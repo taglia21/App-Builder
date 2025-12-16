@@ -1,0 +1,39 @@
+version: '3.9'
+
+services:
+  app:
+    build: .
+    container_name: startup-generator
+    volumes:
+      - ./output:/app/output
+      - ./generated_projects:/app/generated_projects
+      - ./logs:/app/logs
+      - ./.env:/app/.env
+      - ./config.yml:/app/config.yml
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: generate --config /app/config.yml
+
+  db:
+    image: postgres:15
+    container_name: startup-generator-db
+    environment:
+      - POSTGRES_USER=startup_gen
+      - POSTGRES_PASSWORD=startup_gen_password
+      - POSTGRES_DB=startup_generator
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    container_name: startup-generator-redis
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+
+volumes:
+  postgres_data:
+  redis_data:

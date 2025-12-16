@@ -1,0 +1,285 @@
+"""
+LLM Council - Multi-model idea generation with peer review
+Inspired by Andrej Karpathy's llm-council project
+"""
+
+import os
+import asyncio
+import aiohttp
+from typing import List, Dict, Any
+from dataclasses import dataclass
+import json
+
+@dataclass
+class CouncilMember:
+    model_id: str
+    name: str
+    
+@dataclass 
+class CouncilResponse:
+    member: str
+    response: str
+    scores: Dict[str, float] = None
+
+class LLMCouncil:
+    """
+    Implements a council of LLMs that:
+    1. All generate responses independently
+    2. Review and rank each other's responses
+    3. Chairman synthesizes final answer
+    """
+    
+    OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+    
+    # Council members - using cost-effective models
+    DEFAULT_COUNCIL = [
+        CouncilMember("google/gemini-2.0-flash-exp:free", "Gemini"),
+        CouncilMember("anthropic/claude-3.5-sonnet", "Claude"),
+        CouncilMember("openai/gpt-4o-mini", "GPT-4o"),
+        CouncilMember("meta-llama/llama-3.3-70b-instruct", "Llama"),
+    ]
+    
+    # Chairman model
+    CHAIRMAN_MODEL = "google/gemini-2.0-flash-exp:free"
+    
+    def __init__(self, api_key: str = None, council: List[CouncilMember] = None):
+        self.api_key = api_key or os.getenv("OPENROUTER_API_KEY")
+        if not self.api_key:
+            raise ValueError("OPENROUTER_API_KEY required")
+        self.council = council or self.DEFAULT_COUNCIL
+        
+    async def _call_model(self, model_id: str, messages: List[Dict], session: aiohttp.ClientSession) -> str:
+        """Make async call to OpenRouter"""
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://ai-startup-generator.app",
+            "X-Title": "AI Startup Generator"
+        }
+        
+        payload = {
+            "model": model_id,
+            "messages": messages,
+            "max_tokens": 2000,
+            "temperature": 0.7
+        }
+        
+        try:
+            async with session.post(self.OPENROUTER_URL, headers=headers, json=payload) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    return data["choices"][0]["message"]["content"]
+                else:
+                    error = await resp.text()
+                    print(f"Error from {model_id}: {error}")
+                    return None
+        except Exception as e:
+            print(f"Exception calling {model_id}: {e}")
+            return None
+    
+    async def stage1_generate(self, prompt: str, pain_points: List[str]) -> List[CouncilResponse]:
+        """Stage 1: Each council member generates ideas independently"""
+        
+        system_prompt = """You are a startup idea generator. Given market pain points, generate innovative startup ideas.
+        
+For each idea, provide:
+- Name: A catchy startup name
+- Problem: The problem it solves
+- Solution: How it solves it
+- Revenue Model: How it makes money
+- TAM: Target market size estimate
+
+Generate 3-5 high-quality startup ideas based on the pain points provided."""
+
+        user_prompt = f"""Based on these market pain points:
+
+{chr(10).join(f'- {pp}' for pp in pain_points[:15])}
+
+Generate innovative startup ideas that address these problems. Be creative and think about underserved markets."""
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ]
+        
+        responses = []
+        async with aiohttp.ClientSession() as session:
+            tasks = [
+                self._call_model(member.model_id, messages, session) 
+                for member in self.council
+            ]
+            results = await asyncio.gather(*tasks)
+            
+            for member, result in zip(self.council, results):
+                if result:
+                    responses.append(CouncilResponse(member=member.name, response=result))
+        
+        return responses
+    
+    async def stage2_review(self, responses: List[CouncilResponse]) -> List[CouncilResponse]:
+        """Stage 2: Each member reviews and scores the other responses"""
+        
+        review_prompt_template = """You are evaluating startup ideas from different analysts.
+
+Here are the responses from different analysts (anonymized):
+
+{responses}
+
+For each response (A, B, C, D), rate on a scale of 1-10:
+- Innovation: How creative and unique are the ideas?
+- Feasibility: How practical and achievable?
+- Market Fit: How well do they address real pain points?
+- Revenue Potential: How viable is the business model?
+
+Provide your ratings in this exact JSON format:
+{{
+  "A": {{"innovation": X, "feasibility": X, "market_fit": X, "revenue": X, "total": X}},
+  "B": {{"innovation": X, "feasibility": X, "market_fit": X, "revenue": X, "total": X}},
+  ...
+}}
+
+Be objective. It's okay if another analyst's ideas are better than others."""
+
+        # Format responses anonymously
+        labels = ['A', 'B', 'C', 'D']
+        formatted = "\n\n".join([
+            f"=== Analyst {labels[i]} ===\n{r.response}" 
+            for i, r in enumerate(responses[:4])
+        ])
+        
+        review_prompt = review_prompt_template.format(responses=formatted)
+        messages = [{"role": "user", "content": review_prompt}]
+        
+        all_scores = []
+        async with aiohttp.ClientSession() as session:
+            tasks = [
+                self._call_model(member.model_id, messages, session)
+                for member in self.council
+            ]
+            results = await asyncio.gather(*tasks)
+            
+            for result in results:
+                if result:
+                    try:
+                        # Extract JSON from response
+                        start = result.find('{')
+                        end = result.rfind('}') + 1
+                        if start >= 0 and end > start:
+                            scores = json.loads(result[start:end])
+                            all_scores.append(scores)
+                    except:
+                        pass
+        
+        # Aggregate scores and normalize to 0-100 scale
+        if all_scores:
+            for i, response in enumerate(responses[:4]):
+                label = labels[i]
+                totals = []
+                for score_set in all_scores:
+                    if label in score_set and 'total' in score_set[label]:
+                        # Convert from 40-point scale to 100-point scale
+                        normalized_score = (score_set[label]['total'] / 40.0) * 100
+                        totals.append(normalized_score)
+                if totals:
+                    response.scores = {"average": sum(totals) / len(totals)}
+        
+        return responses
+    
+    async def stage3_synthesize(self, responses: List[CouncilResponse], num_ideas: int = 10) -> str:
+        """Stage 3: Chairman synthesizes the best ideas into final output"""
+        
+        # Sort by scores if available
+        scored = [r for r in responses if r.scores]
+        if scored:
+            scored.sort(key=lambda x: x.scores.get('average', 0), reverse=True)
+            responses = scored + [r for r in responses if not r.scores]
+        
+        chairman_prompt = f"""You are the Chairman of an AI startup idea council. 
+        
+Multiple analysts have proposed startup ideas. Your job is to:
+1. Review all proposals
+2. Select the TOP {num_ideas} best ideas across all analysts
+3. Synthesize and improve upon them
+4. Output a final ranked list
+
+Here are the analyst proposals:
+
+{chr(10).join(f'=== {r.member} (Score: {r.scores.get("average", "N/A") if r.scores else "N/A"}) ===\n{r.response}' for r in responses)}
+
+Create the final list of TOP {num_ideas} startup ideas. For each idea provide:
+1. **Name**: Catchy startup name
+2. **Problem Statement**: The pain point it addresses
+3. **Solution**: How it solves the problem  
+4. **Revenue Model**: How it makes money
+5. **TAM Estimate**: Market size
+6. **Why It's Great**: 1-2 sentences on why this idea stands out
+
+Rank them from best (#1) to good (#{num_ideas}). Be decisive."""
+
+        messages = [{"role": "user", "content": chairman_prompt}]
+        
+        async with aiohttp.ClientSession() as session:
+            try:
+                result = await self._call_model(self.CHAIRMAN_MODEL, messages, session)
+                if result and len(result.strip()) > 50:
+                    return result
+                else:
+                    # Fallback: return top analyst responses if chairman fails
+                    fallback = f"## Top Startup Ideas\n\n"
+                    for i, r in enumerate(responses[:min(num_ideas, len(responses))], 1):
+                        fallback += f"### Idea {i} (from {r.member})\n{r.response[:500]}...\n\n"
+                    return fallback
+            except Exception as e:
+                return f"Chairman synthesis error: {str(e)}. Showing top analyst responses:\n\n" + "\n\n".join(f"**{r.member}:** {r.response[:300]}..." for r in responses[:3])
+    
+    async def generate_ideas(self, pain_points: List[str], num_ideas: int = 10, 
+                            on_stage_complete=None) -> Dict[str, Any]:
+        """
+        Full council process:
+        1. Generate ideas from all council members
+        2. Have them review each other
+        3. Chairman synthesizes final list
+        """
+        result = {
+            "stage1_responses": [],
+            "stage2_scores": [],
+            "final_ideas": "",
+            "council_members": [m.name for m in self.council]
+        }
+        
+        # Stage 1
+        if on_stage_complete:
+            on_stage_complete("Stage 1: Council members generating ideas...")
+        responses = await self.stage1_generate("", pain_points)
+        result["stage1_responses"] = [(r.member, r.response[:500]+"...") for r in responses]
+        
+        # Stage 2
+        if on_stage_complete:
+            on_stage_complete("Stage 2: Peer review in progress...")
+        responses = await self.stage2_review(responses)
+        result["stage2_scores"] = [(r.member, r.scores) for r in responses if r.scores]
+        
+        # Stage 3
+        if on_stage_complete:
+            on_stage_complete("Stage 3: Chairman synthesizing final ideas...")
+        final = await self.stage3_synthesize(responses, num_ideas)
+        result["final_ideas"] = final
+        
+        return result
+
+
+# Simple test
+if __name__ == "__main__":
+    async def test():
+        council = LLMCouncil()
+        pain_points = [
+            "Developers waste hours on repetitive code tasks",
+            "Small businesses struggle with inventory management",
+            "Remote teams have poor async communication",
+            "Finding reliable contractors is time-consuming",
+            "Personal finance tracking is too complicated"
+        ]
+        result = await council.generate_ideas(pain_points, num_ideas=5)
+        print(result["final_ideas"])
+    
+    asyncio.run(test())
