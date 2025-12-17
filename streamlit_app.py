@@ -1,5 +1,5 @@
 """
-AI Startup Generator - Epic Rocket Launch Experience
+AI Startup Generator - Red/Purple Professional Edition
 """
 
 import streamlit as st
@@ -14,7 +14,7 @@ import os
 
 st.set_page_config(
     page_title="AI Startup Generator",
-    page_icon="🚀",
+    page_icon="🔴",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
@@ -23,683 +23,308 @@ if 'launched' not in st.session_state:
     st.session_state.launched = False
 
 # =============================================================================
-# EPIC ROCKET INTRO
+# SVG ICONS (PROFESSIONAL ASSETS)
+# =============================================================================
+
+ICONS = {
+    "live_data": """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path><path d="M2 12h20"></path></svg>""",
+    "neural": """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path d="M12 16a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2z"/><path d="M5 9a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2z"/><path d="M19 9a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2z"/><circle cx="12" cy="12" r="3"/><path d="M12 6v3"/><path d="M12 15v3"/><path d="M19.07 10.93l-2.5 2.5"/><path d="M7.43 13.43l-2.5-2.5"/></svg>""",
+    "ranking": """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>""",
+    "code": """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>""",
+    "search": """<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>""",
+    "lock": """<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>""",
+    "settings": """<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>"""
+}
+
+def get_icon(name):
+    return ICONS.get(name, "")
+
+# =============================================================================
+# HYPER-REALISTIC INTRO (RED/PURPLE EDITION)
 # =============================================================================
 
 if not st.session_state.launched:
-    
     intro_html = '''
     <!DOCTYPE html>
     <html>
     <head>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@300;400;600;700&display=swap');
         
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Inter', sans-serif;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         
         body {
-            background: linear-gradient(180deg, #000000 0%, #0a0a1a 30%, #0f0f2a 60%, #1a1a3a 100%);
-            min-height: 100vh;
+            background-color: #050005;
+            color: #fff;
+            font-family: 'Rajdhani', sans-serif;
             overflow: hidden;
-            position: relative;
+            height: 100vh;
+            width: 100vw;
         }
-        
-        .space-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-        }
-        
-        /* Stars */
-        .stars {
+
+        #starfield {
             position: absolute;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 1;
         }
-        
-        .star {
+
+        .hud-overlay {
             position: absolute;
-            background: white;
-            border-radius: 50%;
-            animation: twinkle 2s ease-in-out infinite;
-        }
-        
-        @keyframes twinkle {
-            0%, 100% { opacity: 0.3; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.2); }
-        }
-        
-        /* Shooting stars */
-        .shooting-star {
-            position: absolute;
-            width: 80px;
-            height: 2px;
-            background: linear-gradient(90deg, white, transparent);
-            animation: shoot 4s linear infinite;
-            opacity: 0;
-        }
-        
-        @keyframes shoot {
-            0% { transform: translateX(0) translateY(0); opacity: 0; }
-            5% { opacity: 1; }
-            100% { transform: translateX(500px) translateY(300px); opacity: 0; }
-        }
-        
-        /* Sun */
-        .sun {
-            position: absolute;
-            top: 8%;
-            right: 10%;
-            width: 80px;
-            height: 80px;
-            background: radial-gradient(circle, #ffdd00 0%, #ff8800 50%, #ff4400 100%);
-            border-radius: 50%;
-            box-shadow: 0 0 60px #ff8800, 0 0 100px #ff6600, 0 0 140px #ff4400;
-            animation: sunPulse 4s ease-in-out infinite;
-        }
-        
-        @keyframes sunPulse {
-            0%, 100% { transform: scale(1); box-shadow: 0 0 60px #ff8800, 0 0 100px #ff6600; }
-            50% { transform: scale(1.1); box-shadow: 0 0 80px #ff8800, 0 0 120px #ff6600; }
-        }
-        
-        /* Earth */
-        .earth {
-            position: absolute;
-            top: 20%;
-            left: 8%;
-            width: 100px;
-            height: 100px;
-            background: radial-gradient(circle at 30% 30%, #4a9fff 0%, #1e5aa8 40%, #0c3d6e 100%);
-            border-radius: 50%;
-            box-shadow: inset -10px -10px 20px rgba(0,0,0,0.5), 0 0 20px rgba(74, 159, 255, 0.3);
-            animation: planetFloat 8s ease-in-out infinite;
-            overflow: hidden;
-        }
-        
-        .earth::before {
-            content: '';
-            position: absolute;
-            top: 20%;
-            left: 10%;
-            width: 30px;
-            height: 20px;
-            background: #2d8f2d;
-            border-radius: 50%;
-        }
-        
-        .earth::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 40%;
-            width: 25px;
-            height: 15px;
-            background: #2d8f2d;
-            border-radius: 50%;
-        }
-        
-        @keyframes planetFloat {
-            0%, 100% { transform: translateY(0) rotate(0deg); }
-            50% { transform: translateY(-15px) rotate(5deg); }
-        }
-        
-        /* Mars */
-        .mars {
-            position: absolute;
-            bottom: 25%;
-            left: 12%;
-            width: 50px;
-            height: 50px;
-            background: radial-gradient(circle at 30% 30%, #ff6b4a 0%, #cc4422 60%, #8b2500 100%);
-            border-radius: 50%;
-            box-shadow: inset -5px -5px 15px rgba(0,0,0,0.5);
-            animation: planetFloat 10s ease-in-out infinite;
-            animation-delay: -3s;
-        }
-        
-        /* Saturn */
-        .saturn {
-            position: absolute;
-            top: 35%;
-            right: 15%;
-            width: 70px;
-            height: 70px;
-            background: radial-gradient(circle at 30% 30%, #f4d59e 0%, #c9a227 60%, #8b7355 100%);
-            border-radius: 50%;
-            box-shadow: inset -5px -5px 15px rgba(0,0,0,0.4);
-            animation: planetFloat 12s ease-in-out infinite;
-            animation-delay: -5s;
-        }
-        
-        .saturn::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) rotateX(75deg);
-            width: 120px;
-            height: 120px;
-            border: 8px solid rgba(200, 180, 150, 0.5);
-            border-radius: 50%;
-        }
-        
-        /* Moon */
-        .moon {
-            position: absolute;
-            bottom: 35%;
-            right: 8%;
-            width: 40px;
-            height: 40px;
-            background: radial-gradient(circle at 30% 30%, #f5f5f5 0%, #c9c9c9 50%, #888 100%);
-            border-radius: 50%;
-            box-shadow: inset -3px -3px 10px rgba(0,0,0,0.3);
-            animation: planetFloat 6s ease-in-out infinite;
-            animation-delay: -2s;
-        }
-        
-        /* Asteroids */
-        .asteroid {
-            position: absolute;
-            background: linear-gradient(135deg, #666 0%, #333 100%);
-            border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
-            animation: asteroidTumble 8s linear infinite;
-        }
-        
-        @keyframes asteroidTumble {
-            0% { transform: rotate(0deg) translateX(0); }
-            100% { transform: rotate(360deg) translateX(20px); }
-        }
-        
-        /* UFOs */
-        .ufo {
-            position: absolute;
-            animation: ufoFly 15s linear infinite;
-        }
-        
-        .ufo-body {
-            width: 60px;
-            height: 20px;
-            background: linear-gradient(180deg, #888 0%, #444 100%);
-            border-radius: 50%;
-            position: relative;
-        }
-        
-        .ufo-dome {
-            position: absolute;
-            top: -15px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 30px;
-            height: 20px;
-            background: linear-gradient(180deg, rgba(0, 255, 200, 0.6) 0%, rgba(0, 200, 150, 0.8) 100%);
-            border-radius: 50% 50% 0 0;
-        }
-        
-        .ufo-lights {
-            position: absolute;
-            bottom: -5px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 8px;
-        }
-        
-        .ufo-light {
-            width: 6px;
-            height: 6px;
-            background: #0ff;
-            border-radius: 50%;
-            animation: ufoLight 0.5s ease-in-out infinite alternate;
-        }
-        
-        @keyframes ufoLight {
-            0% { opacity: 0.3; }
-            100% { opacity: 1; box-shadow: 0 0 10px #0ff; }
-        }
-        
-        @keyframes ufoFly {
-            0% { left: -100px; top: 30%; }
-            50% { top: 25%; }
-            100% { left: calc(100% + 100px); top: 35%; }
-        }
-        
-        /* Aliens */
-        .alien {
-            position: absolute;
-            font-size: 35px;
-            animation: alienFloat 5s ease-in-out infinite;
-        }
-        
-        @keyframes alienFloat {
-            0%, 100% { transform: translateY(0) rotate(-5deg); }
-            50% { transform: translateY(-20px) rotate(5deg); }
-        }
-        
-        /* Main content */
-        .content {
-            position: relative;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
             z-index: 10;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
             text-align: center;
-            padding: 20px;
+            width: 100%;
+            pointer-events: none;
+        }
+
+        .content-container {
+            pointer-events: auto;
+            background: rgba(20, 0, 10, 0.4);
+            backdrop-filter: blur(10px);
+            padding: 50px 90px;
+            border: 1px solid rgba(255, 0, 60, 0.3);
+            border-radius: 0;
+            display: inline-block;
+            box-shadow: 0 0 40px rgba(255, 0, 60, 0.1);
         }
         
-        /* Rocket */
-        .rocket-container {
-            cursor: pointer;
-            transition: transform 0.3s ease;
-            position: relative;
+        /* Decorative Corners */
+        .content-container::before {
+            content: ''; position: absolute; top: -1px; left: -1px; width: 30px; height: 30px;
+            border-top: 3px solid #ff003c; border-left: 3px solid #ff003c;
         }
-        
-        .rocket-container:hover {
-            transform: scale(1.05);
+        .content-container::after {
+            content: ''; position: absolute; bottom: -1px; right: -1px; width: 30px; height: 30px;
+            border-bottom: 3px solid #ff003c; border-right: 3px solid #ff003c;
         }
-        
-        .rocket-container.launching {
-            animation: rocketShake 0.1s ease-in-out infinite;
-        }
-        
-        .rocket-container.blastoff {
-            animation: blastOff 1.5s ease-in forwards;
-        }
-        
-        @keyframes rocketShake {
-            0%, 100% { transform: translateX(0) rotate(0); }
-            25% { transform: translateX(-4px) rotate(-1deg); }
-            75% { transform: translateX(4px) rotate(1deg); }
-        }
-        
-        @keyframes blastOff {
-            0% { transform: translateY(0); }
-            100% { transform: translateY(-120vh); }
-        }
-        
-        .rocket-svg {
-            width: 140px;
-            height: 200px;
-            filter: drop-shadow(0 0 20px rgba(0, 200, 255, 0.4));
-        }
-        
-        .flames {
-            transform-origin: top center;
-            animation: flameFlicker 0.1s ease-in-out infinite alternate;
-        }
-        
-        .rocket-container.launching .flames {
-            animation: flameGrow 0.3s ease-out forwards, flameFlicker 0.05s ease-in-out infinite alternate;
-        }
-        
-        @keyframes flameFlicker {
-            0% { opacity: 0.8; transform: scaleY(0.95); }
-            100% { opacity: 1; transform: scaleY(1.05); }
-        }
-        
-        @keyframes flameGrow {
-            0% { transform: scaleY(1); }
-            100% { transform: scaleY(2); }
-        }
-        
-        /* Smoke */
-        .smoke-container {
-            position: absolute;
-            bottom: -20px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: none;
-        }
-        
-        .rocket-container.launching .smoke-container {
-            display: block;
-        }
-        
-        .smoke {
-            position: absolute;
-            background: radial-gradient(circle, rgba(200,200,200,0.8) 0%, rgba(150,150,150,0.4) 50%, transparent 70%);
-            border-radius: 50%;
-            animation: smokePuff 1s ease-out forwards;
-        }
-        
-        @keyframes smokePuff {
-            0% { transform: scale(0.3); opacity: 0.8; }
-            100% { transform: scale(4); opacity: 0; }
-        }
-        
-        /* Text */
-        .badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: rgba(139, 92, 246, 0.15);
-            border: 1px solid rgba(139, 92, 246, 0.3);
-            border-radius: 50px;
-            padding: 10px 20px;
-            font-size: 14px;
-            color: #a78bfa;
-            margin: 30px 0 20px;
-        }
-        
-        .badge-dot {
-            width: 8px;
-            height: 8px;
-            background: #10b981;
-            border-radius: 50%;
-            box-shadow: 0 0 10px #10b981;
-            animation: pulse 2s ease infinite;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.3); }
-        }
-        
-        .title {
-            font-size: 48px;
-            font-weight: 800;
-            color: white;
-            margin-bottom: 10px;
-            line-height: 1.2;
-        }
-        
-        .gradient-text {
-            background: linear-gradient(135deg, #06b6d4, #8b5cf6, #ec4899);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-size: 200% 200%;
-            animation: gradientMove 4s ease infinite;
-        }
-        
-        @keyframes gradientMove {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
+
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 72px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 8px;
+            color: #fff;
+            text-shadow: 0 0 30px rgba(255, 0, 60, 0.8);
+            margin-bottom: 20px;
+            opacity: 0;
+            animation: fadeInDown 1s ease-out forwards 0.5s;
         }
         
         .subtitle {
-            font-size: 18px;
-            color: rgba(255,255,255,0.7);
-            margin-top: 20px;
-            text-align: center;
-            max-width: 600px;
-            margin-left: auto;
-            margin-right: auto;
+            font-size: 24px;
+            text-transform: uppercase;
+            letter-spacing: 6px;
+            color: #ff003c;
+            margin-bottom: 60px;
+            opacity: 0;
+            animation: fadeInUp 1s ease-out forwards 1s;
         }
-        
-        .click-hint {
-            font-size: 16px;
-            color: rgba(255,255,255,0.8);
-            margin-top: 15px;
-            animation: bounce 2s ease infinite;
-        }
-        
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-5px); }
-        }
-        
-        /* Page transition */
-        .intro-wrapper {
-            transition: transform 1s ease-in;
-        }
-        
-        .intro-wrapper.slide-up {
-            transform: translateY(-100vh);
-        }
-        
-        /* Enter button (appears after animation) */
-        .enter-btn {
-            display: none;
-            background: linear-gradient(135deg, #06b6d4, #8b5cf6);
-            border: none;
-            border-radius: 14px;
-            padding: 16px 48px;
-            font-size: 18px;
-            font-weight: 700;
-            color: white;
+
+        .init-btn {
+            background: transparent;
+            border: 2px solid #ff003c;
+            color: #ff003c;
+            padding: 24px 64px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 20px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 4px;
             cursor: pointer;
-            margin-top: 30px;
-            box-shadow: 0 4px 30px rgba(139, 92, 246, 0.4);
-            animation: fadeIn 0.5s ease forwards;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            opacity: 0;
+            animation: pulseRed 2s infinite, fadeIn 1s ease-out forwards 1.5s;
         }
         
-        .enter-btn.show {
-            display: inline-block;
+        @keyframes pulseRed {
+            0% { box-shadow: 0 0 0 0 rgba(255, 0, 60, 0.4); }
+            70% { box-shadow: 0 0 0 15px rgba(255, 0, 60, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 0, 60, 0); }
         }
         
-        @keyframes fadeIn {
-            0% { opacity: 0; transform: translateY(20px); }
-            100% { opacity: 1; transform: translateY(0); }
-        }
-        
-        .enter-btn:hover {
+        .init-btn:hover {
+            background: rgba(255, 0, 60, 0.2);
+            box-shadow: 0 0 50px rgba(255, 0, 60, 0.8);
             transform: scale(1.05);
-            box-shadow: 0 6px 40px rgba(139, 92, 246, 0.5);
+            border-color: #fff;
+            color: #fff;
         }
+        
+        /* Animations */
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .warp-active .content-container {
+            opacity: 0;
+            transform: scale(1.5);
+            transition: all 0.5s ease-in;
+        }
+
+        .flash-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #ff003c; /* Red flash */
+            opacity: 0;
+            pointer-events: none;
+            z-index: 100;
+            transition: opacity 0.2s ease-in;
+        }
+
     </style>
     </head>
     <body>
-        <div class="intro-wrapper" id="introWrapper">
-            <div class="space-container">
-                <!-- Stars generated by JS -->
-                <div class="stars" id="stars"></div>
-                
-                <!-- Shooting stars -->
-                <div class="shooting-star" style="top: 10%; left: 5%; animation-delay: 0s;"></div>
-                <div class="shooting-star" style="top: 30%; left: 20%; animation-delay: 2s;"></div>
-                <div class="shooting-star" style="top: 50%; left: 40%; animation-delay: 4s;"></div>
-                
-                <!-- Sun -->
-                <div class="sun"></div>
-                
-                <!-- Planets -->
-                <div class="earth"></div>
-                <div class="mars"></div>
-                <div class="saturn"></div>
-                <div class="moon"></div>
-                
-                <!-- Asteroids -->
-                <div class="asteroid" style="top: 15%; left: 30%; width: 15px; height: 12px; animation-delay: 0s;"></div>
-                <div class="asteroid" style="top: 60%; left: 75%; width: 20px; height: 16px; animation-delay: -2s;"></div>
-                <div class="asteroid" style="top: 75%; left: 20%; width: 12px; height: 10px; animation-delay: -4s;"></div>
-                <div class="asteroid" style="top: 40%; left: 85%; width: 18px; height: 14px; animation-delay: -6s;"></div>
-                <div class="asteroid" style="top: 80%; left: 60%; width: 14px; height: 11px; animation-delay: -3s;"></div>
-                
-                <!-- UFOs -->
-                <div class="ufo" style="animation-delay: 0s;">
-                    <div class="ufo-dome"></div>
-                    <div class="ufo-body"></div>
-                    <div class="ufo-lights">
-                        <div class="ufo-light"></div>
-                        <div class="ufo-light" style="animation-delay: 0.2s;"></div>
-                        <div class="ufo-light" style="animation-delay: 0.4s;"></div>
-                    </div>
-                </div>
-                <div class="ufo" style="animation-delay: -8s; animation-duration: 20s;">
-                    <div class="ufo-dome"></div>
-                    <div class="ufo-body"></div>
-                    <div class="ufo-lights">
-                        <div class="ufo-light"></div>
-                        <div class="ufo-light" style="animation-delay: 0.2s;"></div>
-                        <div class="ufo-light" style="animation-delay: 0.4s;"></div>
-                    </div>
-                </div>
-                
-                <!-- Aliens -->
-                <div class="alien" style="top: 25%; right: 25%; animation-delay: 0s;">👽</div>
-                <div class="alien" style="bottom: 20%; left: 25%; animation-delay: -2s;">👾</div>
-                <div class="alien" style="top: 55%; right: 5%; animation-delay: -1s; font-size: 28px;">🛸</div>
-            </div>
-            
-            <div class="content">
-                <!-- Rocket -->
-                <div class="rocket-container" id="rocket" onclick="launchRocket()">
-                    <svg class="rocket-svg" viewBox="0 0 100 180" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <defs>
-                            <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                                <stop offset="0%" stop-color="#e8e8e8"/>
-                                <stop offset="50%" stop-color="#ffffff"/>
-                                <stop offset="100%" stop-color="#c8c8c8"/>
-                            </linearGradient>
-                            <linearGradient id="windowGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" stop-color="#00d4ff"/>
-                                <stop offset="100%" stop-color="#0088cc"/>
-                            </linearGradient>
-                            <linearGradient id="finGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                                <stop offset="0%" stop-color="#ff5555"/>
-                                <stop offset="100%" stop-color="#cc2222"/>
-                            </linearGradient>
-                            <linearGradient id="flameGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" stop-color="#00ccff"/>
-                                <stop offset="25%" stop-color="#ffcc00"/>
-                                <stop offset="50%" stop-color="#ff8800"/>
-                                <stop offset="100%" stop-color="#ff2200"/>
-                            </linearGradient>
-                        </defs>
-                        
-                        <!-- Body -->
-                        <path d="M50 8 C50 8 78 35 78 75 L78 115 L22 115 L22 75 C22 35 50 8 50 8Z" fill="url(#bodyGrad)" stroke="#aaa" stroke-width="1"/>
-                        
-                        <!-- Window -->
-                        <circle cx="50" cy="55" r="14" fill="url(#windowGrad)" stroke="#0099dd" stroke-width="2"/>
-                        <circle cx="45" cy="50" r="4" fill="white" opacity="0.6"/>
-                        
-                        <!-- Stripes -->
-                        <rect x="27" y="82" width="46" height="6" rx="2" fill="#ff4444"/>
-                        <rect x="27" y="93" width="46" height="6" rx="2" fill="#ff4444"/>
-                        
-                        <!-- Fins -->
-                        <path d="M22 90 L5 125 L22 115Z" fill="url(#finGrad)"/>
-                        <path d="M78 90 L95 125 L78 115Z" fill="url(#finGrad)"/>
-                        <path d="M38 115 L50 138 L62 115Z" fill="url(#finGrad)"/>
-                        
-                        <!-- Engine -->
-                        <ellipse cx="50" cy="117" rx="14" ry="5" fill="#555"/>
-                        
-                        <!-- Flames -->
-                        <g class="flames">
-                            <path d="M50 120 Q38 145 50 175 Q62 145 50 120Z" fill="url(#flameGrad)" opacity="0.9"/>
-                            <path d="M38 120 Q28 140 36 160 Q44 140 38 120Z" fill="url(#flameGrad)" opacity="0.7"/>
-                            <path d="M62 120 Q72 140 64 160 Q56 140 62 120Z" fill="url(#flameGrad)" opacity="0.7"/>
-                        </g>
-                    </svg>
-                    
-                    <div class="smoke-container" id="smokeContainer"></div>
-                </div>
-                
-                <div class="badge">
-                    <span class="badge-dot"></span>
-                    AI-Powered Platform
-                </div>
-                
-                <h1 class="title">
-                    Ready to discover your<br>
-                    <span class="gradient-text">Billion Dollar Idea?</span>
-                </h1>
-                
-                <p class="subtitle">Transform real-time market data into startup opportunities</p>
-                
-                <p class="click-hint" id="clickHint">👆 Click the rocket to blast off!</p>
+        <canvas id="starfield"></canvas>
+        <div class="flash-overlay" id="flash"></div>
+        
+        <div class="hud-overlay">
+            <div class="content-container">
+                <h1>Startup Generator</h1>
+                <div class="subtitle">Neural Ideation Core</div>
+                <button class="init-btn" onclick="engageWarp()" id="engageBtn">Initialize</button>
             </div>
         </div>
-        
+
         <script>
-            // Generate stars
-            const starsContainer = document.getElementById('stars');
-            for (let i = 0; i < 200; i++) {
-                const star = document.createElement('div');
-                star.className = 'star';
-                star.style.left = Math.random() * 100 + '%';
-                star.style.top = Math.random() * 100 + '%';
-                star.style.width = (Math.random() * 2.5 + 0.5) + 'px';
-                star.style.height = star.style.width;
-                star.style.animationDelay = Math.random() * 2 + 's';
-                starsContainer.appendChild(star);
+            // Starfield Logic
+            const canvas = document.getElementById('starfield');
+            const ctx = canvas.getContext('2d');
+            
+            let width, height;
+            
+            const stars = [];
+            let speed = 0.5;
+            const numStars = 1500;
+            let warpActive = false;
+            
+            function resize() {
+                width = window.innerWidth;
+                height = window.innerHeight;
+                canvas.width = width;
+                canvas.height = height;
             }
             
-            let launched = false;
+            window.addEventListener('resize', resize);
+            resize();
             
-            function launchRocket() {
-                if (launched) return;
-                launched = true;
-                
-                const rocket = document.getElementById('rocket');
-                const smokeContainer = document.getElementById('smokeContainer');
-                const clickHint = document.getElementById('clickHint');
-                const enterBtn = document.getElementById('enterBtn');
-                const introWrapper = document.getElementById('introWrapper');
-                
-                // Hide click hint
-                clickHint.style.display = 'none';
-                
-                // Phase 1: Shake and smoke (2 seconds)
-                rocket.classList.add('launching');
-                
-                // Add smoke particles
-                for (let i = 0; i < 8; i++) {
-                    setTimeout(() => {
-                        const smoke = document.createElement('div');
-                        smoke.className = 'smoke';
-                        smoke.style.width = (30 + Math.random() * 40) + 'px';
-                        smoke.style.height = smoke.style.width;
-                        smoke.style.left = (-20 + Math.random() * 40) + 'px';
-                        smoke.style.animationDelay = (Math.random() * 0.3) + 's';
-                        smokeContainer.appendChild(smoke);
-                    }, i * 200);
+            class Star {
+                constructor() {
+                    this.init();
                 }
                 
-                // Phase 2: Blast off (after 2 seconds)
-                setTimeout(() => {
-                    rocket.classList.remove('launching');
-                    rocket.classList.add('blastoff');
-                }, 2000);
+                init() {
+                    this.x = (Math.random() - 0.5) * width * 2;
+                    this.y = (Math.random() - 0.5) * height * 2;
+                    this.z = Math.random() * width;
+                }
                 
-                // Phase 3: Slide page up (after 3.5 seconds)
-                setTimeout(() => {
-                    introWrapper.classList.add('slide-up');
-                }, 3500);
-                
-                // Automatically trigger Streamlit transition (after 4.5 seconds)
-                setTimeout(() => {
-                    const btn = window.parent.document.querySelector('button[key="continue_btn"]');
-                    if (btn) {
-                        btn.click();
-                    } else {
-                        // Fallback: try any button
-                        const allBtns = window.parent.document.querySelectorAll('button');
-                        if (allBtns.length > 0) allBtns[allBtns.length - 1].click();
+                update() {
+                    this.z -= speed;
+                    if (this.z <= 0) {
+                        this.init();
+                        this.z = width;
                     }
-                }, 4500);
+                }
+                
+                draw() {
+                    let x = (this.x / this.z) * width/2 + width/2;
+                    let y = (this.y / this.z) * height/2 + height/2;
+                    
+                    let pz = this.z + speed * (warpActive ? 3 : 0.5); 
+                    
+                    let px = (this.x / pz) * width/2 + width/2;
+                    let py = (this.y / pz) * height/2 + height/2;
+                    
+                    let r = Math.max(0.1, (1 - this.z / width) * 2.5);
+                    
+                    if (x < 0 || x > width || y < 0 || y > height) return;
+                    
+                    ctx.beginPath();
+                    if (warpActive) {
+                        ctx.moveTo(x, y);
+                        ctx.lineTo(px, py);
+                        // Red/Purple trails
+                        ctx.strokeStyle = Math.random() > 0.5 ? 
+                            `rgba(255, 0, 60, ${1 - this.z/width})` : 
+                            `rgba(112, 0, 255, ${1 - this.z/width})`;
+                        ctx.lineWidth = r * 1.5;
+                        ctx.stroke();
+                    } else {
+                        ctx.arc(x, y, r, 0, Math.PI * 2);
+                        // Subtle red tint on stars
+                        ctx.fillStyle = `rgba(255, 200, 200, ${1 - this.z/width})`;
+                        ctx.fill();
+                    }
+                }
             }
             
-
+            for(let i=0; i<numStars; i++) stars.push(new Star());
+            
+            function animate() {
+                // Red/Black fade
+                ctx.fillStyle = warpActive ? 'rgba(5, 0, 5, 0.2)' : 'rgba(5, 0, 5, 0.8)';
+                ctx.fillRect(0, 0, width, height);
+                stars.forEach(star => { star.update(); star.draw(); });
+                requestAnimationFrame(animate);
+            }
+            
+            animate();
+            
+            function engageWarp() {
+                const btn = document.getElementById('engageBtn');
+                btn.innerHTML = "SYSTEM ENGAGED";
+                document.body.classList.add('warp-active');
+                
+                let acceleration = setInterval(() => {
+                    speed *= 1.1;
+                    if (speed > 100) {
+                        clearInterval(acceleration);
+                        warpActive = true;
+                        setTimeout(() => {
+                            document.getElementById('flash').style.opacity = '1';
+                            setTimeout(() => {
+                                const buttons = window.parent.document.getElementsByTagName('button');
+                                let clicked = false;
+                                for (let b of buttons) {
+                                    if (b.innerText === "Continue") { b.click(); clicked = true; break; }
+                                }
+                                if (!clicked && buttons.length > 0) buttons[buttons.length-1].click();
+                            }, 400);
+                        }, 1800);
+                    }
+                }, 80);
+            }
         </script>
     </body>
     </html>
     '''
     
-    # Hide streamlit elements for intro
     st.markdown("""
     <style>
     #MainMenu, footer, header, [data-testid="stToolbar"], [data-testid="stDecoration"] { display: none !important; }
-    .stApp { background: #0a0a1a !important; }
+    .stApp { background: #050005 !important; }
     .main .block-container { padding: 0 !important; max-width: 100% !important; }
+    div[data-testid="stButton"] { display: none; }
+    div.row-widget.stButton { position: fixed; top: -9999px; }
     </style>
     """, unsafe_allow_html=True)
     
-    components.html(intro_html, height=750, scrolling=False)
+    components.html(intro_html, height=900, scrolling=False)
     
-    # Hidden button for state change
     if st.button("Continue", key="continue_btn"):
         st.session_state.launched = True
         st.rerun()
@@ -708,189 +333,290 @@ if not st.session_state.launched:
 
 
 # =============================================================================
-# MAIN APP CSS
+# MAIN APP CSS (RED/PURPLE PROFESSIONAL THEME)
 # =============================================================================
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 
 :root {
-    --bg: #0a0a1a;
-    --card: rgba(255,255,255,0.03);
-    --border: rgba(255,255,255,0.08);
-    --text: #ffffff;
-    --dim: #ffffff;
-    --muted: #ffffff;
-    --cyan: #06b6d4;
-    --purple: #8b5cf6;
-    --pink: #ec4899;
-    --green: #10b981;
+    --bg-dark: #050005;
+    --bg-panel: rgba(20, 10, 15, 0.7);
+    --border-color: rgba(255, 0, 60, 0.2);
+    --primary: #ff003c;      /* Neon Red */
+    --secondary: #7000ff;    /* Deep Purple */
+    --text-main: #ffffff;
+    --text-dim: #e2e8f0; /* Brighter for readability */
+    --shadow-glow: 0 0 20px rgba(255, 0, 60, 0.2);
 }
 
-* { font-family: 'Inter', sans-serif; }
+/* Global Reset & Fonts */
+* { font-family: 'Rajdhani', sans-serif !important; }
+h1, h2, h3, .hero-title, .stat-value, .section-title { font-family: 'Orbitron', sans-serif !important; }
+
 #MainMenu, footer, header, [data-testid="stToolbar"], [data-testid="stDecoration"] { display: none !important; }
-.stApp { background: var(--bg); }
-.main .block-container { padding: 2rem 3rem; max-width: 1300px; }
 
-.hero { text-align: center; padding: 2rem 1rem; }
-.badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.3); border-radius: 50px; padding: 6px 14px; font-size: 12px; color: #a78bfa; margin-bottom: 16px; }
-.hero-title { font-size: 40px; font-weight: 800; color: var(--text); margin: 0 0 12px; line-height: 1.15; }
-.gradient-text { background: linear-gradient(135deg, #06b6d4, #8b5cf6, #ec4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-.hero-sub { font-size: 16px; color: #ffffff; max-width: 450px; margin: 0 auto 20px; text-align: center !important; display: block !important; }
-.stats { display: flex; justify-content: center; gap: 40px; }
+/* Dynamic Background */
+.stApp {
+    background-color: var(--bg-dark);
+    background-image: 
+        radial-gradient(circle at 80% 0%, rgba(255, 0, 60, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 20% 100%, rgba(112, 0, 255, 0.08) 0%, transparent 50%);
+    background-attachment: fixed;
+}
+
+.main .block-container { padding: 2rem 3rem !important; max-width: 1600px; }
+
+/* Components */
+.glass {
+    background: var(--bg-panel);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 20px -1px rgba(0, 0, 0, 0.3);
+}
+
+/* Hero Section */
+.hero { 
+    text-align: center; 
+    padding: 1rem 1rem 2rem; 
+    position: relative;
+    border-bottom: 1px solid rgba(255, 0, 60, 0.1);
+    margin-bottom: 1.5rem;
+}
+
+.badge { 
+    display: inline-flex; align-items: center; gap: 8px; 
+    border: 1px solid rgba(255, 0, 60, 0.5); 
+    padding: 4px 12px; 
+    font-size: 10px; 
+    color: var(--primary); 
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin-bottom: 16px;
+    background: rgba(255, 0, 60, 0.05);
+}
+
+.hero-title { 
+    font-size: 48px; 
+    font-weight: 900; 
+    color: var(--text-main); 
+    margin: 0 0 16px; 
+    line-height: 1.1; 
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-shadow: 0 0 40px rgba(255, 0, 60, 0.3);
+}
+
+.gradient-text { 
+    background: linear-gradient(180deg, #fff 0%, #ff003c 100%); 
+    -webkit-background-clip: text; 
+    -webkit-text-fill-color: transparent; 
+}
+
+.stats { 
+    display: flex; justify-content: center; gap: 60px; margin-top: 30px; 
+    display: inline-flex;
+}
 .stat { text-align: center; }
-.stat-value { font-size: 28px; font-weight: 700; color: var(--cyan); }
-.stat-label { font-size: 10px; color: #ffffff; text-transform: uppercase; letter-spacing: 1px; }
+.stat-value { font-size: 28px; font-weight: 700; color: var(--text-main); margin-bottom: 4px; }
+.stat-label { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 3px; opacity: 0.9; }
 
-.stTabs [data-baseweb="tab-list"] { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 4px; justify-content: center; }
-.stTabs [data-baseweb="tab"] { background: transparent; border-radius: 8px; color: #ffffff; font-weight: 500; font-size: 13px; padding: 8px 16px; }
-.stTabs [aria-selected="true"] { background: linear-gradient(135deg, var(--cyan), var(--purple)) !important; color: white !important; }
+/* Tabs */
+.stTabs [data-baseweb="tab-list"] { 
+    background: transparent; 
+    border-bottom: 1px solid var(--border-color);
+    padding: 0; gap: 20px;
+}
+.stTabs [data-baseweb="tab"] { 
+    background: transparent; border: none; color: var(--text-dim); 
+    font-family: 'Orbitron', sans-serif !important;
+    font-size: 13px; text-transform: uppercase; letter-spacing: 2px;
+    padding: 12px 0;
+}
+.stTabs [aria-selected="true"] { 
+    color: var(--primary) !important; 
+    border-bottom: 2px solid var(--primary) !important;
+    text-shadow: 0 0 10px rgba(255, 0, 60, 0.5);
+}
 
-.features { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 20px 0; }
-.feature { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; text-align: center; transition: all 0.2s; }
-.feature:hover { transform: translateY(-3px); border-color: var(--cyan); }
-.feature-icon { font-size: 20px; margin-bottom: 8px; }
-.feature-title { font-weight: 600; color: var(--text); font-size: 13px; margin-bottom: 4px; }
-.feature-desc { font-size: 11px; color: #ffffff; }
+/* Interactive Elements */
+.feature { 
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--border-color); 
+    padding: 20px 15px; text-align: center; 
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    height: 100%;
+}
+.feature:hover { 
+    border-color: var(--primary); 
+    background: rgba(255, 0, 60, 0.05);
+    transform: translateY(-5px);
+    box-shadow: 0 10px 40px -10px rgba(255, 0, 60, 0.2);
+}
+.feature-icon-wrapper {
+    color: var(--primary);
+    margin-bottom: 15px;
+    display: inline-flex;
+    padding: 10px;
+    background: rgba(255, 0, 60, 0.1);
+    border-radius: 4px;
+}
+.feature-title { font-weight: 700; color: var(--text-main); font-size: 13px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 6px; }
+.feature-desc { font-size: 12px; color: var(--text-dim); line-height: 1.4; }
 
-.config { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
-.config-title { font-weight: 600; color: var(--text); font-size: 13px; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
-.config-label { font-size: 9px; color: #ffffff; text-transform: uppercase; letter-spacing: 1px; margin: 12px 0 6px; }
+/* Dashboard Config */
+.config { 
+    background: rgba(20, 10, 15, 0.5); 
+    border: 1px solid var(--border-color); 
+    padding: 20px; 
+}
+.config-title { 
+    font-family: 'Orbitron', sans-serif !important;
+    font-weight: 600; color: var(--primary); font-size: 13px; text-transform: uppercase; letter-spacing: 2px;
+    margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); 
+    display: flex; align-items: center; gap: 10px;
+}
+.config-label { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; margin: 15px 0 8px; font-weight: 700; }
 
-.stCheckbox { background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; margin-bottom: 4px; }
-.stCheckbox:hover { border-color: var(--purple); }
-.stCheckbox label, .stCheckbox p, [data-testid="stCheckbox"] label p { color: var(--text) !important; font-size: 12px !important; }
+/* Ideas */
+.idea { 
+    background: linear-gradient(90deg, rgba(255, 0, 60, 0.02), transparent);
+    border: 1px solid var(--border-color);
+    border-left: 3px solid var(--primary);
+    padding: 24px; margin-bottom: 16px; 
+    transition: all 0.3s; 
+}
+.idea:hover { 
+    border-color: var(--primary);
+    background: linear-gradient(90deg, rgba(255, 0, 60, 0.08), transparent); 
+}
 
-.stButton > button { background: linear-gradient(135deg, var(--cyan), var(--purple)) !important; color: white !important; border: none !important; padding: 10px 20px !important; font-weight: 600 !important; font-size: 13px !important; border-radius: 8px !important; box-shadow: 0 4px 15px rgba(139,92,246,0.3) !important; }
-.stButton > button:hover { transform: translateY(-2px) !important; }
+.idea-score { color: var(--primary); font-family: 'Orbitron', sans-serif !important; font-size: 18px; font-weight: 700; letter-spacing: 1px; }
 
-.metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
-.metric { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; text-align: center; }
-.metric-value { font-size: 28px; font-weight: 700; }
-.metric-value.cyan { color: var(--cyan); }
-.metric-value.green { color: var(--green); }
-.metric-value.purple { color: var(--purple); }
-.metric-value.pink { color: var(--pink); }
-.metric-label { font-size: 9px; color: #ffffff; text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+/* Metrics */
+.metric { 
+    background: rgba(20, 10, 15, 0.6); border: 1px solid var(--border-color); 
+    padding: 24px; text-align: center; 
+}
+.metric-value { font-family: 'Orbitron', sans-serif !important; font-size: 32px; font-weight: 700; color: var(--text-main); }
+.metric-value.red { color: var(--primary); text-shadow: 0 0 20px rgba(255, 0, 60, 0.4); }
+.metric-value.purple { color: var(--secondary); text-shadow: 0 0 20px rgba(112, 0, 255, 0.4); }
 
-.idea { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 10px; transition: all 0.2s; }
-.idea:hover { transform: translateX(4px); border-color: var(--cyan); }
-.idea-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.idea-rank { width: 28px; height: 28px; background: linear-gradient(135deg, var(--cyan), var(--purple)); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: white; }
-.idea-score { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); color: var(--green); padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
-.idea-name { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 10px; }
-.idea-label { font-size: 10px; color: var(--cyan); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px; font-weight: 600; }
-.idea-text { color: #ffffff; font-size: 13px; line-height: 1.6; margin-bottom: 10px; }
-.idea-footer { display: flex; gap: 20px; padding-top: 10px; border-top: 1px solid var(--border); }
-.idea-meta-label { font-size: 10px; color: #ffffff; text-transform: uppercase; font-weight: 600; }
-.idea-meta-value { color: #ffffff; font-size: 13px; font-weight: 500; }
+/* Buttons */
+.stButton > button { 
+    background: transparent !important; 
+    border: 1px solid var(--primary) !important; 
+    color: var(--primary) !important; 
+    font-family: 'Orbitron', sans-serif !important;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    padding: 16px 32px !important; 
+    transition: all 0.3s !important;
+    box-shadow: 0 0 15px rgba(255, 0, 60, 0.1) !important;
+    border-radius: 0 !important;
+}
+.stButton > button:hover { 
+    background: rgba(255, 0, 60, 0.1) !important; 
+    box-shadow: 0 0 40px rgba(255, 0, 60, 0.6) !important;
+    text-shadow: 0 0 5px rgba(255, 0, 60, 1) !important;
+    border-color: #fff !important;
+    color: #fff !important;
+}
 
-.section-title { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
-.section-sub { color: #ffffff; font-size: 13px; margin-bottom: 16px; }
-.empty { text-align: center; padding: 40px; color: #ffffff; }
-.empty-icon { font-size: 40px; opacity: 0.3; margin-bottom: 12px; }
-.status { background: rgba(6,182,212,0.05); border: 1px solid rgba(6,182,212,0.2); border-radius: 8px; padding: 10px 14px; margin: 10px 0; color: var(--text); font-size: 13px; }
-.status-done { background: rgba(16,185,129,0.05); border-color: rgba(16,185,129,0.2); }
-.stProgress > div > div { background: linear-gradient(90deg, var(--cyan), var(--purple)) !important; }
-.stProgress > div { background: rgba(255,255,255,0.1) !important; }
-.glass { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 10px; }
-.glass h3 { color: var(--text); font-size: 14px; margin-bottom: 6px; }
-.glass p { color: #ffffff; font-size: 13px; line-height: 1.5; }
-.footer { text-align: center; padding: 24px; margin-top: 40px; border-top: 1px solid var(--border); color: #ffffff; font-size: 12px; }
+/* Status */
+.status { 
+    border-left: 2px solid var(--primary); 
+    background: linear-gradient(90deg, rgba(255, 0, 60, 0.1), transparent);
+    padding: 16px 20px; margin: 16px 0; color: var(--text-main); font-size: 14px; 
+    font-family: 'Orbitron', sans-serif !important; letter-spacing: 2px;
+}
+.status-done { 
+    border-color: #fff; 
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.1), transparent); 
+    color: #fff;
+    text-shadow: 0 0 10px rgba(255,255,255,0.5);
+}
 
-.council-badge { background: linear-gradient(135deg, #f59e0b, #ef4444); color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; display: inline-block; margin-bottom: 10px; }
-.council-member { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 8px; }
-.council-member-name { font-weight: 600; color: var(--cyan); margin-bottom: 4px; }
-.council-score { background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); color: #f59e0b; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+.section-title { font-size: 22px; font-weight: 700; color: var(--text-main); margin-bottom: 8px; text-transform: uppercase; border-left: 3px solid var(--primary); padding-left: 16px; letter-spacing: 1px; }
 
-
-@media (max-width: 900px) { .features, .metrics { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 600px) { .features, .metrics { grid-template-columns: 1fr; } }
 </style>
 """, unsafe_allow_html=True)
 
 # =============================================================================
-# MAIN APP
+# MAIN APP LAYOUT
 # =============================================================================
 
 st.markdown("""
 <div class="hero">
-    <div class="badge">● AI-Powered Platform</div>
-    <h1 class="hero-title">Discover Your Next<br><span class="gradient-text">Billion Dollar Idea</span></h1>
+    <div class="badge">System Online</div>
+    <h1 class="hero-title">Startup Idea<br><span class="gradient-text">Generator Core</span></h1>
     <div class="stats">
-        <div class="stat"><div class="stat-value">4</div><div class="stat-label">Data Sources</div></div>
-        <div class="stat"><div class="stat-value">150+</div><div class="stat-label">Pain Points</div></div>
-        <div class="stat"><div class="stat-value">37</div><div class="stat-label">Files Gen</div></div>
-        <div class="stat"><div class="stat-value">&lt;60s</div><div class="stat-label">Analysis</div></div>
+        <div class="stat"><div class="stat-value">4</div><div class="stat-label">Streams</div></div>
+        <div class="stat"><div class="stat-value">150+</div><div class="stat-label">Signals</div></div>
+        <div class="stat"><div class="stat-value">T-60s</div><div class="stat-label">Compute</div></div>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-tab1, tab2, tab3, tab4 = st.tabs(["⚡ Generate", "📊 Results", "📁 Export", "📖 Docs"])
+tab1, tab2, tab3, tab4 = st.tabs(["⚡ GENERATE", "📊 DATA", "📁 EXPORT", "📖 SYSTEM"])
 
 with tab1:
     c1, c2 = st.columns([2.5, 1])
     
     with c2:
-        st.markdown('<div class="config"><div class="config-title">⚙️ Configuration</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="config"><div class="config-title">{get_icon("settings")} PARAMETERS</div></div>', unsafe_allow_html=True)
         st.markdown('<div class="config-label">Data Sources</div>', unsafe_allow_html=True)
         g = st.checkbox("GitHub Trending", value=True)
-        n = st.checkbox("News APIs", value=True)
-        s = st.checkbox("Search APIs", value=True)
-        r = st.checkbox("Reddit", value=False)
-        st.markdown('<div class="config-label">Settings</div>', unsafe_allow_html=True)
-        llm = st.checkbox("AI Mode", value=True)
-        num = st.slider("Ideas", 5, 25, 10)
-        pp = st.slider("Pain Points", 20, 100, 40)
+        n = st.checkbox("News Feed", value=True)
+        s = st.checkbox("Search Index", value=True)
+        r = st.checkbox("Social Signals", value=False)
+        st.markdown('<div class="config-label">Model Settings</div>', unsafe_allow_html=True)
+        llm = st.checkbox("AI Inference", value=True)
+        num = st.slider("Output Count", 5, 25, 10)
+        pp = st.slider("Signal Density", 20, 100, 40)
         
-        st.markdown('<div class="config-label">Advanced</div>', unsafe_allow_html=True)
-        use_council = st.checkbox("🏛️ LLM Council Mode", value=False, help="Use multiple AI models that review each other's work")
+        st.markdown('<div class="config-label">Advanced Modules</div>', unsafe_allow_html=True)
+        use_council = st.checkbox("Consensus Protocol", value=False, help="Use multiple AI models that review each other's work")
         
-        # API Keys section - only show if Council Mode is enabled
         if use_council:
-            st.markdown('<div class="config-label">🔑 API Keys (Required for Council Mode)</div>', unsafe_allow_html=True)
-            openrouter_key = st.text_input(
-                "OpenRouter API Key",
-                type="password",
-                value=os.getenv("OPENROUTER_API_KEY", ""),
-                help="Get your free key at openrouter.ai",
-                key="openrouter_key"
-            )
-            if openrouter_key:
-                os.environ["OPENROUTER_API_KEY"] = openrouter_key
+            st.markdown(f'<div class="config-label">{get_icon("lock")} Access Keys</div>', unsafe_allow_html=True)
+            openrouter_key = st.text_input("OpenRouter Key", type="password", key="openrouter_key")
+            if openrouter_key: os.environ["OPENROUTER_API_KEY"] = openrouter_key
         
         if llm and not use_council:
-            st.markdown('<div class="config-label">🔑 API Key (Optional)</div>', unsafe_allow_html=True)
-            groq_key = st.text_input(
-                "Groq API Key",
-                type="password", 
-                value=os.getenv("GROQ_API_KEY", ""),
-                help="Optional: Get your free key at console.groq.com",
-                key="groq_key"
-            )
-            if groq_key:
-                os.environ["GROQ_API_KEY"] = groq_key
+            st.markdown(f'<div class="config-label">{get_icon("lock")} Access Keys</div>', unsafe_allow_html=True)
+            groq_key = st.text_input("Groq Key (Optional)", type="password", key="groq_key")
+            if groq_key: os.environ["GROQ_API_KEY"] = groq_key
     
     with c1:
         st.markdown("""
-        <div class="section-title">Generate Startup Ideas</div>
-        <div class="section-sub">Our AI scans real-time data to find problems worth solving</div>
-        <div class="features">
-            <div class="feature"><div class="feature-icon">📡</div><div class="feature-title">Real-Time Data</div><div class="feature-desc">GitHub, News, Reddit, Search</div></div>
-            <div class="feature"><div class="feature-icon">🧠</div><div class="feature-title">AI Analysis</div><div class="feature-desc">LLM-powered ideation</div></div>
-            <div class="feature"><div class="feature-icon">📊</div><div class="feature-title">Smart Scoring</div><div class="feature-desc">Multi-factor ranking</div></div>
-            <div class="feature"><div class="feature-icon">💻</div><div class="feature-title">Code Gen</div><div class="feature-desc">Full-stack apps</div></div>
-        </div>
+        <div class="section-title">Initialize Generation Sequence</div>
+        <div style="margin-left: 20px; color: #e2e8f0; font-size: 14px; margin-bottom: 20px; opacity: 0.9;">Scanning global data streams for high-value opportunities via neural interpretation layers.</div>
         """, unsafe_allow_html=True)
         
-        if st.button("🚀 Generate Ideas", use_container_width=True):
+        # Features Grid with SVGs
+        col_f1, col_f2, col_f3, col_f4 = st.columns(4)
+        with col_f1:
+            st.markdown(f'<div class="feature"><div class="feature-icon-wrapper">{get_icon("live_data")}</div><div class="feature-title">Live Data</div><div class="feature-desc">Real-time ingestion</div></div>', unsafe_allow_html=True)
+        with col_f2:
+            st.markdown(f'<div class="feature"><div class="feature-icon-wrapper">{get_icon("neural")}</div><div class="feature-title">Neural Net</div><div class="feature-desc">Deep pattern matching</div></div>', unsafe_allow_html=True)
+        with col_f3:
+            st.markdown(f'<div class="feature"><div class="feature-icon-wrapper">{get_icon("ranking")}</div><div class="feature-title">Ranking</div><div class="feature-desc">Multi-variable score</div></div>', unsafe_allow_html=True)
+        with col_f4:
+            st.markdown(f'<div class="feature"><div class="feature-icon-wrapper">{get_icon("code")}</div><div class="feature-title">Architecture</div><div class="feature-desc">Stack generation</div></div>', unsafe_allow_html=True)
+        
+        st.markdown("---")
+        
+        if st.button("INITIATE SEQUENCE", use_container_width=True):
             prog = st.progress(0)
             stat = st.empty()
             pps = []
             
-            stat.markdown('<div class="status">📡 Scanning data sources...</div>', unsafe_allow_html=True)
+            stat.markdown('<div class="status"> ESTABLISHING DOWNLINK...</div>', unsafe_allow_html=True)
             
+            # (Logic remains same)
             if g:
                 try:
                     prog.progress(10)
@@ -918,62 +644,38 @@ with tab1:
                     from src.intelligence.sources.reddit import RedditSource
                     reddit_source = RedditSource()
                     reddit_data = reddit_source.collect()
-                    if reddit_data:
-                        pps.extend(reddit_data)
-                except Exception as e: 
-                    st.warning(f"Reddit: {e}")
+                    if reddit_data: pps.extend(reddit_data)
+                except Exception as e: st.warning(f"Reddit: {e}")
             
             if not pps:
-                st.error("No data. Check API keys.")
+                st.error("No signals detected. Verify connection.")
             else:
                 st.session_state['pain_points'] = pps
                 prog.progress(60)
                 
                 if use_council:
-                    # LLM Council Mode
-                    stat.markdown('<div class="status">🏛️ Convening LLM Council...</div>', unsafe_allow_html=True)
-                    
+                    stat.markdown('<div class="status"> CONVENING CONSENSUS PROTOCOL...</div>', unsafe_allow_html=True)
                     try:
                         from src.llm_council import LLMCouncil
                         council = LLMCouncil()
+                        def update_status(msg): stat.markdown(f'<div class="status"> {msg}</div>', unsafe_allow_html=True)
                         
-                        def update_status(msg):
-                            stat.markdown(f'<div class="status">🏛️ {msg}</div>', unsafe_allow_html=True)
-                        
-                        # Extract pain point descriptions
                         pain_point_strs = []
                         for p in pps[:pp]:
-                            if hasattr(p, 'description'):
-                                pain_point_strs.append(p.description)
-                            elif hasattr(p, 'text'):
-                                pain_point_strs.append(p.text)
-                            else:
-                                pain_point_strs.append(str(p))
+                            if hasattr(p, 'description'): pain_point_strs.append(p.description)
+                            elif hasattr(p, 'text'): pain_point_strs.append(p.text)
+                            else: pain_point_strs.append(str(p))
                         
-                        council_result = asyncio.run(council.generate_ideas(
-                            pain_point_strs,
-                            num_ideas=num,
-                            on_stage_complete=update_status
-                        ))
-                        
+                        council_result = asyncio.run(council.generate_ideas(pain_point_strs, num_ideas=num, on_stage_complete=update_status))
                         st.session_state['council_result'] = council_result
-                        # Clear standard mode results
-                        if 'ideas' in st.session_state:
-                            del st.session_state['ideas']
-                        if 'evaluations' in st.session_state:
-                            del st.session_state['evaluations']
-                        
+                        if 'ideas' in st.session_state: del st.session_state['ideas']
+                        if 'evaluations' in st.session_state: del st.session_state['evaluations']
                         prog.progress(100)
-                        stat.markdown('<div class="status status-done">✅ Council complete! Check Results tab.</div>', unsafe_allow_html=True)
-                        
+                        stat.markdown('<div class="status status-done"> PROTOCOL COMPLETE. DATA READY.</div>', unsafe_allow_html=True)
                     except Exception as e:
                         st.error(f"Council error: {e}")
-                        import traceback
-                        st.code(traceback.format_exc())
                 else:
-                    # Standard single-LLM mode
-                    stat.markdown('<div class="status">🧠 AI generating ideas...</div>', unsafe_allow_html=True)
-                    
+                    stat.markdown('<div class="status"> NEURAL PROCESSING ACTIVE...</div>', unsafe_allow_html=True)
                     from src.config import load_config
                     from src.models import IntelligenceData
                     cfg = load_config('config.yml')
@@ -987,17 +689,14 @@ with tab1:
                             from src.idea_generation import IdeaGenerationEngine
                             idea_catalog = asyncio.run(IdeaGenerationEngine(cfg).generate(intel))
                         
-                        # Extract ideas list for display
                         ideas = idea_catalog.ideas if hasattr(idea_catalog, 'ideas') else idea_catalog
                         st.session_state['ideas'] = ideas
                         
                         prog.progress(80)
-                        stat.markdown('<div class="status">📊 Scoring ideas...</div>', unsafe_allow_html=True)
+                        stat.markdown('<div class="status"> CALCULATING VIABILITY SCORES...</div>', unsafe_allow_html=True)
                         
                         from src.scoring import ScoringEngine
-                        # Pass the full catalog to scoring, not just the ideas list
                         eval_report = asyncio.run(ScoringEngine(cfg).evaluate(idea_catalog, intel))
-                        # Extract the evaluated_ideas list from the report
                         evals = eval_report.evaluated_ideas if hasattr(eval_report, 'evaluated_ideas') else []
                         st.session_state['evaluations'] = evals
                         
@@ -1017,123 +716,66 @@ with tab1:
                         except: pass
                         
                         prog.progress(100)
-                        stat.markdown('<div class="status status-done">✅ Done! Check Results tab.</div>', unsafe_allow_html=True)
+                        stat.markdown('<div class="status status-done"> PROCESSING COMPLETE. RESULTS AVAILABLE.</div>', unsafe_allow_html=True)
                     except Exception as e:
-                        st.error(f"Error: {e}")
+                        st.error(f"Processing Error: {e}")
 
 with tab2:
-    # Check for council results first
     if 'council_result' in st.session_state and st.session_state['council_result']:
         council = st.session_state['council_result']
-        
-        st.markdown('<div class="section-title">🏛️ LLM Council Results</div>', unsafe_allow_html=True)
-        
-        # Show council members
+        st.markdown('<div class="section-title">Consensus Results</div>', unsafe_allow_html=True)
         members = council.get('council_members', [])
-        st.markdown(f'<div class="section-sub"><span class="council-badge">Council</span> {" • ".join(members)}</div>', unsafe_allow_html=True)
-        
-        # Show scores
-        if council.get('stage2_scores'):
-            st.markdown("**📊 Peer Review Scores:**")
-            score_data = council['stage2_scores']
-            if score_data:
-                cols = st.columns(len(score_data))
-                for idx, (member, scores) in enumerate(score_data):
-                    if scores:
-                        score = scores.get('average', 0)
-                        with cols[idx]:
-                            st.markdown(f'<div class="council-member"><div class="council-member-name">{member}</div><span class="council-score">{score:.1f}/10</span></div>', unsafe_allow_html=True)
-        
-        st.markdown("---")
-        
-        # Show final synthesized ideas
-        st.markdown("### 🏆 Chairman's Final Selection")
+        st.markdown(f'<div class="section-sub"><span class="badge">COUNCIL</span> {" • ".join(members)}</div>', unsafe_allow_html=True)
         st.markdown(council.get('final_ideas', 'No ideas generated'))
-        
-        # Expandable: Show individual responses
-        with st.expander("🔍 View Individual Council Member Responses"):
-            for member, response in council.get('stage1_responses', []):
-                st.markdown(f"**{member}:**")
-                st.markdown(response)
-                st.markdown("---")
     
     elif 'ideas' in st.session_state and st.session_state.get('ideas'):
         ideas = st.session_state['ideas']
         evals = st.session_state.get('evaluations', [])
         pps = st.session_state.get('pain_points', [])
-        # Ensure evals is a list
-        if not isinstance(evals, list):
-            evals = []
-        top = evals[0].total_score if evals and len(evals) > 0 else 0
-        avg = sum(e.total_score for e in evals)/len(evals) if evals and len(evals) > 0 else 0
+        if not isinstance(evals, list): evals = []
         
-        st.markdown(f'<div class="metrics"><div class="metric"><div class="metric-value cyan">{len(ideas)}</div><div class="metric-label">Ideas</div></div><div class="metric"><div class="metric-value green">{top:.0f}</div><div class="metric-label">Top Score</div></div><div class="metric"><div class="metric-value purple">{avg:.0f}</div><div class="metric-label">Average</div></div><div class="metric"><div class="metric-value pink">{len(pps)}</div><div class="metric-label">Pain Points</div></div></div>', unsafe_allow_html=True)
+        top = evals[0].total_score if evals else 0
+        avg = sum(e.total_score for e in evals)/len(evals) if evals else 0
         
-        if evals:
-            data = [{'Idea': (next((i for i in ideas if i.id==e.idea_id),None).name[:18]+'...' if len(next((i for i in ideas if i.id==e.idea_id),None).name)>18 else next((i for i in ideas if i.id==e.idea_id),None).name), 'Score': e.total_score} for e in evals[:10] if next((i for i in ideas if i.id==e.idea_id),None)]
-            fig = go.Figure(go.Bar(x=[d['Score'] for d in data], y=[d['Idea'] for d in data], orientation='h', marker=dict(color=[d['Score'] for d in data], colorscale=[[0,'#8b5cf6'],[0.5,'#06b6d4'],[1,'#10b981']])))
-            fig.update_layout(height=280, margin=dict(l=0,r=10,t=10,b=0), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', yaxis=dict(categoryorder='total ascending', tickfont=dict(color='rgba(255,255,255,0.7)',size=10)), xaxis=dict(tickfont=dict(color='rgba(255,255,255,0.5)'), gridcolor='rgba(255,255,255,0.03)', range=[0,100]), showlegend=False)
-            st.plotly_chart(fig, use_container_width=True)
-        
-        st.markdown('<div class="section-title">Top Ideas</div>', unsafe_allow_html=True)
-        if st.session_state.get('used_council'):
-            st.markdown('<p style="color: rgba(255,255,255,0.8); font-size: 13px; margin-bottom: 16px; text-align: center;">💎 Scores based on peer review by multiple AI models (Innovation, Feasibility, Market Fit, Revenue Potential)</p>', unsafe_allow_html=True)
+        st.markdown(f'<div class="metrics"><div class="metric"><div class="metric-value red">{len(ideas)}</div><div class="metric-label">Objects</div></div><div class="metric"><div class="metric-value red">{top:.0f}</div><div class="metric-label">Max Score</div></div><div class="metric"><div class="metric-value purple">{avg:.0f}</div><div class="metric-label">Mean Score</div></div><div class="metric"><div class="metric-value">{len(pps)}</div><div class="metric-label">Inputs</div></div></div>', unsafe_allow_html=True)
         
         displayed_count = 0
+        st.markdown('<div class="section-title">High Priority Targets</div>', unsafe_allow_html=True)
+        
         for i, e in enumerate(evals[:10]):
             idea = next((x for x in ideas if x.id==e.idea_id), None)
-            if not idea:
-                st.warning(f"Idea #{i+1} not found (ID: {e.idea_id})")
-                continue
+            if not idea: continue
             
-            try:
-                displayed_count += 1
-                problem = getattr(idea, "problem_statement", "N/A")
-                solution = getattr(idea, "solution_description", "N/A")
-                revenue = getattr(idea, "revenue_model", "N/A")
-                tam = getattr(idea, "tam_estimate", "N/A")
-                
-                # Show preview with truncation
-                problem_preview = problem[:150] + "..." if len(problem) > 150 else problem
-                solution_preview = solution[:150] + "..." if len(solution) > 150 else solution
-                
-                st.markdown(f'<div class="idea"><div class="idea-header"><div class="idea-rank">{displayed_count}</div><div class="idea-score">⭐ {e.total_score:.0f}/100</div></div><div class="idea-name">{idea.name}</div><div class="idea-label">Problem</div><div class="idea-text">{problem_preview}</div><div class="idea-label">Solution</div><div class="idea-text">{solution_preview}</div><div class="idea-footer"><div><div class="idea-meta-label">Revenue</div><div class="idea-meta-value">{revenue[:50]}</div></div><div><div class="idea-meta-label">TAM</div><div class="idea-meta-value">{tam[:50]}</div></div></div></div>', unsafe_allow_html=True)
-                
-                # Add expandable section for full details
-                with st.expander(f"📋 View Full Details", expanded=False):
-                    st.markdown(f"### {idea.name}\n")
-                    st.markdown(f"**💡 Problem Statement**\n\n{problem}\n")
-                    st.markdown(f"**✨ Solution Description**\n\n{solution}\n")
-                    st.markdown(f"**💰 Revenue Model**\n\n{revenue}\n")
-                    st.markdown(f"**📊 TAM Estimate**\n\n{tam}\n")
-                    if hasattr(idea, 'target_market'):
-                        st.markdown(f"**🎯 Target Market**\n\n{idea.target_market}\n")
-                    if hasattr(idea, 'competitive_advantage'):
-                        st.markdown(f"**🏆 Competitive Advantage**\n\n{idea.competitive_advantage}")
-            except Exception as ex:
-                st.error(f"Error displaying idea #{i+1}: {str(ex)}")
+            displayed_count += 1
+            problem = getattr(idea, "problem_statement", "N/A")
+            solution = getattr(idea, "solution_description", "N/A")
+            revenue = getattr(idea, "revenue_model", "N/A")
+            tam = getattr(idea, "tam_estimate", "N/A")
+            
+            problem_preview = problem[:150] + "..." if len(problem) > 150 else problem
+            solution_preview = solution[:150] + "..." if len(solution) > 150 else solution
+            
+            st.markdown(f'<div class="idea"><div class="idea-header"><div class="idea-rank">0{displayed_count}</div><div class="idea-score">:// {e.total_score:.0f}</div></div><div class="idea-name">{idea.name}</div><div class="idea-text"><strong style="color:var(--primary)">PROBLEM:</strong> {problem_preview}</div><div class="idea-text"><strong style="color:var(--primary)">SOLUTION:</strong> {solution_preview}</div><div class="idea-footer"><div><div class="idea-meta-label">Revenue Model</div><div class="idea-meta-value">{revenue[:50]}</div></div><div><div class="idea-meta-label">Est. Market</div><div class="idea-meta-value">{tam[:50]}</div></div></div></div>', unsafe_allow_html=True)
     else:
-        st.markdown('<div class="empty"><div class="empty-icon">🚀</div><div>No ideas yet. Generate some!</div></div>', unsafe_allow_html=True)
+        st.markdown('<div class="empty"><div class="empty-icon">⚠️</div><div>No Data. Initiate Generation Sequence.</div></div>', unsafe_allow_html=True)
 
 with tab3:
-    st.markdown('<div class="section-title">Export</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Data Export</div>', unsafe_allow_html=True)
     output_dir = Path('./output')
     runs = sorted([r for r in output_dir.glob('run_*') if r.is_dir()], reverse=True) if output_dir.exists() else []
     if runs:
-        sel = st.selectbox("Run:", [r.name for r in runs], label_visibility="collapsed")
+        sel = st.selectbox("Select Dataset:", [r.name for r in runs], label_visibility="collapsed")
         for f in (Path('./output')/sel).glob('*'):
             if f.is_file():
                 c1, c2 = st.columns([5,1])
                 with c1: st.write(f"📄 **{f.name}**")
                 with c2:
-                    with open(f,'rb') as fp: st.download_button("⬇️", fp, f.name)
+                    with open(f,'rb') as fp: st.download_button("⬇", fp, f.name)
     else:
-        st.markdown('<div class="empty"><div class="empty-icon">📁</div><div>No exports yet</div></div>', unsafe_allow_html=True)
+        st.write("No archives found.")
 
 with tab4:
-    st.markdown('<div class="section-title">Documentation</div>', unsafe_allow_html=True)
-    st.markdown('<div class="glass"><h3>🔄 Pipeline</h3><p>Data Collection → Pain Point Extraction → AI Ideation → Scoring → Code Generation</p></div>', unsafe_allow_html=True)
-    st.markdown('<div class="glass"><h3>📡 Data Sources</h3><p>GitHub Trending • News APIs • Search APIs • Reddit</p></div>', unsafe_allow_html=True)
-    st.markdown('<div class="glass"><h3>💻 Code Generation</h3><p>37-file production app: FastAPI + Next.js + PostgreSQL + Docker + CI/CD</p></div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">System Manual</div>', unsafe_allow_html=True)
+    st.markdown('<div class="glass"><h3>Pipeline Architecture</h3><p>Ingestion → NLP Analysis → Scoring Heuristics → Stack Assembly</p></div>', unsafe_allow_html=True)
 
-st.markdown('<div class="footer">AI Startup Generator • Built for founders who move fast</div>', unsafe_allow_html=True)
+st.markdown('<div style="text-align: center; margin-top: 50px; color: #52525b; font-size: 10px; text-transform: uppercase;">System Ready • v2.1.0 • Redacted</div>', unsafe_allow_html=True)
