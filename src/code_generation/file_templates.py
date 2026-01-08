@@ -880,3 +880,196 @@ jobs:
         run: |
           docker-compose build
 '''
+
+# =============================================================================
+# INTEGRATION TEMPLATES (Added for Phase 5)
+# =============================================================================
+
+BACKEND_WORKER_PY = '''"""Celery worker configuration."""
+
+from celery import Celery
+from celery.schedules import crontab
+from datetime import timedelta
+from typing import Dict, Any
+
+from app.core.config import settings
+
+celery_app = Celery(
+    "worker",
+    broker=settings.REDIS_URL,
+    backend=settings.REDIS_URL
+)
+
+celery_app.conf.task_routes = {
+    "app.worker.test_celery": "main-queue",
+    "app.worker.email_task": "email-queue"
+}
+
+celery_app.conf.update(
+    task_serializer="json",
+    accept_content=["json"],
+    result_serializer="json",
+    timezone="UTC",
+    enable_utc=True,
+)
+
+@celery_app.task(acks_late=True)
+def test_celery(word: str) -> str:
+    return f"test task return {word}"
+
+@celery_app.task
+def email_task(email: str, subject: str, body: str):
+    """Background task to send email."""
+    # In a real app, you would inject the email service here
+    # from app.services.email import email_service
+    # import asyncio
+    # asyncio.run(email_service.send_email(subject, [email], body))
+    return f"Email sent to {email}"
+'''
+
+BACKEND_AI_SERVICE_PY = '''"""AI Service wrapper."""
+
+import openai
+from typing import Optional, List, Dict, Any
+from app.core.config import settings
+
+class AIService:
+    def __init__(self):
+        # self.api_key = settings.OPENAI_API_KEY
+        # self.client = openai.OpenAI(api_key=self.api_key)
+        self.default_model = "gpt-3.5-turbo"
+
+    def generate_text(self, prompt: str, system_prompt: Optional[str] = None) -> str:
+        """Generate text using OpenAI."""
+        # messages = []
+        # if system_prompt:
+        #     messages.append({"role": "system", "content": system_prompt})
+        # messages.append({"role": "user", "content": prompt})
+
+        try:
+            # response = self.client.chat.completions.create(
+            #     model=self.default_model,
+            #     messages=messages,
+            #     temperature=0.7,
+            # )
+            # return response.choices[0].message.content
+            return "This is a mock AI response. Configure OPENAI_API_KEY to enable real responses."
+        except Exception as e:
+            print(f"Error calling OpenAI: {e}")
+            return ""
+
+    def generate_json(self, prompt: str, schema: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate JSON response (simplified wrapper)."""
+        system_prompt = "You are a JSON generator. Respond with valid JSON only."
+        text = self.generate_text(prompt + "\\n\\nRespond with JSON matching this schema: " + str(schema), system_prompt)
+        import json
+        try:
+            return json.loads(text)
+        except:
+            return {}
+
+ai_service = AIService()
+'''
+
+BACKEND_EMAIL_SERVICE_PY = '''"""Email service wrapper."""
+
+from typing import List, Dict, Any
+from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
+from pydantic import EmailStr
+from pathlib import Path
+import os
+
+from app.core.config import settings
+
+class EmailService:
+    def __init__(self):
+        # Mock config if variables not set
+        self.conf = ConnectionConfig(
+            MAIL_USERNAME=os.getenv("MAIL_USERNAME", "user"),
+            MAIL_PASSWORD=os.getenv("MAIL_PASSWORD", "password"),
+            MAIL_FROM=os.getenv("MAIL_FROM", "test@example.com"),
+            MAIL_PORT=int(os.getenv("MAIL_PORT", "587")),
+            MAIL_SERVER=os.getenv("MAIL_SERVER", "smtp.gmail.com"),
+            MAIL_STARTTLS=True,
+            MAIL_SSL_TLS=False,
+            USE_CREDENTIALS=True,
+            VALIDATE_CERTS=True
+        )
+        self.fastmail = FastMail(self.conf)
+
+    async def send_email(
+        self,
+        subject: str,
+        recipients: List[EmailStr],
+        body: str,
+        template_name: str = None
+    ):
+        """Send an email."""
+        message = MessageSchema(
+            subject=subject,
+            recipients=recipients,
+            body=body,
+            subtype=MessageType.html
+        )
+        
+        # await self.fastmail.send_message(message)
+        print(f"Mock sending email to {recipients}: {subject}")
+
+email_service = EmailService()
+'''
+
+ROOT_DOCKER_COMPOSE = '''version: '3.8'
+
+services:
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/${db_name}
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=changeme
+      - OPENAI_API_KEY=${openai_key}
+    depends_on:
+      - db
+      - redis
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+    depends_on:
+      - backend
+
+  db:
+    image: postgres:15-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=${db_name}
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  ${worker_service}
+
+volumes:
+  postgres_data:
+'''

@@ -174,7 +174,7 @@ def build_from_idea(idea_file, config, output):
     try:
         # Load idea from file
         click.echo(f"\nLoading idea from: {idea_file}")
-        with open(idea_file) as f:
+        with open(idea_file, encoding='utf-8') as f:
             idea_data = json.load(f)
 
         # Convert to StartupIdea object

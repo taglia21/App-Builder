@@ -128,7 +128,7 @@ Respond with ONLY valid JSON, no other text."""
         try:
             response = self.llm_client.complete(prompt, system_prompt, max_tokens=2000, json_mode=True)
             return json.loads(response.content)
-        except Exception as e:
+        except (Exception, json.JSONDecodeError) as e:
             logger.error(f"Error generating product summary: {e}")
             return self._fallback_product_summary(idea)
     
@@ -194,7 +194,7 @@ Respond with ONLY valid JSON."""
         try:
             response = self.llm_client.complete(prompt, system_prompt, max_tokens=4000, json_mode=True)
             return json.loads(response.content)
-        except Exception as e:
+        except (Exception, json.JSONDecodeError) as e:
             logger.error(f"Error generating features: {e}")
             return self._fallback_feature_requirements(idea)
     
@@ -260,7 +260,7 @@ Respond with ONLY valid JSON."""
         try:
             response = self.llm_client.complete(prompt, system_prompt, max_tokens=2500, json_mode=True)
             return json.loads(response.content)
-        except Exception as e:
+        except (Exception, json.JSONDecodeError) as e:
             logger.error(f"Error generating architecture: {e}")
             return self._fallback_system_architecture(idea)
     
@@ -325,7 +325,7 @@ Respond with ONLY valid JSON."""
         try:
             response = self.llm_client.complete(prompt, system_prompt, max_tokens=4000, json_mode=True)
             return json.loads(response.content)
-        except Exception as e:
+        except (Exception, json.JSONDecodeError) as e:
             logger.error(f"Error generating schema: {e}")
             return self._fallback_database_schema(idea)
     

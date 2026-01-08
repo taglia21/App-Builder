@@ -1,0 +1,40 @@
+{
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "Test Dashboard App",
+    "one_liner": "A test application to verify dashboard generation.",
+    "problem_statement": "Testing is hard.",
+    "solution_description": "Auto-generate dashboards for testing.",
+    "target_buyer_persona": {
+        "title": "Developer",
+        "industry": "Tech",
+        "company_size": "1-10",
+        "pain_points": [
+            "Manual testing"
+        ],
+        "goals": [
+            "Automate everything"
+        ],
+        "pain_intensity": 0.8
+    },
+    "value_proposition": "Automates dashboard creation instantly.",
+    "revenue_model": "subscription",
+    "pricing_hypothesis": {
+        "model": "Freemium",
+        "price_points": [
+            "0",
+            "20"
+        ],
+        "price_range": "Low"
+    },
+    "tam_estimate": "$1B",
+    "sam_estimate": "$100M",
+    "som_estimate": "$10M",
+    "competitive_landscape": [
+        "None"
+    ],
+    "differentiation_factors": [
+        "AI-powered"
+    ],
+    "technical_requirements_summary": "React frontend, Python backend.",
+    "score": 90
+}

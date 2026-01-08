@@ -4,10 +4,13 @@ import os
 import json
 import logging
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional, Union
 from string import Template
 from datetime import datetime
+import ast
+from src.llm.client import get_llm_client
 
+from src.models import GeneratedCodebase, GoldStandardPrompt, ProductPrompt
 from src.code_generation.file_templates import (
     BACKEND_MAIN_PY,
     BACKEND_CONFIG_PY,
@@ -23,7 +26,21 @@ from src.code_generation.file_templates import (
     BACKEND_DB_BASE_PY,
     BACKEND_TEST_AUTH_PY,
     BACKEND_TEST_CRUD_PY,
-    GITHUB_WORKFLOW_CI
+    GITHUB_WORKFLOW_CI,
+    BACKEND_WORKER_PY,
+    BACKEND_AI_SERVICE_PY,
+    BACKEND_EMAIL_SERVICE_PY,
+    ROOT_DOCKER_COMPOSE
+)
+from src.code_generation.frontend_templates import (
+    FRONTEND_UI_BUTTON,
+    FRONTEND_UI_INPUT,
+    FRONTEND_UI_CARD,
+    FRONTEND_LIB_UTILS,
+    FRONTEND_LOGIN_PAGE,
+    FRONTEND_REGISTER_PAGE,
+    FRONTEND_DASHBOARD_LAYOUT,
+    FRONTEND_DASHBOARD_PAGE
 )
 
 logger = logging.getLogger(__name__)
@@ -32,7 +49,13 @@ logger = logging.getLogger(__name__)
 class EnhancedCodeGenerator:
     """Generates complete, production-ready full-stack applications."""
     
-    def __init__(self, output_dir: str = "./generated_app_v2"):
+    def __init__(self, config: Optional[Any] = None, llm_client: Optional[Any] = None):
+        """Initialize with config (backward compatibility)."""
+        # Config might be a PipelineConfig object or None
+        output_dir = "./generated_app_v2"
+        if config and hasattr(config, "code_generation") and config.code_generation:
+             output_dir = config.code_generation.output_directory
+        
         self.output_dir = Path(output_dir)
         self.files_created = []
         self.metrics = {
@@ -44,44 +67,147 @@ class EnhancedCodeGenerator:
             'config_files': 0
         }
     
-    def generate(self, idea: Dict[str, Any]) -> Dict[str, Any]:
+    def generate(self, prompt: Union[ProductPrompt, GoldStandardPrompt], output_dir: Optional[str] = None) -> GeneratedCodebase:
         """Generate complete application from startup idea."""
-        logger.info(f"Generating enhanced application for: {idea.get('name', 'App')}")
         
-        # Extract idea details
-        app_name = idea.get('name', 'MyApp').replace(' ', '')
-        description = idea.get('solution_description', idea.get('one_liner', 'A modern web application'))[:200]
+        # Determine output directory
+        if output_dir:
+            self.output_dir = Path(output_dir)
+            
+        # Extract idea details from Prompt object
+        if isinstance(prompt, GoldStandardPrompt):
+            product_prompt = prompt.product_prompt
+        else:
+            product_prompt = prompt
+            
+        idea_name = product_prompt.idea_name
+        
+        # Parse prompt content to get description/features
+        try:
+            content = json.loads(product_prompt.prompt_content)
+            description = content.get("product_summary", {}).get("solution_overview", product_prompt.idea_name)
+            if isinstance(description, dict):
+                 description = str(description)
+        except:
+             description = product_prompt.idea_name
+             
+        # Mock Idea Dict for internal methods
+        # Most internal methods use 'app_name' string directly, but _determine_core_entity uses 'idea' dict
+        # We construct a synthetic idea dict
+        idea_dict = {
+            "name": idea_name,
+            "solution_description": description,
+            "one_liner": description
+        }
+
+        logger.info(f"Generating enhanced application for: {idea_name}")
+        
+        app_name = idea_name.replace(' ', '')
         
         # Determine core entity from idea
-        entity = self._determine_core_entity(idea)
+        entity = self._determine_core_entity(idea_dict)
         
         # Create directory structure
         self._create_directories()
         
+        # transform idea to features
+        # If technical_requirements are in prompt content, we should use them
+        # For now, we rely on the description detection or pass specific flags if they exist
+        features = self._detect_features(description)
+        
         # Generate all files
-        self._generate_backend(app_name, description, entity)
-        self._generate_frontend(app_name, description, entity)
+        self._generate_backend(app_name, description, entity, features)
+        self._generate_frontend(app_name, description, entity, theme="Modern") # theme is hardcoded for now
         self._generate_configs(app_name, description)
         self._generate_docs(app_name, description, entity)
+        self._generate_deployment_files(app_name)
         
         # Calculate metrics
         self._calculate_metrics()
         
         logger.info(f"✓ Generated {self.metrics['total_files']} files ({self.metrics['total_lines']} lines)")
         
-        return {
-            'output_dir': str(self.output_dir),
-            'files': self.files_created,
-            'metrics': self.metrics
-        }
+        return GeneratedCodebase(
+            idea_id=product_prompt.idea_id,
+            idea_name=idea_name,
+            output_path=str(self.output_dir),
+            backend_framework="FastAPI",
+            frontend_framework="Next.js 14",
+            infrastructure_provider="Docker Compose",
+            files_generated=self.metrics['total_files'],
+            lines_of_code=self.metrics['total_lines']
+        )
+
     
+    def _detect_features(self, description: str) -> Dict[str, bool]:
+        """Use LLM to detect necessary technical features."""
+        try:
+            client = get_llm_client("auto")
+            prompt = f"""Analyze this app description and detect technical requirements.
+Description: {description}
+
+Return JSON boolean flags:
+{{
+    "needs_payments": true,  # If selling something/subscription
+    "needs_background_jobs": true,  # If processing video/heavy data
+    "needs_ai_integration": true,  # If usage of LLMs/AI is core
+    "needs_email": true # If sending newsletters/notifications
+}}
+"""
+            response = client.complete(prompt, json_mode=True)
+            return json.loads(response.content.replace('```json', '').replace('```', '').strip())
+        except Exception as e:
+            logger.warning(f"Feature detection failed: {e}")
+            return {
+                "needs_payments": "subscription" in description.lower(),
+                "needs_background_jobs": "video" in description.lower() or "scrape" in description.lower(),
+                "needs_ai_integration": "ai" in description.lower(),
+                "needs_email": "notify" in description.lower()
+            }
     def _determine_core_entity(self, idea: Dict[str, Any]) -> Dict[str, Any]:
-        """Determine the core entity for the app based on the idea."""
-        name = idea.get('name', 'Item').lower()
-        problem = idea.get('problem_statement', '').lower()
-        solution = idea.get('solution_description', '').lower()
+        """Determine the core entity for the app using LLM for smart modeling."""
+        name = idea.get('name', 'Item')
+        description = idea.get('solution_description', '')
         
-        combined_text = f"{name} {problem} {solution}"
+        try:
+            client = get_llm_client("auto")
+            prompt = f"""Design the core database entity for this startup idea.
+App Name: {name}
+Description: {description}
+
+Identify the SINGLE most important business object (e.g. for a Real Estate app -> 'Property', for a CRM -> 'Contact').
+Return a strict JSON object with this structure:
+{{
+    "name": "ClassName",
+    "class": "ClassName",
+    "lower": "classname",
+    "table": "table_names",
+    "fields": [
+        ["field_name", "String(255)", "str", true],
+        ["description", "Text", "Optional[str]", false],
+        ["status", "String(50)", "str", false],
+        ["another_field", "Integer", "int", true]
+    ]
+}}
+Rules:
+1. 'fields' is a list of lists: [name, sql_type, python_type, required_bool]
+2. sql_type examples: String(255), Text, Integer, Boolean, Float
+3. python_type examples: str, int, bool, float, Optional[str]
+4. Do not include 'id', 'created_at', 'updated_at' (added automatically).
+5. detailed fields specific to the domain.
+"""
+            response = client.complete(prompt, json_mode=True)
+            data = json.loads(response.content.replace('```json', '').replace('```', '').strip())
+            
+            # Validate structure
+            if 'fields' in data and isinstance(data['fields'], list):
+                return data
+                
+        except Exception as e:
+            logger.warning(f"Smart entity determination failed: {e}. Falling back to heuristics.")
+
+        # Fallback to heuristics if LLM fails
+        combined_text = f"{name} {description}".lower()
         
         # Common entity patterns
         if any(w in combined_text for w in ['workflow', 'automation', 'flow', 'process']):
@@ -152,12 +278,19 @@ class EnhancedCodeGenerator:
             'frontend/src/app/(auth)/login',
             'frontend/src/app/(auth)/register',
             'frontend/src/app/(dashboard)/dashboard',
+            'frontend/src/app/(dashboard)/dashboard/settings',
             'frontend/src/components/ui',
             'frontend/src/hooks',
             'frontend/src/lib',
             '.github/workflows',
             'docs',
         ]
+        
+        # Add entity directory to list
+        # We can't access entity['lower'] here easily without passing it, 
+        # but _generate_frontend handles the file creation which makes dirs implicitly if using write_file
+        # so this list is just for initial structure.
+
         
         for d in dirs:
             (self.output_dir / d).mkdir(parents=True, exist_ok=True)
@@ -167,7 +300,10 @@ class EnhancedCodeGenerator:
         full_path = self.output_dir / path
         full_path.parent.mkdir(parents=True, exist_ok=True)
         
-        with open(full_path, 'w') as f:
+        with open(full_path, 'w', encoding='utf-8') as f:
+            # Self-healing check for Python files
+            if path.endswith('.py'):
+                content = self._verify_and_fix(path, content)
             f.write(content)
         
         lines = len(content.split('\n'))
@@ -185,9 +321,53 @@ class EnhancedCodeGenerator:
             self.metrics['test_files'] += 1
         else:
             self.metrics['config_files'] += 1
+
+    def _verify_and_fix(self, path: str, content: str) -> str:
+        """Verify Python syntax and fix with LLM if broken."""
+        if not path.endswith('.py'):
+            return content
+            
+        for attempt in range(3):
+            try:
+                ast.parse(content)
+                return content
+            except SyntaxError as e:
+                logger.warning(f"Syntax error in {path} (Attempt {attempt+1}/3): {e}")
+                try:
+                    content = self._fix_code_with_llm(content, str(e))
+                except Exception as llm_error:
+                    logger.error(f"LLM fix failed: {llm_error}")
+        
+        # Final check
+        try:
+            ast.parse(content)
+        except SyntaxError as e:
+            logger.error(f"Failed to fix {path} after 3 attempts: {e}")
+            
+        return content
+
+    def _fix_code_with_llm(self, code: str, error: str) -> str:
+        """Use LLM to fix syntax error."""
+        client = get_llm_client("auto")
+        prompt = f"""Fix the following Python code which has a syntax error.
+Error: {error}
+
+Code:
+```python
+{code}
+```
+
+Return ONLY the fixed code. No explanations.
+"""
+        response = client.complete(prompt)
+        # Clean response
+        fixed = response.content.replace('```python', '').replace('```', '').strip()
+        return fixed
+
     
-    def _generate_backend(self, app_name: str, description: str, entity: Dict):
+    def _generate_backend(self, app_name: str, description: str, entity: Dict, features: Dict[str, bool] = None):
         """Generate all backend files."""
+        features = features or {}
         db_name = app_name.lower().replace('-', '_')
         
         # Main app
@@ -212,6 +392,18 @@ class EnhancedCodeGenerator:
         self._write_file('backend/app/db/session.py', BACKEND_DB_SESSION_PY, 'backend')
         self._write_file('backend/app/db/base_class.py', BACKEND_DB_BASE_PY, 'backend')
         self._write_file('backend/app/db/__init__.py', f'from app.db.base_class import Base  # noqa', 'backend')
+        
+        # Dynamic Modules (Smart Templates)
+        if features.get('needs_payments'):
+            logger.info("Injecting Payment Module (Stripe)...")
+            try:
+                client = get_llm_client("auto")
+                prompt = "Write a production-ready Python FastAPI module using 'stripe' library. It should include a 'create_checkout_session' function and a webhook handler. Return only python code."
+                resp = client.complete(prompt)
+                payment_code = resp.content.replace('```python', '').replace('```', '')
+                self._write_file('backend/app/core/payment.py', payment_code, 'backend')
+            except Exception as e:
+                logger.error(f"Failed to generate payment module: {e}")
         
         # Models
         user_model = Template(BACKEND_MODELS_USER_PY).safe_substitute(
@@ -314,6 +506,15 @@ httpx==0.26.0
 pytest==7.4.4
 pytest-asyncio==0.23.3
 '''
+        if features.get('needs_payments'):
+            requirements += "stripe==7.0.0\n"
+        if features.get('needs_background_jobs'):
+            requirements += "celery==5.3.6\nflower==2.0.1\n"
+        if features.get('needs_ai_integration'):
+            requirements += "openai==1.10.0\nanthropic==0.10.0\n"
+        if features.get('needs_email'):
+            requirements += "fastapi-mail==1.4.1\n"
+            
         self._write_file('backend/requirements.txt', requirements, 'backend')
         
         # Dockerfile
@@ -354,11 +555,100 @@ def event_loop():
         self._write_file('backend/tests/conftest.py', conftest, 'test')
         self._write_file('backend/tests/__init__.py', '', 'test')
         self._write_file('backend/tests/api/__init__.py', '', 'test')
+
+        # Additional Features
+        if features.get('needs_background_jobs'):
+            self._generate_background_jobs(app_name)
+            
+        if features.get('needs_ai_integration'):
+            self._generate_ai_service(app_name)
+            
+        if features.get('needs_email'):
+            self._generate_email_service(app_name)
+
+    def _generate_background_jobs(self, app_name: str):
+        """Generate Celery worker configuration."""
+        logger.info("Generating background jobs module...")
+        self._write_file('backend/app/worker.py', BACKEND_WORKER_PY, 'backend')
+        self._write_file('backend/app/celery_app.py', 'from app.worker import celery_app', 'backend')
+
+    def _generate_ai_service(self, app_name: str):
+        """Generate AI service module."""
+        logger.info("Generating AI service...")
+        self._write_file('backend/app/services/ai.py', BACKEND_AI_SERVICE_PY, 'backend')
+        self._write_file('backend/app/services/__init__.py', '', 'backend')
+
+    def _generate_email_service(self, app_name: str):
+        """Generate Email service module."""
+        logger.info("Generating email service...")
+        self._write_file('backend/app/services/email.py', BACKEND_EMAIL_SERVICE_PY, 'backend')
     
-    def _generate_frontend(self, app_name: str, description: str, entity: Dict):
+    
+    def _get_theme_config(self, theme: str = "Modern") -> Dict[str, str]:
+        """Get CSS variables and config for selected theme."""
+        themes = {
+            "Modern": {
+                "radius": "0.5rem",
+                "font": "Inter, sans-serif",
+                "colors": """
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;"""
+            },
+            "Minimalist": {
+                "radius": "0rem",
+                "font": "Helvetica Neue, sans-serif",
+                "colors": """
+    --background: 0 0% 100%;
+    --foreground: 0 0% 0%;
+    --primary: 0 0% 9%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 0 0% 9%;
+    --input: 0 0% 90%;
+    --ring: 0 0% 70%;"""
+            },
+            "Cyberpunk": {
+                "radius": "0px",
+                "font": "Orbitron, sans-serif",
+                "colors": """
+    --background: 260 50% 10%;
+    --foreground: 280 80% 80%;
+    --primary: 320 100% 50%;
+    --primary-foreground: 0 0% 0%;
+    --secondary: 180 100% 50%;
+    --secondary-foreground: 0 0% 0%;
+    --input: 260 50% 20%;
+    --ring: 320 100% 50%;"""
+            },
+            "Corporate": {
+                "radius": "0.25rem",
+                "font": "Arial, sans-serif",
+                "colors": """
+    --background: 220 30% 96%;
+    --foreground: 220 50% 20%;
+    --primary: 220 80% 40%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 20% 90%;
+    --secondary-foreground: 220 50% 20%;
+    --input: 220 20% 85%;
+    --ring: 220 80% 40%;"""
+            }
+        }
+        return themes.get(theme, themes["Modern"])
+
+    def _generate_frontend(self, app_name: str, description: str, entity: Dict, theme: str = "Modern"):
         """Generate minimal but functional frontend."""
         
+        theme_config = self._get_theme_config(theme)
+
         # Package.json
+
         package_json = f'''{{
   "name": "{app_name.lower().replace(' ', '-')}",
   "version": "1.0.0",
@@ -373,11 +663,22 @@ def event_loop():
     "next": "14.1.0",
     "react": "18.2.0",
     "react-dom": "18.2.0",
-    "axios": "^1.6.5"
+    "axios": "^1.6.5",
+    "clsx": "^2.1.0",
+    "tailwind-merge": "^2.2.0",
+    "lucide-react": "^0.309.0",
+    "recharts": "^2.10.4",
+    "react-hook-form": "^7.49.3",
+    "zod": "^3.22.4",
+    "@hookform/resolvers": "^3.3.4",
+    "@radix-ui/react-slot": "^1.0.2",
+    "@radix-ui/react-label": "^2.0.2",
+    "class-variance-authority": "^0.7.0"
   }},
   "devDependencies": {{
     "@types/node": "20.11.5",
     "@types/react": "18.2.48",
+    "@types/react-dom": "18.2.17",
     "typescript": "5.3.3",
     "tailwindcss": "3.4.1",
     "autoprefixer": "10.4.17",
@@ -387,19 +688,89 @@ def event_loop():
 '''
         self._write_file('frontend/package.json', package_json, 'frontend')
         
+        # Globals CSS
+        globals_css = f'''@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {{
+  :root {{
+    {theme_config['colors']}
+    --radius: {theme_config['radius']};
+  }}
+}}
+
+@layer base {{
+  * {{
+    @apply border-border;
+  }}
+  body {{
+    @apply bg-background text-foreground;
+    font-family: {theme_config['font']};
+  }}
+}}
+'''
+        self._write_file('frontend/src/app/globals.css', globals_css, 'frontend')
+        
+        # Tailwind Config
+        tailwind_config = '''import type { Config } from "tailwindcss";
+
+const config: Config = {
+  content: [
+    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+  ],
+  theme: {
+    container: {
+      center: true,
+      padding: "2rem",
+      screens: {
+        "2xl": "1400px",
+      },
+    },
+    extend: {
+      colors: {
+        border: "hsl(var(--input))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        primary: {
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
+        },
+        secondary: {
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
+        },
+      },
+      borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
+      },
+    },
+  },
+  plugins: [],
+};
+export default config;
+'''
+        self._write_file('frontend/tailwind.config.ts', tailwind_config, 'frontend')
+
         # Home page
         home_page = f'''export default function Home() {{
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">{app_name}</h1>
-        <p className="text-gray-600 mb-8">{description}</p>
-        <div className="space-x-4">
-          <a href="/login" className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-            Sign In
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="text-center space-y-6 p-8 border rounded-lg shadow-lg bg-card text-card-foreground max-w-2xl">
+        <h1 className="text-4xl font-bold tracking-tight text-primary">{app_name}</h1>
+        <p className="text-xl text-muted-foreground">{description}</p>
+        <div className="flex justify-center gap-4">
+          <a href="/login" className="px-8 py-3 bg-primary text-primary-foreground rounded-md hover:opacity-90 transition font-medium">
+            Get Started
           </a>
-          <a href="/register" className="px-6 py-2 bg-gray-200 rounded hover:bg-gray-300">
-            Sign Up
+          <a href="/docs" className="px-8 py-3 bg-secondary text-secondary-foreground rounded-md hover:opacity-90 transition font-medium">
+            Documentation
           </a>
         </div>
       </div>
@@ -410,7 +781,10 @@ def event_loop():
         self._write_file('frontend/src/app/page.tsx', home_page, 'frontend')
         
         # Layout
-        layout = f'''export const metadata = {{
+        layout = f'''import type {{ Metadata }} from "next";
+import "./globals.css";
+
+export const metadata: Metadata = {{
   title: "{app_name}",
   description: "{description}",
 }};
@@ -459,6 +833,45 @@ CMD ["npm", "run", "dev"]
 }
 '''
         self._write_file('frontend/tsconfig.json', tsconfig, 'frontend')
+    
+        # Components
+        self._write_file('frontend/src/components/ui/button.tsx', FRONTEND_UI_BUTTON, 'frontend')
+        self._write_file('frontend/src/components/ui/input.tsx', FRONTEND_UI_INPUT, 'frontend')
+        self._write_file('frontend/src/components/ui/card.tsx', FRONTEND_UI_CARD, 'frontend')
+        self._write_file('frontend/src/components/ui/label.tsx', 'export * from "@radix-ui/react-label"', 'frontend')
+        self._write_file('frontend/src/lib/utils.ts', FRONTEND_LIB_UTILS, 'frontend')
+        
+        # Icons
+        icons_comp = '''import { Loader2 } from "lucide-react";
+
+export const Icons = {
+  spinner: Loader2,
+};
+'''
+        self._write_file('frontend/src/components/icons.tsx', icons_comp, 'frontend')
+
+        # Authentication
+        self._write_file('frontend/src/app/(auth)/login/page.tsx', FRONTEND_LOGIN_PAGE, 'frontend')
+        self._write_file('frontend/src/app/(auth)/register/page.tsx', FRONTEND_REGISTER_PAGE, 'frontend')
+        self._write_file('frontend/src/app/(auth)/layout.tsx', 'export default function AuthLayout({children}: {children: React.ReactNode}) { return children }', 'frontend')
+
+        # Dashboard
+        dashboard_layout = Template(FRONTEND_DASHBOARD_LAYOUT).safe_substitute(
+            app_name=app_name,
+            entity_name=entity['name'],
+            entity_lower=entity['lower']
+        )
+        self._write_file('frontend/src/app/(dashboard)/layout.tsx', dashboard_layout, 'frontend')
+        
+        dashboard_page = Template(FRONTEND_DASHBOARD_PAGE).safe_substitute(
+            entity_name=entity['name'],
+            entity_lower=entity['lower']
+        )
+        self._write_file('frontend/src/app/(dashboard)/dashboard/page.tsx', dashboard_page, 'frontend')
+        self._write_file('frontend/src/app/(dashboard)/dashboard/settings/page.tsx', 'export default function Settings() { return <div>Settings</div> }', 'frontend')
+        
+        # Entity Pages
+        self._write_file(f'frontend/src/app/(dashboard)/dashboard/{entity["lower"]}s/page.tsx', f'export default function List() {{ return <div>List of {entity["name"]}s</div> }}', 'frontend')
     
     def _generate_configs(self, app_name: str, description: str):
         """Generate configuration files."""
@@ -576,6 +989,90 @@ docker-compose up -d
 Generated by AI Startup Generator
 '''
         self._write_file('README.md', readme, 'config')
+
+    def _generate_deployment_files(self, app_name: str):
+        """Generate Vercel and Render configuration files."""
+        safe_name = app_name.lower().replace(' ', '-')
+        
+        # Vercel (Frontend)
+        vercel_json = '''{
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "outputDirectory": ".next"
+}'''
+        self._write_file('frontend/vercel.json', vercel_json, 'config')
+        
+        # Render (Backend)
+        render_yaml = f'''services:
+  - type: web
+    name: {safe_name}-backend
+    env: python
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port 10000
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: {safe_name}-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: PYTHON_VERSION
+        value: 3.11.0
+
+databases:
+  - name: {safe_name}-db
+    databaseName: {safe_name.replace('-', '_')}
+    user: {safe_name.replace('-', '_')}
+'''
+        self._write_file('render.yaml', render_yaml, 'config')
+        
+        # Docker Compose
+        docker_compose = Template(ROOT_DOCKER_COMPOSE).safe_substitute(
+            db_name=safe_name.replace('-', '_'),
+            openai_key='${OPENAI_API_KEY}',  # Literal string for env var
+            worker_service='''
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: celery -A app.celery_app worker --loglevel=info
+    volumes:
+      - ./backend:/app
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/${db_name}
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=changeme
+      - OPENAI_API_KEY=${openai_key}
+    depends_on:
+      - db
+      - redis'''
+        )
+        self._write_file('docker-compose.yml', docker_compose, 'config')
+        
+        # Deployment Guide
+        deploy_guide = f'''# Deployment Guide for {app_name}
+
+## Frontend (Vercel)
+1. Push this repo to GitHub.
+2. Go to [Vercel](https://vercel.com/new).
+3. Import the repository.
+4. Set "Root Directory" to `frontend`.
+5. Click **Deploy**.
+
+## Backend (Render)
+1. Go to [Render](https://dashboard.render.com/).
+2. Click **New +** -> **Blueprint**.
+3. Connect your GitHub repo.
+4. Render will detect `render.yaml` and auto-configure the Backend + Postgres.
+5. Click **Apply**.
+
+## Environment Variables
+- Copy the `SECRET_KEY` from Render to Vercel environment variables.
+- Copy the `API_URL` (Render URL) to Vercel as `NEXT_PUBLIC_API_URL`.
+'''
+        self._write_file('DEPLOY.md', deploy_guide, 'docs')
     
     def _calculate_metrics(self):
         """Calculate generation metrics."""

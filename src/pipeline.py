@@ -245,16 +245,16 @@ class StartupGenerationPipeline:
 
             # Continue with prompt generation
             self.metadata.current_stage = PipelineStage.PROMPT_ENGINEERING
-            product_prompt = await self.prompt_engine.generate(
-                idea, intelligence_data, evaluation
+            product_prompt = self.prompt_engine.generate(
+                idea, intelligence_data
             )
 
             self.metadata.current_stage = PipelineStage.REFINEMENT
-            gold_standard_prompt = await self.refinement_engine.refine(product_prompt)
+            gold_standard_prompt = self.refinement_engine.refine(product_prompt)
             output.gold_standard_prompt = gold_standard_prompt
 
             self.metadata.current_stage = PipelineStage.CODE_GENERATION
-            codebase = await self.code_generator.generate(gold_standard_prompt)
+            codebase = self.code_generator.generate(gold_standard_prompt)
             output.generated_codebase = codebase
 
             self.metadata.status = PipelineStatus.COMPLETED
@@ -280,7 +280,7 @@ class StartupGenerationPipeline:
         file_path = output_dir / f"{name}.json"
 
         try:
-            with open(file_path, "w") as f:
+            with open(file_path, "w", encoding="utf-8") as f:
                 json.dump(data.model_dump(mode="json"), f, indent=2, default=str)
 
             logger.debug(f"Saved intermediate: {file_path}")
@@ -296,7 +296,7 @@ class StartupGenerationPipeline:
         file_path = output_dir / "pipeline_output.json"
 
         try:
-            with open(file_path, "w") as f:
+            with open(file_path, "w", encoding="utf-8") as f:
                 json.dump(output.model_dump(mode="json"), f, indent=2, default=str)
 
             logger.info(f"Saved final output: {file_path}")

@@ -11,6 +11,87 @@ from datetime import datetime
 import json
 import asyncio
 import os
+from src.code_generation.enhanced_engine import EnhancedCodeGenerator
+from src.utils.zipper import zip_directory
+from src.code_generation.refiner import CodeRefiner
+
+import streamlit as st
+
+# ... (rest of imports are fine, skipping to tab logic)
+
+# Main App Logic
+if st.session_state.launched:
+    
+    # ... (Header)
+    
+    tab1, tab2, tab3, tab4 = st.tabs(["Command Center", "High Priority Targets", "Studio", "Data Export"])
+    
+    with tab1:
+        # ... (Existing Intelligence Dashboard)
+        pass
+
+    with tab2:
+        # ... (Existing Idea Generation)
+        pass
+
+    with tab3:
+        st.markdown('<div class="section-title">Design Studio</div>', unsafe_allow_html=True)
+        
+        # Project Selector
+        projects_dir = Path("./generated_projects")
+        if projects_dir.exists():
+            projects = [d.name for d in projects_dir.iterdir() if d.is_dir()]
+            
+            c_sel, c_chat = st.columns([1, 2])
+            
+            with c_sel:
+                st.markdown("### Select Project")
+                selected = st.radio(
+                    "Available Projects", 
+                    projects,
+                    key="project_selector"
+                )
+                st.session_state.selected_project = selected
+                
+                if selected:
+                    st.success(f"Loaded: {selected}")
+                    st.info("💡 You can ask me to change colors, add fields, or fix bugs.")
+            
+            with c_chat:
+                st.markdown(f"### Refine: {st.session_state.selected_project}")
+                
+                # Chat History
+                for msg in st.session_state.messages:
+                    with st.chat_message(msg["role"]):
+                        st.markdown(msg["content"])
+                
+                # Chat Input
+                if prompt := st.chat_input("Ex: Change the primary button color to purple..."):
+                    # Add user message
+                    st.session_state.messages.append({"role": "user", "content": prompt})
+                    with st.chat_message("user"):
+                        st.markdown(prompt)
+                    
+                    # Agent Action
+                    with st.chat_message("assistant"):
+                        with st.spinner("Analyzing codebase..."):
+                            refiner = CodeRefiner()
+                            project_path = projects_dir / st.session_state.selected_project
+                            
+                            result = refiner.refine(str(project_path), prompt)
+                            
+                            if result["success"]:
+                                response = f"✅ **Success!** I updated `{result['file']}`.\n\nType *'Preview'* to see changes."
+                            else:
+                                response = f"❌ **Error:** {result['error']}"
+                            
+                            st.markdown(response)
+                            st.session_state.messages.append({"role": "assistant", "content": response})
+        else:
+            st.warning("No generated projects found. Go to 'High Priority Targets' to generate one first.")
+
+    with tab4:
+
 
 st.set_page_config(
     page_title="AI Startup Generator",
@@ -756,6 +837,36 @@ with tab2:
             solution_preview = solution[:150] + "..." if len(solution) > 150 else solution
             
             st.markdown(f'<div class="idea"><div class="idea-header"><div class="idea-rank">0{displayed_count}</div><div class="idea-score">:// {e.total_score:.0f}</div></div><div class="idea-name">{idea.name}</div><div class="idea-text"><strong style="color:var(--primary)">PROBLEM:</strong> {problem_preview}</div><div class="idea-text"><strong style="color:var(--primary)">SOLUTION:</strong> {solution_preview}</div><div class="idea-footer"><div><div class="idea-meta-label">Revenue Model</div><div class="idea-meta-value">{revenue[:50]}</div></div><div><div class="idea-meta-label">Est. Market</div><div class="idea-meta-value">{tam[:50]}</div></div></div></div>', unsafe_allow_html=True)
+            
+            c_gen, c_status = st.columns([1, 4])
+            with c_gen:
+                theme = st.selectbox(
+                    "Design Theme", 
+                    ["Modern", "Minimalist", "Cyberpunk", "Corporate"], 
+                    key=f"theme_{e.idea_id}",
+                    label_visibility="collapsed"
+                )
+                if st.button("GENERATE CODEBASE", key=f"btn_{e.idea_id}"):
+                    with c_status:
+                        with st.spinner(f"Architecting {theme} Design... Building Backend..."):
+                            try:
+                                generator = EnhancedCodeGenerator(output_dir=f"./generated_projects/{idea.name.replace(' ', '_')}")
+                                idea_dict = idea.model_dump() if hasattr(idea, 'model_dump') else vars(idea)
+                                result = generator.generate(idea_dict, theme=theme)
+                                
+                                zip_path = zip_directory(result['output_dir'], f"{idea.name.replace(' ', '_')}_v1")
+                                
+                                st.success(f"Build Complete! ({result['metrics']['total_files']} files)")
+                                with open(zip_path, "rb") as fp:
+                                    st.download_button(
+                                        label="⬇ DOWNLOAD ARTIFACT",
+                                        data=fp,
+                                        file_name=os.path.basename(zip_path),
+                                        mime="application/zip",
+                                        key=f"dl_{e.idea_id}"
+                                    )
+                            except Exception as ex:
+                                st.error(f"Build Failure: {ex}")
     else:
         st.markdown('<div class="empty"><div class="empty-icon">⚠️</div><div>No Data. Initiate Generation Sequence.</div></div>', unsafe_allow_html=True)
 

@@ -2,6 +2,6 @@
 Code generation module.
 """
 
-from .engine import CodeGenerationEngine
+from .enhanced_engine import EnhancedCodeGenerator as CodeGenerationEngine
 
 __all__ = ["CodeGenerationEngine"]

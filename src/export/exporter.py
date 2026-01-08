@@ -31,13 +31,13 @@ class ResultsExporter:
             else:
                 data.append(str(pp))
         
-        with open(json_path, 'w') as f:
+        with open(json_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2, default=str)
         
         # CSV export
         csv_path = self.run_dir / "pain_points.csv"
         if data:
-            with open(csv_path, 'w', newline='') as f:
+            with open(csv_path, 'w', newline='', encoding='utf-8') as f:
                 writer = csv.DictWriter(f, fieldnames=data[0].keys())
                 writer.writeheader()
                 writer.writerows(data)
@@ -72,20 +72,20 @@ class ResultsExporter:
         # Sort by score
         data.sort(key=lambda x: x.get('score', 0), reverse=True)
         
-        with open(json_path, 'w') as f:
+        with open(json_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2, default=str)
         
         # CSV export
         csv_path = self.run_dir / "ideas.csv"
         if data:
-            with open(csv_path, 'w', newline='') as f:
+            with open(csv_path, 'w', newline='', encoding='utf-8') as f:
                 writer = csv.DictWriter(f, fieldnames=data[0].keys())
                 writer.writeheader()
                 writer.writerows(data)
         
         # Markdown summary
         md_path = self.run_dir / "ideas_summary.md"
-        with open(md_path, 'w') as f:
+        with open(md_path, 'w', encoding='utf-8') as f:
             f.write("# Generated Startup Ideas\n\n")
             f.write(f"Generated: {datetime.now().isoformat()}\n\n")
             f.write(f"Total Ideas: {len(data)}\n\n")
@@ -118,7 +118,7 @@ class ResultsExporter:
             elif hasattr(evaluation, '__dict__'):
                 data['evaluation'] = {k: str(v) for k, v in evaluation.__dict__.items()}
         
-        with open(json_path, 'w') as f:
+        with open(json_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2, default=str)
         
         return str(json_path)
@@ -130,12 +130,12 @@ class ResultsExporter:
         stats['timestamp'] = self.timestamp
         stats['output_directory'] = str(self.run_dir)
         
-        with open(json_path, 'w') as f:
+        with open(json_path, 'w', encoding='utf-8') as f:
             json.dump(stats, f, indent=2, default=str)
         
         # Also create a readable summary
         md_path = self.run_dir / "README.md"
-        with open(md_path, 'w') as f:
+        with open(md_path, 'w', encoding='utf-8') as f:
             f.write("# Pipeline Run Summary\n\n")
             f.write(f"**Timestamp:** {self.timestamp}\n\n")
             f.write("## Statistics\n\n")
