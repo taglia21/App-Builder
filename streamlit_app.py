@@ -18,7 +18,24 @@ from src.pipeline import StartupGenerationPipeline
 
 import streamlit as st
 
+st.set_page_config(
+    page_title="AI Startup Generator",
+    page_icon="🔴",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
+
 # ... (rest of imports are fine, skipping to tab logic)
+
+
+if 'launched' not in st.session_state:
+    st.session_state.launched = False
+
+if 'messages' not in st.session_state:
+    st.session_state.messages = []
+
+if 'selected_project' not in st.session_state:
+    st.session_state.selected_project = None
 
 # Main App Logic
 if st.session_state.launched:
@@ -92,17 +109,9 @@ if st.session_state.launched:
             st.warning("No generated projects found. Go to 'High Priority Targets' to generate one first.")
 
     with tab4:
+        st.info("Export functionality coming soon.")
 
 
-st.set_page_config(
-    page_title="AI Startup Generator",
-    page_icon="🔴",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
-
-if 'launched' not in st.session_state:
-    st.session_state.launched = False
 
 # =============================================================================
 # SVG ICONS (PROFESSIONAL ASSETS)
@@ -852,6 +861,7 @@ with tab2:
                         with st.spinner(f"Architecting {theme} Design... Building Backend..."):
                             try:
                                 # Start Full Pipeline
+                                from src.config import load_config
                                 cfg = load_config('config.yml')
                                 pipeline = StartupGenerationPipeline(cfg)
                                 
