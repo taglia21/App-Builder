@@ -17,7 +17,7 @@ import logging
 from app.api import api_router
 from app.core.config import settings
 from app.db.session import engine
-from app.db import base  # noqa: F401
+from app.db import base_class  # noqa: F401
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

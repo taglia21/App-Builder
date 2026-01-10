@@ -271,6 +271,7 @@ fastapi>=0.109.0
 uvicorn[standard]>=0.27.0
 pydantic>=2.5.0
 pydantic-settings>=2.1.0
+email-validator>=2.1.0
 python-dotenv>=1.0.0
 
 # Database
@@ -307,7 +308,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \\
 
 # Install Python dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --default-timeout=1000 --no-cache-dir -r requirements.txt
 
 # Copy application
 COPY . .

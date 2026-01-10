@@ -520,6 +520,7 @@ redis==5.0.1
 httpx==0.26.0
 pytest==7.4.4
 pytest-asyncio==0.23.3
+email-validator==2.1.0.post1
 '''
         if features.get('needs_payments'):
             requirements += "stripe==7.0.0\n"
@@ -538,7 +539,7 @@ pytest-asyncio==0.23.3
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --default-timeout=1000 --no-cache-dir -r requirements.txt
 
 COPY . .
 
