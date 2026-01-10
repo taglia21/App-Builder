@@ -51,7 +51,10 @@ from src.code_generation.frontend_templates import (
     FRONTEND_COMPONENTS_SIDEBAR,
     FRONTEND_COMPONENTS_NAVBAR,
     FRONTEND_COMPONENTS_DATA_TABLE,
-    FRONTEND_ENTITY_LIST_PAGE
+    FRONTEND_COMPONENTS_DATA_TABLE,
+    FRONTEND_ENTITY_LIST_PAGE,
+    FRONTEND_POSTCSS_CONFIG,
+    FRONTEND_UI_ALERT
 )
 
 logger = logging.getLogger(__name__)
@@ -839,6 +842,9 @@ Templates are available in `terraform/` directory for AWS provisioning.
 }}
 '''
         self._write_file('frontend/package.json', package_json, 'frontend')
+
+        # PostCSS Config
+        self._write_file('frontend/postcss.config.js', FRONTEND_POSTCSS_CONFIG, 'frontend')
         
         # Next.js Config
         next_config = '''/** @type {import('next').NextConfig} */
@@ -1006,7 +1012,7 @@ CMD ["npm", "run", "dev"]
         self._write_file('frontend/src/components/ui/label.tsx', 'export * from "@radix-ui/react-label"', 'frontend')
         self._write_file('frontend/src/components/sidebar.tsx', Template(FRONTEND_COMPONENTS_SIDEBAR).safe_substitute(app_name=app_name, entity_name=entity['name'], entity_lower=entity['lower']), 'frontend')
         self._write_file('frontend/src/components/navbar.tsx', FRONTEND_COMPONENTS_NAVBAR, 'frontend')
-        self._write_file('frontend/src/components/ui/alert.tsx', 'import * as React from "react"\\nimport { cva, type VariantProps } from "class-variance-authority"\\nimport { cn } from "@/lib/utils"\\n\\nconst alertVariants = cva(\\n  "relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground",\\n  {\\n    variants: {\\n      variant: {\\n        default: "bg-background text-foreground",\\n        destructive:\\n          "border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive",\\n      },\\n    },\\n    defaultVariants: {\\n      variant: "default",\\n    },\\n  }\\n)\\n\\nconst Alert = React.forwardRef<\\n  HTMLDivElement,\\n  React.HTMLAttributes<HTMLDivElement> & VariantProps<typeof alertVariants>\\n>(({ className, variant, ...props }, ref) => (\\n  <div\\n    ref={ref}\\n    role="alert"\\n    className={cn(alertVariants({ variant }), className)}\\n    {...props}\\n  />\\n))\\nAlert.displayName = "Alert"\\n\\nconst AlertTitle = React.forwardRef<\\n  HTMLParagraphElement,\\n  React.HTMLAttributes<HTMLHeadingElement>\\n>(({ className, ...props }, ref) => (\\n  <h5\\n    ref={ref}\\n    className={cn("mb-1 font-medium leading-none tracking-tight", className)}\\n    {...props}\\n  />\\n))\\nAlertTitle.displayName = "AlertTitle"\\n\\nconst AlertDescription = React.forwardRef<\\n  HTMLParagraphElement,\\n  React.HTMLAttributes<HTMLParagraphElement>\\n>(({ className, ...props }, ref) => (\\n  <div\\n    ref={ref}\\n    className={cn("text-sm [&_p]:leading-relaxed", className)}\\n    {...props}\\n  />\\n))\\nAlertDescription.displayName = "AlertDescription"\\n\\nexport { Alert, AlertTitle, AlertDescription }', 'frontend')
+        self._write_file('frontend/src/components/ui/alert.tsx', FRONTEND_UI_ALERT, 'frontend')
         self._write_file('frontend/src/lib/utils.ts', FRONTEND_LIB_UTILS, 'frontend')
         
         # Icons

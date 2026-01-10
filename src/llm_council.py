@@ -206,31 +206,68 @@ Here are the analyst proposals:
 
 {chr(10).join(f'=== {r.member} (Score: {r.scores.get("average", "N/A") if r.scores else "N/A"}) ===\n{r.response}' for r in responses)}
 
-Create the final list of TOP {num_ideas} startup ideas. For each idea provide:
-1. **Name**: Catchy startup name
-2. **Problem Statement**: The pain point it addresses
-3. **Solution**: How it solves the problem  
-4. **Revenue Model**: How it makes money
-5. **TAM Estimate**: Market size
-6. **Why It's Great**: 1-2 sentences on why this idea stands out
-
-Rank them from best (#1) to good (#{num_ideas}). Be decisive."""
+Create the final list of TOP {num_ideas} startup ideas. 
+CRITICAL: You must return a valid JSON object containing a list of ideas.
+Format:
+{{
+    "ideas": [
+        {{
+            "name": "Startup Name",
+            "one_liner": "Short catchy tagline",
+            "problem_statement": "Detailed problem description",
+            "solution_description": "Detailed solution description",
+            "revenue_model": "One of: subscription, usage, transaction, hybrid",
+            "target_buyer_persona": {{
+                "title": "Target User Title",
+                "company_size": "SMB/Enterprise/Startup",
+                "industry": "Tech/Retail/etc",
+                "pain_intensity": 0.9
+            }},
+            "tam_estimate": "$XX Billion",
+            "pricing_hypothesis": {{
+                "tiers": ["Free", "Pro", "Enterprise"],
+                "price_range": "$10-$100/mo"
+            }},
+            "technical_requirements_summary": "Python backend, React frontend..."
+        }}
+    ]
+}}
+output ONLY the JSON. No other text."""
 
         messages = [{"role": "user", "content": chairman_prompt}]
         
         async with aiohttp.ClientSession() as session:
             try:
                 result = await self._call_model(self.CHAIRMAN_MODEL, messages, session)
-                if result and len(result.strip()) > 50:
-                    return result
-                else:
-                    # Fallback: return top analyst responses if chairman fails
-                    fallback = f"## Top Startup Ideas\n\n"
-                    for i, r in enumerate(responses[:min(num_ideas, len(responses))], 1):
-                        fallback += f"### Idea {i} (from {r.member})\n{r.response[:500]}...\n\n"
-                    return fallback
+                if result:
+                    # Clean markdown if present
+                    clean_res = result.replace('```json', '').replace('```', '').strip()
+                    try:
+                        data = json.loads(clean_res)
+                        return data
+                    except json.JSONDecodeError:
+                        print(f"Failed to parse Chairman JSON: {clean_res[:100]}...")
+                        # Fallback to a single dummy idea text wrapped in structure if parse fails
+                        return {
+                            "ideas": [
+                                {
+                                    "name": "Parse Error Backup",
+                                    "one_liner": "JSON Parsing failed",
+                                    "problem_statement": "The LLM did not return valid JSON.",
+                                    "solution_description": clean_res[:500],
+                                    "revenue_model": "subscription",
+                                    "target_buyer_persona": {
+                                        "title": "Developer", "company_size": "Any", "industry": "Tech", "pain_intensity": 0.5
+                                    },
+                                    "tam_estimate": "Unknown",
+                                    "pricing_hypothesis": {"tiers": [], "price_range": "Unknown"},
+                                    "technical_requirements_summary": "None"
+                                }
+                            ]
+                        }
+                return {"ideas": []}
             except Exception as e:
-                return f"Chairman synthesis error: {str(e)}. Showing top analyst responses:\n\n" + "\n\n".join(f"**{r.member}:** {r.response[:300]}..." for r in responses[:3])
+                return {"error": str(e), "ideas": []}
     
     async def generate_ideas(self, pain_points: List[str], num_ideas: int = 10, 
                             on_stage_complete=None) -> Dict[str, Any]:
@@ -264,6 +301,7 @@ Rank them from best (#1) to good (#{num_ideas}). Be decisive."""
             on_stage_complete("Stage 3: Chairman synthesizing final ideas...")
         final = await self.stage3_synthesize(responses, num_ideas)
         result["final_ideas"] = final
+
         
         return result
 

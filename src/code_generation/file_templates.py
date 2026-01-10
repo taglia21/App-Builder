@@ -139,7 +139,7 @@ class User(Base):
 
 BACKEND_MODELS_CORE_PY = '''"""${entity_name} model."""
 
-from sqlalchemy import Column, String, Text, Boolean, DateTime, ForeignKey, Integer, Float, JSON
+from sqlalchemy import Column, String, Text, Boolean, DateTime, Date, ForeignKey, Integer, Float, JSON
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 import uuid
