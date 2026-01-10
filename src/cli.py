@@ -12,6 +12,9 @@ from loguru import logger
 from .config import load_config
 from .models import BuyerPersona, PricingHypothesis, RevenueModel, StartupIdea
 from .pipeline import StartupGenerationPipeline
+from .utils.ui import UI
+from .deployment.engine import DeploymentEngine
+from .deployment.models import DeploymentConfig, DeploymentProviderType, DeploymentEnvironment
 
 
 @click.group()
@@ -61,56 +64,72 @@ def cli():
     is_flag=True,
     help="Verbose output with detailed logging",
 )
-def generate(config, output, demo, skip_refinement, skip_code_gen, llm_provider, verbose):
+@click.option(
+    "--deploy",
+    is_flag=True,
+    help="Deploy immediately after generation",
+)
+def generate(config, output, demo, skip_refinement, skip_code_gen, llm_provider, verbose, deploy):
     """Run the full pipeline once."""
-    click.echo("=" * 80)
-    click.echo("Startup Generator - Full Pipeline Execution")
+    UI.header("Startup Generator", "Full Pipeline Execution")
+    
     if demo:
-        click.echo("MODE: Demo (using sample data)")
+        UI.warning("MODE: Demo (using sample data)")
     if llm_provider == 'mock':
-        click.echo("LLM: Mock (no real API calls)")
-    click.echo("=" * 80)
+        UI.warning("LLM: Mock (no real API calls)")
 
     try:
         # Load configuration
-        click.echo(f"\nLoading configuration from: {config}")
+        UI.step(f"Loading configuration from: {config}")
         pipeline_config = load_config(config)
 
         # Create pipeline with LLM provider
         pipeline = StartupGenerationPipeline(pipeline_config, llm_provider=llm_provider)
 
         # Run pipeline
-        click.echo("\nStarting pipeline execution...\n")
-        result = asyncio.run(pipeline.run(
-            demo_mode=demo,
-            skip_refinement=skip_refinement,
-            skip_code_gen=skip_code_gen,
-            output_dir=output
-        ))
+        UI.step("Starting pipeline execution...")
+        
+        # Use progress bar for generation (mocking steps since pipeline handles internal logic)
+        # Ideally pipeline would yield progress, but for now we wrap the async run
+        with UI.spinner("Running pipeline..."):
+             result = asyncio.run(pipeline.run(
+                demo_mode=demo,
+                skip_refinement=skip_refinement,
+                skip_code_gen=skip_code_gen,
+                output_dir=output
+            ))
 
         # Display results
-        click.echo("\n" + "=" * 80)
-        click.echo("RESULTS")
-        click.echo("=" * 80)
+        UI.header("Results")
 
         if result.selected_idea:
-            click.echo(f"\nIdea: {result.selected_idea.name}")
-            click.echo(f"One-liner: {result.selected_idea.one_liner}")
+            UI.info(f"Idea: [bold]{result.selected_idea.name}[/]")
+            print(f"   {result.selected_idea.one_liner}")
 
         if result.evaluation:
             top_eval = result.evaluation.evaluated_ideas[0]
-            click.echo(f"\nTotal Score: {top_eval.total_score:.2f}")
+            UI.info(f"Total Score: [bold green]{top_eval.total_score:.2f}[/]")
 
         if result.generated_codebase:
-            click.echo(f"\nCodebase: {result.generated_codebase.output_path}")
-            click.echo(f"Files: {result.generated_codebase.files_generated}")
+            UI.success(f"Codebase Generated at: {result.generated_codebase.output_path}")
+            UI.info(f"Files: {result.generated_codebase.files_generated}")
 
-        click.echo("\n" + "=" * 80)
-        click.secho("✓ Pipeline completed successfully!", fg="green", bold=True)
-        click.echo("=" * 80)
+        UI.success("Pipeline completed successfully!")
+
+        # Trigger deployment if requested
+        if deploy and result.generated_codebase:
+             UI.step("Initiating Post-Generation Deployment...")
+             ctx = click.get_current_context()
+             ctx.invoke(
+                 globals()['deploy'], 
+                 codebase_path=result.generated_codebase.output_path,
+                 frontend="vercel",
+                 backend="render",
+                 env="production"
+             )
 
     except Exception as e:
-        click.secho(f"\n✗ Pipeline failed: {e}", fg="red", bold=True)
+        UI.error(f"Pipeline failed: {e}")
         logger.exception("Pipeline execution failed")
         raise click.Abort()
 
@@ -250,10 +269,6 @@ def list_providers():
     """List available LLM providers."""
     from src.llm import list_available_providers
     
-    click.echo("\n" + "="*60)
-    click.echo("Available LLM Providers")
-    click.echo("="*60 + "\n")
-    
     available = list_available_providers()
     
     provider_info = {
@@ -265,15 +280,16 @@ def list_providers():
         "mock": {"model": "mock-model", "desc": "Testing mode - no API calls"}
     }
     
+    rows = []
     for provider, is_available in available.items():
-        status = "✓ Ready" if is_available else "✗ No API key"
+        status = "[green]✓ Ready[/]" if is_available else "[red]✗ No API key[/]"
         info = provider_info.get(provider, {})
         model = info.get("model", "")
         desc = info.get("desc", "")
-        
-        click.echo(f"{status:15} {provider:15} {model:30} {desc}")
+        rows.append([status, provider, model, desc])
     
-    click.echo("\nUse --llm-provider <name> to select a provider")
+    UI.table("Available LLM Providers", ["Status", "Provider", "Model", "Description"], rows)
+    UI.info("\nUse [bold]--llm-provider <name>[/] to select a provider")
 
 
 @cli.command()
@@ -288,14 +304,110 @@ def test_llm(provider):
         providers_to_test = [provider]
     
     for prov in providers_to_test:
-        click.echo(f"\nTesting {prov}...")
+        UI.step(f"Testing {prov}...")
         try:
-            client = get_llm_client(prov)
-            response = client.complete("Say 'Hello, I am working!' in exactly those words.", max_tokens=50)
-            click.echo(f"✓ {prov}: {response.content[:50]}")
-            click.echo(f"  Model: {response.model}, Latency: {response.latency_ms:.0f}ms")
+            with UI.spinner(f"Connecting to {prov}..."):
+                client = get_llm_client(prov)
+                response = client.complete("Say 'Hello!'", max_tokens=10)
+            
+            UI.success(f"{prov}: [italic]{response.content.strip()}[/]")
+            UI.info(f"  Model: {response.model}, Latency: {response.latency_ms:.0f}ms")
         except Exception as e:
-            click.echo(f"✗ {prov}: {e}")
+            UI.error(f"{prov}: {e}")
+
+
+@cli.command()
+@click.argument("codebase_path", type=click.Path(exists=True))
+@click.option("--frontend", default="vercel", help="Frontend provider (vercel)")
+@click.option("--backend", default="render", help="Backend provider (render, railway, fly_io)")
+@click.option("--env", default="production", help="Target environment")
+def deploy(codebase_path, frontend, backend, env):
+    """Deploy the application to cloud providers."""
+    
+    # Delayed import to avoid circular dependencies if any
+    from .deployment.engine import DeploymentEngine
+    from .deployment.models import DeploymentConfig, DeploymentProviderType, DeploymentEnvironment
+    
+    UI.header("Deploying App", f"From: {codebase_path}")
+    
+    try:
+        engine = DeploymentEngine()
+        
+        # Deploy Frontend
+        UI.step(f"[1/2] Deploying Frontend to {frontend.upper()}...")
+        fe_config = DeploymentConfig(
+            provider=DeploymentProviderType(frontend),
+            environment=DeploymentEnvironment(env)
+        )
+        # Mock secrets for now
+        secrets = {"VERCEL_TOKEN": "mock", "RENDER_API_KEY": "mock"}
+        
+        # We need to target the frontend dir specifically for Vercel
+        fe_path = Path(codebase_path) / "frontend"
+        
+        # Run async deploy in sync CLI
+        with UI.spinner("Deploying frontend..."):
+            fe_result = asyncio.run(engine.deploy(fe_path, fe_config, secrets))
+        
+        if fe_result.success:
+            UI.success(f"Frontend Deployed: {fe_result.frontend_url}")
+        else:
+            UI.error(f"Frontend Failed: {fe_result.error_message}")
+            
+        # Deploy Backend
+        UI.step(f"[2/2] Deploying Backend to {backend.upper()}...")
+        be_config = DeploymentConfig(
+            provider=DeploymentProviderType(backend),
+            environment=DeploymentEnvironment(env)
+        )
+        be_path = Path(codebase_path) # Render deploy usually takes root
+        
+        with UI.spinner("Deploying backend..."):
+            be_result = asyncio.run(engine.deploy(be_path, be_config, secrets))
+        
+        if be_result.success:
+            UI.success(f"Backend Deployed: {be_result.backend_url}")
+        else:
+            UI.error(f"Backend Failed: {be_result.error_message}")
+
+    except Exception as e:
+        UI.error(f"Deployment Error: {e}")
+
+
+@cli.command()
+@click.argument("deployment_id")
+@click.argument("to_id")
+def rollback(deployment_id, to_id):
+    """Rollback a deployment to a previous version."""
+    click.echo(f"Rolling back {deployment_id} to {to_id}...")
+    # engine = DeploymentEngine()
+    # success = asyncio.run(engine.rollback(deployment_id, to_id))
+    click.echo("✓ Rollback initiated (Mock)")
+
+
+@cli.command()
+@click.argument("codebase_path", type=click.Path(exists=True))
+def estimate_cost(codebase_path):
+    """Estimate monthly infrastructure costs."""
+    from .deployment.infrastructure.cost_estimator import CostEstimator
+    from .deployment.models import DeploymentConfig, DeploymentProviderType
+    
+    estimator = CostEstimator()
+    # Estimate for Vercel + Render
+    v_conf = DeploymentConfig(provider=DeploymentProviderType.VERCEL)
+    r_conf = DeploymentConfig(provider=DeploymentProviderType.RENDER)
+    
+    est_v = estimator.estimate(v_conf)
+    est_r = estimator.estimate(r_conf)
+    
+    total = est_v.total_monthly + est_r.total_monthly
+    
+    click.echo("\nMonthly Cost Estimate:")
+    click.echo("-" * 30)
+    click.echo(f"Frontend (Vercel): ${est_v.total_monthly:.2f}")
+    click.echo(f"Backend (Render):  ${est_r.total_monthly:.2f}")
+    click.echo("-" * 30)
+    click.echo(f"TOTAL:             ${total:.2f}")
 
 
 @cli.command()
@@ -304,6 +416,97 @@ def version():
     from . import __version__
 
     click.echo(f"Startup Generator v{__version__}")
+
+
+@cli.command()
+def wizard():
+    """Interactive Startup Builder Wizard."""
+    from src.llm import get_llm_client
+    
+    UI.header("Startup Builder Wizard", "Interactive Mode")
+    
+    # 1. Choose Mode
+    mode = UI.prompt("Choose mode ([1] Automated Discovery, [2] Build Specific Idea)", default="1")
+    
+    if mode == "2":
+        # Specific Idea Mode
+        name = UI.prompt("What is the name of your startup?")
+        desc = UI.prompt("Describe your startup solution:")
+        
+        UI.step("Analyzing idea and generating full profile...")
+        
+        try:
+            with UI.spinner(" expanding idea with AI..."):
+                client = get_llm_client("auto")
+                prompt = f"""
+                Expand this startup idea into a full JSON profile matching the StartupIdea model.
+                Name: {name}
+                Description: {desc}
+                
+                Return JSON with fields:
+                - name
+                - one_liner (max 100 chars)
+                - problem_statement
+                - solution_description
+                - target_buyer_persona {{ title, company_size, industry, budget_authority, pain_intensity }}
+                - value_proposition
+                - revenue_model (subscription, usage, transaction, hybrid)
+                - pricing_hypothesis {{ tiers, price_range }}
+                - tam_estimate
+                - sam_estimate
+                - som_estimate
+                - competitive_landscape (list of strings)
+                - differentiation_factors (list of strings)
+                - automation_opportunities (list of strings)
+                - technical_requirements_summary
+                
+                Output ONLY valid JSON.
+                """
+                
+                response = client.complete(prompt, json_mode=True)
+                idea_data = json.loads(response.content.replace('```json', '').replace('```', '').strip())
+                idea = StartupIdea(**idea_data)
+                
+            UI.success(f"Idea Profile Created: {idea.name}")
+            print(f"   {idea.one_liner}")
+            
+            # Confirm
+            if not UI.confirm("Proceed with generation?"):
+                UI.warning("Aborted.")
+                return
+                
+            # Run Pipeline from Idea
+            # Re-use config logic
+            pipeline_config = load_config("config.yml")
+            pipeline = StartupGenerationPipeline(pipeline_config)
+            
+            UI.step("Building codebase...")
+            result = asyncio.run(pipeline.run_from_idea(idea))
+            
+            if result.generated_codebase:
+                UI.success(f"Codebase ready at: {result.generated_codebase.output_path}")
+                
+                if UI.confirm("Deploy now?"):
+                    UI.step("Deploying...")
+                    # Call deploy logic (simplified)
+                    ctx = click.get_current_context()
+                    ctx.invoke(
+                         globals()['deploy'], 
+                         codebase_path=result.generated_codebase.output_path,
+                         frontend="vercel",
+                         backend="render",
+                         env="production"
+                     )
+
+        except Exception as e:
+            UI.error(f"Failed to process idea: {e}")
+            logger.exception("Wizard failed")
+
+    else:
+        # Automated Mode
+        UI.info("Running Automated Discovery Pipeline...")
+        ctx = click.get_current_context()
+        ctx.invoke(generate, config="config.yml", deploy=False)
 
 
 if __name__ == "__main__":

@@ -1,1 +1,0 @@
-export default function List() { return <div>List of Items</div> }

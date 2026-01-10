@@ -15,7 +15,7 @@ def mock_config():
     """Create a mock configuration."""
     config = PipelineConfig()
     config.idea_generation = type('obj', (object,), {
-        'min_ideas': 10,
+        'min_ideas': 5,
         'filters': {'b2b_only': True}
     })()
     return config

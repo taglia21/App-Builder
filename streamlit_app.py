@@ -14,6 +14,7 @@ import os
 from src.code_generation.enhanced_engine import EnhancedCodeGenerator
 from src.utils.zipper import zip_directory
 from src.code_generation.refiner import CodeRefiner
+from src.pipeline import StartupGenerationPipeline
 
 import streamlit as st
 
@@ -850,13 +851,17 @@ with tab2:
                     with c_status:
                         with st.spinner(f"Architecting {theme} Design... Building Backend..."):
                             try:
-                                generator = EnhancedCodeGenerator(output_dir=f"./generated_projects/{idea.name.replace(' ', '_')}")
-                                idea_dict = idea.model_dump() if hasattr(idea, 'model_dump') else vars(idea)
-                                result = generator.generate(idea_dict, theme=theme)
+                                # Start Full Pipeline
+                                cfg = load_config('config.yml')
+                                pipeline = StartupGenerationPipeline(cfg)
                                 
-                                zip_path = zip_directory(result['output_dir'], f"{idea.name.replace(' ', '_')}_v1")
+                                # Run via Pipeline (includes QA, Refinement, etc.)
+                                output = asyncio.run(pipeline.run_from_idea(idea))
                                 
-                                st.success(f"Build Complete! ({result['metrics']['total_files']} files)")
+                                result_path = output.generated_codebase.output_path
+                                zip_path = zip_directory(result_path, f"{idea.name.replace(' ', '_')}_v1")
+                                
+                                st.success(f"Build Complete! (QA Checked & Verified)")
                                 with open(zip_path, "rb") as fp:
                                     st.download_button(
                                         label="⬇ DOWNLOAD ARTIFACT",

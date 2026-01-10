@@ -30,8 +30,13 @@ from src.code_generation.file_templates import (
     BACKEND_WORKER_PY,
     BACKEND_AI_SERVICE_PY,
     BACKEND_EMAIL_SERVICE_PY,
+    BACKEND_EMAIL_SERVICE_PY,
     ROOT_DOCKER_COMPOSE
 )
+from src.deployment.providers import VercelProvider, RenderProvider
+from src.deployment.infrastructure.ci_cd_generator import CICDGenerator
+from src.deployment.infrastructure.terraform import TerraformGenerator
+from src.deployment.models import DeploymentConfig, DeploymentProviderType
 from src.code_generation.frontend_templates import (
     FRONTEND_UI_BUTTON,
     FRONTEND_UI_INPUT,
@@ -120,7 +125,8 @@ class EnhancedCodeGenerator:
         self._generate_frontend(app_name, description, entity, theme="Modern") # theme is hardcoded for now
         self._generate_configs(app_name, description)
         self._generate_docs(app_name, description, entity)
-        self._generate_deployment_files(app_name)
+        self._generate_docs(app_name, description, entity)
+        self._generate_deployment_files(app_name, description)
         
         # Calculate metrics
         self._calculate_metrics()
@@ -582,6 +588,67 @@ def event_loop():
         """Generate Email service module."""
         logger.info("Generating email service...")
         self._write_file('backend/app/services/email.py', BACKEND_EMAIL_SERVICE_PY, 'backend')
+
+    def _generate_deployment_files(self, app_name: str, description: str):
+        """Generate all deployment configuration files."""
+        logger.info("Generating deployment configurations...")
+        
+        # 1. Vercel Config (Frontend)
+        # We instantiate provider to use its config generation logic
+        vercel = VercelProvider()
+        # Mock config for generation purposes
+        v_config = DeploymentConfig(provider=DeploymentProviderType.VERCEL, region="iad1")
+        vercel._generate_vercel_config(self.output_dir / "frontend", v_config)
+        self.files_created.append({'path': 'frontend/vercel.json', 'lines': 10, 'category': 'config'})
+        
+        # 2. Render Config (Backend)
+        render = RenderProvider()
+        r_config = DeploymentConfig(provider=DeploymentProviderType.RENDER)
+        # We need to simulate the path expected by render provider (it expects root usually or we pass backend path?)
+        # BaseDeploymentProvider logic usually expects 'codebase_path'.
+        # RenderProvider._generate_render_yaml writes to codebase_path / render.yaml
+        # We want it in root or backend? Usually root for monorepo or specific if separated.
+        # Let's put it in root for now as 'render.yaml' often defines services for subdirs.
+        render._generate_render_yaml(self.output_dir, r_config)
+        self.files_created.append({'path': 'render.yaml', 'lines': 20, 'category': 'config'})
+        
+        # 3. CI/CD Pipeline
+        cicd = CICDGenerator()
+        cicd.generate_github_actions(self.output_dir)
+        self.files_created.append({'path': '.github/workflows/deploy.yml', 'lines': 30, 'category': 'config'})
+        
+        # 4. Terraform Templates
+        tf = TerraformGenerator()
+        tf.generate_templates(self.output_dir)
+        self.files_created.append({'path': 'terraform/main.tf', 'lines': 20, 'category': 'config'})
+        
+        # 5. Deployment Guide
+        guide = f"""# Deployment Guide for {app_name}
+
+## 🚀 Quick Start (Automated)
+
+You can deploy this application using the App-Builder CLI:
+
+```bash
+python main.py deploy ./generated_app_v2 --frontend vercel --backend render
+```
+
+## 🛠 Manual Deployment
+
+### Frontend (Vercel)
+1. Install CLI: `npm i -g vercel`
+2. Login: `vercel login`
+3. Deploy: `cd frontend && vercel`
+
+### Backend (Render)
+1. Create a Web Service for `backend/` (Python/FastAPI).
+2. Create a PostgreSQL database.
+3. Set `DATABASE_URL` environment variable.
+
+### Infrastructure (Terraform)
+Templates are available in `terraform/` directory for AWS provisioning.
+"""
+        self._write_file('DEPLOYMENT_GUIDE.md', guide, 'docs')
     
     
     def _get_theme_config(self, theme: str = "Modern") -> Dict[str, str]:
@@ -642,9 +709,87 @@ def event_loop():
         }
         return themes.get(theme, themes["Modern"])
 
+    def _generate_frontend_types(self, entity: Dict[str, Any]) -> None:
+        """
+        Generate TypeScript interfaces from backend entity definition.
+        Ensures Contract-First reliability.
+        """
+        logger.info("Generating TypeScript schema (Contract-First)...")
+        
+        name = entity.get('name', 'Entity')
+        fields = entity.get('fields', [])
+        
+        # Type mapping
+        type_map = {
+            'String': 'string',
+            'Text': 'string',
+            'Integer': 'number',
+            'Float': 'number',
+            'Boolean': 'boolean',
+            'DateTime': 'string',
+            'Date': 'string'
+        }
+        
+        lines = []
+        lines.append("// This file is auto-generated by the App-Builder Contract System")
+        lines.append("// It must match the backend Pydantic models.")
+        lines.append("")
+        
+        lines.append(f"export interface {name} {{")
+        lines.append("  id: string;") # UUID default
+        
+        for field in fields:
+            # Handle List/Tuple format from _determine_core_entity
+            # [name, sql_type, python_type, is_required]
+            if isinstance(field, (list, tuple)) and len(field) >= 2:
+                f_name = field[0]
+                sql_type = field[1]
+                # is_required is index 3 if exists, default True? 
+                # looking at fallback: ('status', 'String', 'str', False) -> False means not required?
+                # No, standard is usually (name, type, pytype, required).
+                # Fallback 'description' is Optional[str] and False. So False = Not Required (Nullable).
+                # Fallback 'name' is str and True. So True = Required (Not Nullable).
+                is_required = field[3] if len(field) > 3 else False
+                is_nullable = not is_required
+                
+                # Normalize SQL Type to TS Type
+                ts_type = 'any'
+                st_lower = sql_type.lower()
+                if 'int' in st_lower or 'float' in st_lower or 'numeric' in st_lower:
+                    ts_type = 'number'
+                elif 'bool' in st_lower:
+                    ts_type = 'boolean'
+                elif 'json' in st_lower:
+                    ts_type = 'any'
+                else:
+                    # String, Text, Date, etc
+                    ts_type = 'string'
+                
+                suffix = "?" if is_nullable else ""
+                lines.append(f"  {f_name}{suffix}: {ts_type};")
+
+            elif isinstance(field, dict):
+                 # Fallback for dictionary format (if ever used)
+                f_name = field.get('name')
+                f_type = field.get('type', 'String')
+                is_nullable = field.get('nullable', False)
+                ts_type = type_map.get(f_type, 'string') # Usage dependent
+                suffix = "?" if is_nullable else ""
+                lines.append(f"  {f_name}{suffix}: {ts_type};")
+            
+        lines.append("  created_at?: string;")
+        lines.append("}")
+        
+        # Write file
+        content = "\n".join(lines)
+        self._write_file("frontend/src/types/schema.ts", content, "frontend")
+
     def _generate_frontend(self, app_name: str, description: str, entity: Dict, theme: str = "Modern"):
         """Generate minimal but functional frontend."""
         
+        # Generate Types (Contract-First)
+        self._generate_frontend_types(entity)
+
         theme_config = self._get_theme_config(theme)
 
         # Package.json
@@ -687,6 +832,16 @@ def event_loop():
 }}
 '''
         self._write_file('frontend/package.json', package_json, 'frontend')
+        
+        # Next.js Config
+        next_config = '''/** @type {import('next').NextConfig} */
+const nextConfig = {
+    output: 'standalone',
+};
+
+export default nextConfig;
+'''
+        self._write_file('frontend/next.config.mjs', next_config, 'frontend')
         
         # Globals CSS
         globals_css = f'''@tailwind base;
@@ -990,89 +1145,7 @@ Generated by AI Startup Generator
 '''
         self._write_file('README.md', readme, 'config')
 
-    def _generate_deployment_files(self, app_name: str):
-        """Generate Vercel and Render configuration files."""
-        safe_name = app_name.lower().replace(' ', '-')
-        
-        # Vercel (Frontend)
-        vercel_json = '''{
-  "framework": "nextjs",
-  "buildCommand": "npm run build",
-  "devCommand": "npm run dev",
-  "installCommand": "npm install",
-  "outputDirectory": ".next"
-}'''
-        self._write_file('frontend/vercel.json', vercel_json, 'config')
-        
-        # Render (Backend)
-        render_yaml = f'''services:
-  - type: web
-    name: {safe_name}-backend
-    env: python
-    buildCommand: pip install -r backend/requirements.txt
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port 10000
-    envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: {safe_name}-db
-          property: connectionString
-      - key: SECRET_KEY
-        generateValue: true
-      - key: PYTHON_VERSION
-        value: 3.11.0
 
-databases:
-  - name: {safe_name}-db
-    databaseName: {safe_name.replace('-', '_')}
-    user: {safe_name.replace('-', '_')}
-'''
-        self._write_file('render.yaml', render_yaml, 'config')
-        
-        # Docker Compose
-        docker_compose = Template(ROOT_DOCKER_COMPOSE).safe_substitute(
-            db_name=safe_name.replace('-', '_'),
-            openai_key='${OPENAI_API_KEY}',  # Literal string for env var
-            worker_service='''
-  worker:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    command: celery -A app.celery_app worker --loglevel=info
-    volumes:
-      - ./backend:/app
-    environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/${db_name}
-      - REDIS_URL=redis://redis:6379/0
-      - SECRET_KEY=changeme
-      - OPENAI_API_KEY=${openai_key}
-    depends_on:
-      - db
-      - redis'''
-        )
-        self._write_file('docker-compose.yml', docker_compose, 'config')
-        
-        # Deployment Guide
-        deploy_guide = f'''# Deployment Guide for {app_name}
-
-## Frontend (Vercel)
-1. Push this repo to GitHub.
-2. Go to [Vercel](https://vercel.com/new).
-3. Import the repository.
-4. Set "Root Directory" to `frontend`.
-5. Click **Deploy**.
-
-## Backend (Render)
-1. Go to [Render](https://dashboard.render.com/).
-2. Click **New +** -> **Blueprint**.
-3. Connect your GitHub repo.
-4. Render will detect `render.yaml` and auto-configure the Backend + Postgres.
-5. Click **Apply**.
-
-## Environment Variables
-- Copy the `SECRET_KEY` from Render to Vercel environment variables.
-- Copy the `API_URL` (Render URL) to Vercel as `NEXT_PUBLIC_API_URL`.
-'''
-        self._write_file('DEPLOY.md', deploy_guide, 'docs')
     
     def _calculate_metrics(self):
         """Calculate generation metrics."""

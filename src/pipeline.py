@@ -25,6 +25,7 @@ from .models import (
 from .prompt_engineering import PromptEngineeringEngine
 from .refinement import RefinementEngine
 from .scoring import ScoringEngine
+from .quality_assurance import QualityAssuranceEngine
 
 
 class StartupGenerationPipeline:
@@ -42,6 +43,7 @@ class StartupGenerationPipeline:
         self.intelligence_engine = IntelligenceGatheringEngine(config)
         self.idea_engine = IdeaGenerationEngine(config)
         self.scoring_engine = ScoringEngine(config)
+        self.qa_engine = QualityAssuranceEngine()
         
         # LLM-powered engines (initialized lazily)
         self._prompt_engine = None
@@ -148,6 +150,11 @@ class StartupGenerationPipeline:
                 logger.info("\n[STEP 6/6] Generating Codebase")
                 self.metadata.current_stage = PipelineStage.CODE_GENERATION
                 codebase = self.code_generator.generate(product_prompt, output_dir)
+                
+                # Run Quality Assurance
+                logger.info("Running Quality Assurance...")
+                self.qa_engine.run_checks(codebase.output_path)
+                
                 output.generated_codebase = codebase
                 self._save_intermediate(codebase, "codebase")
             else:
@@ -255,6 +262,11 @@ class StartupGenerationPipeline:
 
             self.metadata.current_stage = PipelineStage.CODE_GENERATION
             codebase = self.code_generator.generate(gold_standard_prompt)
+            
+            # Run Quality Assurance
+            logger.info("Running Quality Assurance...")
+            self.qa_engine.run_checks(codebase.output_path)
+            
             output.generated_codebase = codebase
 
             self.metadata.status = PipelineStatus.COMPLETED
