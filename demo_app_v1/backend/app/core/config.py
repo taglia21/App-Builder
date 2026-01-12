@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     GITHUB_CLIENT_SECRET: str = os.getenv("GITHUB_CLIENT_SECRET", "")
     
     # CORS
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8000"]
+    CORS_ORIGINS: List[str] = ["*"]
     
     class Config:
         env_file = ".env"

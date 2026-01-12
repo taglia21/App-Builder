@@ -789,7 +789,7 @@ Respond with ONLY valid JSON."""
     def _fallback_monetization(self, idea: StartupIdea) -> Dict[str, Any]:
         return {
             "pricing_model": idea.revenue_model,
-            "tiers": idea.pricing_hypothesis.get("tiers", ["Free", "Pro", "Enterprise"]),
+            "tiers": getattr(idea.pricing_hypothesis, "tiers", ["Free", "Pro", "Enterprise"]),
             "billing_provider": "Stripe"
         }
     

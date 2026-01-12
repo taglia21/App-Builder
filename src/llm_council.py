@@ -48,8 +48,8 @@ class LLMCouncil:
             raise ValueError("OPENROUTER_API_KEY required")
         self.council = council or self.DEFAULT_COUNCIL
         
-    async def _call_model(self, model_id: str, messages: List[Dict], session: aiohttp.ClientSession) -> str:
-        """Make async call to OpenRouter"""
+    async def _call_model(self, model_id: str, messages: List[Dict], session: aiohttp.ClientSession) -> Dict[str, Any]:
+        """Make async call to OpenRouter with improved error handling"""
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
@@ -68,16 +68,26 @@ class LLMCouncil:
             async with session.post(self.OPENROUTER_URL, headers=headers, json=payload) as resp:
                 if resp.status == 200:
                     data = await resp.json()
-                    return data["choices"][0]["message"]["content"]
+                    content = data["choices"][0]["message"]["content"]
+                    return {"success": True, "content": content}
                 else:
-                    error = await resp.text()
-                    print(f"Error from {model_id}: {error}")
-                    return None
+                    error_text = await resp.text()
+                    try:
+                        error_json = json.loads(error_text)
+                        # OpenRouter usually returns {"error": {"message": "..."}}
+                        error_msg = error_json.get("error", {}).get("message", error_text)
+                        # Check for specific codes
+                        code = error_json.get("error", {}).get("code")
+                        if code == 402: error_msg = "Insufficient Credits (Payment Required)"
+                        elif code == 429: error_msg = "Rate Limit Exceeded"
+                    except:
+                        error_msg = f"HTTP {resp.status}"
+                    
+                    return {"success": False, "error": f"{model_id}: {error_msg}"}
         except Exception as e:
-            print(f"Exception calling {model_id}: {e}")
-            return None
+            return {"success": False, "error": f"{model_id}: {str(e)}"}
     
-    async def stage1_generate(self, prompt: str, pain_points: List[str]) -> List[CouncilResponse]:
+    async def stage1_generate(self, prompt: str, pain_points: List[str]) -> Dict[str, Any]:
         """Stage 1: Each council member generates ideas independently"""
         
         system_prompt = """You are a startup idea generator. Given market pain points, generate innovative startup ideas.
@@ -103,6 +113,8 @@ Generate innovative startup ideas that address these problems. Be creative and t
         ]
         
         responses = []
+        errors = []
+        
         async with aiohttp.ClientSession() as session:
             tasks = [
                 self._call_model(member.model_id, messages, session) 
@@ -111,14 +123,19 @@ Generate innovative startup ideas that address these problems. Be creative and t
             results = await asyncio.gather(*tasks)
             
             for member, result in zip(self.council, results):
-                if result:
-                    responses.append(CouncilResponse(member=member.name, response=result))
+                if result["success"]:
+                    responses.append(CouncilResponse(member=member.name, response=result["content"]))
+                else:
+                    errors.append(result["error"])
         
-        return responses
+        return {"responses": responses, "errors": errors}
     
     async def stage2_review(self, responses: List[CouncilResponse]) -> List[CouncilResponse]:
         """Stage 2: Each member reviews and scores the other responses"""
         
+        if not responses:
+            return []
+            
         review_prompt_template = """You are evaluating startup ideas from different analysts.
 
 Here are the responses from different analysts (anonymized):
@@ -141,10 +158,10 @@ Provide your ratings in this exact JSON format:
 Be objective. It's okay if another analyst's ideas are better than others."""
 
         # Format responses anonymously
-        labels = ['A', 'B', 'C', 'D']
+        labels = ['A', 'B', 'C', 'D', 'E', 'F'][:len(responses)]
         formatted = "\n\n".join([
             f"=== Analyst {labels[i]} ===\n{r.response}" 
-            for i, r in enumerate(responses[:4])
+            for i, r in enumerate(responses)
         ])
         
         review_prompt = review_prompt_template.format(responses=formatted)
@@ -159,20 +176,22 @@ Be objective. It's okay if another analyst's ideas are better than others."""
             results = await asyncio.gather(*tasks)
             
             for result in results:
-                if result:
+                if result["success"]:
                     try:
+                        content = result["content"]
                         # Extract JSON from response
-                        start = result.find('{')
-                        end = result.rfind('}') + 1
+                        start = content.find('{')
+                        end = content.rfind('}') + 1
                         if start >= 0 and end > start:
-                            scores = json.loads(result[start:end])
+                            scores = json.loads(content[start:end])
                             all_scores.append(scores)
                     except:
                         pass
         
         # Aggregate scores and normalize to 0-100 scale
         if all_scores:
-            for i, response in enumerate(responses[:4]):
+            for i, response in enumerate(responses):
+                if i >= len(labels): break
                 label = labels[i]
                 totals = []
                 for score_set in all_scores:
@@ -185,9 +204,12 @@ Be objective. It's okay if another analyst's ideas are better than others."""
         
         return responses
     
-    async def stage3_synthesize(self, responses: List[CouncilResponse], num_ideas: int = 10) -> str:
+    async def stage3_synthesize(self, responses: List[CouncilResponse], num_ideas: int = 10) -> Dict[str, Any]:
         """Stage 3: Chairman synthesizes the best ideas into final output"""
         
+        if not responses:
+            return {"error": "No ideas generated in Stage 1 to synthesize.", "ideas": []}
+
         # Sort by scores if available
         scored = [r for r in responses if r.scores]
         if scored:
@@ -239,9 +261,9 @@ output ONLY the JSON. No other text."""
         async with aiohttp.ClientSession() as session:
             try:
                 result = await self._call_model(self.CHAIRMAN_MODEL, messages, session)
-                if result:
+                if result["success"]:
                     # Clean markdown if present
-                    clean_res = result.replace('```json', '').replace('```', '').strip()
+                    clean_res = result["content"].replace('```json', '').replace('```', '').strip()
                     try:
                         data = json.loads(clean_res)
                         return data
@@ -265,7 +287,7 @@ output ONLY the JSON. No other text."""
                                 }
                             ]
                         }
-                return {"ideas": []}
+                return {"error": result.get("error", "Unknown Chairman Error"), "ideas": []}
             except Exception as e:
                 return {"error": str(e), "ideas": []}
     
@@ -281,14 +303,23 @@ output ONLY the JSON. No other text."""
             "stage1_responses": [],
             "stage2_scores": [],
             "final_ideas": "",
-            "council_members": [m.name for m in self.council]
+            "council_members": [m.name for m in self.council],
+            "errors": []
         }
         
         # Stage 1
         if on_stage_complete:
             on_stage_complete("Stage 1: Council members generating ideas...")
-        responses = await self.stage1_generate("", pain_points)
+        
+        s1_result = await self.stage1_generate("", pain_points)
+        responses = s1_result["responses"]
+        result["errors"].extend(s1_result["errors"])
+        
         result["stage1_responses"] = [(r.member, r.response[:500]+"...") for r in responses]
+        
+        if not responses:
+             result["final_ideas"] = {"error": "All council members failed to generate ideas.", "ideas": []}
+             return result
         
         # Stage 2
         if on_stage_complete:

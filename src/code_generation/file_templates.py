@@ -17,7 +17,8 @@ import logging
 from app.api import api_router
 from app.core.config import settings
 from app.db.session import engine
-from app.db import base_class  # noqa: F401
+from app.db.base_class import Base
+from app import models
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -26,6 +27,12 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
     logger.info("Starting ${app_name}...")
+    
+    # Create tables on startup
+    logger.info("Creating database tables...")
+    Base.metadata.create_all(bind=engine)
+    logger.info("Database tables created.")
+    
     yield
     logger.info("Shutting down ${app_name}...")
 
@@ -39,7 +46,7 @@ app = FastAPI(
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -204,6 +211,10 @@ class UserInDB(UserBase):
 
 class UserResponse(UserInDB):
     pass
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
 
 class Token(BaseModel):
     access_token: str
@@ -438,8 +449,11 @@ from app.core.auth import (
     create_access_token,
     create_refresh_token,
     decode_token,
+    create_refresh_token,
+    decode_token,
     get_current_user
 )
+from app.schemas.user import UserCreate, UserResponse, UserLogin, Token
 
 router = APIRouter()
 
@@ -467,11 +481,11 @@ async def register(user_in: UserCreate, db: Session = Depends(get_db)):
     return user
 
 @router.post("/login", response_model=Token)
-async def login(email: str, password: str, db: Session = Depends(get_db)):
+async def login(user_in: UserLogin, db: Session = Depends(get_db)):
     """Login and get access token."""
-    user = db.query(User).filter(User.email == email).first()
+    user = db.query(User).filter(User.email == user_in.email).first()
     
-    if not user or not verify_password(password, user.hashed_password):
+    if not user or not verify_password(user_in.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password"
@@ -726,7 +740,7 @@ async def test_login():
         })
         
         # Then login
-        response = await client.post("/api/v1/auth/login", params={
+        response = await client.post("/api/v1/auth/login", json={
             "email": "login@example.com",
             "password": "testpassword123"
         })
@@ -738,7 +752,7 @@ async def test_login():
 @pytest.mark.asyncio
 async def test_login_invalid_credentials():
     async with AsyncClient(app=app, base_url="http://test") as client:
-        response = await client.post("/api/v1/auth/login", params={
+        response = await client.post("/api/v1/auth/login", json={
             "email": "nonexistent@example.com",
             "password": "wrongpassword"
         })
@@ -760,7 +774,7 @@ async def auth_headers():
             "email": "crud_test@example.com",
             "password": "testpassword123"
         })
-        response = await client.post("/api/v1/auth/login", params={
+        response = await client.post("/api/v1/auth/login", json={
             "email": "crud_test@example.com",
             "password": "testpassword123"
         })
@@ -1028,7 +1042,7 @@ services:
     volumes:
       - ./backend:/app
     ports:
-      - "8000:8000"
+      - "${BACKEND_PORT:-8000}:8000"
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/${db_name}
       - REDIS_URL=redis://redis:6379/0
@@ -1046,9 +1060,9 @@ services:
       - ./frontend:/app
       - /app/node_modules
     ports:
-      - "3000:3000"
+      - "${FRONTEND_PORT:-3000}:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+      - NEXT_PUBLIC_API_URL=http://localhost:${BACKEND_PORT:-8000}/api/v1
     depends_on:
       - backend
 
@@ -1061,12 +1075,12 @@ services:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=${db_name}
     ports:
-      - "5432:5432"
+      - "${DB_PORT:-5432}:5432"
 
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
 
   ${worker_service}
 

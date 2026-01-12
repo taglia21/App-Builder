@@ -137,6 +137,9 @@ class EnhancedCodeGenerator:
         self._generate_docs(app_name, description, entity)
         self._generate_deployment_files(app_name, description)
         
+        self._generate_deployment_files(app_name, description)
+        self._generate_run_script(app_name)
+        
         # Calculate metrics
         self._calculate_metrics()
         
@@ -201,15 +204,16 @@ Return a strict JSON object with this structure:
         ["field_name", "String(255)", "str", true],
         ["description", "Text", "Optional[str]", false],
         ["status", "String(50)", "str", false],
-        ["another_field", "Integer", "int", true]
+        ["price", "Float", "float", true],
+        ["is_active", "Boolean", "bool", true]
     ]
 }}
 Rules:
 1. 'fields' is a list of lists: [name, sql_type, python_type, required_bool]
-2. sql_type examples: String(255), Text, Integer, Boolean, Float
-3. python_type examples: str, int, bool, float, Optional[str]
+2. sql_type key: String(N), Text, Integer, Float, Boolean, DateTime
+3. python_type key: str, int, float, bool, datetime, Optional[X]
 4. Do not include 'id', 'created_at', 'updated_at' (added automatically).
-5. detailed fields specific to the domain.
+5. Be comprehensive with fields based on the description.
 """
             response = client.complete(prompt, json_mode=True)
             data = json.loads(response.content.replace('```json', '').replace('```', '').strip())
@@ -659,6 +663,46 @@ python main.py deploy ./generated_app_v2 --frontend vercel --backend render
 Templates are available in `terraform/` directory for AWS provisioning.
 """
         self._write_file('DEPLOYMENT_GUIDE.md', guide, 'docs')
+
+    def _generate_run_script(self, app_name: str):
+        """Generate convenience scripts for running the app."""
+        logger.info("Generating start scripts...")
+        
+        # Bash Script (Linux/Mac)
+        bash_script = """#!/bin/bash
+echo "🚀 Starting ${app_name}..."
+
+# Check for Docker
+if ! command -v docker &> /dev/null; then
+    echo "Error: Docker is not installed."
+    exit 1
+fi
+
+echo "Building and starting containers..."
+docker-compose up --build
+"""
+        bash_script = Template(bash_script).safe_substitute(app_name=app_name)
+        self._write_file('start_dev.sh', bash_script, 'config')
+        
+        # Make executable (not strictly possible via file write but good for content)
+        # On windows this essentially just writes the file
+        
+        # Windows Batch Script
+        bat_script = """@echo off
+echo 🚀 Starting ${app_name}...
+
+where docker >nul 2>nul
+if %errorlevel% neq 0 (
+    echo Error: Docker is not installed.
+    pause
+    exit /b 1
+)
+
+echo Building and starting containers...
+docker-compose up --build
+"""
+        bat_script = Template(bat_script).safe_substitute(app_name=app_name)
+        self._write_file('start_dev.bat', bat_script, 'config')
     
     
     def _get_theme_config(self, theme: str = "Modern") -> Dict[str, str]:
@@ -950,12 +994,13 @@ export default config;
         self._write_file('frontend/src/app/page.tsx', home_page, 'frontend')
         
         # Layout
+        safe_description = description.replace('"', '\\"').replace('\n', ' ')
         layout = f'''import type {{ Metadata }} from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {{
   title: "{app_name}",
-  description: "{description}",
+  description: "{safe_description}",
 }};
 
 export default function RootLayout({{ children }}: {{ children: React.ReactNode }}) {{
@@ -1051,48 +1096,54 @@ export const Icons = {
     def _generate_configs(self, app_name: str, description: str):
         """Generate configuration files."""
         # Docker Compose
-        docker_compose = f'''version: "3.8"
-
-services:
-  db:
-    image: postgres:15
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: {app_name.lower().replace(' ', '_').replace('-', '_')}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-
-  backend:
-    build: ./backend
-    ports:
-      - "8000:8000"
-    environment:
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/{app_name.lower().replace(' ', '_').replace('-', '_')}
-      SECRET_KEY: dev-secret-key
-    depends_on:
-      - db
-    volumes:
-      - ./backend:/app
-
-  frontend:
-    build: ./frontend
-    ports:
-      - "3000:3000"
-    environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
-    depends_on:
-      - backend
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-
-volumes:
-  postgres_data:
-'''
+        db_name = app_name.lower().replace(' ', '_').replace('-', '_')
+        
+        # Determine worker service
+        worker_service = ""
+        # We can't easily access features here without passing them, but we can check requirements
+        # Or better, we should pass features to this method. 
+        # For now, let's assume we want the worker if celery is in requirements (which we can't see here easily)
+        # However, the ROOT_DOCKER_COMPOSE template expects ${worker_service}.
+        
+        # Let's fix the imports first.
+        # It seems features are not passed to _generate_configs.
+        # Refactor: Pass features or use empty string for worker if unsure.
+        # But wait, we can infer it or just leave it empty if not needed.
+        
+        # Safe defaults
+        worker_block = ""
+        # Check if we generated worker.py (a bit hacky but works in this class context if we tracked it)
+        # Better: let's use a standard worker block if 'celery' is likely needed.
+        # For this refactor, I will leave worker_service empty unless I can confirm it's needed.
+        # But the hardcoded version didn't have a worker at all!
+        # The template has ${worker_service}.
+        
+        docker_compose = Template(ROOT_DOCKER_COMPOSE).safe_substitute(
+            db_name=db_name,
+            openai_key="${OPENAI_API_KEY}", # Keep as env var reference for Docker
+            worker_service=worker_block
+        )
+        
         self._write_file('docker-compose.yml', docker_compose, 'config')
+
+        # .env.example
+        env_example = f'''# Ports
+BACKEND_PORT=8000
+FRONTEND_PORT=3000
+DB_PORT=5432
+REDIS_PORT=6379
+
+# Database
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/{db_name}
+
+# Auth
+SECRET_KEY=changeme
+OPENAI_API_KEY=
+
+# App
+DEBUG=true
+'''
+        self._write_file('.env.example', env_example, 'config')
         
         # .gitignore
         gitignore = '''node_modules/

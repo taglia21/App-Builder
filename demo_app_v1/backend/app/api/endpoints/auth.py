@@ -6,7 +6,7 @@ from datetime import datetime
 
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.user import UserCreate, UserResponse, Token
+from app.schemas.user import UserCreate, UserResponse, Token, UserLogin
 from app.core.auth import (
     get_password_hash, 
     verify_password, 
@@ -42,11 +42,11 @@ async def register(user_in: UserCreate, db: Session = Depends(get_db)):
     return user
 
 @router.post("/login", response_model=Token)
-async def login(email: str, password: str, db: Session = Depends(get_db)):
+async def login(user_in: UserLogin, db: Session = Depends(get_db)):
     """Login and get access token."""
-    user = db.query(User).filter(User.email == email).first()
+    user = db.query(User).filter(User.email == user_in.email).first()
     
-    if not user or not verify_password(password, user.hashed_password):
+    if not user or not verify_password(user_in.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password"

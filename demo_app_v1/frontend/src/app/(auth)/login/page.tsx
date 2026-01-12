@@ -24,12 +24,14 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login?email=${email}&password=${password}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
       });
-      
+
       const data = await res.json();
-      
+
       if (res.ok) {
         localStorage.setItem("token", data.access_token);
         router.push("/dashboard");
@@ -63,24 +65,24 @@ export default function LoginPage() {
               )}
               <div className="flex flex-col space-y-1.5">
                 <Label htmlFor="email">Email</Label>
-                <Input 
-                    id="email" 
-                    placeholder="name@example.com" 
-                    value={email} 
-                    onChange={(e) => setEmail(e.target.value)} 
-                    required 
-                    autoComplete="email"
+                <Input
+                  id="email"
+                  placeholder="name@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoComplete="email"
                 />
               </div>
               <div className="flex flex-col space-y-1.5">
                 <Label htmlFor="password">Password</Label>
-                <Input 
-                    id="password" 
-                    type="password" 
-                    value={password} 
-                    onChange={(e) => setPassword(e.target.value)} 
-                    required 
-                    autoComplete="current-password"
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="current-password"
                 />
               </div>
             </div>
@@ -91,9 +93,9 @@ export default function LoginPage() {
           </form>
         </CardContent>
         <CardFooter className="flex justify-center">
-            <Link href="/register" className="text-sm text-muted-foreground hover:underline">
-                Don't have an account? Register
-            </Link>
+          <Link href="/register" className="text-sm text-muted-foreground hover:underline">
+            Don't have an account? Register
+          </Link>
         </CardFooter>
       </Card>
     </div>

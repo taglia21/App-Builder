@@ -17,6 +17,10 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8)
 
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     avatar_url: Optional[str] = None

@@ -762,6 +762,12 @@ with tab1:
                         
                         # PARSE INTO STANDARD PIPELINE OBJECTS
                         if 'final_ideas' in council_result and 'ideas' in council_result['final_ideas']:
+                            # Check for partial errors
+                            if 'errors' in council_result and council_result['errors']:
+                                with st.expander("⚠️ Some Council Members Failed", expanded=True):
+                                    for err in council_result['errors']:
+                                        st.error(err)
+
                             from src.models import StartupIdea, EvaluatedIdea, IdeaScores, DimensionScore, RevenueModel, PricingHypothesis, BuyerPersona
                             from uuid import uuid4
                             
@@ -834,8 +840,18 @@ with tab1:
                                 stat.markdown('<div class="status status-done"> COUNCIL PROTOCOL COMPLETE.</div>', unsafe_allow_html=True)
                             else:
                                 st.error("Council generated no valid ideas.")
+                                if 'errors' in council_result:
+                                     st.write("Root Cause Analysis:")
+                                     for err in council_result['errors']:
+                                         st.warning(err)
                         else:
                             st.error("Council returned invalid format.")
+                            if 'final_ideas' in council_result and 'error' in council_result['final_ideas']:
+                                st.error(f"Reason: {council_result['final_ideas']['error']}")
+                            if 'errors' in council_result and council_result['errors']:
+                                st.write("Model Errors:")
+                                for err in council_result['errors']:
+                                    st.warning(err)
 
                     except Exception as e:
                         st.error(f"Council error: {e}")
