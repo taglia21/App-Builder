@@ -81,8 +81,20 @@ class EnhancedCodeGenerator:
             'config_files': 0
         }
     
-    def generate(self, prompt: Union[ProductPrompt, GoldStandardPrompt], output_dir: Optional[str] = None) -> GeneratedCodebase:
-        """Generate complete application from startup idea."""
+    def generate(self, prompt: Union[ProductPrompt, GoldStandardPrompt], output_dir: Optional[str] = None, theme: str = "Modern") -> GeneratedCodebase:
+        """Generate complete application from startup idea.
+        
+        Args:
+            prompt: ProductPrompt or GoldStandardPrompt containing idea details
+            output_dir: Optional output directory path
+            theme: UI theme - one of "Modern", "Minimalist", "Cyberpunk", "Corporate"
+        """
+        
+        # Validate theme
+        valid_themes = ["Modern", "Minimalist", "Cyberpunk", "Corporate"]
+        if theme not in valid_themes:
+            logger.warning(f"Invalid theme '{theme}', defaulting to 'Modern'")
+            theme = "Modern"
         
         # Determine output directory
         if output_dir:
@@ -102,7 +114,7 @@ class EnhancedCodeGenerator:
             description = content.get("product_summary", {}).get("solution_overview", product_prompt.idea_name)
             if isinstance(description, dict):
                  description = str(description)
-        except:
+        except (json.JSONDecodeError, KeyError):
              description = product_prompt.idea_name
              
         # Mock Idea Dict for internal methods
@@ -115,6 +127,7 @@ class EnhancedCodeGenerator:
         }
 
         logger.info(f"Generating enhanced application for: {idea_name}")
+        logger.info(f"Using theme: {theme}")
         
         app_name = idea_name.replace(' ', '')
         
@@ -131,7 +144,7 @@ class EnhancedCodeGenerator:
         
         # Generate all files
         self._generate_backend(app_name, description, entity, features)
-        self._generate_frontend(app_name, description, entity, theme="Modern") # theme is hardcoded for now
+        self._generate_frontend(app_name, description, entity, theme=theme)
         self._generate_configs(app_name, description)
         self._generate_docs(app_name, description, entity)
         self._generate_docs(app_name, description, entity)
@@ -710,55 +723,99 @@ docker-compose up --build
         themes = {
             "Modern": {
                 "radius": "0.5rem",
-                "font": "Inter, sans-serif",
+                "font": "'Inter', system-ui, sans-serif",
                 "colors": """
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
     --primary: 221.2 83.2% 53.3%;
     --primary-foreground: 210 40% 98%;
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83.2% 53.3%;"""
             },
             "Minimalist": {
                 "radius": "0rem",
-                "font": "Helvetica Neue, sans-serif",
+                "font": "'Helvetica Neue', Helvetica, Arial, sans-serif",
                 "colors": """
     --background: 0 0% 100%;
-    --foreground: 0 0% 0%;
+    --foreground: 0 0% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 3.9%;
     --primary: 0 0% 9%;
     --primary-foreground: 0 0% 98%;
     --secondary: 0 0% 96.1%;
     --secondary-foreground: 0 0% 9%;
-    --input: 0 0% 90%;
-    --ring: 0 0% 70%;"""
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 45.1%;
+    --accent: 0 0% 96.1%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: 0 0% 3.9%;"""
             },
             "Cyberpunk": {
                 "radius": "0px",
-                "font": "Orbitron, sans-serif",
+                "font": "'Orbitron', 'Rajdhani', monospace, sans-serif",
                 "colors": """
-    --background: 260 50% 10%;
-    --foreground: 280 80% 80%;
+    --background: 260 50% 5%;
+    --foreground: 180 100% 80%;
+    --card: 260 40% 10%;
+    --card-foreground: 180 100% 80%;
+    --popover: 260 40% 10%;
+    --popover-foreground: 180 100% 80%;
     --primary: 320 100% 50%;
     --primary-foreground: 0 0% 0%;
-    --secondary: 180 100% 50%;
+    --secondary: 180 100% 40%;
     --secondary-foreground: 0 0% 0%;
-    --input: 260 50% 20%;
+    --muted: 260 30% 20%;
+    --muted-foreground: 180 50% 60%;
+    --accent: 280 100% 60%;
+    --accent-foreground: 0 0% 0%;
+    --destructive: 0 100% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 260 50% 25%;
+    --input: 260 50% 15%;
     --ring: 320 100% 50%;"""
             },
             "Corporate": {
                 "radius": "0.25rem",
-                "font": "Arial, sans-serif",
+                "font": "'Arial', 'Helvetica', sans-serif",
                 "colors": """
-    --background: 220 30% 96%;
-    --foreground: 220 50% 20%;
-    --primary: 220 80% 40%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 210 20% 90%;
-    --secondary-foreground: 220 50% 20%;
-    --input: 220 20% 85%;
-    --ring: 220 80% 40%;"""
+    --background: 210 40% 98%;
+    --foreground: 222.2 47.4% 11.2%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 47.4% 11.2%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 47.4% 11.2%;
+    --primary: 221.2 83.2% 40%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 20% 93%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 93%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 85%;
+    --input: 214.3 31.8% 85%;
+    --ring: 221.2 83.2% 40%;"""
             }
         }
         return themes.get(theme, themes["Modern"])
@@ -944,7 +1001,7 @@ const config: Config = {
     },
     extend: {
       colors: {
-        border: "hsl(var(--input))",
+        border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
@@ -956,6 +1013,26 @@ const config: Config = {
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
           foreground: "hsl(var(--secondary-foreground))",
+        },
+        destructive: {
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
+        },
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
+        },
+        accent: {
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
+        },
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
+        },
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
         },
       },
       borderRadius: {
@@ -1047,6 +1124,334 @@ CMD ["npm", "run", "dev"]
 }
 '''
         self._write_file('frontend/tsconfig.json', tsconfig, 'frontend')
+        
+        # Theme config file for AI agent customization
+        theme_config_ts = f'''/**
+ * Theme Configuration
+ * 
+ * This file contains all design tokens for the "{theme}" theme.
+ * AI agents can safely modify colors, fonts, spacing, and other visual properties here
+ * without affecting business logic in components.
+ * 
+ * To change the theme:
+ * 1. Modify the values in this file
+ * 2. Update globals.css :root variables to match
+ * 3. Components will automatically pick up the changes
+ */
+
+export const themeConfig = {{
+  /** Theme identifier */
+  name: "{theme}",
+  
+  /** Color palette - HSL values matching CSS variables in globals.css */
+  colors: {{
+    primary: "hsl(var(--primary))",
+    primaryForeground: "hsl(var(--primary-foreground))",
+    secondary: "hsl(var(--secondary))",
+    secondaryForeground: "hsl(var(--secondary-foreground))",
+    background: "hsl(var(--background))",
+    foreground: "hsl(var(--foreground))",
+    card: "hsl(var(--card))",
+    cardForeground: "hsl(var(--card-foreground))",
+    muted: "hsl(var(--muted))",
+    mutedForeground: "hsl(var(--muted-foreground))",
+    accent: "hsl(var(--accent))",
+    accentForeground: "hsl(var(--accent-foreground))",
+    destructive: "hsl(var(--destructive))",
+    destructiveForeground: "hsl(var(--destructive-foreground))",
+    border: "hsl(var(--border))",
+    input: "hsl(var(--input))",
+    ring: "hsl(var(--ring))",
+  }},
+  
+  /** Typography settings */
+  fonts: {{
+    heading: "{theme_config['font']}",
+    body: "{theme_config['font']}",
+    mono: "monospace",
+  }},
+  
+  /** Spacing and sizing */
+  spacing: {{
+    radius: "{theme_config['radius']}",
+    containerMaxWidth: "1400px",
+    containerPadding: "2rem",
+  }},
+  
+  /** Visual effects */
+  effects: {{
+    /** Border style preference: "solid" | "none" | "gradient" */
+    borderStyle: "solid",
+    /** Shadow intensity: "none" | "subtle" | "medium" | "strong" */
+    shadowIntensity: "{"subtle" if theme in ["Modern", "Corporate"] else "strong" if theme == "Cyberpunk" else "none"}",
+    /** Enable animations */
+    animationsEnabled: true,
+  }},
+}} as const;
+
+export type ThemeConfig = typeof themeConfig;
+
+/**
+ * Helper to get a color value
+ * Usage: getColor("primary") returns "hsl(var(--primary))"
+ */
+export function getColor(name: keyof typeof themeConfig.colors): string {{
+  return themeConfig.colors[name];
+}}
+'''
+        self._write_file('frontend/src/config/theme.config.ts', theme_config_ts, 'frontend')
+        
+        # Navigation Configuration - AI Agent Safe Edit Zone
+        navigation_config = f'''/**
+ * Navigation Configuration
+ * 
+ * SAFE TO MODIFY: This file is intentionally separated from business logic
+ * for AI-assisted customization. Modify navigation items here without
+ * touching component code.
+ * 
+ * @ai-safe-edit
+ */
+
+import {{ LayoutDashboard, Box, Settings, Users, FileText, BarChart }} from "lucide-react";
+import type {{ LucideIcon }} from "lucide-react";
+
+export interface NavItem {{
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  /** Optional badge to show (e.g., notification count) */
+  badge?: string | number;
+  /** Whether this item is visible */
+  visible?: boolean;
+}}
+
+export interface NavSection {{
+  title?: string;
+  items: NavItem[];
+}}
+
+/**
+ * Main navigation items for the sidebar
+ */
+export const mainNavigation: NavItem[] = [
+  {{
+    href: "/dashboard",
+    label: "Dashboard",
+    icon: LayoutDashboard,
+  }},
+  {{
+    href: "/dashboard/{entity['lower']}s",
+    label: "{entity['name']}s",
+    icon: Box,
+  }},
+];
+
+/**
+ * Settings and account navigation
+ */
+export const settingsNavigation: NavItem[] = [
+  {{
+    href: "/dashboard/settings",
+    label: "Settings",
+    icon: Settings,
+  }},
+];
+
+/**
+ * All navigation sections
+ */
+export const navigationConfig = {{
+  appName: "{app_name}",
+  main: mainNavigation,
+  settings: settingsNavigation,
+}} as const;
+
+export type NavigationConfig = typeof navigationConfig;
+'''
+        self._write_file('frontend/src/config/navigation.config.ts', navigation_config, 'frontend')
+        
+        # Copy/Content Configuration - AI Agent Safe Edit Zone
+        copy_config = f'''/**
+ * Copy/Content Configuration
+ * 
+ * SAFE TO MODIFY: This file contains all user-facing text strings.
+ * AI agents can safely edit these without affecting application logic.
+ * 
+ * @ai-safe-edit
+ */
+
+export const copyConfig = {{
+  /**
+   * Application branding
+   */
+  app: {{
+    name: "{app_name}",
+    tagline: "Your {app_name} dashboard",
+    description: "{description}",
+  }},
+
+  /**
+   * Authentication pages
+   */
+  auth: {{
+    login: {{
+      title: "Welcome back",
+      subtitle: "Sign in to your account",
+      emailLabel: "Email",
+      passwordLabel: "Password",
+      submitButton: "Sign in",
+      registerLink: "Don't have an account? Sign up",
+      forgotPasswordLink: "Forgot password?",
+    }},
+    register: {{
+      title: "Create an account",
+      subtitle: "Get started with {app_name}",
+      emailLabel: "Email",
+      passwordLabel: "Password",
+      confirmPasswordLabel: "Confirm password",
+      nameLabel: "Full name",
+      submitButton: "Create account",
+      loginLink: "Already have an account? Sign in",
+    }},
+  }},
+
+  /**
+   * Dashboard pages
+   */
+  dashboard: {{
+    welcome: "Welcome to {app_name}",
+    emptyState: "No {entity['lower']}s found. Create your first one!",
+    createButton: "Create {entity['name']}",
+  }},
+
+  /**
+   * Common UI elements
+   */
+  common: {{
+    loading: "Loading...",
+    error: "Something went wrong",
+    retry: "Try again",
+    save: "Save",
+    cancel: "Cancel",
+    delete: "Delete",
+    edit: "Edit",
+    view: "View",
+    search: "Search...",
+    noResults: "No results found",
+  }},
+
+  /**
+   * Error messages
+   */
+  errors: {{
+    networkError: "Unable to connect. Please check your internet connection.",
+    unauthorized: "Please sign in to continue.",
+    notFound: "The requested resource was not found.",
+    serverError: "An unexpected error occurred. Please try again later.",
+  }},
+}} as const;
+
+export type CopyConfig = typeof copyConfig;
+
+/**
+ * Helper to get nested copy values
+ * Usage: getCopy("auth.login.title")
+ */
+export function getCopy(path: string): string {{
+  const keys = path.split(".");
+  let value: any = copyConfig;
+  for (const key of keys) {{
+    value = value?.[key];
+  }}
+  return typeof value === "string" ? value : path;
+}}
+'''
+        self._write_file('frontend/src/config/copy.config.ts', copy_config, 'frontend')
+        
+        # Features Configuration - AI Agent Safe Edit Zone
+        features_config = f'''/**
+ * Feature Flags Configuration
+ * 
+ * SAFE TO MODIFY: Toggle features on/off without changing code.
+ * AI agents can safely enable/disable functionality here.
+ * 
+ * @ai-safe-edit
+ */
+
+export const featuresConfig = {{
+  /**
+   * Authentication features
+   */
+  auth: {{
+    /** Enable social login (Google, GitHub) */
+    socialLogin: false,
+    /** Enable "Remember me" checkbox */
+    rememberMe: true,
+    /** Enable password reset functionality */
+    passwordReset: false,
+    /** Enable email verification requirement */
+    emailVerification: false,
+  }},
+
+  /**
+   * Dashboard features
+   */
+  dashboard: {{
+    /** Show analytics/stats cards on dashboard */
+    showStats: true,
+    /** Enable dark mode toggle */
+    darkMode: true,
+    /** Show recent activity feed */
+    activityFeed: false,
+    /** Enable keyboard shortcuts */
+    keyboardShortcuts: false,
+  }},
+
+  /**
+   * {entity['name']} features
+   */
+  {entity['lower']}: {{
+    /** Enable bulk actions (select multiple) */
+    bulkActions: false,
+    /** Show advanced filters */
+    advancedFilters: false,
+    /** Enable export to CSV/Excel */
+    exportEnabled: false,
+    /** Enable import from CSV */
+    importEnabled: false,
+  }},
+
+  /**
+   * UI/UX features
+   */
+  ui: {{
+    /** Show loading skeletons vs spinners */
+    useSkeletons: true,
+    /** Enable animations */
+    animations: true,
+    /** Show toast notifications */
+    toasts: true,
+    /** Enable offline support */
+    offlineSupport: false,
+  }},
+}} as const;
+
+export type FeaturesConfig = typeof featuresConfig;
+
+/**
+ * Check if a feature is enabled
+ * Usage: isFeatureEnabled("auth.socialLogin")
+ */
+export function isFeatureEnabled(path: string): boolean {{
+  const keys = path.split(".");
+  let value: any = featuresConfig;
+  for (const key of keys) {{
+    value = value?.[key];
+  }}
+  return value === true;
+}}
+'''
+        self._write_file('frontend/src/config/features.config.ts', features_config, 'frontend')
     
         # Components
         self._write_file('frontend/src/components/ui/button.tsx', FRONTEND_UI_BUTTON, 'frontend')
@@ -1126,22 +1531,83 @@ export const Icons = {
         
         self._write_file('docker-compose.yml', docker_compose, 'config')
 
-        # .env.example
-        env_example = f'''# Ports
+        # Generate cryptographically secure SECRET_KEY
+        import secrets
+        secret_key = secrets.token_urlsafe(32)
+        
+        # .env with actual secure values (for immediate use)
+        env_file = f'''# {db_name} Environment Configuration
+# Generated with secure defaults - modify as needed
+
+# =============================================================================
+# PORTS
+# =============================================================================
 BACKEND_PORT=8000
 FRONTEND_PORT=3000
 DB_PORT=5432
 REDIS_PORT=6379
 
-# Database
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/{db_name}
+# =============================================================================
+# DATABASE
+# =============================================================================
+DATABASE_URL=postgresql://postgres:postgres@db:5432/{db_name}
 
-# Auth
-SECRET_KEY=changeme
+# =============================================================================
+# SECURITY
+# =============================================================================
+# Auto-generated secure key - DO NOT COMMIT THIS FILE TO VERSION CONTROL
+SECRET_KEY={secret_key}
+
+# =============================================================================
+# OPTIONAL INTEGRATIONS
+# =============================================================================
 OPENAI_API_KEY=
 
-# App
-DEBUG=true
+# =============================================================================
+# APP SETTINGS
+# =============================================================================
+DEBUG=false
+'''
+        self._write_file('.env', env_file, 'config')
+        logger.info(f"Generated .env with secure SECRET_KEY")
+        
+        # .env.example (for documentation/version control)
+        env_example = f'''# {db_name} Environment Configuration
+# Copy this file to .env and update values as needed
+# IMPORTANT: .env should NEVER be committed to version control
+
+# =============================================================================
+# PORTS
+# =============================================================================
+BACKEND_PORT=8000
+FRONTEND_PORT=3000
+DB_PORT=5432
+REDIS_PORT=6379
+
+# =============================================================================
+# DATABASE
+# =============================================================================
+DATABASE_URL=postgresql://postgres:postgres@db:5432/{db_name}
+
+# =============================================================================
+# SECURITY (REQUIRED - CHANGE THESE!)
+# =============================================================================
+# Generate a new key with: python -c "import secrets; print(secrets.token_urlsafe(32))"
+SECRET_KEY=CHANGE_ME_GENERATE_A_SECURE_KEY
+
+# =============================================================================
+# OPTIONAL INTEGRATIONS
+# =============================================================================
+OPENAI_API_KEY=
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=
+
+# =============================================================================
+# APP SETTINGS
+# =============================================================================
+DEBUG=false
 '''
         self._write_file('.env.example', env_example, 'config')
         
@@ -1161,56 +1627,196 @@ dist/
         self._write_file('.github/workflows/ci.yml', GITHUB_WORKFLOW_CI, 'config')
     
     def _generate_docs(self, app_name: str, description: str, entity: Dict):
-        """Generate documentation."""
+        """Generate documentation and environment files."""
+        db_name = app_name.lower().replace('-', '_').replace(' ', '_')
+        
+        # Generate .env.example
+        env_example = f'''# {app_name} Environment Configuration
+# Copy this file to .env and update values as needed
+
+# =============================================================================
+# DATABASE
+# =============================================================================
+DATABASE_URL=postgresql://postgres:postgres@db:5432/{db_name}
+
+# =============================================================================
+# SECURITY (CHANGE THESE IN PRODUCTION!)
+# =============================================================================
+SECRET_KEY=your-secret-key-change-in-production
+
+# =============================================================================
+# REDIS (Optional - for caching/sessions)
+# =============================================================================
+REDIS_URL=redis://redis:6379/0
+
+# =============================================================================
+# CORS (Comma-separated origins, or leave for defaults)
+# =============================================================================
+# CORS_ORIGINS=http://localhost:3000,http://localhost:8000
+
+# =============================================================================
+# OPTIONAL INTEGRATIONS
+# =============================================================================
+# OPENAI_API_KEY=sk-...
+# GOOGLE_CLIENT_ID=
+# GOOGLE_CLIENT_SECRET=
+# GITHUB_CLIENT_ID=
+# GITHUB_CLIENT_SECRET=
+
+# =============================================================================
+# PORTS (for docker-compose)
+# =============================================================================
+BACKEND_PORT=8000
+FRONTEND_PORT=3000
+DB_PORT=5432
+'''
+        self._write_file('.env.example', env_example, 'config')
+        
+        # Generate comprehensive README
         readme = f'''# {app_name}
 
 {description}
 
-## Quick Start
+## 🚀 Quick Start (3 Steps)
 
+### Prerequisites
+- [Docker](https://docs.docker.com/get-docker/) and Docker Compose
+- (Optional) Python 3.11+ and Node.js 20+ for local development
+
+### Step 1: Configure Environment
 ```bash
-# Start all services
-docker-compose up -d
-
-# Access
-# - Frontend: http://localhost:3000
-# - Backend API: http://localhost:8000/docs
+cp .env.example .env
+# Edit .env if needed (defaults work for local development)
 ```
 
-## Features
+### Step 2: Start the Application
+```bash
+docker compose up --build
+```
 
-- ✅ JWT Authentication
-- ✅ Full CRUD for {entity['name']}s
-- ✅ PostgreSQL Database
-- ✅ REST API with FastAPI
-- ✅ Next.js Frontend
-- ✅ Docker Setup
-- ✅ Test Suite
+### Step 3: Open in Browser
+- **Frontend:** http://localhost:3000
+- **Backend API Docs:** http://localhost:8000/docs
+- **Health Check:** http://localhost:8000/health/ready
 
-## API Endpoints
+### ✅ Success Looks Like:
+1. Open http://localhost:3000
+2. Click "Register" and create an account
+3. Login with your credentials
+4. You should see the dashboard!
 
-- `POST /api/v1/auth/register` - Register user
-- `POST /api/v1/auth/login` - Login
-- `GET /api/v1/{entity['lower']}s/` - List {entity['lower']}s
-- `POST /api/v1/{entity['lower']}s/` - Create {entity['lower']}
-- `GET /api/v1/{entity['lower']}s/{{id}}` - Get {entity['lower']}
-- `PUT /api/v1/{entity['lower']}s/{{id}}` - Update {entity['lower']}
-- `DELETE /api/v1/{entity['lower']}s/{{id}}` - Delete {entity['lower']}
+---
 
-## Tech Stack
+## 📊 Health Endpoints
 
-**Backend:**
-- FastAPI 0.109
-- SQLAlchemy 2.0
-- PostgreSQL 15
-- JWT Auth
-- Pytest
+| Endpoint | Purpose | Use Case |
+|----------|---------|----------|
+| `/health` | Basic liveness | App is running |
+| `/health/ready` | Readiness check | DB connected, ready for traffic |
+| `/health/live` | Liveness probe | Kubernetes liveness probe |
 
-**Frontend:**
-- Next.js 14
-- React 18
-- TypeScript
-- Tailwind CSS
+---
+
+## ⚙️ Environment Variables
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `DATABASE_URL` | Yes | (set in docker-compose) | PostgreSQL connection string |
+| `SECRET_KEY` | Yes | ⚠️ weak default | JWT signing key (change in production!) |
+| `REDIS_URL` | No | redis://redis:6379/0 | Redis connection string |
+
+See `.env.example` for all available options.
+
+---
+
+## 🔧 Local Development (Without Docker)
+
+### Backend
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate  # Windows: venv\\Scripts\\activate
+pip install -r requirements.txt
+
+# Set environment variables
+export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/{db_name}
+export SECRET_KEY=dev-secret-key
+
+# Run
+uvicorn app.main:app --reload --port 8000
+```
+
+### Frontend
+```bash
+cd frontend
+npm install
+NEXT_PUBLIC_API_URL=http://localhost:8000 npm run dev
+```
+
+---
+
+## 📁 Project Structure
+
+```
+├── backend/
+│   ├── app/
+│   │   ├── api/          # API endpoints
+│   │   ├── core/         # Config, auth, security
+│   │   ├── crud/         # Database operations
+│   │   ├── db/           # Database session, models
+│   │   ├── models/       # SQLAlchemy models
+│   │   └── schemas/      # Pydantic schemas
+│   ├── tests/            # Backend tests
+│   └── Dockerfile
+├── frontend/
+│   ├── src/
+│   │   ├── app/          # Next.js pages
+│   │   ├── components/   # React components
+│   │   └── config/       # Theme configuration
+│   └── Dockerfile
+└── docker-compose.yml
+```
+
+---
+
+## 🔌 API Endpoints
+
+### Authentication
+- `POST /api/v1/auth/register` - Register new user
+- `POST /api/v1/auth/login` - Login (returns JWT)
+- `POST /api/v1/auth/refresh` - Refresh token
+- `GET /api/v1/auth/me` - Get current user
+
+### {entity['name']}s
+- `GET /api/v1/{entity['lower']}s/` - List all
+- `POST /api/v1/{entity['lower']}s/` - Create new
+- `GET /api/v1/{entity['lower']}s/{{id}}` - Get by ID
+- `PUT /api/v1/{entity['lower']}s/{{id}}` - Update
+- `DELETE /api/v1/{entity['lower']}s/{{id}}` - Delete
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| Frontend | Next.js 14, React 18, TypeScript, Tailwind CSS |
+| Backend | FastAPI 0.109, SQLAlchemy 2.0, Pydantic 2.5 |
+| Database | PostgreSQL 15 |
+| Auth | JWT (python-jose), bcrypt |
+| Container | Docker, Docker Compose |
+
+---
+
+## 🎨 Customization
+
+### Theme Configuration
+Edit `frontend/src/config/theme.config.ts` to customize colors, fonts, and spacing.
+
+### CSS Variables
+Theme colors are defined in `frontend/src/app/globals.css` as CSS variables.
+
+---
 
 Generated by AI Startup Generator
 '''

@@ -105,7 +105,7 @@ class CodeGenerationEngine:
         # Parse prompt_content
         try:
             content_dict = json.loads(prompt.prompt_content)
-        except:
+        except json.JSONDecodeError:
             content_dict = {}
         
         tagline = content_dict.get('product_summary', {}).get('tagline', 'A modern SaaS application')
@@ -415,7 +415,7 @@ CMD ["npm", "run", "dev"]
         # Parse prompt_content
         try:
             content_dict = json.loads(prompt.prompt_content)
-        except:
+        except json.JSONDecodeError:
             content_dict = {}
         
         arch_desc = content_dict.get('system_architecture', {}).get('architecture_diagram_description', 'Modern SaaS architecture')

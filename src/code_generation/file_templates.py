@@ -11,29 +11,48 @@ BACKEND_MAIN_PY = '''"""${app_name} - FastAPI Backend."""
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 import logging
 
 from app.api import api_router
 from app.core.config import settings
-from app.db.session import engine
+from app.db.session import engine, wait_for_db, check_db_connection
 from app.db.base_class import Base
 from app import models
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
+    logger.info("=" * 60)
     logger.info("Starting ${app_name}...")
+    logger.info("=" * 60)
     
-    # Create tables on startup
-    logger.info("Creating database tables...")
+    # Wait for database to be ready (handles container startup race)
+    logger.info("Waiting for database connection...")
+    try:
+        wait_for_db(max_retries=30, initial_interval=1.0)
+    except RuntimeError as e:
+        logger.error(f"FATAL: {e}")
+        raise
+    
+    # Create tables on startup (idempotent)
+    logger.info("Ensuring database tables exist...")
     Base.metadata.create_all(bind=engine)
-    logger.info("Database tables created.")
+    logger.info("✓ Database tables ready.")
+    
+    logger.info("=" * 60)
+    logger.info("${app_name} is ready to serve requests!")
+    logger.info("=" * 60)
     
     yield
+    
     logger.info("Shutting down ${app_name}...")
 
 app = FastAPI(
@@ -46,7 +65,7 @@ app = FastAPI(
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -55,16 +74,73 @@ app.add_middleware(
 # Include routers
 app.include_router(api_router, prefix="/api/v1")
 
+
 @app.get("/health")
 async def health_check():
+    """Basic health check - app is running."""
     return {"status": "healthy", "app": "${app_name}"}
+
+
+@app.get("/health/ready")
+async def readiness_check():
+    """
+    Readiness check - app is ready to serve traffic.
+    
+    Checks database connectivity. Use this for Kubernetes readiness probes
+    or load balancer health checks.
+    """
+    db_status = check_db_connection()
+    
+    if db_status["status"] == "connected":
+        return {
+            "status": "ready",
+            "checks": {
+                "database": "connected"
+            }
+        }
+    else:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "not_ready",
+                "checks": {
+                    "database": db_status["error"]
+                }
+            }
+        )
+
+
+@app.get("/health/live")
+async def liveness_check():
+    """
+    Liveness check - app process is alive.
+    
+    Use this for Kubernetes liveness probes. If this fails,
+    the container should be restarted.
+    """
+    return {"status": "alive"}
 '''
 
-BACKEND_CONFIG_PY = '''"""Application configuration."""
+BACKEND_CONFIG_PY = '''"""Application configuration with validation."""
 
 from pydantic_settings import BaseSettings
+from pydantic import field_validator
 from typing import List
 import os
+import logging
+import warnings
+
+logger = logging.getLogger(__name__)
+
+# Weak/default SECRET_KEY patterns to warn about
+WEAK_SECRET_PATTERNS = [
+    "changeme",
+    "your-secret-key",
+    "change-in-production",
+    "CHANGE_ME",
+    "secret",
+]
+
 
 class Settings(BaseSettings):
     # App
@@ -86,19 +162,58 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     
+    # Password requirements
+    MIN_PASSWORD_LENGTH: int = 8
+    
     # OAuth
     GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "")
     GOOGLE_CLIENT_SECRET: str = os.getenv("GOOGLE_CLIENT_SECRET", "")
     GITHUB_CLIENT_ID: str = os.getenv("GITHUB_CLIENT_ID", "")
     GITHUB_CLIENT_SECRET: str = os.getenv("GITHUB_CLIENT_SECRET", "")
     
-    # CORS
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8000"]
+    # CORS - configurable via environment
+    # Set CORS_ORIGINS as comma-separated URLs, e.g., "http://localhost:3000,https://myapp.com"
+    CORS_ORIGINS: List[str] = _parse_cors_origins()
     
     class Config:
         env_file = ".env"
+    
+    @field_validator("SECRET_KEY")
+    @classmethod
+    def validate_secret_key(cls, v: str) -> str:
+        """Warn if SECRET_KEY appears to be a weak default."""
+        is_weak = any(pattern.lower() in v.lower() for pattern in WEAK_SECRET_PATTERNS)
+        is_short = len(v) < 32
+        
+        if is_weak or is_short:
+            warnings.warn(
+                "\\n" + "=" * 60 + "\\n"
+                "⚠️  SECURITY WARNING: SECRET_KEY appears to be weak!\\n"
+                "   For production, generate a secure key with:\\n"
+                "   python -c \\"import secrets; print(secrets.token_urlsafe(32))\\"\\n"
+                "=" * 60,
+                UserWarning,
+                stacklevel=2
+            )
+        return v
+
+
+def _parse_cors_origins() -> List[str]:
+    """Parse CORS_ORIGINS from environment or use defaults."""
+    env_origins = os.getenv("CORS_ORIGINS", "")
+    if env_origins:
+        # Split by comma and strip whitespace
+        return [origin.strip() for origin in env_origins.split(",") if origin.strip()]
+    # Default origins for local development
+    return ["http://localhost:3000", "http://localhost:8000"]
+
 
 settings = Settings()
+
+# Log startup configuration (non-sensitive)
+logger.info(f"Starting {settings.APP_NAME}")
+logger.info(f"Debug mode: {settings.DEBUG}")
+logger.info(f"CORS origins: {settings.CORS_ORIGINS}")
 '''
 
 BACKEND_MODELS_USER_PY = '''"""User model."""
@@ -442,18 +557,15 @@ from datetime import datetime
 
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.user import UserCreate, UserResponse, Token
+from app.schemas.user import UserCreate, UserResponse, UserLogin, Token
 from app.core.auth import (
     get_password_hash, 
     verify_password, 
     create_access_token,
     create_refresh_token,
     decode_token,
-    create_refresh_token,
-    decode_token,
     get_current_user
 )
-from app.schemas.user import UserCreate, UserResponse, UserLogin, Token
 
 router = APIRouter()
 
@@ -624,14 +736,20 @@ async def delete_${entity_lower}(
     crud_${entity_lower}.delete(db, id=id)
 '''
 
-BACKEND_DB_SESSION_PY = '''"""Database session management."""
+BACKEND_DB_SESSION_PY = '''"""Database session management with connection retry logic."""
 
-from sqlalchemy import create_engine
+import time
+import logging
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.exc import OperationalError
 from typing import Generator
 
 from app.core.config import settings
 
+logger = logging.getLogger(__name__)
+
+# Create engine with connection pooling
 engine = create_engine(
     settings.DATABASE_URL,
     pool_pre_ping=True,
@@ -641,7 +759,63 @@ engine = create_engine(
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+
+def wait_for_db(max_retries: int = 30, initial_interval: float = 1.0) -> bool:
+    """
+    Wait for database to be ready with exponential backoff.
+    
+    Args:
+        max_retries: Maximum number of connection attempts
+        initial_interval: Initial wait time between retries (doubles each attempt, max 30s)
+    
+    Returns:
+        True if connection successful
+    
+    Raises:
+        RuntimeError if database is not available after max_retries
+    """
+    for attempt in range(1, max_retries + 1):
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+                conn.commit()
+            logger.info("✓ Database connection established.")
+            return True
+        except OperationalError as e:
+            wait_time = min(initial_interval * (2 ** (attempt - 1)), 30.0)
+            logger.warning(
+                f"Database not ready (attempt {attempt}/{max_retries}). "
+                f"Retrying in {wait_time:.1f}s... Error: {str(e)[:100]}"
+            )
+            time.sleep(wait_time)
+        except Exception as e:
+            logger.error(f"Unexpected database error: {e}")
+            raise
+    
+    raise RuntimeError(
+        f"Could not connect to database after {max_retries} attempts. "
+        f"Check DATABASE_URL and ensure PostgreSQL is running."
+    )
+
+
+def check_db_connection() -> dict:
+    """
+    Check database connectivity for health endpoints.
+    
+    Returns:
+        Dict with status and optional error message
+    """
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+            conn.commit()
+        return {"status": "connected", "error": None}
+    except Exception as e:
+        return {"status": "disconnected", "error": str(e)}
+
+
 def get_db() -> Generator[Session, None, None]:
+    """Dependency for FastAPI endpoints to get a database session."""
     db = SessionLocal()
     try:
         yield db
@@ -979,7 +1153,7 @@ class AIService:
         import json
         try:
             return json.loads(text)
-        except:
+        except json.JSONDecodeError:
             return {}
 
 ai_service = AIService()
@@ -1046,11 +1220,19 @@ services:
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/${db_name}
       - REDIS_URL=redis://redis:6379/0
-      - SECRET_KEY=changeme
+      - SECRET_KEY=${SECRET_KEY:-changeme-in-production}
       - OPENAI_API_KEY=${openai_key}
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   frontend:
     build:
@@ -1062,9 +1244,10 @@ services:
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:${BACKEND_PORT:-8000}/api/v1
+      - NEXT_PUBLIC_API_URL=http://localhost:${BACKEND_PORT:-8000}
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
 
   db:
     image: postgres:15-alpine
@@ -1076,11 +1259,22 @@ services:
       - POSTGRES_DB=${db_name}
     ports:
       - "${DB_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ${db_name}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
   redis:
     image: redis:7-alpine
     ports:
       - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   ${worker_service}
 

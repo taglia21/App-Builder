@@ -657,32 +657,32 @@ def get_llm_client(
         if os.getenv("GROQ_API_KEY"):
             try:
                 providers.append(GroqClient())
-            except:
-                pass
+            except (ValueError, ImportError) as e:
+                logger.debug(f"Skipping Groq in multi-provider: {type(e).__name__}: {e}")
         
         if os.getenv("GOOGLE_API_KEY"):
             try:
                 providers.append(GeminiClient())
-            except:
-                pass
+            except (ValueError, ImportError) as e:
+                logger.debug(f"Skipping Gemini in multi-provider: {type(e).__name__}: {e}")
         
         if os.getenv("OPENROUTER_API_KEY"):
             try:
                 providers.append(OpenRouterClient())
-            except:
-                pass
+            except (ValueError, ImportError) as e:
+                logger.debug(f"Skipping OpenRouter in multi-provider: {type(e).__name__}: {e}")
         
         if os.getenv("ANTHROPIC_API_KEY"):
             try:
                 providers.append(AnthropicClient())
-            except:
-                pass
+            except (ValueError, ImportError) as e:
+                logger.debug(f"Skipping Anthropic in multi-provider: {type(e).__name__}: {e}")
         
         if os.getenv("OPENAI_API_KEY"):
             try:
                 providers.append(OpenAIClient())
-            except:
-                pass
+            except (ValueError, ImportError) as e:
+                logger.debug(f"Skipping OpenAI in multi-provider: {type(e).__name__}: {e}")
         
         if not providers:
             logger.warning("No providers available for multi-provider client, using mock")

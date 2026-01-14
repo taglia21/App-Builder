@@ -73,8 +73,8 @@ class GitHubSource(DataSource):
                                     "comments": issue.comments,
                                 }
                             )
-                    except:
-                        pass
+                    except Exception as e:
+                        logger.debug(f"Failed to fetch issues for {repo.full_name}: {e}")
 
                     data_point = {
                         "source_type": "github",
@@ -109,5 +109,6 @@ class GitHubSource(DataSource):
         try:
             readme = repo.get_readme()
             return readme.decoded_content.decode("utf-8")[:1000]  # First 1000 chars
-        except:
+        except Exception as e:
+            logger.debug(f"Failed to fetch README: {e}")
             return ""

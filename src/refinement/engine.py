@@ -141,7 +141,7 @@ class RefinementEngine:
         # Parse prompt_content (it's a JSON string)
         try:
             content = json.loads(prompt.prompt_content)
-        except:
+        except json.JSONDecodeError:
             content = {}
         
         # Required top-level sections

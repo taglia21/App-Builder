@@ -69,7 +69,14 @@ def cli():
     is_flag=True,
     help="Deploy immediately after generation",
 )
-def generate(config, output, demo, skip_refinement, skip_code_gen, llm_provider, verbose, deploy):
+@click.option(
+    "--theme",
+    "-t",
+    type=click.Choice(['Modern', 'Minimalist', 'Cyberpunk', 'Corporate'], case_sensitive=False),
+    default='Modern',
+    help="UI theme for the generated app",
+)
+def generate(config, output, demo, skip_refinement, skip_code_gen, llm_provider, verbose, deploy, theme):
     """Run the full pipeline once."""
     UI.header("Startup Generator", "Full Pipeline Execution")
     
@@ -77,6 +84,7 @@ def generate(config, output, demo, skip_refinement, skip_code_gen, llm_provider,
         UI.warning("MODE: Demo (using sample data)")
     if llm_provider == 'mock':
         UI.warning("LLM: Mock (no real API calls)")
+    UI.info(f"Theme: [bold]{theme}[/]")
 
     try:
         # Load configuration
@@ -96,7 +104,8 @@ def generate(config, output, demo, skip_refinement, skip_code_gen, llm_provider,
                 demo_mode=demo,
                 skip_refinement=skip_refinement,
                 skip_code_gen=skip_code_gen,
-                output_dir=output
+                output_dir=output,
+                theme=theme
             ))
 
         # Display results
@@ -470,6 +479,12 @@ def wizard():
             UI.success(f"Idea Profile Created: {idea.name}")
             print(f"   {idea.one_liner}")
             
+            # Select theme
+            theme_choice = UI.prompt("Choose theme ([1] Modern, [2] Minimalist, [3] Cyberpunk, [4] Corporate)", default="1")
+            theme_map = {"1": "Modern", "2": "Minimalist", "3": "Cyberpunk", "4": "Corporate"}
+            theme = theme_map.get(theme_choice, "Modern")
+            UI.info(f"Selected theme: [bold]{theme}[/]")
+            
             # Confirm
             if not UI.confirm("Proceed with generation?"):
                 UI.warning("Aborted.")
@@ -481,7 +496,7 @@ def wizard():
             pipeline = StartupGenerationPipeline(pipeline_config)
             
             UI.step("Building codebase...")
-            result = asyncio.run(pipeline.run_from_idea(idea))
+            result = asyncio.run(pipeline.run_from_idea(idea, theme=theme))
             
             if result.generated_codebase:
                 UI.success(f"Codebase ready at: {result.generated_codebase.output_path}")
@@ -503,10 +518,14 @@ def wizard():
             logger.exception("Wizard failed")
 
     else:
-        # Automated Mode
+        # Automated Mode - prompt for theme
+        theme_choice = UI.prompt("Choose theme ([1] Modern, [2] Minimalist, [3] Cyberpunk, [4] Corporate)", default="1")
+        theme_map = {"1": "Modern", "2": "Minimalist", "3": "Cyberpunk", "4": "Corporate"}
+        theme = theme_map.get(theme_choice, "Modern")
+        
         UI.info("Running Automated Discovery Pipeline...")
         ctx = click.get_current_context()
-        ctx.invoke(generate, config="config.yml", deploy=False)
+        ctx.invoke(generate, config="config.yml", deploy=False, theme=theme)
 
 
 if __name__ == "__main__":

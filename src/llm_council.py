@@ -80,8 +80,8 @@ class LLMCouncil:
                         code = error_json.get("error", {}).get("code")
                         if code == 402: error_msg = "Insufficient Credits (Payment Required)"
                         elif code == 429: error_msg = "Rate Limit Exceeded"
-                    except:
-                        error_msg = f"HTTP {resp.status}"
+                    except (json.JSONDecodeError, KeyError) as parse_err:
+                        error_msg = f"HTTP {resp.status} (parse error: {parse_err})"
                     
                     return {"success": False, "error": f"{model_id}: {error_msg}"}
         except Exception as e:
@@ -185,8 +185,8 @@ Be objective. It's okay if another analyst's ideas are better than others."""
                         if start >= 0 and end > start:
                             scores = json.loads(content[start:end])
                             all_scores.append(scores)
-                    except:
-                        pass
+                    except (json.JSONDecodeError, KeyError) as e:
+                        pass  # Scores extraction failed, continue with other reviewers
         
         # Aggregate scores and normalize to 0-100 scale
         if all_scores:

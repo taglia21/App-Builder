@@ -92,7 +92,8 @@ class RedditPlaywrightCollector:
             if self.context: self.context.close()
             if self.browser: self.browser.close()
             if self.playwright: self.playwright.stop()
-        except: pass
+        except Exception:
+            pass
     
     def _login(self) -> bool:
         """Try to login if credentials provided, but continue without login if it fails."""
@@ -202,7 +203,8 @@ class RedditPlaywrightCollector:
                         text = p.inner_text()
                         if len(text) > 20:
                             comments.append({'text': text[:500]})
-                except: pass
+                except Exception:
+                    pass
             
             return RedditPost(
                 id=hashlib.md5(url.encode()).hexdigest()[:12],
@@ -240,7 +242,8 @@ class RedditPlaywrightCollector:
                     if post:
                         posts.append(post)
                     time.sleep(self.delay)
-            except: continue
+            except Exception:
+                continue
         return posts
     
     def _to_pain_point(self, post: RedditPost):

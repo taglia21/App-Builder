@@ -81,15 +81,25 @@ class StartupGenerationPipeline:
             self._code_generator = CodeGenerationEngine(self.config, self.llm_client)
         return self._code_generator
 
-    async def run(self, demo_mode: bool = False, skip_refinement: bool = False, skip_code_gen: bool = False, output_dir: str = "./generated_project") -> PipelineOutput:
-        """Run the complete pipeline."""
+    async def run(self, demo_mode: bool = False, skip_refinement: bool = False, skip_code_gen: bool = False, output_dir: str = "./generated_project", theme: str = "Modern") -> PipelineOutput:
+        """Run the complete pipeline.
+        
+        Args:
+            demo_mode: Use sample data instead of real API calls
+            skip_refinement: Skip prompt refinement step
+            skip_code_gen: Skip code generation step
+            output_dir: Output directory for generated code
+            theme: UI theme - one of "Modern", "Minimalist", "Cyberpunk", "Corporate"
+        """
         logger.info("=" * 80)
         logger.info("STARTING STARTUP GENERATION PIPELINE")
         if demo_mode:
             logger.info("Running in DEMO MODE - using sample data")
+        logger.info(f"Theme: {theme}")
         logger.info("=" * 80)
 
         self.metadata.status = PipelineStatus.RUNNING
+        self.theme = theme  # Store for code generation step
 
         output = PipelineOutput(metadata=self.metadata)
 
@@ -149,7 +159,7 @@ class StartupGenerationPipeline:
             if not skip_code_gen:
                 logger.info("\n[STEP 6/6] Generating Codebase")
                 self.metadata.current_stage = PipelineStage.CODE_GENERATION
-                codebase = self.code_generator.generate(product_prompt, output_dir)
+                codebase = self.code_generator.generate(product_prompt, output_dir, theme=self.theme)
                 
                 # Run Quality Assurance
                 logger.info("Running Quality Assurance...")
@@ -187,11 +197,18 @@ class StartupGenerationPipeline:
             self.metadata.completed_at = datetime.utcnow()
             raise
 
-    async def run_from_idea(self, idea: StartupIdea) -> PipelineOutput:
-        """Run pipeline starting from an existing idea (skip intelligence and idea generation)."""
+    async def run_from_idea(self, idea: StartupIdea, theme: str = "Modern") -> PipelineOutput:
+        """Run pipeline starting from an existing idea (skip intelligence and idea generation).
+        
+        Args:
+            idea: StartupIdea to build
+            theme: UI theme - one of "Modern", "Minimalist", "Cyberpunk", "Corporate"
+        """
         logger.info("Running pipeline from existing idea")
+        logger.info(f"Theme: {theme}")
 
         self.metadata.status = PipelineStatus.RUNNING
+        self.theme = theme  # Store for code generation
         output = PipelineOutput(metadata=self.metadata)
 
         try:
@@ -261,7 +278,7 @@ class StartupGenerationPipeline:
             output.gold_standard_prompt = gold_standard_prompt
 
             self.metadata.current_stage = PipelineStage.CODE_GENERATION
-            codebase = self.code_generator.generate(gold_standard_prompt)
+            codebase = self.code_generator.generate(gold_standard_prompt, theme=self.theme)
             
             # Run Quality Assurance
             logger.info("Running Quality Assurance...")
