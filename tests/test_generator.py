@@ -273,6 +273,7 @@ class TestGeneratedAppStructure:
         assert "Dashboard" in content, "Missing Dashboard nav item"
         assert "@ai-safe-edit" in content, "Missing AI safe edit marker"
     
+
     def test_file_count_reasonable(self, generator, temp_output_dir):
         """Test that generated app has reasonable file count."""
         prompt = create_product_prompt("TestApp")
@@ -289,6 +290,95 @@ class TestGeneratedAppStructure:
         # Should generate 60-100 files for a typical app
         assert file_count >= 60, f"Too few files generated: {file_count}"
         assert file_count <= 150, f"Too many files generated: {file_count}"
+
+    def test_cors_function_defined_before_use(self, generator, temp_output_dir):
+        """Regression test: _parse_cors_origins must be defined before Settings class.
+        
+        This ensures the NameError bug from calling _parse_cors_origins() before
+        it was defined cannot recur.
+        """
+        prompt = create_product_prompt("TestApp")
+        result = generator.generate(
+            prompt=prompt,
+            output_dir=temp_output_dir,
+            theme="Modern"
+        )
+        
+        output_path = Path(temp_output_dir)
+        config_py = output_path / "backend/app/core/config.py"
+        
+        assert config_py.exists(), "Missing config.py"
+        
+        content = config_py.read_text(encoding="utf-8")
+        
+        # Find positions of function definition and class definition
+        func_pos = content.find("def _parse_cors_origins()")
+        class_pos = content.find("class Settings(")
+        
+        assert func_pos != -1, "Missing _parse_cors_origins function definition"
+        assert class_pos != -1, "Missing Settings class definition"
+        assert func_pos < class_pos, (
+            f"_parse_cors_origins (pos={func_pos}) must be defined before "
+            f"Settings class (pos={class_pos}) to avoid NameError at import time"
+        )
+
+    def test_app_has_required_startup_scripts(self, generator, temp_output_dir):
+        """Test that generated app has all required scripts to run out-of-box."""
+        prompt = create_product_prompt("TestApp")
+        result = generator.generate(
+            prompt=prompt,
+            output_dir=temp_output_dir,
+            theme="Modern"
+        )
+        
+        output_path = Path(temp_output_dir)
+        
+        # Required files for running the app
+        required_files = [
+            "docker-compose.yml",
+            ".env",
+            ".env.example",
+            "backend/requirements.txt",
+            "backend/Dockerfile",
+            "backend/app/main.py",
+            "frontend/package.json",
+            "frontend/Dockerfile",
+        ]
+        
+        for file_path in required_files:
+            assert (output_path / file_path).exists(), f"Missing required startup file: {file_path}"
+        
+        # Check docker-compose.yml has the required services
+        compose_content = (output_path / "docker-compose.yml").read_text(encoding="utf-8")
+        assert "backend:" in compose_content, "docker-compose missing backend service"
+        assert "frontend:" in compose_content, "docker-compose missing frontend service"
+        assert "db:" in compose_content, "docker-compose missing db service"
+
+    def test_schema_files_import_dict(self, generator, temp_output_dir):
+        """Regression test: schema files must import Dict to avoid NameError.
+        
+        This ensures generated schemas can use Dict type hints without crashes.
+        """
+        prompt = create_product_prompt("TestApp")
+        result = generator.generate(
+            prompt=prompt,
+            output_dir=temp_output_dir,
+            theme="Modern"
+        )
+        
+        output_path = Path(temp_output_dir)
+        schemas_dir = output_path / "backend/app/schemas"
+        
+        # Check all schema files have Dict imported
+        for schema_file in schemas_dir.glob("*.py"):
+            if schema_file.name == "__init__.py":
+                continue
+            content = schema_file.read_text(encoding="utf-8")
+            # If file uses Dict, it must import it
+            if "Dict" in content and "Dict]" in content:
+                assert "from typing import" in content and "Dict" in content, (
+                    f"{schema_file.name} uses Dict but doesn't import it from typing"
+                )
 
 
 class TestGeneratorMetrics:

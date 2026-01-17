@@ -142,6 +142,16 @@ WEAK_SECRET_PATTERNS = [
 ]
 
 
+def _parse_cors_origins() -> List[str]:
+    """Parse CORS_ORIGINS from environment or use defaults."""
+    env_origins = os.getenv("CORS_ORIGINS", "")
+    if env_origins:
+        # Split by comma and strip whitespace
+        return [origin.strip() for origin in env_origins.split(",") if origin.strip()]
+    # Default origins for local development
+    return ["http://localhost:3000", "http://localhost:8000"]
+
+
 class Settings(BaseSettings):
     # App
     APP_NAME: str = "${app_name}"
@@ -196,16 +206,6 @@ class Settings(BaseSettings):
                 stacklevel=2
             )
         return v
-
-
-def _parse_cors_origins() -> List[str]:
-    """Parse CORS_ORIGINS from environment or use defaults."""
-    env_origins = os.getenv("CORS_ORIGINS", "")
-    if env_origins:
-        # Split by comma and strip whitespace
-        return [origin.strip() for origin in env_origins.split(",") if origin.strip()]
-    # Default origins for local development
-    return ["http://localhost:3000", "http://localhost:8000"]
 
 
 settings = Settings()
@@ -344,7 +344,7 @@ class TokenPayload(BaseModel):
 BACKEND_SCHEMAS_CORE_PY = '''"""${entity_name} schemas."""
 
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from datetime import datetime
 from uuid import UUID
 
