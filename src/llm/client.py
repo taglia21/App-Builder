@@ -1,6 +1,11 @@
 """
 Multi-Provider LLM Client
 Supports: Google Gemini, Groq, OpenRouter, OpenAI, Anthropic, and Mock mode.
+
+Features:
+- Automatic retry with exponential backoff for rate limits and transient errors
+- Response caching to reduce API costs and improve performance
+- Unified interface across all providers
 """
 
 import os
@@ -9,7 +14,16 @@ import logging
 import time
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, Any, List, Union
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
+
+from .retry_cache import (
+    LLMCache,
+    SmartRetry,
+    RetryConfig,
+    CacheConfig,
+    get_default_cache,
+    get_default_retry,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -23,14 +37,84 @@ class LLMResponse:
     usage: Dict[str, int] = field(default_factory=dict)
     latency_ms: float = 0
     raw_response: Any = None
+    cached: bool = False  # Whether this response was from cache
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for caching."""
+        return {
+            'content': self.content,
+            'model': self.model,
+            'provider': self.provider,
+            'usage': self.usage,
+            'latency_ms': self.latency_ms,
+            'cached': True,  # Will be cached
+        }
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'LLMResponse':
+        """Create from cached dictionary."""
+        return cls(
+            content=data['content'],
+            model=data['model'],
+            provider=data['provider'],
+            usage=data.get('usage', {}),
+            latency_ms=data.get('latency_ms', 0),
+            cached=True,
+        )
 
 
 class BaseLLMClient(ABC):
-    """Abstract base class for LLM clients."""
+    """Abstract base class for LLM clients with retry and caching support."""
     
     provider_name: str = "base"
     
+    def __init__(
+        self,
+        retry_config: Optional[RetryConfig] = None,
+        cache_config: Optional[CacheConfig] = None,
+        use_cache: bool = True,
+        use_retry: bool = True,
+    ):
+        """Initialize base client with optional retry and cache configuration."""
+        self._use_cache = use_cache
+        self._use_retry = use_retry
+        
+        # Set up caching
+        if use_cache:
+            if cache_config:
+                self._cache = LLMCache(cache_config)
+            else:
+                self._cache = get_default_cache()
+        else:
+            self._cache = None
+        
+        # Set up retry logic
+        if use_retry:
+            if retry_config:
+                self._retry = SmartRetry(retry_config)
+            else:
+                self._retry = get_default_retry()
+        else:
+            self._retry = None
+    
     @abstractmethod
+    def _complete_impl(
+        self,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+        max_tokens: int = 4096,
+        temperature: float = 0.7,
+        json_mode: bool = False
+    ) -> LLMResponse:
+        """Internal completion implementation. Override in subclasses."""
+        pass
+    
+    @property
+    @abstractmethod
+    def model(self) -> str:
+        """Get the current model name."""
+        pass
+    
     def complete(
         self,
         prompt: str,
@@ -39,8 +123,58 @@ class BaseLLMClient(ABC):
         temperature: float = 0.7,
         json_mode: bool = False
     ) -> LLMResponse:
-        """Generate a completion from the LLM."""
-        pass
+        """
+        Generate a completion from the LLM with caching and retry support.
+        
+        Args:
+            prompt: The user prompt
+            system_prompt: Optional system prompt
+            max_tokens: Maximum tokens in response
+            temperature: Sampling temperature (0-2)
+            json_mode: Request JSON output format
+            
+        Returns:
+            LLMResponse with the completion
+        """
+        # Check cache first
+        if self._cache is not None:
+            cached = self._cache.get(
+                prompt=prompt,
+                system_prompt=system_prompt,
+                model=self.model,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                json_mode=json_mode,
+                provider=self.provider_name,
+            )
+            if cached:
+                logger.debug(f"Using cached response for {self.provider_name}")
+                return LLMResponse.from_dict(cached)
+        
+        # Make the actual call (with or without retry)
+        if self._retry is not None:
+            response = self._retry(self._complete_impl)(
+                prompt, system_prompt, max_tokens, temperature, json_mode
+            )
+        else:
+            response = self._complete_impl(
+                prompt, system_prompt, max_tokens, temperature, json_mode
+            )
+        
+        # Cache the response
+        if self._cache is not None and response:
+            self._cache.set(
+                prompt=prompt,
+                system_prompt=system_prompt,
+                model=self.model,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                json_mode=json_mode,
+                provider=self.provider_name,
+                response=response.to_dict(),
+            )
+        
+        return response
     
     def complete_with_retry(
         self,
@@ -52,17 +186,25 @@ class BaseLLMClient(ABC):
         max_retries: int = 3,
         retry_delay: float = 1.0
     ) -> LLMResponse:
-        """Complete with automatic retry on failure."""
-        last_error = None
-        for attempt in range(max_retries):
-            try:
-                return self.complete(prompt, system_prompt, max_tokens, temperature, json_mode)
-            except Exception as e:
-                last_error = e
-                logger.warning(f"Attempt {attempt + 1}/{max_retries} failed: {e}")
-                if attempt < max_retries - 1:
-                    time.sleep(retry_delay * (attempt + 1))
-        raise last_error
+        """Legacy method for backward compatibility. Now just calls complete()."""
+        return self.complete(prompt, system_prompt, max_tokens, temperature, json_mode)
+    
+    def clear_cache(self):
+        """Clear the response cache."""
+        if self._cache:
+            self._cache.clear()
+    
+    def get_cache_stats(self) -> Dict[str, Any]:
+        """Get cache statistics."""
+        if self._cache:
+            return self._cache.stats()
+        return {"enabled": False}
+    
+    def get_retry_stats(self) -> Dict[str, int]:
+        """Get retry statistics."""
+        if self._retry:
+            return self._retry.get_stats()
+        return {"enabled": False}
 
 
 class GeminiClient(BaseLLMClient):
@@ -73,13 +215,17 @@ class GeminiClient(BaseLLMClient):
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = "gemini-2.5-flash"
+        model: str = "gemini-2.5-flash",
+        use_cache: bool = True,
+        use_retry: bool = True,
     ):
-        self.api_key = api_key or os.getenv("GOOGLE_API_KEY")
-        if not self.api_key:
-            raise ValueError("Google API key not found. Set GOOGLE_API_KEY environment variable.")
+        super().__init__(use_cache=use_cache, use_retry=use_retry)
         
-        self.model = model
+        self.api_key = api_key or os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+        if not self.api_key:
+            raise ValueError("Google API key not found. Set GOOGLE_API_KEY or GEMINI_API_KEY environment variable.")
+        
+        self._model = model
         
         try:
             import google.generativeai as genai
@@ -90,7 +236,11 @@ class GeminiClient(BaseLLMClient):
         except ImportError:
             raise ImportError("google-generativeai package not installed. Run: pip install google-generativeai")
     
-    def complete(
+    @property
+    def model(self) -> str:
+        return self._model
+    
+    def _complete_impl(
         self,
         prompt: str,
         system_prompt: Optional[str] = None,
@@ -162,13 +312,17 @@ class GroqClient(BaseLLMClient):
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = "llama-3.3-70b-versatile"
+        model: str = "llama-3.3-70b-versatile",
+        use_cache: bool = True,
+        use_retry: bool = True,
     ):
+        super().__init__(use_cache=use_cache, use_retry=use_retry)
+        
         self.api_key = api_key or os.getenv("GROQ_API_KEY")
         if not self.api_key:
             raise ValueError("Groq API key not found. Set GROQ_API_KEY environment variable.")
         
-        self.model = model
+        self._model = model
         
         try:
             from groq import Groq
@@ -177,7 +331,11 @@ class GroqClient(BaseLLMClient):
         except ImportError:
             raise ImportError("groq package not installed. Run: pip install groq")
     
-    def complete(
+    @property
+    def model(self) -> str:
+        return self._model
+    
+    def _complete_impl(
         self,
         prompt: str,
         system_prompt: Optional[str] = None,
@@ -241,13 +399,17 @@ class OpenRouterClient(BaseLLMClient):
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = "meta-llama/llama-3.2-3b-instruct:free"
+        model: str = "meta-llama/llama-3.2-3b-instruct:free",
+        use_cache: bool = True,
+        use_retry: bool = True,
     ):
+        super().__init__(use_cache=use_cache, use_retry=use_retry)
+        
         self.api_key = api_key or os.getenv("OPENROUTER_API_KEY")
         if not self.api_key:
             raise ValueError("OpenRouter API key not found. Set OPENROUTER_API_KEY environment variable.")
         
-        self.model = model
+        self._model = model
         self.base_url = "https://openrouter.ai/api/v1"
         
         try:
@@ -260,7 +422,11 @@ class OpenRouterClient(BaseLLMClient):
         except ImportError:
             raise ImportError("openai package not installed. Run: pip install openai")
     
-    def complete(
+    @property
+    def model(self) -> str:
+        return self._model
+    
+    def _complete_impl(
         self,
         prompt: str,
         system_prompt: Optional[str] = None,
@@ -313,12 +479,20 @@ class OpenAIClient(BaseLLMClient):
     
     provider_name = "openai"
     
-    def __init__(self, api_key: Optional[str] = None, model: str = "gpt-4-turbo-preview"):
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        model: str = "gpt-4-turbo-preview",
+        use_cache: bool = True,
+        use_retry: bool = True,
+    ):
+        super().__init__(use_cache=use_cache, use_retry=use_retry)
+        
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         if not self.api_key:
             raise ValueError("OpenAI API key not found. Set OPENAI_API_KEY environment variable.")
         
-        self.model = model
+        self._model = model
         
         try:
             from openai import OpenAI
@@ -327,7 +501,11 @@ class OpenAIClient(BaseLLMClient):
         except ImportError:
             raise ImportError("openai package not installed. Run: pip install openai")
     
-    def complete(
+    @property
+    def model(self) -> str:
+        return self._model
+    
+    def _complete_impl(
         self,
         prompt: str,
         system_prompt: Optional[str] = None,
@@ -375,12 +553,20 @@ class AnthropicClient(BaseLLMClient):
     
     provider_name = "anthropic"
     
-    def __init__(self, api_key: Optional[str] = None, model: str = "claude-sonnet-4-20250514"):
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        model: str = "claude-sonnet-4-20250514",
+        use_cache: bool = True,
+        use_retry: bool = True,
+    ):
+        super().__init__(use_cache=use_cache, use_retry=use_retry)
+        
         self.api_key = api_key or os.getenv("ANTHROPIC_API_KEY")
         if not self.api_key:
             raise ValueError("Anthropic API key not found. Set ANTHROPIC_API_KEY environment variable.")
         
-        self.model = model
+        self._model = model
         
         try:
             import anthropic
@@ -389,7 +575,11 @@ class AnthropicClient(BaseLLMClient):
         except ImportError:
             raise ImportError("anthropic package not installed. Run: pip install anthropic")
     
-    def complete(
+    @property
+    def model(self) -> str:
+        return self._model
+    
+    def _complete_impl(
         self,
         prompt: str,
         system_prompt: Optional[str] = None,
@@ -440,10 +630,17 @@ class MockLLMClient(BaseLLMClient):
     
     provider_name = "mock"
     
-    def __init__(self):
+    def __init__(self, use_cache: bool = False, use_retry: bool = False):
+        # Mock client doesn't need caching or retry
+        super().__init__(use_cache=False, use_retry=False)
+        self._model = "mock-model"
         logger.info("Initialized Mock LLM client (no API calls)")
     
-    def complete(
+    @property
+    def model(self) -> str:
+        return self._model
+    
+    def _complete_impl(
         self,
         prompt: str,
         system_prompt: Optional[str] = None,
