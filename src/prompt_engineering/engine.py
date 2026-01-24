@@ -711,21 +711,28 @@ Respond with ONLY valid JSON."""
     
     # Fallback methods for when LLM fails
     def _fallback_product_summary(self, idea: StartupIdea) -> Dict[str, Any]:
+        # Convert Pydantic models to dicts for JSON serialization
+        target_buyer = idea.target_buyer_persona
+        if hasattr(target_buyer, 'model_dump'):
+            target_buyer = target_buyer.model_dump()
+        elif hasattr(target_buyer, 'dict'):
+            target_buyer = target_buyer.dict()
+        
         return {
             "product_name": idea.name,
             "tagline": idea.one_liner[:50],
             "problem_statement": {
                 "primary_problem": idea.problem_statement,
                 "secondary_problems": [],
-                "current_solutions": idea.competitive_landscape[:3],
-                "solution_gaps": idea.differentiation_factors
+                "current_solutions": idea.competitive_landscape[:3] if idea.competitive_landscape else [],
+                "solution_gaps": idea.differentiation_factors if idea.differentiation_factors else []
             },
             "significance": {
                 "financial_impact": f"TAM: {idea.tam_estimate}",
                 "operational_impact": "Reduces manual work significantly",
                 "strategic_impact": "Competitive advantage through automation"
             },
-            "target_buyer": idea.target_buyer_persona,
+            "target_buyer": target_buyer,
             "unique_value_proposition": idea.value_proposition
         }
     

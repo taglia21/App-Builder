@@ -192,14 +192,17 @@ class EntityDefinition(BaseModel):
                 self.table = lower + 's'
     
     def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary format expected by code generator."""
+        """Convert to dictionary format expected by code generator.
+        
+        Returns fields as dicts for consistency with fallback heuristics.
+        """
         return {
             'name': self.name,
             'class': self.class_name,
             'lower': self.lower,
             'table': self.table,
             'fields': [
-                (f.name, f.sql_type, f.python_type, f.required)
+                {'name': f.name, 'sql_type': f.sql_type, 'python_type': f.python_type, 'required': f.required}
                 for f in self.fields
             ]
         }
@@ -674,12 +677,29 @@ Return ONLY the fixed code. No explanations.
         )
         self._write_file('backend/app/models/user.py', user_model, 'backend')
         
+        # Helper to extract field data (handles both dict and tuple formats)
+        def get_field_data(field):
+            if isinstance(field, dict):
+                return (
+                    field.get('name', 'field'),
+                    field.get('sql_type', 'String(255)'),
+                    field.get('python_type', 'str'),
+                    field.get('required', True)
+                )
+            elif isinstance(field, (list, tuple)) and len(field) >= 2:
+                return (
+                    str(field[0]),
+                    str(field[1]),
+                    str(field[2]) if len(field) > 2 else 'str',
+                    bool(field[3]) if len(field) > 3 else True
+                )
+            else:
+                return ('field', 'String(255)', 'str', True)
+        
         # Generate columns for entity model
         columns = []
         for field in entity['fields']:
-            field_name = field['name']
-            sql_type = field['sql_type']
-            required = field.get('required', True)
+            field_name, sql_type, py_type, required = get_field_data(field)
             nullable = 'False' if required else 'True'
             columns.append(f'{field_name} = Column({sql_type}, nullable={nullable})')
         
@@ -701,9 +721,7 @@ Return ONLY the fixed code. No explanations.
         schema_fields = []
         update_fields = []
         for field in entity['fields']:
-            field_name = field['name']
-            py_type = field['python_type']
-            required = field.get('required', True)
+            field_name, sql_type, py_type, required = get_field_data(field)
             if required:
                 schema_fields.append(f'{field_name}: {py_type}')
             else:
@@ -810,7 +828,12 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload
         # Tests
         self._write_file('backend/tests/api/test_auth.py', BACKEND_TEST_AUTH_PY, 'test')
         
-        test_fields = [f'"{field["name"]}": "test"' for field in entity['fields'][:2] if field.get('required', True)]
+        # Use get_field_data to handle both dict and tuple field formats
+        test_fields = []
+        for field in entity['fields'][:2]:
+            field_name, field_sql_type, field_python_type, field_required = get_field_data(field)
+            if field_required:
+                test_fields.append(f'"{field_name}": "test"')
         crud_tests = Template(BACKEND_TEST_CRUD_PY).safe_substitute(
             entity_class=entity['class'],
             entity_lower=entity['lower'],
