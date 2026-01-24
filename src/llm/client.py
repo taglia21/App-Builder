@@ -571,6 +571,31 @@ class MockLLMClient(BaseLLMClient):
                 "estimated_mvp_weeks": 8
             })
         
+        elif "entity" in prompt_lower or "database entity" in prompt_lower:
+            # Core entity for code generation
+            return json.dumps({
+                "name": "Item",
+                "class": "Item",
+                "lower": "item",
+                "table": "items",
+                "fields": [
+                    {"name": "name", "sql_type": "String(255)", "python_type": "str", "required": True},
+                    {"name": "description", "sql_type": "Text", "python_type": "Optional[str]", "required": False},
+                    {"name": "status", "sql_type": "String(50)", "python_type": "str", "required": False},
+                    {"name": "price", "sql_type": "Float", "python_type": "float", "required": False},
+                    {"name": "is_active", "sql_type": "Boolean", "python_type": "bool", "required": True}
+                ]
+            })
+        
+        elif "feature" in prompt_lower and "detect" in prompt_lower:
+            # Feature detection for code generation
+            return json.dumps({
+                "needs_payments": False,
+                "needs_background_jobs": False,
+                "needs_ai_integration": True,
+                "needs_email": False
+            })
+        
         else:
             return json.dumps({"mock": True, "message": "Mock response generated"})
 

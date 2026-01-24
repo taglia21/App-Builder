@@ -146,12 +146,18 @@ class StartupGenerationPipeline:
             self._save_intermediate(product_prompt, "prompt")
 
             # Step 5: Refine Prompt to Gold Standard (optional)
+            # Track the final prompt to use for code generation
+            final_prompt = product_prompt
+            
             if not skip_refinement:
                 logger.info("\n[STEP 5/6] Refining Prompt to Gold Standard")
                 self.metadata.current_stage = PipelineStage.REFINEMENT
                 gold_standard_prompt = self.refinement_engine.refine(product_prompt)
                 output.gold_standard_prompt = gold_standard_prompt
                 self._save_intermediate(gold_standard_prompt, "gold_standard_prompt")
+                # Use the refined prompt for code generation
+                final_prompt = gold_standard_prompt.product_prompt
+                logger.info(f"Refinement complete: {gold_standard_prompt.certification.status.value}")
             else:
                 logger.info("\n[STEP 5/6] Skipping Refinement (--skip-refinement flag)")
 
@@ -159,7 +165,8 @@ class StartupGenerationPipeline:
             if not skip_code_gen:
                 logger.info("\n[STEP 6/6] Generating Codebase")
                 self.metadata.current_stage = PipelineStage.CODE_GENERATION
-                codebase = self.code_generator.generate(product_prompt, output_dir, theme=self.theme)
+                # Use final_prompt which is either refined or original based on skip_refinement flag
+                codebase = self.code_generator.generate(final_prompt, output_dir, theme=self.theme)
                 
                 # Run Quality Assurance
                 logger.info("Running Quality Assurance...")
@@ -276,9 +283,11 @@ class StartupGenerationPipeline:
             self.metadata.current_stage = PipelineStage.REFINEMENT
             gold_standard_prompt = self.refinement_engine.refine(product_prompt)
             output.gold_standard_prompt = gold_standard_prompt
+            logger.info(f"Refinement complete: {gold_standard_prompt.certification.status.value}")
 
             self.metadata.current_stage = PipelineStage.CODE_GENERATION
-            codebase = self.code_generator.generate(gold_standard_prompt, theme=self.theme)
+            # Use the refined prompt's product_prompt for code generation
+            codebase = self.code_generator.generate(gold_standard_prompt.product_prompt, theme=self.theme)
             
             # Run Quality Assurance
             logger.info("Running Quality Assurance...")

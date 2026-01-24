@@ -4,10 +4,11 @@ import os
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, Tuple
 from string import Template
 from datetime import datetime
 import ast
+from pydantic import BaseModel, Field, ValidationError, field_validator
 from src.llm.client import get_llm_client
 
 from src.models import GeneratedCodebase, GoldStandardPrompt, ProductPrompt
@@ -58,6 +59,194 @@ from src.code_generation.frontend_templates import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# Helper Functions
+# =============================================================================
+
+def sanitize_python_identifier(name: str) -> str:
+    """
+    Sanitize a string to be a valid Python identifier.
+    Replaces hyphens, spaces, and other invalid chars with underscores.
+    Ensures the result is a valid Python module/variable name.
+    """
+    import re
+    # Replace hyphens and spaces with underscores
+    name = name.replace('-', '_').replace(' ', '_')
+    # Remove any characters that aren't alphanumeric or underscore
+    name = re.sub(r'[^a-zA-Z0-9_]', '_', name)
+    # Remove consecutive underscores
+    name = re.sub(r'_+', '_', name)
+    # Remove leading/trailing underscores
+    name = name.strip('_')
+    # Ensure it doesn't start with a number
+    if name and name[0].isdigit():
+        name = '_' + name
+    # Fallback if empty
+    if not name:
+        name = 'entity'
+    return name.lower()
+
+
+# =============================================================================
+# Pydantic Models for LLM Response Validation
+# =============================================================================
+
+class FeatureFlags(BaseModel):
+    """Validated feature detection flags from LLM."""
+    needs_payments: bool = False
+    needs_background_jobs: bool = False
+    needs_ai_integration: bool = False
+    needs_email: bool = False
+
+
+class EntityField(BaseModel):
+    """A single field in the entity definition."""
+    name: str
+    sql_type: str
+    python_type: str
+    required: bool = True
+    
+    @field_validator('sql_type')
+    @classmethod
+    def validate_sql_type(cls, v: str) -> str:
+        """Normalize SQL type to valid SQLAlchemy type."""
+        v = v.strip()
+        # Map common variations
+        type_mapping = {
+            'string': 'String(255)',
+            'varchar': 'String(255)',
+            'text': 'Text',
+            'int': 'Integer',
+            'integer': 'Integer',
+            'float': 'Float',
+            'double': 'Float',
+            'decimal': 'Float',
+            'bool': 'Boolean',
+            'boolean': 'Boolean',
+            'date': 'Date',
+            'datetime': 'DateTime',
+            'timestamp': 'DateTime',
+            'json': 'JSON',
+            'jsonb': 'JSON',
+        }
+        lower = v.lower()
+        for key, val in type_mapping.items():
+            if lower.startswith(key):
+                # Preserve String(N) if provided
+                if 'string(' in lower:
+                    return v
+                return val
+        return v
+    
+    @field_validator('python_type')
+    @classmethod  
+    def validate_python_type(cls, v: str) -> str:
+        """Normalize Python type hints."""
+        v = v.strip()
+        # Map to valid Python types
+        type_mapping = {
+            'string': 'str',
+            'integer': 'int', 
+            'float': 'float',
+            'boolean': 'bool',
+            'dict': 'Dict[str, Any]',
+            'list': 'List[Any]',
+            'any': 'Any',
+        }
+        lower = v.lower()
+        if lower in type_mapping:
+            return type_mapping[lower]
+        return v
+
+
+class EntityDefinition(BaseModel):
+    """Validated entity definition from LLM."""
+    name: str
+    class_name: str = Field(alias='class', default='')
+    lower: str = ''
+    table: str = ''
+    fields: List[EntityField] = Field(default_factory=list)
+    
+    def model_post_init(self, __context) -> None:
+        """Auto-fill missing fields based on name."""
+        if not self.class_name:
+            # Clean class name: remove hyphens, spaces, underscores and title case
+            clean_name = self.name.replace('-', ' ').replace('_', ' ')
+            self.class_name = ''.join(word.title() for word in clean_name.split())
+        if not self.lower:
+            # Use sanitize function to ensure valid Python identifier
+            self.lower = sanitize_python_identifier(self.name)
+        else:
+            # Sanitize even if provided
+            self.lower = sanitize_python_identifier(self.lower)
+        if not self.table:
+            # Simple pluralization
+            lower = self.lower
+            if lower.endswith('y'):
+                self.table = lower[:-1] + 'ies'
+            elif lower.endswith('s') or lower.endswith('x') or lower.endswith('ch'):
+                self.table = lower + 'es'
+            else:
+                self.table = lower + 's'
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary format expected by code generator."""
+        return {
+            'name': self.name,
+            'class': self.class_name,
+            'lower': self.lower,
+            'table': self.table,
+            'fields': [
+                (f.name, f.sql_type, f.python_type, f.required)
+                for f in self.fields
+            ]
+        }
+
+
+def parse_entity_fields(raw_fields: List) -> List[EntityField]:
+    """Parse entity fields from various LLM response formats."""
+    parsed = []
+    for field in raw_fields:
+        if isinstance(field, dict):
+            # Dict format: {"name": "...", "sql_type": "...", ...}
+            parsed.append(EntityField(
+                name=field.get('name', field.get('field_name', 'unknown')),
+                sql_type=field.get('sql_type', field.get('type', 'String(255)')),
+                python_type=field.get('python_type', field.get('py_type', 'str')),
+                required=field.get('required', True)
+            ))
+        elif isinstance(field, (list, tuple)) and len(field) >= 2:
+            # List/tuple format: [name, sql_type, python_type, required]
+            parsed.append(EntityField(
+                name=str(field[0]),
+                sql_type=str(field[1]),
+                python_type=str(field[2]) if len(field) > 2 else 'str',
+                required=bool(field[3]) if len(field) > 3 else True
+            ))
+        elif isinstance(field, str):
+            # String format: just field name
+            parsed.append(EntityField(
+                name=field,
+                sql_type='String(255)',
+                python_type='str',
+                required=False
+            ))
+    return parsed
+
+
+def clean_llm_json(content: str) -> str:
+    """Clean LLM response to extract valid JSON."""
+    content = content.strip()
+    # Remove markdown code blocks
+    if content.startswith('```json'):
+        content = content[7:]
+    elif content.startswith('```'):
+        content = content[3:]
+    if content.endswith('```'):
+        content = content[:-3]
+    return content.strip()
 
 
 class EnhancedCodeGenerator:
@@ -134,6 +323,11 @@ class EnhancedCodeGenerator:
         # Determine core entity from idea
         entity = self._determine_core_entity(idea_dict)
         
+        # CRITICAL: Ensure entity['lower'] is a valid Python identifier
+        # This prevents filenames like "ai-powered_crm.py" which are invalid
+        entity['lower'] = sanitize_python_identifier(entity.get('lower', entity.get('name', 'item')))
+        entity['table'] = sanitize_python_identifier(entity.get('table', entity['lower'] + 's'))
+        
         # Create directory structure
         self._create_directories()
         
@@ -168,7 +362,15 @@ class EnhancedCodeGenerator:
 
     
     def _detect_features(self, description: str) -> Dict[str, bool]:
-        """Use LLM to detect necessary technical features."""
+        """Use LLM to detect necessary technical features with validated response."""
+        # Default fallback based on keyword detection
+        fallback = FeatureFlags(
+            needs_payments="subscription" in description.lower() or "payment" in description.lower(),
+            needs_background_jobs="video" in description.lower() or "scrape" in description.lower() or "process" in description.lower(),
+            needs_ai_integration="ai" in description.lower() or "llm" in description.lower() or "gpt" in description.lower(),
+            needs_email="notify" in description.lower() or "email" in description.lower() or "newsletter" in description.lower()
+        )
+        
         try:
             client = get_llm_client("auto")
             prompt = f"""Analyze this app description and detect technical requirements.
@@ -183,17 +385,26 @@ Return JSON boolean flags:
 }}
 """
             response = client.complete(prompt, json_mode=True)
-            return json.loads(response.content.replace('```json', '').replace('```', '').strip())
+            raw_content = clean_llm_json(response.content)
+            data = json.loads(raw_content)
+            
+            # Validate with Pydantic model
+            features = FeatureFlags(**data)
+            logger.info(f"Feature detection: payments={features.needs_payments}, jobs={features.needs_background_jobs}, ai={features.needs_ai_integration}, email={features.needs_email}")
+            return features.model_dump()
+            
+        except ValidationError as e:
+            logger.warning(f"Feature detection response validation failed: {e}")
+            return fallback.model_dump()
+        except json.JSONDecodeError as e:
+            logger.warning(f"Feature detection JSON parse failed: {e}")
+            return fallback.model_dump()
         except Exception as e:
             logger.warning(f"Feature detection failed: {e}")
-            return {
-                "needs_payments": "subscription" in description.lower(),
-                "needs_background_jobs": "video" in description.lower() or "scrape" in description.lower(),
-                "needs_ai_integration": "ai" in description.lower(),
-                "needs_email": "notify" in description.lower()
-            }
+            return fallback.model_dump()
+
     def _determine_core_entity(self, idea: Dict[str, Any]) -> Dict[str, Any]:
-        """Determine the core entity for the app using LLM for smart modeling."""
+        """Determine the core entity for the app using LLM with validated response."""
         name = idea.get('name', 'Item')
         description = idea.get('solution_description', '')
         
@@ -211,34 +422,57 @@ Return a strict JSON object with this structure:
     "lower": "classname",
     "table": "table_names",
     "fields": [
-        ["field_name", "String(255)", "str", true],
-        ["description", "Text", "Optional[str]", false],
-        ["status", "String(50)", "str", false],
-        ["price", "Float", "float", true],
-        ["is_active", "Boolean", "bool", true]
+        {{"name": "field_name", "sql_type": "String(255)", "python_type": "str", "required": true}},
+        {{"name": "description", "sql_type": "Text", "python_type": "Optional[str]", "required": false}},
+        {{"name": "status", "sql_type": "String(50)", "python_type": "str", "required": false}},
+        {{"name": "price", "sql_type": "Float", "python_type": "float", "required": true}},
+        {{"name": "is_active", "sql_type": "Boolean", "python_type": "bool", "required": true}}
     ]
 }}
 Rules:
-1. 'fields' is a list of lists: [name, sql_type, python_type, required_bool]
-2. sql_type key: String(N), Text, Integer, Float, Boolean, DateTime
-3. python_type key: str, int, float, bool, datetime, Optional[X]
+1. 'fields' is a list of objects with name, sql_type, python_type, required
+2. sql_type options: String(N), Text, Integer, Float, Boolean, DateTime
+3. python_type options: str, int, float, bool, datetime, Optional[str], etc.
 4. Do not include 'id', 'created_at', 'updated_at' (added automatically).
 5. Be comprehensive with fields based on the description.
 """
             response = client.complete(prompt, json_mode=True)
-            data = json.loads(response.content.replace('```json', '').replace('```', '').strip())
+            raw_content = clean_llm_json(response.content)
+            data = json.loads(raw_content)
             
-            # Validate structure
-            if 'fields' in data and isinstance(data['fields'], list):
-                return data
-                
+            # Parse and validate fields
+            raw_fields = data.get('fields', [])
+            validated_fields = parse_entity_fields(raw_fields)
+            
+            # If no valid fields, fall back to heuristics
+            if not validated_fields:
+                logger.warning("LLM returned no valid fields. Falling back to heuristics.")
+                raise ValueError("No valid fields in LLM response")
+            
+            # Create validated entity
+            entity = EntityDefinition(
+                name=data.get('name', name),
+                **{'class': data.get('class', data.get('name', name))},
+                lower=data.get('lower', ''),
+                table=data.get('table', ''),
+                fields=validated_fields
+            )
+            
+            result = entity.to_dict()
+            logger.info(f"Entity determined: {result['class']} with {len(result['fields'])} fields")
+            return result
+            
+        except ValidationError as e:
+            logger.warning(f"Entity validation failed: {e}. Falling back to heuristics.")
+        except json.JSONDecodeError as e:
+            logger.warning(f"Entity JSON parse failed: {e}. Falling back to heuristics.")
         except Exception as e:
             logger.warning(f"Smart entity determination failed: {e}. Falling back to heuristics.")
 
         # Fallback to heuristics if LLM fails
         combined_text = f"{name} {description}".lower()
         
-        # Common entity patterns
+        # Common entity patterns - using dict format for consistency with LLM responses
         if any(w in combined_text for w in ['workflow', 'automation', 'flow', 'process']):
             return {
                 'name': 'Workflow',
@@ -246,10 +480,10 @@ Rules:
                 'lower': 'workflow',
                 'table': 'workflows',
                 'fields': [
-                    ('name', 'String(255)', 'str', True),
-                    ('description', 'Text', 'Optional[str]', False),
-                    ('is_active', 'Boolean', 'bool', False),
-                    ('config', 'JSON', 'Optional[Dict]', False),
+                    {'name': 'name', 'sql_type': 'String(255)', 'python_type': 'str', 'required': True},
+                    {'name': 'description', 'sql_type': 'Text', 'python_type': 'Optional[str]', 'required': False},
+                    {'name': 'is_active', 'sql_type': 'Boolean', 'python_type': 'bool', 'required': False},
+                    {'name': 'config', 'sql_type': 'JSON', 'python_type': 'Optional[Dict]', 'required': False},
                 ]
             }
         elif any(w in combined_text for w in ['project', 'task', 'manage', 'organize']):
@@ -259,10 +493,10 @@ Rules:
                 'lower': 'project',
                 'table': 'projects',
                 'fields': [
-                    ('name', 'String(255)', 'str', True),
-                    ('description', 'Text', 'Optional[str]', False),
-                    ('status', 'String(50)', 'str', False),
-                    ('priority', 'Integer', 'int', False),
+                    {'name': 'name', 'sql_type': 'String(255)', 'python_type': 'str', 'required': True},
+                    {'name': 'description', 'sql_type': 'Text', 'python_type': 'Optional[str]', 'required': False},
+                    {'name': 'status', 'sql_type': 'String(50)', 'python_type': 'str', 'required': False},
+                    {'name': 'priority', 'sql_type': 'Integer', 'python_type': 'int', 'required': False},
                 ]
             }
         elif any(w in combined_text for w in ['content', 'post', 'blog', 'article', 'document']):
@@ -272,10 +506,10 @@ Rules:
                 'lower': 'content',
                 'table': 'contents',
                 'fields': [
-                    ('title', 'String(255)', 'str', True),
-                    ('body', 'Text', 'str', True),
-                    ('status', 'String(50)', 'str', False),
-                    ('views', 'Integer', 'int', False),
+                    {'name': 'title', 'sql_type': 'String(255)', 'python_type': 'str', 'required': True},
+                    {'name': 'body', 'sql_type': 'Text', 'python_type': 'str', 'required': True},
+                    {'name': 'status', 'sql_type': 'String(50)', 'python_type': 'str', 'required': False},
+                    {'name': 'views', 'sql_type': 'Integer', 'python_type': 'int', 'required': False},
                 ]
             }
         else:
@@ -286,10 +520,10 @@ Rules:
                 'lower': 'item',
                 'table': 'items',
                 'fields': [
-                    ('name', 'String(255)', 'str', True),
-                    ('description', 'Text', 'Optional[str]', False),
-                    ('status', 'String(50)', 'str', False),
-                    ('data', 'JSON', 'Optional[Dict]', False),
+                    {'name': 'name', 'sql_type': 'String(255)', 'python_type': 'str', 'required': True},
+                    {'name': 'description', 'sql_type': 'Text', 'python_type': 'Optional[str]', 'required': False},
+                    {'name': 'status', 'sql_type': 'String(50)', 'python_type': 'str', 'required': False},
+                    {'name': 'data', 'sql_type': 'JSON', 'python_type': 'Optional[Dict]', 'required': False},
                 ]
             }
     
@@ -442,7 +676,10 @@ Return ONLY the fixed code. No explanations.
         
         # Generate columns for entity model
         columns = []
-        for field_name, sql_type, py_type, required in entity['fields']:
+        for field in entity['fields']:
+            field_name = field['name']
+            sql_type = field['sql_type']
+            required = field.get('required', True)
             nullable = 'False' if required else 'True'
             columns.append(f'{field_name} = Column({sql_type}, nullable={nullable})')
         
@@ -463,7 +700,10 @@ Return ONLY the fixed code. No explanations.
         # Generate schema fields
         schema_fields = []
         update_fields = []
-        for field_name, sql_type, py_type, required in entity['fields']:
+        for field in entity['fields']:
+            field_name = field['name']
+            py_type = field['python_type']
+            required = field.get('required', True)
             if required:
                 schema_fields.append(f'{field_name}: {py_type}')
             else:
@@ -570,7 +810,7 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload
         # Tests
         self._write_file('backend/tests/api/test_auth.py', BACKEND_TEST_AUTH_PY, 'test')
         
-        test_fields = [f'"{field_name}": "test"' for field_name, _, py_type, req in entity['fields'][:2] if req]
+        test_fields = [f'"{field["name"]}": "test"' for field in entity['fields'][:2] if field.get('required', True)]
         crud_tests = Template(BACKEND_TEST_CRUD_PY).safe_substitute(
             entity_class=entity['class'],
             entity_lower=entity['lower'],
