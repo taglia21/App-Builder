@@ -147,9 +147,6 @@ class EnhancedCodeGenerator:
         self._generate_frontend(app_name, description, entity, theme=theme)
         self._generate_configs(app_name, description)
         self._generate_docs(app_name, description, entity)
-        self._generate_docs(app_name, description, entity)
-        self._generate_deployment_files(app_name, description)
-        
         self._generate_deployment_files(app_name, description)
         self._generate_run_script(app_name)
         
@@ -554,6 +551,12 @@ email-validator==2.1.0.post1
         dockerfile = '''FROM python:3.11-slim
 
 WORKDIR /app
+
+# Install system dependencies (curl for healthchecks, libpq for psycopg2)
+RUN apt-get update && apt-get install -y --no-install-recommends \\
+    curl \\
+    libpq-dev \\
+    && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 RUN pip install --default-timeout=1000 --no-cache-dir -r requirements.txt
@@ -1460,7 +1463,33 @@ export function isFeatureEnabled(path: string): boolean {{
         self._write_file('frontend/src/components/ui/table.tsx', FRONTEND_UI_TABLE, 'frontend')
         self._write_file('frontend/src/components/ui/stats-card.tsx', FRONTEND_UI_STATS_CARD, 'frontend')
         self._write_file('frontend/src/components/ui/data-table.tsx', FRONTEND_COMPONENTS_DATA_TABLE, 'frontend')
-        self._write_file('frontend/src/components/ui/label.tsx', 'export * from "@radix-ui/react-label"', 'frontend')
+        label_component = '''"use client"
+
+import * as React from "react"
+import * as LabelPrimitive from "@radix-ui/react-label"
+import { cva, type VariantProps } from "class-variance-authority"
+import { cn } from "@/lib/utils"
+
+const labelVariants = cva(
+  "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+)
+
+const Label = React.forwardRef<
+  React.ElementRef<typeof LabelPrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof LabelPrimitive.Root> &
+    VariantProps<typeof labelVariants>
+>(({ className, ...props }, ref) => (
+  <LabelPrimitive.Root
+    ref={ref}
+    className={cn(labelVariants(), className)}
+    {...props}
+  />
+))
+Label.displayName = LabelPrimitive.Root.displayName
+
+export { Label }
+'''
+        self._write_file('frontend/src/components/ui/label.tsx', label_component, 'frontend')
         self._write_file('frontend/src/components/sidebar.tsx', Template(FRONTEND_COMPONENTS_SIDEBAR).safe_substitute(app_name=app_name, entity_name=entity['name'], entity_lower=entity['lower']), 'frontend')
         self._write_file('frontend/src/components/navbar.tsx', FRONTEND_COMPONENTS_NAVBAR, 'frontend')
         self._write_file('frontend/src/components/ui/alert.tsx', FRONTEND_UI_ALERT, 'frontend')

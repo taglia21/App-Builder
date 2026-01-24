@@ -1206,9 +1206,7 @@ class EmailService:
 email_service = EmailService()
 '''
 
-ROOT_DOCKER_COMPOSE = '''version: '3.8'
-
-services:
+ROOT_DOCKER_COMPOSE = '''services:
   backend:
     build: 
       context: ./backend
@@ -1228,11 +1226,11 @@ services:
       redis:
         condition: service_started
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5)"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 40s
+      retries: 5
+      start_period: 60s
 
   frontend:
     build:

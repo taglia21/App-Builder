@@ -300,8 +300,9 @@ httpx>=0.26.0
 
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies (curl for healthchecks, libpq for psycopg2)
 RUN apt-get update && apt-get install -y --no-install-recommends \\
+    curl \\
     gcc \\
     libpq-dev \\
     && rm -rf /var/lib/apt/lists/*
