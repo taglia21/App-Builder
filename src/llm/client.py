@@ -231,7 +231,7 @@ class OpenRouterClient(BaseLLMClient):
     provider_name = "openrouter"
     
     FREE_MODELS = [
-        "mistralai/mistral-7b-instruct:free",
+        "meta-llama/llama-3.2-3b-instruct:free",
         "microsoft/phi-3-mini-128k-instruct:free",
         "google/gemma-2-9b-it:free",
         "qwen/qwen-2-7b-instruct:free",
@@ -241,7 +241,7 @@ class OpenRouterClient(BaseLLMClient):
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = "mistralai/mistral-7b-instruct:free"
+        model: str = "meta-llama/llama-3.2-3b-instruct:free"
     ):
         self.api_key = api_key or os.getenv("OPENROUTER_API_KEY")
         if not self.api_key:
@@ -661,7 +661,7 @@ def get_llm_client(
     if provider == "openrouter":
         return OpenRouterClient(
             api_key=api_key,
-            model=model or os.getenv("OPENROUTER_MODEL", "mistralai/mistral-7b-instruct:free")
+            model=model or os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3.2-3b-instruct:free")
         )
     
     if provider == "openai":
