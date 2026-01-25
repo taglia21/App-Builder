@@ -32,6 +32,7 @@ def cli(ctx):
     
     \b
     QUICK START:
+      launchforge build                  # 🚀 Interactive AI assistant (recommended!)
       launchforge generate --demo        # Try with sample data
       launchforge generate               # Use real AI providers
     
@@ -44,7 +45,8 @@ def cli(ctx):
         # Show welcome banner if no command given
         console = Console()
         print_welcome(console)
-        console.print("[dim]Run [bold]launchforge --help[/bold] for commands[/dim]\n")
+        console.print("[bold cyan]🚀 Quick Start:[/bold cyan] Run [bold]launchforge build[/bold] to describe your idea and get code!\n")
+        console.print("[dim]Run [bold]launchforge --help[/bold] for all commands[/dim]\n")
 
 
 @cli.command()
@@ -175,6 +177,85 @@ def generate(config, output, demo, skip_refinement, skip_code_gen, llm_provider,
     except Exception as e:
         UI.error(f"Pipeline failed: {e}")
         logger.exception("Pipeline execution failed")
+        raise click.Abort()
+
+
+@cli.command()
+@click.option(
+    "--output",
+    "-o",
+    default="./launchforge-demo",
+    help="Output directory for demo app",
+)
+def demo(output):
+    """🎮 Generate a sample app to see LaunchForge in action.
+    
+    Creates a complete demo startup app using sample data.
+    No API keys required - perfect for trying out LaunchForge!
+    
+    \b
+    Example:
+      python main.py demo
+      cd launchforge-demo/backend
+      pip install -r requirements.txt
+      uvicorn main:app --reload
+    """
+    console = Console()
+    print_banner(console)
+    console.print()
+    
+    UI.header("LaunchForge Demo", "Generating Sample Startup App")
+    UI.info("This demo uses sample data - no API keys required!")
+    console.print()
+    
+    try:
+        from .config import load_config
+        from .pipeline import StartupGenerationPipeline
+        
+        # Load config
+        pipeline_config = load_config("config.yml")
+        
+        # Create pipeline with mock LLM
+        pipeline = StartupGenerationPipeline(pipeline_config, llm_provider='mock')
+        
+        UI.step("Running demo pipeline...")
+        result = asyncio.run(pipeline.run(
+            demo_mode=True,
+            skip_refinement=False,
+            skip_code_gen=False,
+            output_dir=output,
+            theme='Modern'
+        ))
+        
+        console.print()
+        
+        if result.selected_idea:
+            UI.success(f"Generated: [bold]{result.selected_idea.name}[/]")
+            console.print(f"   {result.selected_idea.one_liner}")
+        
+        if result.generated_codebase:
+            console.print()
+            print_success_banner(
+                result.selected_idea.name if result.selected_idea else "Demo App",
+                result.generated_codebase.output_path,
+                console
+            )
+            
+            console.print()
+            console.print("[bold cyan]🎉 Demo complete![/bold cyan]")
+            console.print()
+            console.print("To run your demo app:")
+            console.print(f"  [dim]cd {result.generated_codebase.output_path}/backend[/dim]")
+            console.print("  [dim]pip install -r requirements.txt[/dim]")
+            console.print("  [dim]uvicorn main:app --reload[/dim]")
+            console.print()
+            console.print("Then visit: [cyan]http://localhost:8000/docs[/cyan]")
+        else:
+            UI.warning("Code generation was skipped in demo mode")
+        
+    except Exception as e:
+        UI.error(f"Demo failed: {e}")
+        logger.exception("Demo execution failed")
         raise click.Abort()
 
 
@@ -607,6 +688,56 @@ def wizard():
         UI.info("Running Automated Discovery Pipeline...")
         ctx = click.get_current_context()
         ctx.invoke(generate, config="config.yml", deploy=False, theme=theme)
+
+
+@cli.command()
+@click.option(
+    "--output",
+    "-o",
+    default="./output",
+    help="Output directory for generated app",
+)
+@click.option(
+    "--llm-provider",
+    type=click.Choice(['auto', 'perplexity', 'groq', 'mock']),
+    default='auto',
+    help="LLM provider: perplexity (recommended), groq, or mock (testing)",
+)
+@click.option(
+    "--verbose",
+    "-v",
+    is_flag=True,
+    help="Verbose output",
+)
+def build(output, llm_provider, verbose):
+    """🚀 Interactive AI assistant - describe your idea, get working code!
+    
+    This is the killer feature - just describe your startup in plain English
+    and LaunchForge will:
+    
+    \b
+    1. Research the market using real-time web intelligence
+    2. Ask smart follow-up questions
+    3. Generate a complete, production-ready application
+    
+    \b
+    Example:
+      launchforge build
+      > Describe your idea: An AI tool that helps developers write better tests
+      ... LaunchForge researches, asks questions, and builds your app!
+    
+    No complex configuration needed - just your idea and we handle the rest.
+    """
+    from .assistant import run_build_assistant
+    
+    success = run_build_assistant(
+        llm_provider=llm_provider,
+        output_dir=output,
+        verbose=verbose,
+    )
+    
+    if not success:
+        raise click.Abort()
 
 
 if __name__ == "__main__":

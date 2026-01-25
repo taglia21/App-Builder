@@ -204,15 +204,18 @@ class StartupGenerationPipeline:
             self.metadata.completed_at = datetime.utcnow()
             raise
 
-    async def run_from_idea(self, idea: StartupIdea, theme: str = "Modern") -> PipelineOutput:
+    async def run_from_idea(self, idea: StartupIdea, theme: str = "Modern", output_dir: str = "./generated_project") -> PipelineOutput:
         """Run pipeline starting from an existing idea (skip intelligence and idea generation).
         
         Args:
             idea: StartupIdea to build
             theme: UI theme - one of "Modern", "Minimalist", "Cyberpunk", "Corporate"
+            output_dir: Output directory for generated code
         """
         logger.info("Running pipeline from existing idea")
         logger.info(f"Theme: {theme}")
+        logger.info(f"Output directory: {output_dir}")
+        self.output_dir = output_dir
 
         self.metadata.status = PipelineStatus.RUNNING
         self.theme = theme  # Store for code generation
@@ -287,7 +290,7 @@ class StartupGenerationPipeline:
 
             self.metadata.current_stage = PipelineStage.CODE_GENERATION
             # Use the refined prompt's product_prompt for code generation
-            codebase = self.code_generator.generate(gold_standard_prompt.product_prompt, theme=self.theme)
+            codebase = self.code_generator.generate(gold_standard_prompt.product_prompt, output_dir=self.output_dir, theme=self.theme)
             
             # Run Quality Assurance
             logger.info("Running Quality Assurance...")

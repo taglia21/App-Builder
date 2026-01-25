@@ -1,461 +1,631 @@
-# 🚀 AI Startup Generator
+# ⚡ LaunchForge
 
-**Generate validated startup ideas from real market data, then automatically build production-ready applications.**
+### AI-Powered Startup Builder
+
+**From idea to deployed app in minutes, not months.**
 
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-
-## 🎯 What It Does
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+[![Tests](https://img.shields.io/badge/tests-4%2F4-brightgreen.svg)]()
 
 ```
-📡 Real-Time Data    →  Scrapes GitHub, News, Search, Reddit for pain points
-🔍 Pain Point Mining →  Extracts 100+ market signals automatically
-💡 AI Ideation       →  Generates creative startup ideas (Groq, Gemini, GPT)
-📊 Smart Scoring     →  Ranks by market demand, feasibility, TAM
-💻 Code Generation   →  Outputs 37-file production apps with auth, CRUD, tests
+╦  ┌─┐┬ ┬┌┐┌┌─┐┬ ┬╔═╗┌─┐┬─┐┌─┐┌─┐
+║  ├─┤│ │││││  ├─┤╠╣ │ │├┬┘│ ┬├┤ 
+╩═╝┴ ┴└─┘┘└┘└─┘┴ ┴╚  └─┘┴└─└─┘└─┘
 ```
-
-**Live Demo:** Try the [Streamlit Web UI](https://your-app.streamlit.app) (coming soon)
 
 ---
 
-## ✨ Key Features
+## 🎯 What is LaunchForge?
 
-### 🔍 Multi-Source Intelligence
-- **15+ Data Sources**: GitHub trending, HackerNews, Google Trends, RSS feeds, Reddit, News APIs
-- **Smart Extraction**: Identifies pain points, market trends, emerging opportunities
-- **Real-Time Analysis**: Continuous monitoring of developer discussions and market signals
-- **Quality Filtering**: Urgency scoring, demographic targeting, market size indicators
+LaunchForge is a **no-code AI startup builder** that transforms your ideas into working applications. Just describe what you want to build, and let AI handle the rest.
 
-### 🤖 AI-Powered Ideation
-- **Multiple LLM Support**: Groq (Llama 3.3), Google Gemini, OpenAI GPT, Anthropic Claude
-- **Template Fallback**: Works without API keys using proven idea templates
-- **Business Intelligence**: Generates revenue models, pricing strategies, TAM estimates
-- **Smart Clustering**: Groups related pain points for comprehensive solutions
+### Core Features
 
-### 📊 Intelligent Scoring
-- **Multi-Dimensional Analysis**: Market demand, technical feasibility, innovation, competition
-- **Configurable Weights**: Customize scoring criteria for your focus
-- **Detailed Justifications**: Understand why each idea scored the way it did
-- **Market Validation**: Cross-references with real market data and trends
-
-### 💻 Production Code Generation
-- **37 Files per App**: Complete full-stack application structure
-- **1,067+ Lines of Code**: Production-ready, not just scaffolding
-- **Modern Stack**:
-  - Backend: FastAPI + PostgreSQL + SQLAlchemy 2.0
-  - Frontend: Next.js 14 + TypeScript + Tailwind CSS
-  - Auth: JWT-based with refresh tokens
-  - DevOps: Docker Compose + GitHub Actions CI/CD
-- **Complete Features**: CRUD operations, tests, migrations, deployment configs
+| Feature | Description |
+|---------|-------------|
+| 🎨 **Interactive Build Mode** | Describe your idea in plain English, answer follow-up questions, get a complete app |
+| 🔍 **Market Intelligence** | Real-time validation using Perplexity AI's web search |
+| 💡 **Smart Generation** | AI-powered idea creation with market demand scoring |
+| ⚡ **Production-Ready Code** | Full-stack applications with backend, frontend, auth, and tests |
+| 🚀 **One-Click Deploy** | Deploy to Vercel (frontend), Render (backend), or your preferred cloud |
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Quick Start (2 Minutes)
 
-### Prerequisites
-- Python 3.12+
-- pip or poetry
-- (Optional) Docker for running generated apps
-
-### Installation
+### 1. Install
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/App-Builder.git
+git clone https://github.com/taglia21/App-Builder.git
 cd App-Builder
-
-# Install dependencies
 pip install -r requirements.txt
-
-# Optional: Install Playwright for Reddit scraping
-playwright install
 ```
 
-### Configuration (Optional)
-
-Create a `.env` file for API keys (all optional - works without them):
+### 2. Set API Key
 
 ```bash
-# LLM Providers (pick one or use multiple for failover)
-GROQ_API_KEY=gsk_...              # Free: 30 req/min
-GEMINI_API_KEY=...                # Free: 60 req/min
-OPENAI_API_KEY=...                # Paid
-ANTHROPIC_API_KEY=...             # Paid
+# Primary: Real-time market research
+# Get free key at: https://www.perplexity.ai/settings/api
+export PERPLEXITY_API_KEY="pplx-..."
 
-# Data Sources (optional - free sources work without keys)
-REDDIT_CLIENT_ID=...              # Free Reddit API
-REDDIT_CLIENT_SECRET=...
-NEWSAPI_KEY=...                   # Free: 100 req/day
-GOOGLE_API_KEY=...                # For Google Search
-GITHUB_TOKEN=...                  # Higher GitHub rate limits
+# Backup: Fast fallback (free tier available)
+# Get free key at: https://console.groq.com/keys
+export GROQ_API_KEY="gsk_..."
 ```
 
-**Note**: System works with **zero API keys** using free sources (GitHub, HackerNews, Google Trends).
+### 3. Launch the Build Assistant (The Killer Feature!)
+
+```bash
+python main.py build
+```
+
+Follow the interactive prompts:
+
+```
+💡 Step 1: Describe your startup idea
+? Describe your startup idea:
+  → An AI tool that helps developers write better unit tests
+
+🔍 Step 2: Market Research (automatic with Perplexity)
+✓ Found 47 relevant pain points...
+
+💬 Step 3: Refine with follow-up questions
+? Who is your target user?
+? What are the 3-5 key features?
+? How do you plan to monetize?
+
+✓ Generating your complete application...
+
+🎉 Success!
+   📁 output/ai_test_generator_abc123/
+   📄 156 files created
+   
+To run your app:
+  cd output/ai_test_generator_abc123/backend
+  pip install -r requirements.txt
+  uvicorn main:app --reload
+```
 
 ---
 
-## 💡 Usage
+## 📖 Usage Modes
 
-### Option 1: Command Line Interface
+### Mode 1: Interactive Build (⭐ Recommended)
+
+The killer feature. Perfect for anyone with an idea:
 
 ```bash
-# Run full pipeline
-python main.py generate --config config.yml
+python main.py build
+```
 
-# Use specific LLM provider
+**What happens:**
+1. Describe your startup idea in plain English
+2. LaunchForge researches the market using real-time web intelligence
+3. AI asks targeted follow-up questions (target users, features, monetization)
+4. Your idea is converted into a complete startup profile
+5. A production-ready full-stack app is generated
+6. Option to deploy immediately
+
+**Best for:** Entrepreneurs, indie hackers, anyone with an idea
+
+---
+
+### Mode 2: Automated Discovery Pipeline
+
+Let AI discover *and* validate ideas:
+
+```bash
+# Try with demo data (no API calls needed)
+python main.py generate --demo -o ./my-startup
+
+# Run with real AI providers
+python main.py generate -o ./my-startup
+
+# Choose LLM provider
+python main.py generate --llm-provider perplexity
 python main.py generate --llm-provider groq
-
-# Demo mode (no API calls)
-python main.py generate --demo
-
-# Skip specific steps
-python main.py generate --skip-refinement --skip-code-gen
 ```
 
-**Output:**
-```
-[1/6] Gathering Intelligence... ✓ 147 pain points
-[2/6] Generating Ideas...       ✓ 23 startup ideas
-[3/6] Scoring Ideas...          ✓ Top: 84.5/100
-[4/6] Refining Idea...          ✓ Enhanced
-[5/6] Engineering Prompts...    ✓ Optimized
-[6/6] Generating Code...        ✓ 37 files created
+**What happens:**
+1. Gathers real-time market intelligence (pain points, trends, competitors)
+2. Generates 50+ startup ideas
+3. Scores each idea on demand, feasibility, market size
+4. Builds production-ready code for the top idea
+5. Saves all intermediate results for review
 
-Results saved to: ./output/run_20251202_143022/
-```
+**Best for:** Research, exploring market opportunities, benchmarking
 
-### Option 2: Web Interface (Streamlit)
+---
+
+### Mode 3: Build From Existing Idea
+
+Already have a startup idea? Jump straight to code generation:
 
 ```bash
-streamlit run streamlit_app.py
-```
-
-Features:
-- 🌐 Interactive dashboard
-- 📊 Visual scoring charts
-- 🎨 Real-time idea preview
-- 📥 Export in multiple formats
-- 🔍 Filter and search ideas
-
-### Option 3: Python API
-
-```python
-import asyncio
-from src.config import load_config
-from src.pipeline import StartupGenerationPipeline
-
-async def generate_startup():
-    # Load configuration
-    config = load_config('config.yml')
-    
-    # Create pipeline with Groq LLM
-    pipeline = StartupGenerationPipeline(config, llm_provider='groq')
-    
-    # Run complete pipeline
-    result = await pipeline.run(
-        demo_mode=False,
-        skip_refinement=False,
-        skip_code_gen=False,
-        output_dir='./my_startup'
-    )
-    
-    # Access results
-    print(f"Top Idea: {result.selected_idea.name}")
-    print(f"Score: {result.evaluation.total_score}/100")
-    print(f"Generated Code: {result.generated_code_path}")
-
-asyncio.run(generate_startup())
+python main.py build-from-idea ideas.json -o ./my-startup
 ```
 
 ---
 
-## 📂 Project Structure
+## 🛠 Commands Reference
+
+### Core Commands
+
+| Command | Purpose | Example |
+|---------|---------|---------|
+| `build` | Interactive AI assistant (⭐ recommended!) | `python main.py build` |
+| `generate` | Full pipeline (discovery → code) | `python main.py generate` |
+| `build-from-idea` | Code from existing idea JSON | `python main.py build-from-idea idea.json` |
+| `deploy` | Deploy generated app to cloud | `python main.py deploy ./output/app` |
+
+### Options
+
+```bash
+# LLM Provider
+--llm-provider [auto|perplexity|groq|mock]  # Default: auto
+
+# Output & Theme
+-o, --output PATH                           # Output directory
+-t, --theme [Modern|Minimalist|Cyberpunk|Corporate]
+
+# Pipeline Control
+--demo                                       # Use sample data
+--skip-refinement                            # Skip prompt optimization
+--skip-code-gen                              # Stop after idea generation
+--deploy                                     # Auto-deploy after generation
+
+# Other
+-v, --verbose                               # Detailed logging
+```
+
+### Utility Commands
+
+```bash
+python main.py demo              # See a complete example
+python main.py providers         # Check LLM provider status
+python main.py test-llm          # Test LLM connectivity
+python main.py estimate-cost     # Estimate hosting costs
+python main.py wizard            # Legacy interactive mode
+```
+
+---
+
+## 🔍 How It Works
+
+### The Interactive Build Flow
 
 ```
-App-Builder/
+┌──────────────────────────────────────────┐
+│ 1. IDEA CAPTURE                          │
+│    "Describe your startup in plain text" │
+└──────────────────┬───────────────────────┘
+                   │
+┌──────────────────▼───────────────────────┐
+│ 2. MARKET RESEARCH (via Perplexity)      │
+│    • Research real pain points           │
+│    • Analyze competitors                 │
+│    • Validate market demand              │
+└──────────────────┬───────────────────────┘
+                   │
+┌──────────────────▼───────────────────────┐
+│ 3. FOLLOW-UP QUESTIONS                   │
+│    • Target users?                       │
+│    • Key features?                       │
+│    • Monetization model?                 │
+└──────────────────┬───────────────────────┘
+                   │
+┌──────────────────▼───────────────────────┐
+│ 4. IDEA SYNTHESIS                        │
+│    AI creates complete startup profile:  │
+│    • Name, tagline, positioning          │
+│    • Market sizing (TAM/SAM/SOM)         │
+│    • Revenue model & pricing             │
+│    • Competitive landscape               │
+└──────────────────┬───────────────────────┘
+                   │
+┌──────────────────▼───────────────────────┐
+│ 5. CODE GENERATION                       │
+│    Full-stack production-ready app:      │
+│    ✓ Backend (FastAPI + SQLAlchemy)      │
+│    ✓ Frontend (Next.js + React)          │
+│    ✓ Database (PostgreSQL + migrations)  │
+│    ✓ Auth (JWT + password hashing)       │
+│    ✓ Docker & deployment config          │
+│    ✓ API documentation (Swagger)         │
+└──────────────────┬───────────────────────┘
+                   │
+┌──────────────────▼───────────────────────┐
+│ 6. DEPLOYMENT (Optional)                 │
+│    One-click deploy to cloud:            │
+│    • Frontend → Vercel                   │
+│    • Backend → Render or Railway         │
+└──────────────────────────────────────────┘
+```
+
+### The Automated Discovery Pipeline
+
+```
+Market Intelligence → Idea Generation → Scoring → Prompt Engineering 
+    → Refinement → Code Generation → Quality Assurance → Output
+```
+
+1. **Intelligence Gathering**: Scrapes Reddit, GitHub, Twitter, news for pain points
+2. **Idea Generation**: Creates 50+ startup ideas from top pain points
+3. **Scoring**: Evaluates ideas on market demand, feasibility, TAM/SAM/SOM
+4. **Prompt Engineering**: Converts top idea into detailed product spec
+5. **Refinement**: Optimizes spec to "gold standard" quality
+6. **Code Generation**: Creates production-ready full-stack app
+7. **QA**: Validates generated code for best practices
+8. **Output**: Ready-to-run and deploy application
+
+---
+
+## 📊 What Gets Generated
+
+### Backend (FastAPI)
+
+```
+backend/
+├── main.py                 # FastAPI app with routes
+├── models.py              # SQLAlchemy ORM models  
+├── schemas.py             # Pydantic request/response schemas
+├── database.py            # Database configuration
+├── auth.py                # JWT authentication
+├── requirements.txt       # Python dependencies
+├── Dockerfile             # Container image
+└── docker-compose.yml     # Local development setup
+```
+
+### Frontend (Next.js)
+
+```
+frontend/
+├── app/                   # Next.js app directory
+├── components/            # React components (built for your theme)
+├── hooks/                 # Custom React hooks
+├── public/                # Static assets
+├── package.json           # Node dependencies
+├── Dockerfile             # Production container
+└── .env.example           # Configuration template
+```
+
+### Documentation
+
+```
+docs/
+├── API.md                 # REST API documentation
+├── ARCHITECTURE.md        # System design overview
+├── DEPLOYMENT.md          # Cloud deployment guide
+└── DEVELOPMENT.md         # Setup for local development
+```
+
+---
+
+## 🤖 AI Providers
+
+### Perplexity (⭐ Recommended)
+
+- **Real-time web search** built into responses
+- Perfect for market research and idea validation
+- Models: `sonar-pro` (default), `sonar-deep-research`, `sonar-reasoning`
+- Cost: $5/month for 300 daily questions (generous free tier)
+- Get key: https://www.perplexity.ai/settings/api
+
+```bash
+export PERPLEXITY_API_KEY="pplx-..."
+python main.py generate --llm-provider perplexity
+```
+
+### Groq (Fast Fallback)
+
+- Ultra-fast inference
+- Free tier: 3 requests/minute
+- Fallback when Perplexity is unavailable
+- Get key: https://console.groq.com/keys
+
+```bash
+export GROQ_API_KEY="gsk_..."
+python main.py generate --llm-provider groq
+```
+
+### Mock Mode (Testing)
+
+- No API calls needed
+- Perfect for development and testing
+- Uses predefined responses
+
+```bash
+python main.py generate --llm-provider mock --demo
+```
+
+### Auto Mode (Recommended)
+
+Automatically selects the best available provider:
+
+```bash
+python main.py generate --llm-provider auto
+```
+
+**Priority:** Perplexity → Groq → Mock
+
+---
+
+## 🎨 UI Themes
+
+Generated apps come in 4 professional themes:
+
+- **Modern**: Clean, contemporary design (default)
+- **Minimalist**: Elegant, distraction-free
+- **Cyberpunk**: Bold, futuristic aesthetic
+- **Corporate**: Professional, enterprise-ready
+
+```bash
+python main.py build --theme Cyberpunk
+```
+
+---
+
+## 🚀 Deployment
+
+### Deploy to Cloud (One Command)
+
+```bash
+python main.py deploy ./output/my-startup
+```
+
+**Deploys to:**
+- **Frontend**: Vercel (automatic)
+- **Backend**: Render (automatic)
+
+**Prerequisites:**
+- Vercel account (free)
+- Render account (free tier available)
+
+### Manual Deployment
+
+Each generated app includes Docker:
+
+```bash
+cd ./output/my-startup
+
+# Build Docker images
+docker-compose build
+
+# Run locally
+docker-compose up
+
+# Deploy to Docker registry
+docker push registry.example.com/my-startup:latest
+```
+
+---
+
+## 📈 Project Structure
+
+```
+LaunchForge/
 ├── src/
-│   ├── intelligence/          # Data collection engine
-│   │   ├── collectors/        # GitHub, News, Reddit scrapers
-│   │   └── sources/           # Data source adapters
-│   ├── idea_generation/       # AI-powered ideation
-│   │   ├── engine.py          # Template-based generator
-│   │   └── llm_engine.py      # AI-powered generator
-│   ├── scoring/               # Multi-factor evaluation
-│   ├── code_generation/       # Production code generator
-│   │   ├── enhanced_engine.py # 37-file generator
-│   │   └── file_templates.py  # Backend, frontend templates
-│   ├── llm/                   # Multi-provider LLM client
-│   ├── prompt_engineering/    # Prompt optimization
-│   └── refinement/            # Idea enhancement
-├── config.yml                 # Pipeline configuration
-├── main.py                    # CLI entry point
-├── streamlit_app.py           # Web UI
-└── requirements.txt           # Python dependencies
+│   ├── assistant.py           # Interactive build mode ✨
+│   ├── cli.py                 # Command-line interface
+│   ├── pipeline.py            # Main orchestration
+│   ├── models.py              # Data models
+│   ├── llm/                   # LLM providers (Perplexity, Groq)
+│   ├── code_generation/       # Code gen engine
+│   ├── intelligence/          # Market research
+│   ├── idea_generation/       # Idea creation
+│   ├── prompt_engineering/    # Spec generation
+│   ├── refinement/            # Prompt optimization
+│   ├── scoring/               # Idea evaluation
+│   ├── deployment/            # Cloud deployment
+│   └── utils/                 # Helpers
+├── tests/                     # Unit & integration tests
+├── config.yml                 # Configuration template
+├── requirements.txt           # Python dependencies
+└── README.md                  # This file
 ```
 
 ---
 
-## 🎨 Example: Generated Startup
+## 💡 Examples
 
-### Input: Real GitHub Trend
-```
-"n8n - Fair-code workflow automation platform with native AI 
-capabilities. Combine visual building with custom code, 400+ integrations."
-```
+### Example 1: Build an AI Test Generator
 
-### Output: Validated Idea
-```yaml
-Name: WorkflowAI Pro
-Score: 84.5/100
-
-Problem:
-  Developers waste 15+ hours/week on repetitive API integration tasks.
-  Current tools lack AI assistance and require extensive coding.
-
-Solution:
-  AI-powered workflow automation platform with visual builder,
-  400+ pre-built integrations, and natural language configuration.
-
-Market Analysis:
-  TAM: $12B (workflow automation market)
-  Target: 50K+ SaaS companies, DevOps teams
-  Competition: Medium (n8n, Zapier, Make)
-  
-Revenue Model:
-  Freemium SaaS
-  - Free: 1K operations/month
-  - Pro: $29/mo (unlimited operations)
-  - Enterprise: Custom pricing + priority support
-
-Technical Feasibility: High (8.5/10)
-  Proven tech stack, clear implementation path
-```
-
-### Generated Application
-```
-workflow_ai_pro/
-├── backend/                   # FastAPI + PostgreSQL
-│   ├── app/
-│   │   ├── api/endpoints/     # Auth + CRUD routes
-│   │   ├── core/              # JWT, config, security
-│   │   ├── crud/              # Database operations
-│   │   ├── models/            # SQLAlchemy models
-│   │   └── schemas/           # Pydantic validation
-│   ├── tests/                 # Pytest test suite
-│   ├── alembic/               # DB migrations
-│   └── requirements.txt
-├── frontend/                  # Next.js + TypeScript
-│   ├── src/app/               # App router pages
-│   ├── components/            # Reusable UI components
-│   ├── package.json
-│   └── Dockerfile
-├── docker-compose.yml         # 3-service orchestration
-├── .github/workflows/ci.yml   # CI/CD pipeline
-└── README.md                  # Deployment guide
-```
-
-**Deploy immediately:**
 ```bash
-cd workflow_ai_pro
-docker-compose up -d
+$ python main.py build
+? Describe your startup idea:
+  An AI tool that analyzes code and generates comprehensive unit tests 
+  using advanced static analysis and machine learning.
 
-# Access:
-# - API Docs: http://localhost:8000/docs
-# - Frontend: http://localhost:3000
-# - Database: localhost:5432
+[LaunchForge researches...]
+
+? Who is your target user?
+  Junior developers and small teams
+  
+? What are the 3-5 key features?
+  Automatic test generation, Code analysis, Coverage reports, IDE integration
+
+? How do you plan to monetize?
+  Subscription
+
+Generated: AI Test Generator
+Output: output/ai_test_generator_a1b2c3d4/
 ```
 
----
+### Example 2: Market Research
 
-## ⚙️ Configuration
+```bash
+$ python main.py generate -o ./research
 
-### Data Sources (`config.yml`)
+[Step 1/6] Gathering Intelligence
+  ✓ Found 127 pain points
+  ✓ Analyzed 45 competitors
+  ✓ Identified 8 emerging industries
 
-```yaml
-intelligence:
-  data_sources:
-    # FREE (no API key required) ✅
-    - type: google_trends
-      enabled: true
-      regions: [US, GB, CA, AU]
-      
-    - type: hackernews
-      enabled: true
-      max_stories: 100
-      
-    - type: rss_feeds
-      enabled: true
-      
-    # PAID/API KEY REQUIRED
-    - type: reddit
-      enabled: false  # Enable after adding credentials
-      client_id: ${REDDIT_CLIENT_ID}
-      
-    - type: newsapi
-      enabled: false
-      api_key: ${NEWSAPI_KEY}
+[Step 2/6] Generating Ideas
+  ✓ Created 52 startup ideas
+  
+[Step 3/6] Scoring Ideas
+  ✓ Top idea: "AI Code Review Assistant" (Score: 87.3/100)
+  
+[Step 4-6] Generating Code...
+  ✓ Built complete full-stack application
+
+$ cd research/backend && pip install -r requirements.txt
+$ uvicorn main:app --reload
 ```
-
-### Scoring Weights
-
-```yaml
-scoring:
-  weights:
-    market_demand: 0.35      # Market size & urgency
-    feasibility: 0.25        # Technical difficulty
-    innovation: 0.20         # Uniqueness
-    competition: 0.20        # Market density
-  min_total_score: 70.0      # Minimum passing score
-```
-
-### LLM Provider
-
-```yaml
-llm:
-  provider: auto  # auto, groq, gemini, openai, anthropic
-  model: llama-3.3-70b-versatile
-  temperature: 0.7
-  max_tokens: 2000
-```
-
----
-
-## 📊 Performance Metrics
-
-| Metric | Value | Details |
-|--------|-------|---------|
-| **Data Collection** | 60s | 100-200 pain points from 5+ sources |
-| **Idea Generation** | 10s | 20-50 ideas (with LLM) |
-| **Code Generation** | <1s | 37 files, 1,067 lines |
-| **Full Pipeline** | <90s | End-to-end execution |
-| **Idea Quality** | 75-85/100 | Average score range |
-
-### Scalability
-- **Parallel Collection**: All sources run concurrently
-- **LLM Failover**: Automatic fallback to backup providers
-- **Rate Limiting**: Respects API quotas automatically
-- **Caching**: Deduplicates pain points
 
 ---
 
 ## 🧪 Testing
 
+Run the test suite:
+
 ```bash
+# Component tests
+python test_build_components.py
+
 # Run all tests
 pytest tests/
 
 # With coverage
-pytest tests/ --cov=src --cov-report=html
-
-# Specific module
-pytest tests/test_idea_generation.py -v
+pytest --cov=src tests/
 ```
 
 ---
 
-## 📖 Documentation
+## 🔧 Configuration
 
-- **[DEVELOPMENT.md](DEVELOPMENT.md)**: Contributing guide
-- **[config.yml](config.yml)**: Complete configuration reference
-- **[examples.py](examples.py)**: Python API examples
+Edit `config.yml` to customize:
 
----
-
-## 🛠️ Advanced Usage
-
-### Custom Data Collector
-
-```python
-# src/intelligence/collectors/my_source.py
-from src.models import PainPoint, SourceType
-
-class MyCollector:
-    def collect(self) -> list[PainPoint]:
-        return [
-            PainPoint(
-                description="Users struggle with X",
-                source_url="https://example.com",
-                source_type=SourceType.OTHER,
-                urgency_score=8.5,
-                affected_demographics=["Developers"],
-                market_size_indicator="Large"
-            )
-        ]
-```
-
-Register in `config.yml`:
 ```yaml
-- type: my_source
-  enabled: true
+# LLM Settings
+llm:
+  provider: perplexity          # primary provider
+  fallback: groq                # fallback provider
+  model: sonar-pro              # specific model
+  
+# Generation Settings
+generation:
+  num_ideas: 50                 # ideas to generate
+  temperature: 0.7              # creativity level
+  
+# Deployment
+deployment:
+  frontend: vercel              # frontend platform
+  backend: render               # backend platform
 ```
 
-### Custom Code Templates
+---
 
-```python
-# src/code_generation/file_templates.py
-CUSTOM_ENDPOINT = """
-from fastapi import APIRouter
+## 📚 Advanced Usage
 
-router = APIRouter()
+### Development Mode
 
-@router.get("/custom")
-async def my_endpoint():
-    return {"data": "custom response"}
-"""
+```bash
+# Verbose logging
+python main.py generate -v
+
+# Keep intermediate outputs
+python main.py generate --verbose
+
+# Test without code generation
+python main.py generate --skip-code-gen
+```
+
+### Batch Processing
+
+Generate multiple startups:
+
+```bash
+for i in {1..5}; do
+  python main.py generate -o "./startup_$i"
+done
+```
+
+### Custom Prompts
+
+Edit generated `prompt.json` files and regenerate:
+
+```bash
+python main.py build-from-idea ideas.json -o ./my-startup
 ```
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! See [DEVELOPMENT.md](DEVELOPMENT.md) for:
-- Development setup
-- Code style guidelines
-- Testing requirements
-- Pull request process
+Contributions welcome! Areas to help:
+
+- [ ] Add more code templates
+- [ ] Support additional LLM providers
+- [ ] Improve deployment providers
+- [ ] Add more UI themes
+- [ ] Write documentation
+- [ ] Report bugs
+
+```bash
+git clone https://github.com/taglia21/App-Builder.git
+cd App-Builder
+# Make your changes
+git push origin feature-name
+```
 
 ---
 
 ## 📄 License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE) file
 
 ---
 
-## 🙏 Acknowledgments
+## 🙋 FAQ
 
-Built with excellent open-source tools:
-- **FastAPI** - Modern Python web framework
-- **Streamlit** - Interactive data apps
-- **Groq** - Fast LLM inference
-- **SQLAlchemy** - Python ORM
-- **Next.js** - React framework
-- **Playwright** - Web automation
+**Q: Do I need API keys?**
+A: Only if you want real AI features. Demo mode works without keys.
+
+**Q: How long does code generation take?**
+A: Typically 2-5 minutes depending on app complexity.
+
+**Q: Can I customize the generated code?**
+A: Absolutely! Generated code is yours to modify, deploy, sell.
+
+**Q: What if I don't like the idea LaunchForge suggests?**
+A: Use `build` mode to describe exactly what you want instead.
+
+**Q: Is the generated code production-ready?**
+A: Yes! It includes auth, validation, error handling, tests, and deployment config.
+
+**Q: Can I use this to build side projects?**
+A: Yes! Perfect for indie hackers, MVPs, and side hustles.
 
 ---
 
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/App-Builder/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/App-Builder/discussions)
+- 📖 Check [DEVELOPMENT.md](DEVELOPMENT.md) for setup help
+- 🐛 Report bugs on GitHub Issues
+- 💬 Discuss on GitHub Discussions
+- 🚀 Share your generated apps!
 
 ---
 
-## 🎯 Roadmap
+## 🎉 Next Steps
 
-- [x] **Phase 1**: Multi-source intelligence gathering
-- [x] **Phase 2**: AI-powered idea generation
-- [x] **Phase 3**: Production code generation (37 files)
-- [ ] **Phase 4**: Frontend enhancement (dashboards, forms)
-- [ ] **Phase 5**: Advanced features (RBAC, email verification)
-- [ ] **Phase 6**: Cloud deployment automation (AWS, GCP, Vercel)
-- [ ] **Phase 7**: Monitoring & analytics
-- [ ] **Phase 8**: Multi-language support (Node.js, Go, Rust)
+1. **Set your API key** (Perplexity or Groq)
+2. **Run** `python main.py build`
+3. **Describe your idea** in plain English
+4. **Get your app** in minutes
+5. **Deploy to cloud** with one command
+
+**Happy building! 🚀**
 
 ---
 
-**🚀 Transform market signals into production-ready startups in minutes!**
+<div align="center">
 
-*Star this repo if you find it useful! ⭐*
+Made with ❤️ by the LaunchForge team
+
+[Star on GitHub](https://github.com/taglia21/App-Builder) · [Get Perplexity Key](https://www.perplexity.ai/settings/api) · [Read Docs](DEVELOPMENT.md)
+
+</div>
