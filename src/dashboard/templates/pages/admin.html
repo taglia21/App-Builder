@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - LaunchForge</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    {% extends "base.html" %}
+    
+    {% block title %}Admin Dashboard{% endblock %}
+    
+    {% block content %}
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+            <div class="flex gap-4">
+                <a href="/admin/email-templates" 
+                   class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                    Email Templates
+                </a>
+                <button onclick="exportFeedback()" 
+                        class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
+                    Export CSV
+                </button>
+            </div>
+        </div>
+        
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-gray-500 text-sm uppercase">Total Feedback</h3>
+                <p class="text-3xl font-bold text-gray-900">{{ stats.total_feedback }}</p>
+                <p class="text-sm text-gray-600">{{ stats.pending_feedback }} pending</p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-gray-500 text-sm uppercase">Contact Submissions</h3>
+                <p class="text-3xl font-bold text-gray-900">{{ stats.total_contacts }}</p>
+                <p class="text-sm text-gray-600">{{ stats.pending_contacts }} pending</p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-gray-500 text-sm uppercase">Total Users</h3>
+                <p class="text-3xl font-bold text-gray-900">{{ stats.total_users }}</p>
+                <p class="text-sm text-gray-600">{{ stats.verified_users }} verified</p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-gray-500 text-sm uppercase">Onboarding Complete</h3>
+                <p class="text-3xl font-bold text-gray-900">{{ stats.onboarding_complete_pct }}%</p>
+                <p class="text-sm text-gray-600">{{ stats.onboarding_complete }} users</p>
+            </div>
+        </div>
+        
+        <!-- Tabs -->
+        <div class="bg-white rounded-lg shadow">
+            <div class="border-b border-gray-200">
+                <nav class="flex -mb-px">
+                    <button id="tab-feedback" 
+                            onclick="switchTab('feedback')"
+                            class="tab-button px-6 py-4 border-b-2 border-blue-600 text-blue-600 font-medium">
+                        Feedback
+                    </button>
+                    <button id="tab-contacts" 
+                            onclick="switchTab('contacts')"
+                            class="tab-button px-6 py-4 border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+                        Contact Submissions
+                    </button>
+                </nav>
+            </div>
+            
+            <!-- Filters -->
+            <div class="p-4 border-b border-gray-200 bg-gray-50">
+                <div class="flex gap-4 items-center">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Status</label>
+                        <select id="filter-status" 
+                                onchange="applyFilters()"
+                                class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 rounded-md">
+                            <option value="">All</option>
+                            <option value="pending">Pending</option>
+                            <option value="reviewed">Reviewed</option>
+                            <option value="resolved">Resolved</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Category</label>
+                        <select id="filter-category" 
+                                onchange="applyFilters()"
+                                class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 rounded-md">
+                            <option value="">All</option>
+                            <option value="general">General</option>
+                            <option value="bug">Bug Report</option>
+                            <option value="feature">Feature Request</option>
+                            <option value="improvement">Improvement</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Date Range</label>
+                        <select id="filter-date" 
+                                onchange="applyFilters()"
+                                class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 rounded-md">
+                            <option value="">All Time</option>
+                            <option value="today">Today</option>
+                            <option value="week">This Week</option>
+                            <option value="month">This Month</option>
+                        </select>
+                    </div>
+                    <div class="flex-1"></div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">&nbsp;</label>
+                        <button onclick="clearFilters()" 
+                                class="mt-1 px-4 py-2 text-gray-600 hover:text-gray-900">
+                            Clear Filters
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Feedback Tab Content -->
+            <div id="content-feedback" class="tab-content">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Message</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="feedback-list" class="bg-white divide-y divide-gray-200">
+                            {% for item in feedback_items %}
+                            <tr id="feedback-{{ item.id }}">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {{ item.created_at.strftime('%Y-%m-%d %H:%M') }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="px-2 py-1 text-xs rounded-full 
+                                        {% if item.category == 'bug' %}bg-red-100 text-red-800
+                                        {% elif item.category == 'feature' %}bg-purple-100 text-purple-800
+                                        {% elif item.category == 'improvement' %}bg-yellow-100 text-yellow-800
+                                        {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                        {{ item.category }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-900 max-w-md truncate">
+                                    {{ item.message[:100] }}{% if item.message|length > 100 %}...{% endif %}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {{ item.user_email or 'Anonymous' }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="px-2 py-1 text-xs rounded-full
+                                        {% if item.status == 'pending' %}bg-yellow-100 text-yellow-800
+                                        {% elif item.status == 'resolved' %}bg-green-100 text-green-800
+                                        {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                        {{ item.status }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                    <button onclick="viewFeedback('{{ item.id }}')" 
+                                            class="text-blue-600 hover:text-blue-900 mr-3">View</button>
+                                    {% if item.status != 'resolved' %}
+                                    <button hx-post="/admin/feedback/{{ item.id }}/resolve"
+                                            hx-target="#feedback-{{ item.id }}"
+                                            hx-swap="outerHTML"
+                                            class="text-green-600 hover:text-green-900">Resolve</button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+                                    No feedback submissions found.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Contacts Tab Content -->
+            <div id="content-contacts" class="tab-content hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Subject</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="contacts-list" class="bg-white divide-y divide-gray-200">
+                            {% for item in contact_items %}
+                            <tr id="contact-{{ item.id }}">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {{ item.created_at.strftime('%Y-%m-%d %H:%M') }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                    {{ item.name }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <a href="mailto:{{ item.email }}" class="text-blue-600 hover:underline">
+                                        {{ item.email }}
+                                    </a>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
+                                    {{ item.subject }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="px-2 py-1 text-xs rounded-full
+                                        {% if item.status == 'pending' %}bg-yellow-100 text-yellow-800
+                                        {% elif item.status == 'replied' %}bg-blue-100 text-blue-800
+                                        {% elif item.status == 'resolved' %}bg-green-100 text-green-800
+                                        {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                        {{ item.status }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                    <button onclick="viewContact('{{ item.id }}')" 
+                                            class="text-blue-600 hover:text-blue-900 mr-3">View</button>
+                                    <button onclick="showReplyModal('{{ item.id }}', '{{ item.email }}', '{{ item.subject }}')" 
+                                            class="text-purple-600 hover:text-purple-900 mr-3">Reply</button>
+                                    {% if item.status != 'resolved' %}
+                                    <button hx-post="/admin/contacts/{{ item.id }}/resolve"
+                                            hx-target="#contact-{{ item.id }}"
+                                            hx-swap="outerHTML"
+                                            class="text-green-600 hover:text-green-900">Resolve</button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+                                    No contact submissions found.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Pagination -->
+            <div class="px-6 py-4 border-t border-gray-200">
+                <div class="flex items-center justify-between">
+                    <div class="text-sm text-gray-500">
+                        Showing {{ offset + 1 }} to {{ offset + items|length }} of {{ total_items }} results
+                    </div>
+                    <div class="flex gap-2">
+                        {% if page > 1 %}
+                        <a href="?page={{ page - 1 }}" 
+                           class="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50">
+                            Previous
+                        </a>
+                        {% endif %}
+                        {% if has_next %}
+                        <a href="?page={{ page + 1 }}" 
+                           class="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50">
+                            Next
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- View Feedback Modal -->
+    <div id="view-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <h2 id="modal-title" class="text-xl font-bold text-gray-900">Feedback Details</h2>
+                        <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div id="modal-content" class="space-y-4">
+                        <!-- Content loaded dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Reply Modal -->
+    <div id="reply-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full">
+                <form id="reply-form" onsubmit="sendReply(event)">
+                    <div class="p-6">
+                        <div class="flex justify-between items-start mb-4">
+                            <h2 class="text-xl font-bold text-gray-900">Reply to Contact</h2>
+                            <button type="button" onclick="closeReplyModal()" class="text-gray-400 hover:text-gray-600">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        <input type="hidden" id="reply-contact-id" name="contact_id">
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">To</label>
+                                <input type="email" id="reply-to" name="to" readonly
+                                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Subject</label>
+                                <input type="text" id="reply-subject" name="subject"
+                                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Message</label>
+                                <textarea id="reply-message" name="message" rows="8"
+                                          class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+                                          placeholder="Type your reply..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="px-6 py-4 bg-gray-50 rounded-b-lg flex justify-end gap-3">
+                        <button type="button" onclick="closeReplyModal()" 
+                                class="px-4 py-2 text-gray-700 hover:text-gray-900">
+                            Cancel
+                        </button>
+                        <button type="submit" 
+                                class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                            Send Reply
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('border-blue-600', 'text-blue-600');
+                btn.classList.add('border-transparent', 'text-gray-500');
+            });
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.add('hidden');
+            });
+            
+            document.getElementById(`tab-${tab}`).classList.add('border-blue-600', 'text-blue-600');
+            document.getElementById(`tab-${tab}`).classList.remove('border-transparent', 'text-gray-500');
+            document.getElementById(`content-${tab}`).classList.remove('hidden');
+        }
+        
+        function applyFilters() {
+            const status = document.getElementById('filter-status').value;
+            const category = document.getElementById('filter-category').value;
+            const date = document.getElementById('filter-date').value;
+            
+            const params = new URLSearchParams(window.location.search);
+            if (status) params.set('status', status);
+            else params.delete('status');
+            if (category) params.set('category', category);
+            else params.delete('category');
+            if (date) params.set('date', date);
+            else params.delete('date');
+            
+            window.location.href = `${window.location.pathname}?${params.toString()}`;
+        }
+        
+        function clearFilters() {
+            window.location.href = window.location.pathname;
+        }
+        
+        function viewFeedback(id) {
+            fetch(`/api/admin/feedback/${id}`)
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('modal-title').textContent = 'Feedback Details';
+                    document.getElementById('modal-content').innerHTML = `
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><strong>Category:</strong> ${data.category}</div>
+                            <div><strong>Status:</strong> ${data.status}</div>
+                            <div><strong>User:</strong> ${data.user_email || 'Anonymous'}</div>
+                            <div><strong>Date:</strong> ${data.created_at}</div>
+                        </div>
+                        <div class="mt-4">
+                            <strong>Message:</strong>
+                            <p class="mt-2 p-4 bg-gray-50 rounded">${data.message}</p>
+                        </div>
+                        ${data.page_url ? `<div class="mt-2"><strong>Page:</strong> ${data.page_url}</div>` : ''}
+                        ${data.user_agent ? `<div class="mt-2 text-sm text-gray-500"><strong>User Agent:</strong> ${data.user_agent}</div>` : ''}
+                    `;
+                    document.getElementById('view-modal').classList.remove('hidden');
+                });
+        }
+        
+        function viewContact(id) {
+            fetch(`/api/admin/contacts/${id}`)
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('modal-title').textContent = 'Contact Details';
+                    document.getElementById('modal-content').innerHTML = `
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><strong>Name:</strong> ${data.name}</div>
+                            <div><strong>Email:</strong> <a href="mailto:${data.email}" class="text-blue-600">${data.email}</a></div>
+                            <div><strong>Status:</strong> ${data.status}</div>
+                            <div><strong>Date:</strong> ${data.created_at}</div>
+                        </div>
+                        <div class="mt-4">
+                            <strong>Subject:</strong>
+                            <p class="mt-1">${data.subject}</p>
+                        </div>
+                        <div class="mt-4">
+                            <strong>Message:</strong>
+                            <p class="mt-2 p-4 bg-gray-50 rounded whitespace-pre-wrap">${data.message}</p>
+                        </div>
+                        ${data.reply_message ? `
+                        <div class="mt-4 p-4 bg-blue-50 rounded">
+                            <strong>Reply sent ${data.replied_at}:</strong>
+                            <p class="mt-2 whitespace-pre-wrap">${data.reply_message}</p>
+                        </div>` : ''}
+                    `;
+                    document.getElementById('view-modal').classList.remove('hidden');
+                });
+        }
+        
+        function closeModal() {
+            document.getElementById('view-modal').classList.add('hidden');
+        }
+        
+        function showReplyModal(id, email, subject) {
+            document.getElementById('reply-contact-id').value = id;
+            document.getElementById('reply-to').value = email;
+            document.getElementById('reply-subject').value = `Re: ${subject}`;
+            document.getElementById('reply-message').value = '';
+            document.getElementById('reply-modal').classList.remove('hidden');
+        }
+        
+        function closeReplyModal() {
+            document.getElementById('reply-modal').classList.add('hidden');
+        }
+        
+        async function sendReply(event) {
+            event.preventDefault();
+            const form = document.getElementById('reply-form');
+            const formData = new FormData(form);
+            
+            const response = await fetch(`/admin/contacts/${formData.get('contact_id')}/reply`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    message: formData.get('message'),
+                    subject: formData.get('subject')
+                })
+            });
+            
+            if (response.ok) {
+                closeReplyModal();
+                window.location.reload();
+            } else {
+                alert('Failed to send reply. Please try again.');
+            }
+        }
+        
+        function exportFeedback() {
+            window.location.href = '/api/admin/export/feedback?format=csv';
+        }
+        
+        // Close modals on escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+                closeReplyModal();
+            }
+        });
+    </script>
+    {% endblock %}
+</body>
+</html>

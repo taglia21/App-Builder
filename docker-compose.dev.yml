@@ -1,0 +1,163 @@
+version: '3.9'
+
+# Development Docker Compose with Mailhog for local email testing
+# Usage: docker-compose -f docker-compose.dev.yml up
+
+services:
+  app:
+    build: .
+    container_name: launchforge-dev
+    volumes:
+      - ./output:/app/output
+      - ./generated_projects:/app/generated_projects
+      - ./logs:/app/logs
+      - ./.env:/app/.env
+      - ./config.yml:/app/config.yml
+      - ./src:/app/src  # Mount source for hot reload
+    environment:
+      - PYTHONUNBUFFERED=1
+      - ENVIRONMENT=development
+      - DEBUG=true
+      # Use Mailhog for local email testing
+      - SMTP_HOST=mailhog
+      - SMTP_PORT=1025
+      - SMTP_USE_TLS=false
+      - FROM_EMAIL=noreply@localhost
+      # For Resend testing, comment above and use:
+      # - RESEND_API_KEY=${RESEND_API_KEY}
+      # - FROM_EMAIL=noreply@launchforge.dev
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+      - mailhog
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  db:
+    image: postgres:15
+    container_name: launchforge-db-dev
+    environment:
+      - POSTGRES_USER=launchforge
+      - POSTGRES_PASSWORD=launchforge_dev_password
+      - POSTGRES_DB=launchforge_dev
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U launchforge -d launchforge_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: launchforge-redis-dev
+    volumes:
+      - redis_dev_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # Mailhog - Local Email Testing
+  # ============================================
+  # Mailhog catches all outgoing emails and provides a web UI to view them.
+  # 
+  # Web UI: http://localhost:8025
+  # SMTP: localhost:1025
+  #
+  # No authentication required - perfect for development!
+  # ============================================
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    container_name: launchforge-mailhog
+    ports:
+      - "1025:1025"  # SMTP server
+      - "8025:8025"  # Web UI
+    logging:
+      driver: none  # Reduce log noise
+
+  # Optional: pgAdmin for database management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: launchforge-pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@launchforge.dev
+      - PGADMIN_DEFAULT_PASSWORD=admin
+      - PGADMIN_CONFIG_SERVER_MODE=False
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+    profiles:
+      - tools  # Only start with: docker-compose --profile tools up
+
+  # Optional: Redis Commander for Redis management
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: launchforge-redis-commander
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    profiles:
+      - tools  # Only start with: docker-compose --profile tools up
+
+volumes:
+  postgres_dev_data:
+  redis_dev_data:
+
+# ============================================
+# DEVELOPMENT GUIDE
+# ============================================
+#
+# 1. Start the development stack:
+#    docker-compose -f docker-compose.dev.yml up
+#
+# 2. Start with optional tools (pgAdmin, Redis Commander):
+#    docker-compose -f docker-compose.dev.yml --profile tools up
+#
+# 3. Access services:
+#    - App:             http://localhost:8000
+#    - Mailhog Web UI:  http://localhost:8025
+#    - pgAdmin:         http://localhost:5050 (with --profile tools)
+#    - Redis Commander: http://localhost:8081 (with --profile tools)
+#
+# 4. Run migrations:
+#    docker-compose -f docker-compose.dev.yml exec app alembic upgrade head
+#
+# 5. View logs:
+#    docker-compose -f docker-compose.dev.yml logs -f app
+#
+# 6. Stop everything:
+#    docker-compose -f docker-compose.dev.yml down
+#
+# 7. Reset database:
+#    docker-compose -f docker-compose.dev.yml down -v
+#    docker-compose -f docker-compose.dev.yml up
+#
+# ============================================
+# EMAIL TESTING WITH MAILHOG
+# ============================================
+#
+# All emails sent by the app are captured by Mailhog.
+# 
+# 1. Trigger an email (e.g., sign up, password reset)
+# 2. Open http://localhost:8025
+# 3. View the captured email
+# 4. Test HTML rendering, links, etc.
+#
+# To test with real Resend.com:
+# 1. Set RESEND_API_KEY in .env
+# 2. Update docker-compose.dev.yml to use Resend
+# 3. Restart the app container
+#
+# ============================================

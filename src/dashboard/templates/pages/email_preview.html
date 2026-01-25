@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Template Preview - LaunchForge</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    {% extends "base.html" %}
+    
+    {% block title %}Email Templates{% endblock %}
+    
+    {% block content %}
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">Email Template Preview</h1>
+                <p class="text-gray-600 mt-1">Preview and test all email templates</p>
+            </div>
+            <a href="/admin" class="text-blue-600 hover:text-blue-800">
+                ← Back to Admin Dashboard
+            </a>
+        </div>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <!-- Template Selector -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-lg shadow p-4">
+                    <h3 class="font-medium text-gray-900 mb-4">Templates</h3>
+                    <nav class="space-y-2">
+                        <button onclick="loadTemplate('verification')" 
+                                id="btn-verification"
+                                class="template-btn w-full text-left px-4 py-3 rounded-lg bg-blue-50 text-blue-700 font-medium">
+                            ✉️ Email Verification
+                        </button>
+                        <button onclick="loadTemplate('welcome')" 
+                                id="btn-welcome"
+                                class="template-btn w-full text-left px-4 py-3 rounded-lg hover:bg-gray-50 text-gray-700">
+                            👋 Welcome Email
+                        </button>
+                        <button onclick="loadTemplate('password_reset')" 
+                                id="btn-password_reset"
+                                class="template-btn w-full text-left px-4 py-3 rounded-lg hover:bg-gray-50 text-gray-700">
+                            🔐 Password Reset
+                        </button>
+                        <button onclick="loadTemplate('payment_confirmation')" 
+                                id="btn-payment_confirmation"
+                                class="template-btn w-full text-left px-4 py-3 rounded-lg hover:bg-gray-50 text-gray-700">
+                            💳 Payment Confirmation
+                        </button>
+                        <button onclick="loadTemplate('app_complete')" 
+                                id="btn-app_complete"
+                                class="template-btn w-full text-left px-4 py-3 rounded-lg hover:bg-gray-50 text-gray-700">
+                            🎉 App Generation Complete
+                        </button>
+                    </nav>
+                    
+                    <!-- Sample Data Editor -->
+                    <div class="mt-6 pt-6 border-t border-gray-200">
+                        <h3 class="font-medium text-gray-900 mb-4">Sample Data</h3>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm text-gray-600">Recipient Name</label>
+                                <input type="text" id="sample-name" value="John Doe"
+                                       onchange="updatePreview()"
+                                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-600">Email</label>
+                                <input type="email" id="sample-email" value="john@example.com"
+                                       onchange="updatePreview()"
+                                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                            </div>
+                            <div id="extra-fields">
+                                <!-- Dynamic fields based on template -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Send Test Email -->
+                    <div class="mt-6 pt-6 border-t border-gray-200">
+                        <h3 class="font-medium text-gray-900 mb-4">Send Test Email</h3>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm text-gray-600">Send to</label>
+                                <input type="email" id="test-email" 
+                                       placeholder="your@email.com"
+                                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                            </div>
+                            <button onclick="sendTestEmail()"
+                                    class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                                Send Test Email
+                            </button>
+                            <p id="test-result" class="text-sm text-center hidden"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Preview Panel -->
+            <div class="lg:col-span-3">
+                <div class="bg-white rounded-lg shadow">
+                    <!-- Preview Header -->
+                    <div class="border-b border-gray-200 p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="font-medium text-gray-900" id="preview-title">Email Verification</h3>
+                                <p class="text-sm text-gray-500" id="preview-subject">Subject: Verify your LaunchForge email</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="setViewMode('desktop')" 
+                                        id="view-desktop"
+                                        class="view-btn px-3 py-1 text-sm rounded bg-gray-200 text-gray-800">
+                                    Desktop
+                                </button>
+                                <button onclick="setViewMode('mobile')" 
+                                        id="view-mobile"
+                                        class="view-btn px-3 py-1 text-sm rounded text-gray-600 hover:bg-gray-100">
+                                    Mobile
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Email Preview Frame -->
+                    <div id="preview-container" class="p-4 bg-gray-100 min-h-[600px] flex justify-center">
+                        <div id="preview-frame" class="bg-white shadow-lg transition-all duration-300" 
+                             style="width: 600px; max-width: 100%;">
+                            <iframe id="email-preview" 
+                                    class="w-full border-0" 
+                                    style="height: 600px;"
+                                    sandbox="allow-same-origin">
+                            </iframe>
+                        </div>
+                    </div>
+                    
+                    <!-- Raw HTML Viewer -->
+                    <div class="border-t border-gray-200">
+                        <button onclick="toggleRawHtml()" 
+                                class="w-full px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center justify-between">
+                            <span>View Raw HTML</span>
+                            <svg id="raw-chevron" class="w-5 h-5 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                        <div id="raw-html-panel" class="hidden border-t border-gray-200">
+                            <pre id="raw-html" class="p-4 bg-gray-900 text-gray-100 text-xs overflow-x-auto max-h-80"></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let currentTemplate = 'verification';
+        let viewMode = 'desktop';
+        
+        const templates = {
+            verification: {
+                title: 'Email Verification',
+                subject: 'Verify your LaunchForge email',
+                extraFields: []
+            },
+            welcome: {
+                title: 'Welcome Email',
+                subject: 'Welcome to LaunchForge! 🚀',
+                extraFields: []
+            },
+            password_reset: {
+                title: 'Password Reset',
+                subject: 'Reset your LaunchForge password',
+                extraFields: []
+            },
+            payment_confirmation: {
+                title: 'Payment Confirmation',
+                subject: 'Payment confirmed - Pro Plan',
+                extraFields: [
+                    {id: 'plan_name', label: 'Plan Name', value: 'Pro Plan'},
+                    {id: 'amount', label: 'Amount', value: '$29.00'}
+                ]
+            },
+            app_complete: {
+                title: 'App Generation Complete',
+                subject: "Your app 'My SaaS' is ready! 🎉",
+                extraFields: [
+                    {id: 'app_name', label: 'App Name', value: 'My SaaS'}
+                ]
+            }
+        };
+        
+        function loadTemplate(template) {
+            currentTemplate = template;
+            
+            // Update button states
+            document.querySelectorAll('.template-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-50', 'text-blue-700', 'font-medium');
+                btn.classList.add('hover:bg-gray-50', 'text-gray-700');
+            });
+            const activeBtn = document.getElementById(`btn-${template}`);
+            activeBtn.classList.add('bg-blue-50', 'text-blue-700', 'font-medium');
+            activeBtn.classList.remove('hover:bg-gray-50', 'text-gray-700');
+            
+            // Update header
+            const config = templates[template];
+            document.getElementById('preview-title').textContent = config.title;
+            document.getElementById('preview-subject').textContent = `Subject: ${config.subject}`;
+            
+            // Update extra fields
+            const extraFieldsContainer = document.getElementById('extra-fields');
+            extraFieldsContainer.innerHTML = config.extraFields.map(field => `
+                <div>
+                    <label class="block text-sm text-gray-600">${field.label}</label>
+                    <input type="text" id="sample-${field.id}" value="${field.value}"
+                           onchange="updatePreview()"
+                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                </div>
+            `).join('');
+            
+            updatePreview();
+        }
+        
+        function updatePreview() {
+            const name = document.getElementById('sample-name').value;
+            const email = document.getElementById('sample-email').value;
+            
+            // Collect extra fields
+            const extraData = {};
+            templates[currentTemplate].extraFields.forEach(field => {
+                const input = document.getElementById(`sample-${field.id}`);
+                if (input) extraData[field.id] = input.value;
+            });
+            
+            // Fetch rendered template
+            fetch('/api/admin/email-templates/preview', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    template: currentTemplate,
+                    data: {name, email, ...extraData}
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                const iframe = document.getElementById('email-preview');
+                iframe.srcdoc = data.html;
+                document.getElementById('raw-html').textContent = data.html;
+            })
+            .catch(err => {
+                console.error('Preview error:', err);
+            });
+        }
+        
+        function setViewMode(mode) {
+            viewMode = mode;
+            const frame = document.getElementById('preview-frame');
+            
+            document.querySelectorAll('.view-btn').forEach(btn => {
+                btn.classList.remove('bg-gray-200', 'text-gray-800');
+                btn.classList.add('text-gray-600', 'hover:bg-gray-100');
+            });
+            
+            const activeBtn = document.getElementById(`view-${mode}`);
+            activeBtn.classList.add('bg-gray-200', 'text-gray-800');
+            activeBtn.classList.remove('text-gray-600', 'hover:bg-gray-100');
+            
+            if (mode === 'mobile') {
+                frame.style.width = '375px';
+            } else {
+                frame.style.width = '600px';
+            }
+        }
+        
+        function toggleRawHtml() {
+            const panel = document.getElementById('raw-html-panel');
+            const chevron = document.getElementById('raw-chevron');
+            
+            if (panel.classList.contains('hidden')) {
+                panel.classList.remove('hidden');
+                chevron.classList.add('rotate-180');
+            } else {
+                panel.classList.add('hidden');
+                chevron.classList.remove('rotate-180');
+            }
+        }
+        
+        async function sendTestEmail() {
+            const testEmail = document.getElementById('test-email').value;
+            const resultEl = document.getElementById('test-result');
+            
+            if (!testEmail) {
+                resultEl.textContent = 'Please enter an email address';
+                resultEl.className = 'text-sm text-center text-red-600';
+                resultEl.classList.remove('hidden');
+                return;
+            }
+            
+            resultEl.textContent = 'Sending...';
+            resultEl.className = 'text-sm text-center text-gray-600';
+            resultEl.classList.remove('hidden');
+            
+            try {
+                const name = document.getElementById('sample-name').value;
+                const extraData = {};
+                templates[currentTemplate].extraFields.forEach(field => {
+                    const input = document.getElementById(`sample-${field.id}`);
+                    if (input) extraData[field.id] = input.value;
+                });
+                
+                const response = await fetch('/api/admin/email-templates/send-test', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        template: currentTemplate,
+                        to: testEmail,
+                        data: {name, ...extraData}
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultEl.textContent = '✓ Test email sent successfully!';
+                    resultEl.className = 'text-sm text-center text-green-600';
+                } else {
+                    resultEl.textContent = `✗ ${data.error || 'Failed to send'}`;
+                    resultEl.className = 'text-sm text-center text-red-600';
+                }
+            } catch (err) {
+                resultEl.textContent = '✗ Failed to send test email';
+                resultEl.className = 'text-sm text-center text-red-600';
+            }
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTemplate('verification');
+        });
+    </script>
+    {% endblock %}
+</body>
+</html>

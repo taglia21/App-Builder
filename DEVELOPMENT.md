@@ -151,7 +151,87 @@ pytest -v
 
 # Run async tests
 pytest tests/test_pipeline.py -v --asyncio-mode=auto
+
+# Run email integration tests
+pytest tests/test_email_integration.py -v
+
+# Run onboarding flow tests
+pytest tests/test_onboarding_flow.py -v
 ```
+
+## Email Testing with Mailhog
+
+For local development, we use Mailhog to capture and preview emails without sending them to real recipients.
+
+### Setup
+
+1. **Start the development stack with Mailhog:**
+   ```bash
+   docker-compose -f docker-compose.dev.yml up
+   ```
+
+2. **Access Mailhog Web UI:**
+   Open [http://localhost:8025](http://localhost:8025) in your browser.
+
+3. **Trigger test emails:**
+   - Sign up for a new account
+   - Request password reset
+   - Generate an app (completion email)
+
+4. **View captured emails:**
+   All emails will appear in the Mailhog web interface where you can:
+   - View HTML and plain text versions
+   - Check email headers
+   - Test links in emails
+   - Download as .eml files
+
+### Testing with Real Resend.com
+
+To test with the actual email service:
+
+1. **Get a Resend API key:**
+   - Sign up at [resend.com](https://resend.com)
+   - Create an API key
+   - Add your domain and verify DNS
+
+2. **Configure environment:**
+   ```bash
+   export RESEND_API_KEY=re_your_api_key
+   export FROM_EMAIL=noreply@yourdomain.com
+   ```
+
+3. **Update docker-compose.dev.yml:**
+   Comment out the Mailhog SMTP settings and enable Resend.
+
+### Email Template Development
+
+1. **Templates location:** `src/emails/templates/`
+
+2. **Available templates:**
+   - `verification.html` - Email verification
+   - `welcome.html` - Welcome email after verification
+   - `password_reset.html` - Password reset link
+   - `payment_confirmation.html` - Payment received
+   - `app_complete.html` - App generation complete
+
+3. **Preview templates:**
+   - Admin access: Go to `/admin/email-templates`
+   - Send test emails to your inbox
+   - Preview in desktop and mobile views
+
+4. **Template variables:**
+   Each template receives specific variables. See `src/emails/client.py` for the convenience functions.
+
+### Troubleshooting Email Issues
+
+**Issue**: Emails not appearing in Mailhog
+**Solution**: Ensure the app is configured to use `mailhog:1025` as SMTP host
+
+**Issue**: Resend API errors
+**Solution**: Check API key, verify domain DNS, check rate limits
+
+**Issue**: Template rendering errors
+**Solution**: Check template syntax, ensure all variables are passed
 
 ## Logging
 

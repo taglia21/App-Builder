@@ -499,3 +499,379 @@ def create_health_registry(
             registry.register(ExternalServiceHealthCheck(**service))
     
     return registry
+
+
+# =============================================================================
+# Enhanced Health Check Classes
+# =============================================================================
+
+
+class EmailServiceHealthCheck(HealthCheck):
+    """Health check for email service (Resend.com) connectivity."""
+    
+    def __init__(self, timeout: float = 5.0):
+        self.timeout = timeout
+        self._name = "email_service"
+    
+    @property
+    def name(self) -> str:
+        return self._name
+    
+    async def check(self) -> ComponentHealth:
+        """Check email service connectivity."""
+        start_time = time.time()
+        
+        api_key = os.getenv("RESEND_API_KEY")
+        if not api_key:
+            return ComponentHealth(
+                name=self.name,
+                status=HealthStatus.UNKNOWN,
+                message="RESEND_API_KEY not configured",
+            )
+        
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                # Check Resend API status by getting domains
+                response = await client.get(
+                    "https://api.resend.com/domains",
+                    headers={"Authorization": f"Bearer {api_key}"}
+                )
+                
+                response_time = (time.time() - start_time) * 1000
+                
+                if response.status_code == 200:
+                    return ComponentHealth(
+                        name=self.name,
+                        status=HealthStatus.HEALTHY,
+                        message="Email service (Resend) connected",
+                        response_time_ms=response_time,
+                        details={"provider": "resend"},
+                    )
+                elif response.status_code == 401:
+                    return ComponentHealth(
+                        name=self.name,
+                        status=HealthStatus.UNHEALTHY,
+                        message="Invalid Resend API key",
+                        response_time_ms=response_time,
+                    )
+                else:
+                    return ComponentHealth(
+                        name=self.name,
+                        status=HealthStatus.DEGRADED,
+                        message=f"Unexpected status: {response.status_code}",
+                        response_time_ms=response_time,
+                    )
+                    
+        except httpx.TimeoutException:
+            return ComponentHealth(
+                name=self.name,
+                status=HealthStatus.UNHEALTHY,
+                message=f"Email service timeout after {self.timeout}s",
+                response_time_ms=(time.time() - start_time) * 1000,
+            )
+        except Exception as e:
+            return ComponentHealth(
+                name=self.name,
+                status=HealthStatus.UNHEALTHY,
+                message=f"Email service check failed: {str(e)}",
+                response_time_ms=(time.time() - start_time) * 1000,
+            )
+
+
+class DatabaseTablesHealthCheck(HealthCheck):
+    """Health check for all database tables including new ones."""
+    
+    def __init__(self, db_url: Optional[str] = None, timeout: float = 5.0):
+        self.db_url = db_url or os.getenv("DATABASE_URL")
+        self.timeout = timeout
+        self._name = "database_tables"
+    
+    @property
+    def name(self) -> str:
+        return self._name
+    
+    async def check(self) -> ComponentHealth:
+        """Check all database tables are accessible."""
+        start_time = time.time()
+        
+        if not self.db_url:
+            return ComponentHealth(
+                name=self.name,
+                status=HealthStatus.UNKNOWN,
+                message="Database URL not configured",
+            )
+        
+        required_tables = [
+            "users", "projects", "deployments", "generations",
+            "feedback", "contact_submissions", "onboarding_status"
+        ]
+        
+        try:
+            import asyncpg
+            
+            conn = await asyncio.wait_for(
+                asyncpg.connect(self.db_url),
+                timeout=self.timeout,
+            )
+            
+            # Check each table exists
+            missing_tables = []
+            existing_tables = []
+            
+            for table in required_tables:
+                try:
+                    await conn.fetchval(f"SELECT 1 FROM {table} LIMIT 1")
+                    existing_tables.append(table)
+                except Exception:
+                    missing_tables.append(table)
+            
+            await conn.close()
+            response_time = (time.time() - start_time) * 1000
+            
+            if not missing_tables:
+                return ComponentHealth(
+                    name=self.name,
+                    status=HealthStatus.HEALTHY,
+                    message=f"All {len(required_tables)} tables accessible",
+                    response_time_ms=response_time,
+                    details={"tables": existing_tables},
+                )
+            elif len(missing_tables) < len(required_tables):
+                return ComponentHealth(
+                    name=self.name,
+                    status=HealthStatus.DEGRADED,
+                    message=f"Missing tables: {', '.join(missing_tables)}",
+                    response_time_ms=response_time,
+                    details={
+                        "existing": existing_tables,
+                        "missing": missing_tables,
+                    },
+                )
+            else:
+                return ComponentHealth(
+                    name=self.name,
+                    status=HealthStatus.UNHEALTHY,
+                    message="No required tables found - run migrations",
+                    response_time_ms=response_time,
+                )
+                
+        except asyncio.TimeoutError:
+            return ComponentHealth(
+                name=self.name,
+                status=HealthStatus.UNHEALTHY,
+                message=f"Database timeout after {self.timeout}s",
+                response_time_ms=(time.time() - start_time) * 1000,
+            )
+        except ImportError:
+            return ComponentHealth(
+                name=self.name,
+                status=HealthStatus.UNKNOWN,
+                message="Database driver not installed",
+            )
+        except Exception as e:
+            return ComponentHealth(
+                name=self.name,
+                status=HealthStatus.UNHEALTHY,
+                message=f"Database tables check failed: {str(e)}",
+                response_time_ms=(time.time() - start_time) * 1000,
+            )
+
+
+class DependenciesHealthCheck(HealthCheck):
+    """Aggregate health check for all external dependencies."""
+    
+    def __init__(self, registry: Optional['HealthCheckRegistry'] = None):
+        self._name = "dependencies"
+        self.registry = registry
+    
+    @property
+    def name(self) -> str:
+        return self._name
+    
+    async def check(self) -> ComponentHealth:
+        """Check all external dependencies."""
+        start_time = time.time()
+        
+        dependencies = {}
+        all_healthy = True
+        any_unhealthy = False
+        
+        # Check database
+        db_check = DatabaseHealthCheck()
+        db_result = await db_check.check()
+        dependencies["database"] = db_result.status.value
+        if db_result.status == HealthStatus.UNHEALTHY:
+            any_unhealthy = True
+        if db_result.status != HealthStatus.HEALTHY:
+            all_healthy = False
+        
+        # Check Redis
+        redis_check = RedisHealthCheck()
+        redis_result = await redis_check.check()
+        dependencies["redis"] = redis_result.status.value
+        if redis_result.status == HealthStatus.UNHEALTHY:
+            any_unhealthy = True
+        if redis_result.status != HealthStatus.HEALTHY:
+            all_healthy = False
+        
+        # Check email service
+        email_check = EmailServiceHealthCheck()
+        email_result = await email_check.check()
+        dependencies["email"] = email_result.status.value
+        if email_result.status == HealthStatus.UNHEALTHY:
+            any_unhealthy = True
+        if email_result.status != HealthStatus.HEALTHY:
+            all_healthy = False
+        
+        # Check LLM providers (optional)
+        llm_status = await self._check_llm_providers()
+        dependencies["llm"] = llm_status
+        
+        response_time = (time.time() - start_time) * 1000
+        
+        if all_healthy:
+            status = HealthStatus.HEALTHY
+            message = "All dependencies healthy"
+        elif any_unhealthy:
+            status = HealthStatus.UNHEALTHY
+            message = "Some dependencies are unhealthy"
+        else:
+            status = HealthStatus.DEGRADED
+            message = "Some dependencies are degraded"
+        
+        return ComponentHealth(
+            name=self.name,
+            status=status,
+            message=message,
+            response_time_ms=response_time,
+            details={"dependencies": dependencies},
+        )
+    
+    async def _check_llm_providers(self) -> str:
+        """Check if at least one LLM provider is configured."""
+        providers = []
+        
+        if os.getenv("OPENAI_API_KEY"):
+            providers.append("openai")
+        if os.getenv("ANTHROPIC_API_KEY"):
+            providers.append("anthropic")
+        if os.getenv("GROQ_API_KEY"):
+            providers.append("groq")
+        if os.getenv("PERPLEXITY_API_KEY"):
+            providers.append("perplexity")
+        
+        if providers:
+            return f"configured ({', '.join(providers)})"
+        return "not_configured"
+
+
+# =============================================================================
+# FastAPI Health Check Router
+# =============================================================================
+
+from fastapi import APIRouter, Response
+
+health_router = APIRouter(prefix="/health", tags=["health"])
+
+
+@health_router.get("")
+@health_router.get("/")
+async def health_check():
+    """
+    Basic health check endpoint.
+    
+    Returns 200 if service is running.
+    """
+    return {
+        "status": "healthy",
+        "service": "launchforge",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+@health_router.get("/email")
+async def health_check_email():
+    """
+    Test email service connection.
+    
+    Checks Resend.com API connectivity.
+    """
+    check = EmailServiceHealthCheck()
+    result = await check.check()
+    
+    status_code = 200 if result.status == HealthStatus.HEALTHY else 503
+    
+    return Response(
+        content=str(result.to_dict()),
+        status_code=status_code,
+        media_type="application/json"
+    )
+
+
+@health_router.get("/database")
+async def health_check_database():
+    """
+    Test database connectivity and table access.
+    
+    Checks all required tables including new ones.
+    """
+    # Basic connectivity
+    db_check = DatabaseHealthCheck()
+    db_result = await db_check.check()
+    
+    # Table access
+    tables_check = DatabaseTablesHealthCheck()
+    tables_result = await tables_check.check()
+    
+    overall_healthy = (
+        db_result.status == HealthStatus.HEALTHY and 
+        tables_result.status == HealthStatus.HEALTHY
+    )
+    
+    return {
+        "status": "healthy" if overall_healthy else "unhealthy",
+        "connectivity": db_result.to_dict(),
+        "tables": tables_result.to_dict(),
+    }
+
+
+@health_router.get("/dependencies")
+async def health_check_dependencies():
+    """
+    Check all external service dependencies.
+    
+    Includes: database, redis, email, LLM providers.
+    """
+    check = DependenciesHealthCheck()
+    result = await check.check()
+    
+    status_code = 200 if result.status == HealthStatus.HEALTHY else 503
+    
+    return Response(
+        content=str(result.to_dict()),
+        status_code=status_code,
+        media_type="application/json"
+    )
+
+
+@health_router.get("/full")
+async def health_check_full():
+    """
+    Comprehensive health check of all components.
+    
+    Runs all health checks and returns detailed status.
+    """
+    registry = create_health_registry(
+        include_database=True,
+        include_redis=True,
+    )
+    
+    # Add email check
+    registry.register(EmailServiceHealthCheck())
+    
+    # Add tables check
+    registry.register(DatabaseTablesHealthCheck())
+    
+    result = await registry.check(use_cache=False)
+    
+    return result.to_dict()

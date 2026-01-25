@@ -135,6 +135,17 @@ class PipelineConfig(BaseSettings):
     notification_email: Optional[str] = None
     environment: str = "development"
     debug: bool = False
+    
+    # Analytics configuration
+    plausible_domain: Optional[str] = None
+    plausible_enabled: bool = False
+    google_analytics_id: Optional[str] = None
+    google_analytics_api_secret: Optional[str] = None
+    
+    # Email configuration
+    resend_api_key: Optional[str] = None
+    from_email: str = "noreply@launchforge.app"
+    support_email: str = "support@launchforge.app"
 
     # Sub-configurations
     intelligence: Optional[IntelligenceConfig] = None
@@ -206,3 +217,25 @@ class PipelineConfig(BaseSettings):
 def load_config(config_path: str = "config.yml") -> PipelineConfig:
     """Load pipeline configuration."""
     return PipelineConfig.from_yaml(config_path)
+
+
+# Cached settings singleton
+_settings: Optional[PipelineConfig] = None
+
+
+def get_settings() -> PipelineConfig:
+    """Get the application settings singleton.
+    
+    Returns a cached PipelineConfig instance. Uses environment variables
+    for configuration with optional YAML file loading.
+    """
+    global _settings
+    if _settings is None:
+        _settings = PipelineConfig()
+    return _settings
+
+
+def reset_settings() -> None:
+    """Reset the cached settings singleton. Useful for testing."""
+    global _settings
+    _settings = None

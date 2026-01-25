@@ -14,11 +14,42 @@ from dataclasses import dataclass
 from pathlib import Path
 import httpx
 import logging
-from jinja2 import Environment, FileSystemLoader, select_autoescape
+import time
+from jinja2 import Environment, FileSystemLoader, select_autoescape, TemplateNotFound
 
 from src.config import get_settings
 
 logger = logging.getLogger(__name__)
+
+
+class EmailError(Exception):
+    """Base exception for email errors."""
+    pass
+
+
+class EmailConfigurationError(EmailError):
+    """Raised when email is not properly configured."""
+    pass
+
+
+class EmailSendError(EmailError):
+    """Raised when email sending fails."""
+    def __init__(self, message: str, status_code: int = None, response_body: str = None):
+        super().__init__(message)
+        self.status_code = status_code
+        self.response_body = response_body
+
+
+class EmailTemplateError(EmailError):
+    """Raised when email template rendering fails."""
+    pass
+
+
+class EmailRateLimitError(EmailError):
+    """Raised when rate limited by email provider."""
+    def __init__(self, message: str, retry_after: int = None):
+        super().__init__(message)
+        self.retry_after = retry_after
 
 
 @dataclass
@@ -35,6 +66,8 @@ class EmailResult:
     success: bool
     message_id: Optional[str] = None
     error: Optional[str] = None
+    error_code: Optional[str] = None
+    duration_ms: Optional[float] = None
 
 
 class EmailClient:
@@ -46,9 +79,13 @@ class EmailClient:
     - HTML and plain text support
     - Attachment support
     - Retry logic for reliability
+    - Comprehensive error handling
+    - Metrics tracking
     """
     
     RESEND_API_URL = "https://api.resend.com/emails"
+    MAX_RETRIES = 3
+    RETRY_DELAY = 1.0  # seconds
     
     def __init__(
         self,
@@ -63,6 +100,9 @@ class EmailClient:
             api_key: Resend API key (or from settings)
             from_email: Default sender email
             from_name: Default sender name
+        
+        Raises:
+            EmailConfigurationError: If required settings are missing
         """
         settings = get_settings()
         self.api_key = api_key or getattr(settings, 'resend_api_key', None)
@@ -84,6 +124,24 @@ class EmailClient:
         """Check if email is properly configured."""
         return bool(self.api_key)
     
+    def validate_configuration(self) -> None:
+        """
+        Validate email configuration.
+        
+        Raises:
+            EmailConfigurationError: If configuration is invalid
+        """
+        if not self.api_key:
+            raise EmailConfigurationError(
+                "RESEND_API_KEY not configured. "
+                "Please set RESEND_API_KEY environment variable."
+            )
+        if not self.from_email:
+            raise EmailConfigurationError(
+                "FROM_EMAIL not configured. "
+                "Please set FROM_EMAIL environment variable."
+            )
+    
     def _get_headers(self) -> Dict[str, str]:
         """Get API request headers."""
         return {
@@ -101,7 +159,8 @@ class EmailClient:
         cc: Optional[List[str]] = None,
         bcc: Optional[List[str]] = None,
         attachments: Optional[List[EmailAttachment]] = None,
-        tags: Optional[Dict[str, str]] = None
+        tags: Optional[Dict[str, str]] = None,
+        raise_on_error: bool = False
     ) -> EmailResult:
         """
         Send an email via Resend API.
@@ -116,16 +175,42 @@ class EmailClient:
             bcc: BCC recipients
             attachments: File attachments
             tags: Custom tags for tracking
+            raise_on_error: Whether to raise exceptions on failure
             
         Returns:
             EmailResult with success status and message ID
+            
+        Raises:
+            EmailConfigurationError: If email not configured (when raise_on_error=True)
+            EmailSendError: If sending fails (when raise_on_error=True)
+            EmailRateLimitError: If rate limited (when raise_on_error=True)
         """
+        start_time = time.time()
+        
+        # Import metrics for tracking
+        try:
+            from src.monitoring.metrics import track_email_send
+        except ImportError:
+            track_email_send = None
+        
+        template_name = tags.get("type", "unknown") if tags else "unknown"
+        
         if not self.is_configured:
-            logger.warning("Email not configured - skipping send")
-            return EmailResult(success=False, error="Email not configured")
+            error_msg = "Email not configured - RESEND_API_KEY missing"
+            logger.warning(error_msg)
+            if raise_on_error:
+                raise EmailConfigurationError(error_msg)
+            return EmailResult(success=False, error=error_msg, error_code="NOT_CONFIGURED")
         
         # Build recipient list
         recipients = [to] if isinstance(to, str) else to
+        
+        # Validate recipients
+        if not recipients:
+            error_msg = "No recipients specified"
+            if raise_on_error:
+                raise EmailSendError(error_msg)
+            return EmailResult(success=False, error=error_msg, error_code="NO_RECIPIENTS")
         
         # Build payload
         payload: Dict[str, Any] = {
@@ -159,31 +244,141 @@ class EmailClient:
                 for att in attachments
             ]
         
-        # Send request
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    self.RESEND_API_URL,
-                    headers=self._get_headers(),
-                    json=payload,
-                    timeout=30.0
-                )
-                
-                if response.status_code == 200:
-                    data = response.json()
-                    logger.info(f"Email sent successfully to {recipients}: {data.get('id')}")
-                    return EmailResult(success=True, message_id=data.get("id"))
-                else:
-                    error = response.text
-                    logger.error(f"Failed to send email: {error}")
-                    return EmailResult(success=False, error=error)
+        # Send request with retry logic
+        last_error = None
+        for attempt in range(self.MAX_RETRIES):
+            try:
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(
+                        self.RESEND_API_URL,
+                        headers=self._get_headers(),
+                        json=payload,
+                        timeout=30.0
+                    )
                     
-        except httpx.TimeoutException:
-            logger.error("Email send timed out")
-            return EmailResult(success=False, error="Request timed out")
-        except Exception as e:
-            logger.exception(f"Email send error: {e}")
-            return EmailResult(success=False, error=str(e))
+                    duration_ms = (time.time() - start_time) * 1000
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        logger.info(f"Email sent successfully to {recipients}: {data.get('id')}")
+                        
+                        # Track success
+                        if track_email_send:
+                            track_email_send(template_name, True, duration_ms / 1000)
+                        
+                        return EmailResult(
+                            success=True, 
+                            message_id=data.get("id"),
+                            duration_ms=duration_ms
+                        )
+                    
+                    elif response.status_code == 429:
+                        # Rate limited
+                        retry_after = int(response.headers.get("Retry-After", 60))
+                        error_msg = f"Rate limited by Resend. Retry after {retry_after}s"
+                        logger.warning(f"{error_msg} (attempt {attempt + 1}/{self.MAX_RETRIES})")
+                        
+                        if attempt < self.MAX_RETRIES - 1:
+                            await self._async_sleep(min(retry_after, 5))
+                            continue
+                        
+                        if raise_on_error:
+                            raise EmailRateLimitError(error_msg, retry_after=retry_after)
+                        return EmailResult(
+                            success=False, 
+                            error=error_msg, 
+                            error_code="RATE_LIMITED",
+                            duration_ms=duration_ms
+                        )
+                    
+                    elif response.status_code >= 500:
+                        # Server error - retry
+                        error_msg = f"Resend server error: {response.status_code}"
+                        logger.warning(f"{error_msg} (attempt {attempt + 1}/{self.MAX_RETRIES})")
+                        last_error = error_msg
+                        
+                        if attempt < self.MAX_RETRIES - 1:
+                            await self._async_sleep(self.RETRY_DELAY * (attempt + 1))
+                            continue
+                    
+                    else:
+                        # Client error - don't retry
+                        try:
+                            error_data = response.json()
+                            error_msg = error_data.get("message", response.text)
+                        except Exception:
+                            error_msg = response.text
+                        
+                        logger.error(f"Failed to send email: {response.status_code} - {error_msg}")
+                        
+                        # Track failure
+                        if track_email_send:
+                            track_email_send(template_name, False, duration_ms / 1000)
+                        
+                        if raise_on_error:
+                            raise EmailSendError(
+                                error_msg, 
+                                status_code=response.status_code,
+                                response_body=response.text
+                            )
+                        return EmailResult(
+                            success=False, 
+                            error=error_msg,
+                            error_code=f"HTTP_{response.status_code}",
+                            duration_ms=duration_ms
+                        )
+                        
+            except httpx.TimeoutException as e:
+                duration_ms = (time.time() - start_time) * 1000
+                error_msg = f"Email send timed out after 30s"
+                logger.warning(f"{error_msg} (attempt {attempt + 1}/{self.MAX_RETRIES})")
+                last_error = error_msg
+                
+                if attempt < self.MAX_RETRIES - 1:
+                    await self._async_sleep(self.RETRY_DELAY * (attempt + 1))
+                    continue
+                    
+            except httpx.ConnectError as e:
+                duration_ms = (time.time() - start_time) * 1000
+                error_msg = f"Failed to connect to Resend API: {str(e)}"
+                logger.warning(f"{error_msg} (attempt {attempt + 1}/{self.MAX_RETRIES})")
+                last_error = error_msg
+                
+                if attempt < self.MAX_RETRIES - 1:
+                    await self._async_sleep(self.RETRY_DELAY * (attempt + 1))
+                    continue
+                    
+            except Exception as e:
+                duration_ms = (time.time() - start_time) * 1000
+                error_msg = f"Email send error: {str(e)}"
+                logger.exception(error_msg)
+                last_error = error_msg
+                
+                if attempt < self.MAX_RETRIES - 1:
+                    await self._async_sleep(self.RETRY_DELAY * (attempt + 1))
+                    continue
+        
+        # All retries exhausted
+        duration_ms = (time.time() - start_time) * 1000
+        
+        # Track failure
+        if track_email_send:
+            track_email_send(template_name, False, duration_ms / 1000)
+        
+        if raise_on_error:
+            raise EmailSendError(last_error or "Email send failed after retries")
+        
+        return EmailResult(
+            success=False, 
+            error=last_error or "Email send failed after retries",
+            error_code="RETRIES_EXHAUSTED",
+            duration_ms=duration_ms
+        )
+    
+    async def _async_sleep(self, seconds: float):
+        """Async sleep helper."""
+        import asyncio
+        await asyncio.sleep(seconds)
     
     def render_template(
         self,
@@ -199,13 +394,21 @@ class EmailClient:
             
         Returns:
             Rendered HTML string
+            
+        Raises:
+            EmailTemplateError: If template rendering fails
         """
         try:
             template = self.jinja_env.get_template(template_name)
             return template.render(**context)
+        except TemplateNotFound:
+            error_msg = f"Email template not found: {template_name}"
+            logger.error(error_msg)
+            raise EmailTemplateError(error_msg)
         except Exception as e:
-            logger.error(f"Template render error for {template_name}: {e}")
-            raise
+            error_msg = f"Template render error for {template_name}: {e}"
+            logger.error(error_msg)
+            raise EmailTemplateError(error_msg)
     
     async def send_template_email(
         self,

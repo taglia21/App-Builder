@@ -84,6 +84,32 @@
     </style>
     
     {% block head %}{% endblock %}
+    
+    <!-- Analytics (conditionally loaded based on configuration) -->
+    {% if plausible_domain %}
+    <script defer data-domain="{{ plausible_domain }}" src="https://plausible.io/js/script.js"></script>
+    {% endif %}
+    
+    {% if google_analytics_id %}
+    <!-- Google Analytics 4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{ google_analytics_id }}"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      
+      // Default to denied, update based on cookie consent
+      gtag('consent', 'default', {
+        'analytics_storage': 'denied',
+        'ad_storage': 'denied'
+      });
+      
+      gtag('config', '{{ google_analytics_id }}', {
+        'anonymize_ip': true,
+        'cookie_flags': 'SameSite=None;Secure'
+      });
+    </script>
+    {% endif %}
 </head>
 <body class="h-full bg-gray-50" x-data="{ sidebarOpen: false }">
     <div class="min-h-full">
@@ -416,23 +442,31 @@
                 applyCookiePreferences() {
                     // Enable/disable analytics
                     if (this.preferences.analytics) {
-                        // Initialize analytics (e.g., Google Analytics)
-                        // window.gtag && gtag('consent', 'update', { analytics_storage: 'granted' });
+                        // Update Google Analytics consent
+                        if (typeof gtag !== 'undefined') {
+                            gtag('consent', 'update', { 'analytics_storage': 'granted' });
+                        }
                         console.log('Analytics cookies enabled');
                     } else {
                         // Disable analytics
-                        // window.gtag && gtag('consent', 'update', { analytics_storage: 'denied' });
+                        if (typeof gtag !== 'undefined') {
+                            gtag('consent', 'update', { 'analytics_storage': 'denied' });
+                        }
                         console.log('Analytics cookies disabled');
                     }
                     
                     // Enable/disable marketing
                     if (this.preferences.marketing) {
-                        // Enable marketing cookies
-                        // window.gtag && gtag('consent', 'update', { ad_storage: 'granted' });
+                        // Enable marketing/advertising cookies
+                        if (typeof gtag !== 'undefined') {
+                            gtag('consent', 'update', { 'ad_storage': 'granted' });
+                        }
                         console.log('Marketing cookies enabled');
                     } else {
                         // Disable marketing
-                        // window.gtag && gtag('consent', 'update', { ad_storage: 'denied' });
+                        if (typeof gtag !== 'undefined') {
+                            gtag('consent', 'update', { 'ad_storage': 'denied' });
+                        }
                         console.log('Marketing cookies disabled');
                     }
                     

@@ -495,3 +495,206 @@ def get_generation_duration() -> Histogram:
         "Generation duration in seconds",
         labels=["stage"],
     )
+
+
+# =============================================================================
+# Email Metrics
+# =============================================================================
+
+def get_email_send_counter() -> Counter:
+    """Get email send counter (success/failure)."""
+    return get_metrics().counter(
+        "email_sends_total",
+        "Total email sends by status and template",
+        labels=["status", "template"],
+    )
+
+
+def get_email_send_duration() -> Histogram:
+    """Get email send duration histogram."""
+    return get_metrics().histogram(
+        "email_send_duration_seconds",
+        "Email send duration in seconds",
+        labels=["template"],
+    )
+
+
+def track_email_send(template: str, success: bool, duration_seconds: float = 0):
+    """
+    Track an email send attempt.
+    
+    Args:
+        template: Email template name (verification, welcome, etc.)
+        success: Whether the send was successful
+        duration_seconds: Time taken to send
+    """
+    status = "success" if success else "failure"
+    get_email_send_counter().inc(labels={"status": status, "template": template})
+    if duration_seconds > 0:
+        get_email_send_duration().observe(duration_seconds, labels={"template": template})
+
+
+# =============================================================================
+# Onboarding Metrics
+# =============================================================================
+
+def get_onboarding_completion_counter() -> Counter:
+    """Get onboarding step completion counter."""
+    return get_metrics().counter(
+        "onboarding_completions_total",
+        "Total onboarding step completions",
+        labels=["step"],
+    )
+
+
+def get_onboarding_completion_gauge() -> Gauge:
+    """Get gauge for current onboarding completion rates."""
+    return get_metrics().gauge(
+        "onboarding_completion_rate",
+        "Current onboarding completion rate by step",
+        labels=["step"],
+    )
+
+
+def track_onboarding_step(step: str):
+    """
+    Track an onboarding step completion.
+    
+    Args:
+        step: Step name (email_verified, api_keys_set, first_app_generated, first_deploy_completed)
+    """
+    get_onboarding_completion_counter().inc(labels={"step": step})
+
+
+def update_onboarding_rates(rates: dict):
+    """
+    Update onboarding completion rate gauges.
+    
+    Args:
+        rates: Dictionary of step -> completion rate (0-100)
+    """
+    gauge = get_onboarding_completion_gauge()
+    for step, rate in rates.items():
+        gauge.set(rate, labels={"step": step})
+
+
+# =============================================================================
+# Feedback & Contact Metrics
+# =============================================================================
+
+def get_feedback_counter() -> Counter:
+    """Get feedback submission counter."""
+    return get_metrics().counter(
+        "feedback_submissions_total",
+        "Total feedback submissions by category",
+        labels=["category"],
+    )
+
+
+def get_contact_counter() -> Counter:
+    """Get contact form submission counter."""
+    return get_metrics().counter(
+        "contact_submissions_total",
+        "Total contact form submissions",
+        labels=["status"],
+    )
+
+
+def track_feedback_submission(category: str):
+    """
+    Track a feedback submission.
+    
+    Args:
+        category: Feedback category (general, bug, feature, improvement)
+    """
+    get_feedback_counter().inc(labels={"category": category})
+
+
+def track_contact_submission():
+    """Track a contact form submission."""
+    get_contact_counter().inc(labels={"status": "pending"})
+
+
+def track_contact_reply():
+    """Track a contact form reply."""
+    get_contact_counter().inc(labels={"status": "replied"})
+
+
+# =============================================================================
+# Metrics Export for Health Dashboard
+# =============================================================================
+
+def get_dashboard_metrics() -> Dict[str, Any]:
+    """
+    Get aggregated metrics for the health dashboard.
+    
+    Returns:
+        Dictionary of metrics suitable for dashboard display.
+    """
+    metrics = get_metrics()
+    
+    # Email metrics
+    email_counter = metrics._counters.get("email_sends_total")
+    email_success = 0
+    email_failure = 0
+    if email_counter:
+        for mv in email_counter.values():
+            if mv.labels.get("status") == "success":
+                email_success += mv.value
+            elif mv.labels.get("status") == "failure":
+                email_failure += mv.value
+    
+    # Request metrics
+    request_counter = metrics._counters.get("http_requests_total")
+    total_requests = 0
+    if request_counter:
+        for mv in request_counter.values():
+            total_requests += mv.value
+    
+    # Generation metrics
+    gen_counter = metrics._counters.get("generations_total")
+    total_generations = 0
+    if gen_counter:
+        for mv in gen_counter.values():
+            total_generations += mv.value
+    
+    # Feedback metrics
+    feedback_counter = metrics._counters.get("feedback_submissions_total")
+    total_feedback = 0
+    feedback_by_category = {}
+    if feedback_counter:
+        for mv in feedback_counter.values():
+            total_feedback += mv.value
+            cat = mv.labels.get("category", "unknown")
+            feedback_by_category[cat] = feedback_by_category.get(cat, 0) + mv.value
+    
+    # Onboarding metrics
+    onboarding_gauge = metrics._gauges.get("onboarding_completion_rate")
+    onboarding_rates = {}
+    if onboarding_gauge:
+        for mv in onboarding_gauge.values():
+            step = mv.labels.get("step", "unknown")
+            onboarding_rates[step] = mv.value
+    
+    return {
+        "email": {
+            "total_sent": email_success + email_failure,
+            "success": email_success,
+            "failure": email_failure,
+            "success_rate": (email_success / (email_success + email_failure) * 100) if (email_success + email_failure) > 0 else 100,
+        },
+        "requests": {
+            "total": total_requests,
+        },
+        "generations": {
+            "total": total_generations,
+        },
+        "feedback": {
+            "total": total_feedback,
+            "by_category": feedback_by_category,
+        },
+        "onboarding": {
+            "completion_rates": onboarding_rates,
+        },
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
