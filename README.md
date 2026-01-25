@@ -579,6 +579,20 @@ MIT License - see [LICENSE](LICENSE) file
 
 ---
 
+## � Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Quick Start](QUICK_START.md) | Get started in 2 minutes |
+| [Development Guide](DEVELOPMENT.md) | Local setup and contribution |
+| [API Reference](docs/API_REFERENCE.md) | Complete API documentation |
+| [Architecture](docs/ARCHITECTURE.md) | System design and modules |
+| [Configuration](docs/CONFIGURATION.md) | Environment and settings |
+| [Testing Guide](docs/TESTING.md) | Testing strategies and examples |
+| [Deployment Guide](docs/DEPLOYMENT_GUIDE.md) | Cloud deployment instructions |
+
+---
+
 ## 🙋 FAQ
 
 **Q: Do I need API keys?**
@@ -626,6 +640,6 @@ A: Yes! Perfect for indie hackers, MVPs, and side hustles.
 
 Made with ❤️ by the LaunchForge team
 
-[Star on GitHub](https://github.com/taglia21/App-Builder) · [Get Perplexity Key](https://www.perplexity.ai/settings/api) · [Read Docs](DEVELOPMENT.md)
+[Star on GitHub](https://github.com/taglia21/App-Builder) · [Get Perplexity Key](https://www.perplexity.ai/settings/api) · [Read Docs](docs/API_REFERENCE.md)
 
 </div>

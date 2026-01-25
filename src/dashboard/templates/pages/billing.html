@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+
+{% block title %}Billing - LaunchForge{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-2xl font-semibold leading-6 text-gray-900">Billing & Subscription</h1>
+        <p class="mt-2 text-sm text-gray-700">
+            Manage your subscription and payment methods.
+        </p>
+    </div>
+    
+    <!-- Current Plan -->
+    <div class="bg-white shadow rounded-lg p-6 mb-8">
+        <div class="sm:flex sm:items-center sm:justify-between">
+            <div>
+                <h2 class="text-lg font-medium text-gray-900">Current Plan</h2>
+                <div class="mt-2 flex items-center">
+                    <span class="inline-flex items-center rounded-full bg-forge-100 px-3 py-1 text-sm font-medium text-forge-700">
+                        {{ subscription.tier if subscription else 'FREE' }}
+                    </span>
+                    {% if subscription and subscription.status == 'active' %}
+                    <span class="ml-2 inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700">
+                        Active
+                    </span>
+                    {% endif %}
+                </div>
+                <p class="mt-2 text-sm text-gray-500">
+                    {% if subscription and subscription.tier == 'PRO' %}
+                    $29/month • Next billing date: {{ subscription.next_billing.strftime('%B %d, %Y') if subscription.next_billing else 'N/A' }}
+                    {% elif subscription and subscription.tier == 'ENTERPRISE' %}
+                    $99/month • Next billing date: {{ subscription.next_billing.strftime('%B %d, %Y') if subscription.next_billing else 'N/A' }}
+                    {% else %}
+                    Free forever • Limited to 1 app
+                    {% endif %}
+                </p>
+            </div>
+            <div class="mt-4 sm:mt-0">
+                {% if subscription and subscription.tier != 'FREE' %}
+                <form hx-post="/api/subscription/portal" hx-swap="none">
+                    <button type="submit" class="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                        Manage Subscription
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Usage -->
+        <div class="mt-6 border-t pt-6">
+            <h3 class="text-sm font-medium text-gray-900">Usage</h3>
+            <div class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <div>
+                    <p class="text-sm text-gray-500">Apps Created</p>
+                    <p class="mt-1 text-2xl font-semibold text-gray-900">
+                        {{ apps_used|default(0) }} / {{ apps_limit|default(1) }}
+                    </p>
+                    <div class="mt-2 h-2 rounded-full bg-gray-200">
+                        <div class="h-2 rounded-full bg-forge-600" style="width: {{ ((apps_used|default(0)) / (apps_limit|default(1)) * 100)|min(100) }}%"></div>
+                    </div>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Deployments This Month</p>
+                    <p class="mt-1 text-2xl font-semibold text-gray-900">
+                        {{ deployments_used|default(0) }} / {{ deployments_limit|default(3) }}
+                    </p>
+                    <div class="mt-2 h-2 rounded-full bg-gray-200">
+                        <div class="h-2 rounded-full bg-green-600" style="width: {{ ((deployments_used|default(0)) / (deployments_limit|default(3)) * 100)|min(100) }}%"></div>
+                    </div>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">AI Credits</p>
+                    <p class="mt-1 text-2xl font-semibold text-gray-900">
+                        {{ credits_used|default(0) }} / {{ credits_limit|default(100) }}
+                    </p>
+                    <div class="mt-2 h-2 rounded-full bg-gray-200">
+                        <div class="h-2 rounded-full bg-purple-600" style="width: {{ ((credits_used|default(0)) / (credits_limit|default(100)) * 100)|min(100) }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Pricing Plans -->
+    <div class="mb-8">
+        <h2 class="text-lg font-medium text-gray-900 mb-6">Available Plans</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Free -->
+            <div class="bg-white rounded-lg shadow p-6 border-2 {% if not subscription or subscription.tier == 'FREE' %}border-forge-500{% else %}border-transparent{% endif %}">
+                <h3 class="text-lg font-semibold text-gray-900">Free</h3>
+                <p class="mt-2 text-3xl font-bold text-gray-900">$0<span class="text-sm font-normal text-gray-500">/month</span></p>
+                <ul class="mt-6 space-y-3">
+                    <li class="flex items-start">
+                        <svg class="h-5 w-5 text-green-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+                        </svg>
+                        <span class="ml-2 text-sm text-gray-600">1 app</span>
+                    </li>
+                    <li class="flex items-start">
+                        <svg class="h-5 w-5 text-green-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+                        </svg>
+                        <span class="ml-2 text-sm text-gray-600">3 deployments/month</span>
+                    </li>
+                    <li class="flex items-start">
+                        <svg class="h-5 w-5 text-green-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+                        </svg>
+                        <span class="ml-2 text-sm text-gray-600">100 AI credits</span>
+                    </li>
+                    <li class="flex items-start">
+                        <svg class="h-5 w-5 text-green-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+                        </svg>
+                        <span class="ml-2 text-sm text-gray-600">Community support</span>
+                    </li>
+                </ul>
+                {% if not subscription or subscription.tier == 'FREE' %}
+                <button disabled class="mt-6 w-full rounded-md bg-gray-100 px-3 py-2 text-sm font-semibold text-gray-400 cursor-not-allowed">
+                    Current Plan
+                </button>
+                {% else %}
+                <button disabled class="mt-6 w-full rounded-md bg-gray-100 px-3 py-2 text-sm font-semibold text-gray-500">
+                    Downgrade
+                </button>
+                {% endif %}
+            </div>
+            
+            <!-- Pro -->
+            <div class="bg-white rounded-lg shadow p-6 border-2 {% if subscription and subscription.tier == 'PRO' %}border-forge-500{% else %}border-transparent{% endif %} relative">
+                <div class="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <span class="inline-flex items-center rounded-full bg-forge-600 px-3 py-1 text-xs font-medium text-white">
+                        Most Popular
+                    </span>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900">Pro</h3>
+                <p class="mt-2 text-3xl font-bold text-gray-900">$29<span class="text-sm font-normal text-gray-500">/month</span></p>
+                <ul class="mt-6 space-y-3">
+                    <li class="flex items-start">
+                        <svg class="h-5 w-5 text-green-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+                        </svg>
+                        <span class="ml-2 text-sm text-gray-600"><strong>5 apps</strong></span>
+                    </li>
+                    <li class="flex items-start">
+                        <svg class="h-5 w-5 text-green-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+                        </svg>
+                        <span class="ml-2 text-sm text-gray-600"><strong>Unlimited</strong> deployments</span>
+                    </li>
+                    <li class="flex items-start">
+                        <svg class="h-5 w-5 text-green-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+                        </svg>
+                        <span class="ml-2 text-sm text-gray-600"><strong>1,000</strong> AI credits/month</span>
+                    </li>
+                    <li class="flex items-start">
+                        <svg class="h-5 w-5 text-green-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+                        </svg>
+                        <span class="ml-2 text-sm text-gray-600">Priority support</span>
+                    </li>
+                    <li class="flex items-start">
+                        <svg class="h-5 w-5 text-green-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+                        </svg>
+                        <span class="ml-2 text-sm text-gray-600">Custom domains</span>
+                    </li>
+                </ul>
+                {% if subscription and subscription.tier == 'PRO' %}
+                <button disabled class="mt-6 w-full rounded-md bg-gray-100 px-3 py-2 text-sm font-semibold text-gray-400 cursor-not-allowed">
+                    Current Plan
+                </button>
+                {% else %}
+                <form hx-post="/api/subscription/checkout" hx-vals='{"tier": "pro"}' hx-swap="none">
+                    <button type="submit" class="mt-6 w-full rounded-md bg-forge-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-forge-500">
+                        Upgrade to Pro
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+            
+            <!-- Enterprise -->
+            <div class="bg-white rounded-lg shadow p-6 border-2 {% if subscription and subscription.tier == 'ENTERPRISE' %}border-forge-500{% else %}border-transparent{% endif %}">
+                <h3 class="text-lg font-semibold text-gray-900">Enterprise</h3>
+                <p class="mt-2 text-3xl font-bold text-gray-900">$99<span class="text-sm font-normal text-gray-500">/month</span></p>
+                <ul class="mt-6 space-y-3">
+                    <li class="flex items-start">
+                        <svg class="h-5 w-5 text-green-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+                        </svg>
+                        <span class="ml-2 text-sm text-gray-600"><strong>Unlimited</strong> apps</span>
+                    </li>
+                    <li class="flex items-start">
+                        <svg class="h-5 w-5 text-green-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+                        </svg>
+                        <span class="ml-2 text-sm text-gray-600"><strong>Unlimited</strong> deployments</span>
+                    </li>
+                    <li class="flex items-start">
+                        <svg class="h-5 w-5 text-green-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+                        </svg>
+                        <span class="ml-2 text-sm text-gray-600"><strong>10,000</strong> AI credits/month</span>
+                    </li>
+                    <li class="flex items-start">
+                        <svg class="h-5 w-5 text-green-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+                        </svg>
+                        <span class="ml-2 text-sm text-gray-600">24/7 dedicated support</span>
+                    </li>
+                    <li class="flex items-start">
+                        <svg class="h-5 w-5 text-green-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+                        </svg>
+                        <span class="ml-2 text-sm text-gray-600">White-label option</span>
+                    </li>
+                    <li class="flex items-start">
+                        <svg class="h-5 w-5 text-green-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+                        </svg>
+                        <span class="ml-2 text-sm text-gray-600">SLA guarantee</span>
+                    </li>
+                </ul>
+                {% if subscription and subscription.tier == 'ENTERPRISE' %}
+                <button disabled class="mt-6 w-full rounded-md bg-gray-100 px-3 py-2 text-sm font-semibold text-gray-400 cursor-not-allowed">
+                    Current Plan
+                </button>
+                {% else %}
+                <form hx-post="/api/subscription/checkout" hx-vals='{"tier": "enterprise"}' hx-swap="none">
+                    <button type="submit" class="mt-6 w-full rounded-md bg-gray-900 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gray-800">
+                        Upgrade to Enterprise
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Payment History -->
+    <div class="bg-white shadow rounded-lg p-6">
+        <h2 class="text-lg font-medium text-gray-900 mb-6">Payment History</h2>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead>
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invoice</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% if invoices %}
+                    {% for invoice in invoices %}
+                    <tr>
+                        <td class="px-4 py-3 text-sm text-gray-900">{{ invoice.date.strftime('%B %d, %Y') }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-600">{{ invoice.description }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-900">${{ '%.2f'|format(invoice.amount / 100) }}</td>
+                        <td class="px-4 py-3">
+                            <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium {% if invoice.status == 'paid' %}bg-green-100 text-green-700{% else %}bg-yellow-100 text-yellow-700{% endif %}">
+                                {{ invoice.status }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <a href="{{ invoice.url }}" target="_blank" class="text-forge-600 hover:underline text-sm">Download</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="px-4 py-8 text-center text-sm text-gray-500">
+                            No payment history yet
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

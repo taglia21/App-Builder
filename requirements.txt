@@ -76,6 +76,9 @@ jinja2-time>=0.2.0
 black>=23.12.0
 isort>=5.13.0
 
+# Rate limiting
+slowapi>=0.1.9
+
 # Monitoring and logging
 loguru>=0.7.0
 sentry-sdk>=1.39.0

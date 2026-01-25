@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LaunchForge - Build and Deploy SaaS Apps in Minutes</title>
+    <meta name="description" content="LaunchForge is the AI-powered platform that generates production-ready SaaS applications from your idea. Full-stack code, automated deployment, and business setup in one place.">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        forge: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .float { animation: float 3s ease-in-out infinite; }
+        
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(14, 165, 233, 0.3); }
+            50% { box-shadow: 0 0 40px rgba(14, 165, 233, 0.6); }
+        }
+        .pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+    </style>
+</head>
+<body class="h-full bg-gradient-to-b from-gray-900 via-gray-900 to-gray-800">
+    <!-- Header -->
+    <header class="absolute inset-x-0 top-0 z-50">
+        <nav class="flex items-center justify-between p-6 lg:px-8">
+            <div class="flex lg:flex-1">
+                <a href="/" class="-m-1.5 p-1.5 flex items-center gap-2">
+                    <svg class="h-8 w-8 text-forge-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span class="text-xl font-bold text-white">LaunchForge</span>
+                </a>
+            </div>
+            <div class="hidden lg:flex lg:gap-x-12">
+                <a href="#features" class="text-sm font-semibold leading-6 text-gray-300 hover:text-white">Features</a>
+                <a href="#how-it-works" class="text-sm font-semibold leading-6 text-gray-300 hover:text-white">How it Works</a>
+                <a href="#pricing" class="text-sm font-semibold leading-6 text-gray-300 hover:text-white">Pricing</a>
+                <a href="https://docs.launchforge.dev" class="text-sm font-semibold leading-6 text-gray-300 hover:text-white">Docs</a>
+            </div>
+            <div class="flex flex-1 justify-end gap-x-4">
+                <a href="/auth/login" class="text-sm font-semibold leading-6 text-gray-300 hover:text-white py-2">Log in</a>
+                <a href="/auth/signup" class="rounded-md bg-forge-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-forge-500">
+                    Get Started Free
+                </a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <!-- Hero -->
+        <div class="relative isolate pt-14">
+            <div class="absolute inset-x-0 -top-40 -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80">
+                <div class="relative left-[calc(50%-11rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-forge-500 to-blue-500 opacity-20 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]"></div>
+            </div>
+            
+            <div class="py-24 sm:py-32 lg:pb-40">
+                <div class="mx-auto max-w-7xl px-6 lg:px-8">
+                    <div class="mx-auto max-w-2xl text-center">
+                        <div class="mb-8 flex justify-center">
+                            <div class="relative rounded-full px-3 py-1 text-sm leading-6 text-gray-400 ring-1 ring-gray-700 hover:ring-gray-600">
+                                Now with AI-powered business formation. 
+                                <a href="#features" class="font-semibold text-forge-400">
+                                    <span class="absolute inset-0" aria-hidden="true"></span>Learn more <span aria-hidden="true">→</span>
+                                </a>
+                            </div>
+                        </div>
+                        <h1 class="text-4xl font-bold tracking-tight text-white sm:text-6xl">
+                            From Idea to <span class="text-forge-500">Deployed SaaS</span> in Minutes
+                        </h1>
+                        <p class="mt-6 text-lg leading-8 text-gray-300">
+                            Describe your app idea, and LaunchForge generates production-ready code, deploys it, 
+                            and even helps you form your business. The complete platform for developer entrepreneurs.
+                        </p>
+                        <div class="mt-10 flex items-center justify-center gap-x-6">
+                            <a href="/auth/signup" class="rounded-md bg-forge-600 px-6 py-3 text-lg font-semibold text-white shadow-sm hover:bg-forge-500 pulse-glow">
+                                Start Building Free →
+                            </a>
+                            <a href="#demo" class="text-sm font-semibold leading-6 text-gray-300 hover:text-white">
+                                Watch Demo <span aria-hidden="true">→</span>
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <!-- Hero Image/Demo -->
+                    <div class="mt-16 flow-root sm:mt-24">
+                        <div class="relative -m-2 rounded-xl bg-gray-900/5 p-2 ring-1 ring-inset ring-gray-900/10 lg:-m-4 lg:rounded-2xl lg:p-4">
+                            <div class="rounded-md bg-gray-800 shadow-2xl ring-1 ring-gray-700">
+                                <!-- Fake browser chrome -->
+                                <div class="flex items-center gap-2 border-b border-gray-700 px-4 py-3">
+                                    <div class="flex gap-1.5">
+                                        <span class="h-3 w-3 rounded-full bg-red-500"></span>
+                                        <span class="h-3 w-3 rounded-full bg-yellow-500"></span>
+                                        <span class="h-3 w-3 rounded-full bg-green-500"></span>
+                                    </div>
+                                    <div class="flex-1 text-center">
+                                        <span class="text-sm text-gray-400">app.launchforge.dev</span>
+                                    </div>
+                                </div>
+                                <!-- Screenshot placeholder -->
+                                <div class="aspect-video bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
+                                    <div class="text-center float">
+                                        <svg class="mx-auto h-24 w-24 text-forge-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                                            <path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                        <p class="mt-4 text-2xl font-bold text-white">Your SaaS, Ready in Minutes</p>
+                                        <p class="mt-2 text-gray-400">Full-stack • Deployed • Production-ready</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Features -->
+        <div id="features" class="py-24 sm:py-32 bg-gray-800/50">
+            <div class="mx-auto max-w-7xl px-6 lg:px-8">
+                <div class="mx-auto max-w-2xl lg:text-center">
+                    <h2 class="text-base font-semibold leading-7 text-forge-400">Everything you need</h2>
+                    <p class="mt-2 text-3xl font-bold tracking-tight text-white sm:text-4xl">
+                        One Platform. Complete Solution.
+                    </p>
+                    <p class="mt-6 text-lg leading-8 text-gray-300">
+                        From idea validation to deployed product to legal entity—LaunchForge handles the entire journey.
+                    </p>
+                </div>
+                
+                <div class="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-none">
+                    <dl class="grid max-w-xl grid-cols-1 gap-x-8 gap-y-16 lg:max-w-none lg:grid-cols-3">
+                        <div class="flex flex-col">
+                            <dt class="flex items-center gap-x-3 text-base font-semibold leading-7 text-white">
+                                <div class="rounded-lg bg-forge-600 p-2">
+                                    <svg class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
+                                    </svg>
+                                </div>
+                                AI Code Generation
+                            </dt>
+                            <dd class="mt-4 flex flex-auto flex-col text-base leading-7 text-gray-400">
+                                <p class="flex-auto">Describe your app in plain English. Our AI generates production-ready full-stack code with best practices baked in.</p>
+                            </dd>
+                        </div>
+                        
+                        <div class="flex flex-col">
+                            <dt class="flex items-center gap-x-3 text-base font-semibold leading-7 text-white">
+                                <div class="rounded-lg bg-forge-600 p-2">
+                                    <svg class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m-2.24 2.39a4.493 4.493 0 00-1.757 4.306 4.493 4.493 0 004.306-1.758M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
+                                    </svg>
+                                </div>
+                                One-Click Deploy
+                            </dt>
+                            <dd class="mt-4 flex flex-auto flex-col text-base leading-7 text-gray-400">
+                                <p class="flex-auto">Automatic deployment to Vercel, Render, or your preferred cloud. CI/CD pipelines, environment variables, and domains configured automatically.</p>
+                            </dd>
+                        </div>
+                        
+                        <div class="flex flex-col">
+                            <dt class="flex items-center gap-x-3 text-base font-semibold leading-7 text-white">
+                                <div class="rounded-lg bg-forge-600 p-2">
+                                    <svg class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z" />
+                                    </svg>
+                                </div>
+                                Stripe Integration
+                            </dt>
+                            <dd class="mt-4 flex flex-auto flex-col text-base leading-7 text-gray-400">
+                                <p class="flex-auto">Built-in payment processing with Stripe. Subscriptions, one-time payments, and customer portal ready to go.</p>
+                            </dd>
+                        </div>
+                        
+                        <div class="flex flex-col">
+                            <dt class="flex items-center gap-x-3 text-base font-semibold leading-7 text-white">
+                                <div class="rounded-lg bg-forge-600 p-2">
+                                    <svg class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0012 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75z" />
+                                    </svg>
+                                </div>
+                                Business Formation
+                            </dt>
+                            <dd class="mt-4 flex flex-auto flex-col text-base leading-7 text-gray-400">
+                                <p class="flex-auto">Form your LLC, get an EIN, open a business bank account, and register domains—all from one dashboard.</p>
+                            </dd>
+                        </div>
+                        
+                        <div class="flex flex-col">
+                            <dt class="flex items-center gap-x-3 text-base font-semibold leading-7 text-white">
+                                <div class="rounded-lg bg-forge-600 p-2">
+                                    <svg class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                                    </svg>
+                                </div>
+                                Auth Built-In
+                            </dt>
+                            <dd class="mt-4 flex flex-auto flex-col text-base leading-7 text-gray-400">
+                                <p class="flex-auto">Every app comes with secure authentication. Email/password, social logins, magic links—choose what fits.</p>
+                            </dd>
+                        </div>
+                        
+                        <div class="flex flex-col">
+                            <dt class="flex items-center gap-x-3 text-base font-semibold leading-7 text-white">
+                                <div class="rounded-lg bg-forge-600 p-2">
+                                    <svg class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5m.75-9l3-3 2.148 2.148A12.061 12.061 0 0116.5 7.605" />
+                                    </svg>
+                                </div>
+                                Analytics Dashboard
+                            </dt>
+                            <dd class="mt-4 flex flex-auto flex-col text-base leading-7 text-gray-400">
+                                <p class="flex-auto">Track your users, revenue, and app performance. Integrated analytics without extra setup.</p>
+                            </dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pricing -->
+        <div id="pricing" class="py-24 sm:py-32">
+            <div class="mx-auto max-w-7xl px-6 lg:px-8">
+                <div class="mx-auto max-w-2xl sm:text-center">
+                    <h2 class="text-3xl font-bold tracking-tight text-white sm:text-4xl">Simple, transparent pricing</h2>
+                    <p class="mt-6 text-lg leading-8 text-gray-300">
+                        Start free. Upgrade when you're ready to scale.
+                    </p>
+                </div>
+                
+                <div class="mx-auto mt-16 grid max-w-lg grid-cols-1 gap-8 lg:max-w-none lg:grid-cols-3">
+                    <!-- Free -->
+                    <div class="flex flex-col justify-between rounded-3xl bg-gray-800 p-8 ring-1 ring-gray-700 xl:p-10">
+                        <div>
+                            <div class="flex items-center justify-between gap-x-4">
+                                <h3 class="text-lg font-semibold leading-8 text-white">Free</h3>
+                            </div>
+                            <p class="mt-4 text-sm leading-6 text-gray-400">Perfect for trying out LaunchForge.</p>
+                            <p class="mt-6 flex items-baseline gap-x-1">
+                                <span class="text-4xl font-bold tracking-tight text-white">$0</span>
+                                <span class="text-sm font-semibold leading-6 text-gray-400">/month</span>
+                            </p>
+                            <ul role="list" class="mt-8 space-y-3 text-sm leading-6 text-gray-300">
+                                <li class="flex gap-x-3">
+                                    <svg class="h-6 w-5 flex-none text-forge-500" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+                                    </svg>
+                                    1 app
+                                </li>
+                                <li class="flex gap-x-3">
+                                    <svg class="h-6 w-5 flex-none text-forge-500" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+                                    </svg>
+                                    3 deployments/month
+                                </li>
+                                <li class="flex gap-x-3">
+                                    <svg class="h-6 w-5 flex-none text-forge-500" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+                                    </svg>
+                                    100 AI credits
+                                </li>
+                                <li class="flex gap-x-3">
+                                    <svg class="h-6 w-5 flex-none text-forge-500" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+                                    </svg>
+                                    Community support
+                                </li>
+                            </ul>
+                        </div>
+                        <a href="/auth/signup" class="mt-8 block rounded-md bg-gray-700 px-3 py-2 text-center text-sm font-semibold text-white hover:bg-gray-600">
+                            Get Started Free
+                        </a>
+                    </div>
+                    
+                    <!-- Pro -->
+                    <div class="flex flex-col justify-between rounded-3xl bg-forge-600 p-8 ring-1 ring-forge-500 xl:p-10">
+                        <div>
+                            <div class="flex items-center justify-between gap-x-4">
+                                <h3 class="text-lg font-semibold leading-8 text-white">Pro</h3>
+                                <p class="rounded-full bg-forge-500 px-2.5 py-1 text-xs font-semibold text-white">Most popular</p>
+                            </div>
+                            <p class="mt-4 text-sm leading-6 text-forge-100">For serious builders and indie hackers.</p>
+                            <p class="mt-6 flex items-baseline gap-x-1">
+                                <span class="text-4xl font-bold tracking-tight text-white">$29</span>
+                                <span class="text-sm font-semibold leading-6 text-forge-100">/month</span>
+                            </p>
+                            <ul role="list" class="mt-8 space-y-3 text-sm leading-6 text-forge-100">
+                                <li class="flex gap-x-3">
+                                    <svg class="h-6 w-5 flex-none text-white" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+                                    </svg>
+                                    <strong>5 apps</strong>
+                                </li>
+                                <li class="flex gap-x-3">
+                                    <svg class="h-6 w-5 flex-none text-white" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+                                    </svg>
+                                    <strong>Unlimited</strong> deployments
+                                </li>
+                                <li class="flex gap-x-3">
+                                    <svg class="h-6 w-5 flex-none text-white" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+                                    </svg>
+                                    1,000 AI credits/month
+                                </li>
+                                <li class="flex gap-x-3">
+                                    <svg class="h-6 w-5 flex-none text-white" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+                                    </svg>
+                                    Custom domains
+                                </li>
+                                <li class="flex gap-x-3">
+                                    <svg class="h-6 w-5 flex-none text-white" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+                                    </svg>
+                                    Priority support
+                                </li>
+                            </ul>
+                        </div>
+                        <a href="/auth/signup?plan=pro" class="mt-8 block rounded-md bg-white px-3 py-2 text-center text-sm font-semibold text-forge-600 hover:bg-forge-50">
+                            Start Pro Trial
+                        </a>
+                    </div>
+                    
+                    <!-- Enterprise -->
+                    <div class="flex flex-col justify-between rounded-3xl bg-gray-800 p-8 ring-1 ring-gray-700 xl:p-10">
+                        <div>
+                            <div class="flex items-center justify-between gap-x-4">
+                                <h3 class="text-lg font-semibold leading-8 text-white">Enterprise</h3>
+                            </div>
+                            <p class="mt-4 text-sm leading-6 text-gray-400">For teams and agencies building at scale.</p>
+                            <p class="mt-6 flex items-baseline gap-x-1">
+                                <span class="text-4xl font-bold tracking-tight text-white">$99</span>
+                                <span class="text-sm font-semibold leading-6 text-gray-400">/month</span>
+                            </p>
+                            <ul role="list" class="mt-8 space-y-3 text-sm leading-6 text-gray-300">
+                                <li class="flex gap-x-3">
+                                    <svg class="h-6 w-5 flex-none text-forge-500" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+                                    </svg>
+                                    <strong>Unlimited</strong> apps
+                                </li>
+                                <li class="flex gap-x-3">
+                                    <svg class="h-6 w-5 flex-none text-forge-500" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+                                    </svg>
+                                    10,000 AI credits/month
+                                </li>
+                                <li class="flex gap-x-3">
+                                    <svg class="h-6 w-5 flex-none text-forge-500" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+                                    </svg>
+                                    White-label option
+                                </li>
+                                <li class="flex gap-x-3">
+                                    <svg class="h-6 w-5 flex-none text-forge-500" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+                                    </svg>
+                                    SLA guarantee
+                                </li>
+                                <li class="flex gap-x-3">
+                                    <svg class="h-6 w-5 flex-none text-forge-500" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+                                    </svg>
+                                    24/7 dedicated support
+                                </li>
+                            </ul>
+                        </div>
+                        <a href="/auth/signup?plan=enterprise" class="mt-8 block rounded-md bg-gray-700 px-3 py-2 text-center text-sm font-semibold text-white hover:bg-gray-600">
+                            Contact Sales
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CTA -->
+        <div class="py-24 sm:py-32 bg-forge-600">
+            <div class="mx-auto max-w-7xl px-6 lg:px-8">
+                <div class="mx-auto max-w-2xl text-center">
+                    <h2 class="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+                        Ready to build your SaaS?
+                    </h2>
+                    <p class="mx-auto mt-6 max-w-xl text-lg leading-8 text-forge-100">
+                        Join thousands of developers who've launched with LaunchForge. Your first app is free.
+                    </p>
+                    <div class="mt-10 flex items-center justify-center gap-x-6">
+                        <a href="/auth/signup" class="rounded-md bg-white px-6 py-3 text-lg font-semibold text-forge-600 shadow-sm hover:bg-forge-50">
+                            Start Building Free →
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 border-t border-gray-800">
+        <div class="mx-auto max-w-7xl px-6 py-12 md:flex md:items-center md:justify-between lg:px-8">
+            <div class="flex justify-center space-x-6 md:order-2">
+                <a href="https://twitter.com/launchforge" class="text-gray-400 hover:text-gray-300">
+                    <span class="sr-only">Twitter</span>
+                    <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84" />
+                    </svg>
+                </a>
+                <a href="https://github.com/launchforge" class="text-gray-400 hover:text-gray-300">
+                    <span class="sr-only">GitHub</span>
+                    <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                        <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd" />
+                    </svg>
+                </a>
+            </div>
+            <p class="mt-8 text-center text-xs leading-5 text-gray-400 md:order-1 md:mt-0">
+                &copy; 2024 LaunchForge. All rights reserved.
+            </p>
+        </div>
+    </footer>
+</body>
+</html>

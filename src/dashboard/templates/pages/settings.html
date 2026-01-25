@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - LaunchForge{% endblock %}
+
+{% block content %}
+<div class="fade-in max-w-4xl">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-2xl font-semibold leading-6 text-gray-900">Settings</h1>
+        <p class="mt-2 text-sm text-gray-700">
+            Manage your account settings and preferences.
+        </p>
+    </div>
+    
+    <!-- Profile Settings -->
+    <form hx-post="/dashboard/settings"
+          hx-swap="none"
+          hx-indicator="#save-indicator"
+          class="bg-white shadow rounded-lg p-6 mb-8">
+        <h2 class="text-lg font-medium text-gray-900 mb-6">Profile</h2>
+        
+        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div>
+                <label for="full_name" class="block text-sm font-medium leading-6 text-gray-900">Full Name</label>
+                <input type="text" 
+                       name="full_name" 
+                       id="full_name" 
+                       value="{{ current_user.full_name if current_user else '' }}"
+                       class="mt-2 block w-full rounded-md border-0 py-2 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-forge-600 sm:text-sm">
+            </div>
+            
+            <div>
+                <label for="email" class="block text-sm font-medium leading-6 text-gray-900">Email</label>
+                <input type="email" 
+                       name="email" 
+                       id="email" 
+                       value="{{ current_user.email if current_user else '' }}"
+                       disabled
+                       class="mt-2 block w-full rounded-md border-0 py-2 px-3 text-gray-500 shadow-sm ring-1 ring-inset ring-gray-300 bg-gray-50 sm:text-sm">
+                <p class="mt-1 text-xs text-gray-500">Email cannot be changed</p>
+            </div>
+            
+            <div>
+                <label for="company" class="block text-sm font-medium leading-6 text-gray-900">Company (Optional)</label>
+                <input type="text" 
+                       name="company" 
+                       id="company" 
+                       value="{{ current_user.company if current_user else '' }}"
+                       class="mt-2 block w-full rounded-md border-0 py-2 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-forge-600 sm:text-sm">
+            </div>
+            
+            <div>
+                <label for="website" class="block text-sm font-medium leading-6 text-gray-900">Website (Optional)</label>
+                <input type="url" 
+                       name="website" 
+                       id="website" 
+                       value="{{ current_user.website if current_user else '' }}"
+                       placeholder="https://"
+                       class="mt-2 block w-full rounded-md border-0 py-2 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-forge-600 sm:text-sm">
+            </div>
+        </div>
+        
+        <div class="mt-6 flex justify-end">
+            <button type="submit" 
+                    class="inline-flex items-center rounded-md bg-forge-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-forge-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forge-600">
+                <span id="save-indicator" class="htmx-indicator mr-2">
+                    <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </span>
+                Save Changes
+            </button>
+        </div>
+    </form>
+    
+    <!-- Connected Accounts -->
+    <div class="bg-white shadow rounded-lg p-6 mb-8">
+        <h2 class="text-lg font-medium text-gray-900 mb-6">Connected Accounts</h2>
+        
+        <ul class="divide-y divide-gray-200">
+            <!-- GitHub -->
+            <li class="py-4 flex items-center justify-between">
+                <div class="flex items-center">
+                    <svg class="h-8 w-8 text-gray-900" fill="currentColor" viewBox="0 0 24 24">
+                        <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd" />
+                    </svg>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-900">GitHub</p>
+                        <p class="text-sm text-gray-500">
+                            {% if github_connected %}
+                            Connected as {{ github_username }}
+                            {% else %}
+                            Not connected
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                {% if github_connected %}
+                <button type="button" class="text-sm font-medium text-red-600 hover:text-red-500">Disconnect</button>
+                {% else %}
+                <a href="/auth/github" class="inline-flex items-center rounded-md bg-gray-900 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gray-800">
+                    Connect
+                </a>
+                {% endif %}
+            </li>
+            
+            <!-- Vercel -->
+            <li class="py-4 flex items-center justify-between">
+                <div class="flex items-center">
+                    <svg class="h-8 w-8" viewBox="0 0 76 65" fill="currentColor">
+                        <path d="M37.5274 0L75.0548 65H0L37.5274 0Z"/>
+                    </svg>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-900">Vercel</p>
+                        <p class="text-sm text-gray-500">
+                            {% if vercel_connected %}
+                            Connected
+                            {% else %}
+                            Not connected
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                {% if vercel_connected %}
+                <button type="button" class="text-sm font-medium text-red-600 hover:text-red-500">Disconnect</button>
+                {% else %}
+                <a href="/auth/vercel" class="inline-flex items-center rounded-md bg-black px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gray-800">
+                    Connect
+                </a>
+                {% endif %}
+            </li>
+            
+            <!-- Stripe -->
+            <li class="py-4 flex items-center justify-between">
+                <div class="flex items-center">
+                    <svg class="h-8 w-8" viewBox="0 0 40 40" fill="none">
+                        <path fill-rule="evenodd" clip-rule="evenodd" d="M18.4167 16.8333C18.4167 15.6167 19.4 15.1 21.0833 15.1C23.5167 15.1 26.5833 15.9 29.0167 17.2667V11.6C26.3333 10.4333 23.6833 10 21.0833 10C15.4667 10 11.6667 13.05 11.6667 17.8833C11.6667 25.1333 21.8333 23.9667 21.8333 27.0833C21.8333 28.5167 20.6 28.9833 18.8 28.9833C16.15 28.9833 12.7833 27.8833 10.0833 26.3667V32.05C13.0833 33.4333 16.1167 34.0833 18.8 34.0833C24.5667 34.0833 28.5833 31.1333 28.5833 26.2167C28.5667 18.3833 18.4167 19.7833 18.4167 16.8333Z" fill="#635BFF"/>
+                    </svg>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-900">Stripe</p>
+                        <p class="text-sm text-gray-500">
+                            {% if stripe_connected %}
+                            Connected
+                            {% else %}
+                            Not connected
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                {% if stripe_connected %}
+                <button type="button" class="text-sm font-medium text-red-600 hover:text-red-500">Disconnect</button>
+                {% else %}
+                <a href="/auth/stripe" class="inline-flex items-center rounded-md bg-purple-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-purple-500">
+                    Connect
+                </a>
+                {% endif %}
+            </li>
+        </ul>
+    </div>
+    
+    <!-- Notification Preferences -->
+    <div class="bg-white shadow rounded-lg p-6 mb-8">
+        <h2 class="text-lg font-medium text-gray-900 mb-6">Notifications</h2>
+        
+        <div class="space-y-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-900">Email Notifications</p>
+                    <p class="text-sm text-gray-500">Receive emails about your projects</p>
+                </div>
+                <button type="button" 
+                        x-data="{ enabled: true }"
+                        @click="enabled = !enabled"
+                        :class="enabled ? 'bg-forge-600' : 'bg-gray-200'"
+                        class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-forge-600 focus:ring-offset-2">
+                    <span :class="enabled ? 'translate-x-5' : 'translate-x-0'"
+                          class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
+                </button>
+            </div>
+            
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-900">Deployment Alerts</p>
+                    <p class="text-sm text-gray-500">Get notified when deployments complete or fail</p>
+                </div>
+                <button type="button" 
+                        x-data="{ enabled: true }"
+                        @click="enabled = !enabled"
+                        :class="enabled ? 'bg-forge-600' : 'bg-gray-200'"
+                        class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-forge-600 focus:ring-offset-2">
+                    <span :class="enabled ? 'translate-x-5' : 'translate-x-0'"
+                          class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
+                </button>
+            </div>
+            
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-900">Marketing Emails</p>
+                    <p class="text-sm text-gray-500">Receive updates about new features</p>
+                </div>
+                <button type="button" 
+                        x-data="{ enabled: false }"
+                        @click="enabled = !enabled"
+                        :class="enabled ? 'bg-forge-600' : 'bg-gray-200'"
+                        class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-forge-600 focus:ring-offset-2">
+                    <span :class="enabled ? 'translate-x-5' : 'translate-x-0'"
+                          class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Danger Zone -->
+    <div class="bg-white shadow rounded-lg p-6 border border-red-200">
+        <h2 class="text-lg font-medium text-red-600 mb-6">Danger Zone</h2>
+        
+        <div class="space-y-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-900">Delete Account</p>
+                    <p class="text-sm text-gray-500">Permanently delete your account and all data</p>
+                </div>
+                <button type="button" 
+                        onclick="confirm('Are you sure? This action cannot be undone.') && alert('Account deletion would be processed')"
+                        class="inline-flex items-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500">
+                    Delete Account
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
