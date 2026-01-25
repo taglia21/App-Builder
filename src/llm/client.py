@@ -625,6 +625,156 @@ class AnthropicClient(BaseLLMClient):
         )
 
 
+class PerplexityClient(BaseLLMClient):
+    """Perplexity AI client with real-time web search built into responses.
+    
+    Perplexity is especially valuable for market intelligence because it has
+    REAL-TIME web search capabilities integrated into the model's responses.
+    
+    Available models:
+    - sonar-pro: Flagship model, best for general use
+    - sonar-deep-research: For comprehensive research tasks
+    - sonar-reasoning: For complex analysis and reasoning
+    """
+    
+    provider_name = "perplexity"
+    
+    # Available Perplexity models
+    MODELS = {
+        "sonar-pro": "Flagship model - balanced performance",
+        "sonar-deep-research": "Deep research - comprehensive analysis", 
+        "sonar-reasoning": "Reasoning model - complex analysis",
+    }
+    
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        model: str = "sonar-pro",
+        use_cache: bool = True,
+        use_retry: bool = True,
+    ):
+        super().__init__(use_cache=use_cache, use_retry=use_retry)
+        
+        self.api_key = api_key or os.getenv("PERPLEXITY_API_KEY")
+        if not self.api_key:
+            raise ValueError("Perplexity API key not found. Set PERPLEXITY_API_KEY environment variable.")
+        
+        self._model = model
+        self.base_url = "https://api.perplexity.ai"
+        
+        try:
+            from openai import OpenAI
+            self.client = OpenAI(
+                api_key=self.api_key,
+                base_url=self.base_url
+            )
+            logger.info(f"Initialized Perplexity client with model {model}")
+        except ImportError:
+            raise ImportError("openai package not installed. Run: pip install openai")
+    
+    @property
+    def model(self) -> str:
+        return self._model
+    
+    def _complete_impl(
+        self,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+        max_tokens: int = 4096,
+        temperature: float = 0.7,
+        json_mode: bool = False
+    ) -> LLMResponse:
+        start_time = time.time()
+        
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        
+        user_content = prompt
+        if json_mode:
+            user_content += "\n\nRespond with valid JSON only. No other text or markdown."
+        
+        messages.append({"role": "user", "content": user_content})
+        
+        kwargs = {
+            "model": self.model,
+            "messages": messages,
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+        }
+        
+        response = self.client.chat.completions.create(**kwargs)
+        
+        latency_ms = (time.time() - start_time) * 1000
+        
+        content = response.choices[0].message.content
+        
+        # Clean JSON if needed
+        if json_mode:
+            content = self._clean_json_response(content)
+        
+        return LLMResponse(
+            content=content,
+            model=response.model,
+            provider=self.provider_name,
+            usage={
+                "prompt_tokens": getattr(response.usage, 'prompt_tokens', 0) if response.usage else 0,
+                "completion_tokens": getattr(response.usage, 'completion_tokens', 0) if response.usage else 0,
+            },
+            latency_ms=latency_ms,
+            raw_response=response
+        )
+    
+    def _clean_json_response(self, content: str) -> str:
+        """Clean markdown code blocks from JSON response."""
+        content = content.strip()
+        if content.startswith("```json"):
+            content = content[7:]
+        elif content.startswith("```"):
+            content = content[3:]
+        if content.endswith("```"):
+            content = content[:-3]
+        return content.strip()
+    
+    def research(self, query: str, max_tokens: int = 4096) -> LLMResponse:
+        """Perform deep research on a topic using Perplexity's web search.
+        
+        This is a convenience method that uses the deep-research model
+        for comprehensive market intelligence gathering.
+        """
+        original_model = self._model
+        self._model = "sonar-deep-research"
+        try:
+            response = self.complete(
+                prompt=query,
+                system_prompt="You are a market research analyst. Provide comprehensive, factual research with citations.",
+                max_tokens=max_tokens,
+                temperature=0.3  # Lower temp for more factual responses
+            )
+        finally:
+            self._model = original_model
+        return response
+    
+    def analyze(self, data: str, question: str, max_tokens: int = 4096) -> LLMResponse:
+        """Analyze data using Perplexity's reasoning model.
+        
+        This is a convenience method that uses the reasoning model
+        for complex analysis tasks.
+        """
+        original_model = self._model
+        self._model = "sonar-reasoning"
+        try:
+            response = self.complete(
+                prompt=f"Data:\n{data}\n\nQuestion: {question}",
+                system_prompt="You are an analytical expert. Provide thorough analysis with clear reasoning.",
+                max_tokens=max_tokens,
+                temperature=0.5
+            )
+        finally:
+            self._model = original_model
+        return response
+
+
 class MockLLMClient(BaseLLMClient):
     """Mock LLM client for testing without API calls."""
     
@@ -873,8 +1023,21 @@ def get_llm_client(
             model=model or os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-20250514")
         )
     
+    if provider == "perplexity":
+        return PerplexityClient(
+            api_key=api_key,
+            model=model or os.getenv("PERPLEXITY_MODEL", "sonar-pro")
+        )
+    
     if provider == "multi":
         providers = []
+        
+        # Perplexity first for its real-time web search capabilities
+        if os.getenv("PERPLEXITY_API_KEY"):
+            try:
+                providers.append(PerplexityClient())
+            except (ValueError, ImportError) as e:
+                logger.debug(f"Skipping Perplexity in multi-provider: {type(e).__name__}: {e}")
         
         if os.getenv("GROQ_API_KEY"):
             try:
@@ -913,7 +1076,13 @@ def get_llm_client(
         return MultiProviderClient(providers)
     
     if provider == "auto":
-        # Try providers in order (free/fast first)
+        # Try providers in order (Perplexity preferred for web search, then free/fast)
+        if os.getenv("PERPLEXITY_API_KEY"):
+            try:
+                return PerplexityClient()
+            except Exception as e:
+                logger.warning(f"Could not initialize Perplexity: {e}")
+        
         if os.getenv("GROQ_API_KEY"):
             try:
                 return GroqClient()
@@ -953,6 +1122,7 @@ def get_llm_client(
 def list_available_providers() -> Dict[str, bool]:
     """Check which providers are available based on environment variables."""
     return {
+        "perplexity": bool(os.getenv("PERPLEXITY_API_KEY")),
         "gemini": bool(os.getenv("GOOGLE_API_KEY")),
         "groq": bool(os.getenv("GROQ_API_KEY")),
         "openrouter": bool(os.getenv("OPENROUTER_API_KEY")),

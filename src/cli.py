@@ -54,9 +54,9 @@ def cli():
 )
 @click.option(
     "--llm-provider",
-    type=click.Choice(['auto', 'gemini', 'groq', 'openrouter', 'openai', 'anthropic', 'mock', 'multi']),
+    type=click.Choice(['auto', 'perplexity', 'gemini', 'groq', 'openrouter', 'openai', 'anthropic', 'mock', 'multi']),
     default='auto',
-    help="LLM provider to use (auto tries providers in order, multi uses failover)",
+    help="LLM provider to use (perplexity has real-time web search, auto tries providers in order, multi uses failover)",
 )
 @click.option(
     "--verbose",
