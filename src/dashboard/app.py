@@ -8,14 +8,36 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 import os
 import time
+import logging
 from pathlib import Path
 
 from .routes import create_dashboard_router
 from .api import create_api_router
 from .rate_limiter import setup_rate_limiting
 
-# Import logging system
-from src.logging_config import setup_logging, get_logger, RequestLoggingMiddleware, setup_sentry
+# Import logging system with fallback for minimal deployments
+try:
+    from src.logging_config import setup_logging, get_logger, RequestLoggingMiddleware, setup_sentry
+    HAS_CUSTOM_LOGGING = True
+except ImportError:
+    HAS_CUSTOM_LOGGING = False
+    # Fallback logging setup
+    def setup_logging():
+        logging.basicConfig(level=logging.INFO)
+    
+    def get_logger(name):
+        return logging.getLogger(name)
+    
+    def setup_sentry():
+        pass
+    
+    class RequestLoggingMiddleware:
+        """Fallback middleware that does nothing."""
+        def __init__(self, app):
+            self.app = app
+        
+        async def __call__(self, scope, receive, send):
+            await self.app(scope, receive, send)
 
 # Initialize logging
 setup_logging()
@@ -80,14 +102,22 @@ def create_app() -> FastAPI:
         response.headers["X-Process-Time"] = str(process_time)
         return response
     
+    # Root endpoint
+    @app.get("/")
+    async def root():
+        """Root endpoint - landing or redirect."""
+        return {"status": "healthy", "service": "LaunchForge Dashboard"}
+    
     # Health check endpoint
     @app.get("/health")
     async def health_check():
         """Health check endpoint."""
+        from datetime import datetime
         return {
-            "status": "healthy",
+            "status": "ok",
             "service": "launchforge-dashboard",
-            "version": "1.0.0"
+            "version": "1.0.0",
+            "timestamp": datetime.utcnow().isoformat() + "Z"
         }
     
     # Setup rate limiting
