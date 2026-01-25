@@ -42,7 +42,13 @@ newsapi-python>=0.2.7
 # Free data sources (NO API KEY REQUIRED)
 pytrends>=4.9.0  # Google Trends
 pygooglenews>=0.1.2  # Google News
-feedparser<>=5.2.1,<6.0.0# RSS feeds (downgraded for pygooglenews compatibility)
+feedparser>=5.2.1,<6.0.0  # RSS feeds (downgraded for pygooglenews compatibility)
+cat requirements.txt | sed -n '45p'
+python3 -c "with open('requirements.txt', 'r') as f: lines = f.readlines(); lines[44] = 'feedparser>=5.2.1,<6.0.0  # RSS feeds (downgraded for pygooglenews compatibility)\n'; open('requirements.txt', 'w').writelines(lines)"
+git reset --hard HEAD
+feedparser<>=5.2.1,<6.0.0# RSS feeds (dosed -i '45s/.*/feedparser>=5.2.1,<6.0.0  # RSS feeds (downgraded for pygooglenews compatibility)/' requirements.txt
+cat requirements.txt | sed -n '45p'
+wngraded for pygooglenews compatibility)
 yfinance>=0.2.0  # Yahoo Finance market data
 hackernews>=2.0.0  # Hacker News API
 asyncpraw>=7.7.0  # Async Reddit (better performance)
