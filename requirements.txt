@@ -41,8 +41,6 @@ newsapi-python>=0.2.7
 
 # Free data sources (NO API KEY REQUIRED)
 pytrends>=4.9.0  # Google Trends
-pygooglenews>=0.1.2  # Google News
-feedparser>=5.2.1,<6.0.0  # RSS feeds (downgraded for pygooglenews compatibility)
 yfinance>=0.2.0  # Yahoo Finance market data
 hackernews>=2.0.0  # Hacker News API
 asyncpraw>=7.7.0  # Async Reddit (better performance)
