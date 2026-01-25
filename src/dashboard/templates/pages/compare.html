@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+
+{% block title %}LaunchForge vs Competitors - Why We're Different{% endblock %}
+
+{% block content %}
+<div class="py-24 sm:py-32 bg-gray-900">
+    <div class="mx-auto max-w-7xl px-6 lg:px-8">
+        <!-- Header -->
+        <div class="mx-auto max-w-2xl text-center">
+            <h1 class="text-4xl font-bold tracking-tight text-white sm:text-5xl">
+                Why Choose <span class="text-forge-500">LaunchForge</span>?
+            </h1>
+            <p class="mt-6 text-lg leading-8 text-gray-300">
+                We're not just another AI code generator. We're the complete platform for launching real businesses.
+            </p>
+        </div>
+
+        <!-- Key Differentiators -->
+        <div class="mx-auto mt-16 max-w-5xl">
+            <div class="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+                <!-- Real Market Validation -->
+                <div class="rounded-2xl bg-gradient-to-br from-green-900/50 to-green-800/30 p-6 ring-1 ring-green-700">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="rounded-lg bg-green-600 p-2">
+                            <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold text-white">Real Market Validation</h3>
+                    </div>
+                    <p class="text-gray-300 text-sm">
+                        <strong class="text-green-400">Perplexity AI integration</strong> for live web research. 
+                        We validate your idea against real market data before you build.
+                    </p>
+                    <div class="mt-4 text-xs text-green-400">✓ Live competitor analysis</div>
+                    <div class="text-xs text-green-400">✓ Market size estimation</div>
+                    <div class="text-xs text-green-400">✓ Trend detection</div>
+                </div>
+
+                <!-- End-to-End Business -->
+                <div class="rounded-2xl bg-gradient-to-br from-blue-900/50 to-blue-800/30 p-6 ring-1 ring-blue-700">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="rounded-lg bg-blue-600 p-2">
+                            <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold text-white">End-to-End Business</h3>
+                    </div>
+                    <p class="text-gray-300 text-sm">
+                        <strong class="text-blue-400">Not just code</strong>—LLC formation, EIN, 
+                        business banking, domain registration. Everything to launch.
+                    </p>
+                    <div class="mt-4 text-xs text-blue-400">✓ LLC/Corp formation</div>
+                    <div class="text-xs text-blue-400">✓ Business bank account</div>
+                    <div class="text-xs text-blue-400">✓ Domain registration</div>
+                </div>
+
+                <!-- Production-First -->
+                <div class="rounded-2xl bg-gradient-to-br from-purple-900/50 to-purple-800/30 p-6 ring-1 ring-purple-700">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="rounded-lg bg-purple-600 p-2">
+                            <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3m3 3a3 3 0 100 6h13.5a3 3 0 100-6m-16.5-3a3 3 0 013-3h13.5a3 3 0 013 3m-19.5 0a4.5 4.5 0 01.9-2.7L5.737 5.1a3.375 3.375 0 012.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 01.9 2.7m0 0a3 3 0 01-3 3m0 3h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008zm-3 6h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold text-white">Production-First</h3>
+                    </div>
+                    <p class="text-gray-300 text-sm">
+                        <strong class="text-purple-400">Real deployments</strong> with monitoring, SSL, 
+                        CI/CD—not just prototypes that need weeks of work.
+                    </p>
+                    <div class="mt-4 text-xs text-purple-400">✓ Auto SSL certificates</div>
+                    <div class="text-xs text-purple-400">✓ Health monitoring</div>
+                    <div class="text-xs text-purple-400">✓ CI/CD pipelines</div>
+                </div>
+
+                <!-- Monetization Built-In -->
+                <div class="rounded-2xl bg-gradient-to-br from-yellow-900/50 to-yellow-800/30 p-6 ring-1 ring-yellow-700">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="rounded-lg bg-yellow-600 p-2">
+                            <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold text-white">Monetization Built-In</h3>
+                    </div>
+                    <p class="text-gray-300 text-sm">
+                        <strong class="text-yellow-400">Stripe integration from day 1</strong>. 
+                        Subscriptions, payments, customer portal—ready to make money.
+                    </p>
+                    <div class="mt-4 text-xs text-yellow-400">✓ Stripe subscriptions</div>
+                    <div class="text-xs text-yellow-400">✓ Customer portal</div>
+                    <div class="text-xs text-yellow-400">✓ Webhook handling</div>
+                </div>
+
+                <!-- Full Ownership -->
+                <div class="rounded-2xl bg-gradient-to-br from-red-900/50 to-red-800/30 p-6 ring-1 ring-red-700">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="rounded-lg bg-red-600 p-2">
+                            <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold text-white">Full Ownership</h3>
+                    </div>
+                    <p class="text-gray-300 text-sm">
+                        <strong class="text-red-400">You own your code</strong>. MIT licensed, 
+                        export anytime, no vendor lock-in. Your business, your code.
+                    </p>
+                    <div class="mt-4 text-xs text-red-400">✓ MIT licensed code</div>
+                    <div class="text-xs text-red-400">✓ Export anytime</div>
+                    <div class="text-xs text-red-400">✓ No lock-in</div>
+                </div>
+
+                <!-- AI-Powered Intelligence -->
+                <div class="rounded-2xl bg-gradient-to-br from-cyan-900/50 to-cyan-800/30 p-6 ring-1 ring-cyan-700">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="rounded-lg bg-cyan-600 p-2">
+                            <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold text-white">Multi-Model AI</h3>
+                    </div>
+                    <p class="text-gray-300 text-sm">
+                        <strong class="text-cyan-400">GPT-4, Claude, Gemini</strong>—use the best AI 
+                        for each task. Model council for better code quality.
+                    </p>
+                    <div class="mt-4 text-xs text-cyan-400">✓ OpenAI GPT-4</div>
+                    <div class="text-xs text-cyan-400">✓ Anthropic Claude</div>
+                    <div class="text-xs text-cyan-400">✓ Google Gemini</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Comparison Table -->
+        <div class="mx-auto mt-24 max-w-5xl">
+            <h2 class="text-2xl font-bold text-white text-center mb-12">Feature Comparison</h2>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="border-b border-gray-700">
+                            <th class="py-4 px-4 text-sm font-semibold text-gray-300">Feature</th>
+                            <th class="py-4 px-4 text-sm font-semibold text-forge-400 text-center">LaunchForge</th>
+                            <th class="py-4 px-4 text-sm font-semibold text-gray-400 text-center">Bolt.new</th>
+                            <th class="py-4 px-4 text-sm font-semibold text-gray-400 text-center">v0.dev</th>
+                            <th class="py-4 px-4 text-sm font-semibold text-gray-400 text-center">Cursor</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-800">
+                        <tr>
+                            <td class="py-4 px-4 text-sm text-gray-300">Full-Stack Code Generation</td>
+                            <td class="py-4 px-4 text-center"><span class="text-green-400 text-lg">✓</span></td>
+                            <td class="py-4 px-4 text-center"><span class="text-green-400 text-lg">✓</span></td>
+                            <td class="py-4 px-4 text-center"><span class="text-yellow-400 text-lg">~</span></td>
+                            <td class="py-4 px-4 text-center"><span class="text-green-400 text-lg">✓</span></td>
+                        </tr>
+                        <tr>
+                            <td class="py-4 px-4 text-sm text-gray-300">Market Validation (Perplexity AI)</td>
+                            <td class="py-4 px-4 text-center"><span class="text-green-400 text-lg">✓</span></td>
+                            <td class="py-4 px-4 text-center"><span class="text-red-400 text-lg">✗</span></td>
+                            <td class="py-4 px-4 text-center"><span class="text-red-400 text-lg">✗</span></td>
+                            <td class="py-4 px-4 text-center"><span class="text-red-400 text-lg">✗</span></td>
+                        </tr>
+                        <tr>
+                            <td class="py-4 px-4 text-sm text-gray-300">LLC/Business Formation</td>
+                            <td class="py-4 px-4 text-center"><span class="text-green-400 text-lg">✓</span></td>
+                            <td class="py-4 px-4 text-center"><span class="text-red-400 text-lg">✗</span></td>
+                            <td class="py-4 px-4 text-center"><span class="text-red-400 text-lg">✗</span></td>
+                            <td class="py-4 px-4 text-center"><span class="text-red-400 text-lg">✗</span></td>
+                        </tr>
+                        <tr>
+                            <td class="py-4 px-4 text-sm text-gray-300">Business Banking Integration</td>
+                            <td class="py-4 px-4 text-center"><span class="text-green-400 text-lg">✓</span></td>
+                            <td class="py-4 px-4 text-center"><span class="text-red-400 text-lg">✗</span></td>
+                            <td class="py-4 px-4 text-center"><span class="text-red-400 text-lg">✗</span></td>
+                            <td class="py-4 px-4 text-center"><span class="text-red-400 text-lg">✗</span></td>
+                        </tr>
+                        <tr>
+                            <td class="py-4 px-4 text-sm text-gray-300">Domain Registration</td>
+                            <td class="py-4 px-4 text-center"><span class="text-green-400 text-lg">✓</span></td>
+                            <td class="py-4 px-4 text-center"><span class="text-red-400 text-lg">✗</span></td>
+                            <td class="py-4 px-4 text-center"><span class="text-red-400 text-lg">✗</span></td>
+                            <td class="py-4 px-4 text-center"><span class="text-red-400 text-lg">✗</span></td>
+                        </tr>
+                        <tr>
+                            <td class="py-4 px-4 text-sm text-gray-300">One-Click Production Deploy</td>
+                            <td class="py-4 px-4 text-center"><span class="text-green-400 text-lg">✓</span></td>
+                            <td class="py-4 px-4 text-center"><span class="text-green-400 text-lg">✓</span></td>
+                            <td class="py-4 px-4 text-center"><span class="text-yellow-400 text-lg">~</span></td>
+                            <td class="py-4 px-4 text-center"><span class="text-red-400 text-lg">✗</span></td>
+                        </tr>
+                        <tr>
+                            <td class="py-4 px-4 text-sm text-gray-300">Stripe Payments Built-In</td>
+                            <td class="py-4 px-4 text-center"><span class="text-green-400 text-lg">✓</span></td>
+                            <td class="py-4 px-4 text-center"><span class="text-yellow-400 text-lg">~</span></td>
+                            <td class="py-4 px-4 text-center"><span class="text-red-400 text-lg">✗</span></td>
+                            <td class="py-4 px-4 text-center"><span class="text-red-400 text-lg">✗</span></td>
+                        </tr>
+                        <tr>
+                            <td class="py-4 px-4 text-sm text-gray-300">Production Monitoring</td>
+                            <td class="py-4 px-4 text-center"><span class="text-green-400 text-lg">✓</span></td>
+                            <td class="py-4 px-4 text-center"><span class="text-red-400 text-lg">✗</span></td>
+                            <td class="py-4 px-4 text-center"><span class="text-red-400 text-lg">✗</span></td>
+                            <td class="py-4 px-4 text-center"><span class="text-red-400 text-lg">✗</span></td>
+                        </tr>
+                        <tr>
+                            <td class="py-4 px-4 text-sm text-gray-300">Auto SSL Certificates</td>
+                            <td class="py-4 px-4 text-center"><span class="text-green-400 text-lg">✓</span></td>
+                            <td class="py-4 px-4 text-center"><span class="text-green-400 text-lg">✓</span></td>
+                            <td class="py-4 px-4 text-center"><span class="text-yellow-400 text-lg">~</span></td>
+                            <td class="py-4 px-4 text-center"><span class="text-red-400 text-lg">✗</span></td>
+                        </tr>
+                        <tr>
+                            <td class="py-4 px-4 text-sm text-gray-300">Full Code Ownership (MIT)</td>
+                            <td class="py-4 px-4 text-center"><span class="text-green-400 text-lg">✓</span></td>
+                            <td class="py-4 px-4 text-center"><span class="text-green-400 text-lg">✓</span></td>
+                            <td class="py-4 px-4 text-center"><span class="text-green-400 text-lg">✓</span></td>
+                            <td class="py-4 px-4 text-center"><span class="text-green-400 text-lg">✓</span></td>
+                        </tr>
+                        <tr>
+                            <td class="py-4 px-4 text-sm text-gray-300">Multi-Model AI (GPT-4, Claude, Gemini)</td>
+                            <td class="py-4 px-4 text-center"><span class="text-green-400 text-lg">✓</span></td>
+                            <td class="py-4 px-4 text-center"><span class="text-yellow-400 text-lg">~</span></td>
+                            <td class="py-4 px-4 text-center"><span class="text-red-400 text-lg">✗</span></td>
+                            <td class="py-4 px-4 text-center"><span class="text-green-400 text-lg">✓</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <p class="mt-4 text-xs text-gray-500 text-center">
+                ✓ = Full support | ~ = Partial/Limited | ✗ = Not available
+            </p>
+        </div>
+
+        <!-- CTA -->
+        <div class="mx-auto mt-24 max-w-2xl text-center">
+            <h2 class="text-3xl font-bold text-white">Ready to Build Your Business?</h2>
+            <p class="mt-4 text-gray-400">
+                Join thousands of entrepreneurs using LaunchForge to go from idea to revenue.
+            </p>
+            <div class="mt-8 flex justify-center gap-4">
+                <a href="/auth/signup" class="rounded-md bg-forge-600 px-6 py-3 text-lg font-semibold text-white shadow-sm hover:bg-forge-500">
+                    Start Building Free →
+                </a>
+                <a href="/demo" class="rounded-md bg-gray-700 px-6 py-3 text-lg font-semibold text-white shadow-sm hover:bg-gray-600">
+                    Watch Demo
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

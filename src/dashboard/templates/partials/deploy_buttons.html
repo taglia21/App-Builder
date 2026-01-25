@@ -1,0 +1,91 @@
+<!-- One-Click Deploy Buttons Partial -->
+<div class="one-click-deploy">
+    <h3 class="text-lg font-semibold text-gray-900 mb-4">Deploy to Production</h3>
+    <p class="text-sm text-gray-500 mb-6">One click to deploy your app to your favorite platform</p>
+    
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <!-- Vercel -->
+        <button 
+            hx-post="/api/deploy/vercel/{{ project_id }}"
+            hx-target="#deploy-status"
+            hx-indicator="#deploy-loading"
+            class="flex items-center justify-center gap-3 rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-900 shadow-sm hover:bg-gray-50 transition-colors">
+            <svg class="h-5 w-5" viewBox="0 0 116 100" fill="currentColor">
+                <path d="M57.5 0L115 100H0L57.5 0Z"/>
+            </svg>
+            Deploy to Vercel
+        </button>
+        
+        <!-- Render -->
+        <button 
+            hx-post="/api/deploy/render/{{ project_id }}"
+            hx-target="#deploy-status"
+            hx-indicator="#deploy-loading"
+            class="flex items-center justify-center gap-3 rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-900 shadow-sm hover:bg-gray-50 transition-colors">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                <rect width="24" height="24" rx="4"/>
+            </svg>
+            Deploy to Render
+        </button>
+        
+        <!-- Railway -->
+        <button 
+            hx-post="/api/deploy/railway/{{ project_id }}"
+            hx-target="#deploy-status"
+            hx-indicator="#deploy-loading"
+            class="flex items-center justify-center gap-3 rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-900 shadow-sm hover:bg-gray-50 transition-colors">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M.113 10.27A2.552 2.552 0 0 0 0 11.02c0 .25.038.495.113.75h9.774c1.103 0 1.997.894 1.997 1.997v9.694c.253.076.5.112.75.112.258 0 .501-.036.749-.112v-9.694c0-1.103.895-1.997 1.998-1.997h9.774A2.571 2.571 0 0 0 24 11.02c0-.258-.036-.502-.112-.75H14.38a1.998 1.998 0 0 1-1.998-1.998V.112A2.564 2.564 0 0 0 11.633 0c-.25 0-.497.038-.75.112v8.16a1.998 1.998 0 0 1-1.997 1.998H.113z"/>
+            </svg>
+            Deploy to Railway
+        </button>
+        
+        <!-- Fly.io -->
+        <button 
+            hx-post="/api/deploy/fly/{{ project_id }}"
+            hx-target="#deploy-status"
+            hx-indicator="#deploy-loading"
+            class="flex items-center justify-center gap-3 rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-900 shadow-sm hover:bg-gray-50 transition-colors">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="12" cy="12" r="10"/>
+            </svg>
+            Deploy to Fly.io
+        </button>
+    </div>
+    
+    <!-- Loading indicator -->
+    <div id="deploy-loading" class="htmx-indicator mt-4 text-center">
+        <div class="inline-flex items-center gap-2 text-forge-600">
+            <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Deploying...
+        </div>
+    </div>
+    
+    <!-- Status display -->
+    <div id="deploy-status" class="mt-4"></div>
+    
+    <!-- Docker option -->
+    <div class="mt-6 pt-6 border-t border-gray-200">
+        <p class="text-sm text-gray-500 mb-3">Or deploy with Docker:</p>
+        <div class="bg-gray-900 rounded-lg p-4 overflow-x-auto">
+            <code class="text-sm text-green-400">
+                docker pull launchforge/{{ project_name or 'your-app' }}:latest<br>
+                docker run -p 8080:8080 launchforge/{{ project_name or 'your-app' }}:latest
+            </code>
+        </div>
+    </div>
+    
+    <!-- Export option -->
+    <div class="mt-4">
+        <a href="/api/projects/{{ project_id }}/export" 
+           class="inline-flex items-center text-sm text-forge-600 hover:text-forge-800">
+            <svg class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+            </svg>
+            Download source code (ZIP)
+        </a>
+    </div>
+</div>

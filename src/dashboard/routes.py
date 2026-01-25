@@ -129,6 +129,40 @@ class DashboardRoutes:
             "sections": ["Profile", "API Keys", "Billing", "Notifications"],
         })
     
+    async def compare(self, request: Request) -> HTMLResponse:
+        """Competitive comparison page."""
+        return self.render(request, "pages/compare.html", {})
+    
+    async def health_dashboard(self, request: Request) -> HTMLResponse:
+        """Deployment health dashboard."""
+        # Mock deployment data
+        deployments = [
+            {
+                "id": "dep_1",
+                "project_id": "proj_1",
+                "name": "My SaaS App",
+                "url": "https://my-saas.vercel.app",
+                "status": "healthy",
+                "response_time": 120,
+                "uptime": 99.95,
+                "ssl_valid": True,
+                "ssl_days_remaining": 45,
+            },
+        ]
+        
+        stats = {
+            "total_deployments": len(deployments),
+            "healthy": len([d for d in deployments if d["status"] == "healthy"]),
+            "degraded": len([d for d in deployments if d["status"] == "degraded"]),
+            "down": len([d for d in deployments if d["status"] == "down"]),
+        }
+        
+        return self.render(request, "pages/health.html", {
+            "deployments": deployments,
+            "stats": stats,
+            "incidents": [],
+        })
+    
     async def billing(self, request: Request) -> HTMLResponse:
         """Billing and subscription page."""
         return self.render(request, "pages/billing.html", {
@@ -260,6 +294,8 @@ def create_dashboard_router(templates: Jinja2Templates) -> APIRouter:
     # Page routes
     router.add_api_route("/", routes.home, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/dashboard", routes.dashboard, methods=["GET"], response_class=HTMLResponse)
+    router.add_api_route("/compare", routes.compare, methods=["GET"], response_class=HTMLResponse)
+    router.add_api_route("/health", routes.health_dashboard, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/projects/new", routes.new_project, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/projects/{project_id}", routes.project_detail, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/settings", routes.settings, methods=["GET"], response_class=HTMLResponse)

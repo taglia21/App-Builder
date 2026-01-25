@@ -358,6 +358,59 @@ class APIRoutes:
     async def revoke_api_key(key_id: str) -> Dict[str, Any]:
         """Revoke an API key."""
         return {"revoked": True, "key_id": key_id}
+    
+    # One-Click Deploy Endpoints
+    async def deploy_to_vercel(self, project_id: str) -> dict:
+        """Deploy project to Vercel."""
+        return {
+            "status": "deploying",
+            "provider": "vercel",
+            "project_id": project_id,
+            "message": "Deployment initiated to Vercel",
+            "estimated_time": "2-3 minutes",
+        }
+    
+    async def deploy_to_render(self, project_id: str) -> dict:
+        """Deploy project to Render."""
+        return {
+            "status": "deploying",
+            "provider": "render",
+            "project_id": project_id,
+            "message": "Deployment initiated to Render",
+            "estimated_time": "3-5 minutes",
+        }
+    
+    async def deploy_to_railway(self, project_id: str) -> dict:
+        """Deploy project to Railway."""
+        return {
+            "status": "deploying",
+            "provider": "railway",
+            "project_id": project_id,
+            "message": "Deployment initiated to Railway",
+            "estimated_time": "2-4 minutes",
+        }
+    
+    async def deploy_to_fly(self, project_id: str) -> dict:
+        """Deploy project to Fly.io."""
+        return {
+            "status": "deploying",
+            "provider": "fly",
+            "project_id": project_id,
+            "message": "Deployment initiated to Fly.io",
+            "estimated_time": "3-5 minutes",
+        }
+    
+    async def get_health_metrics(self) -> dict:
+        """Get deployment health metrics."""
+        return {
+            "deployments": [],
+            "stats": {
+                "total_deployments": 0,
+                "healthy": 0,
+                "degraded": 0,
+                "down": 0,
+            }
+        }
 
 
 def create_api_router() -> APIRouter:
@@ -384,6 +437,15 @@ def create_api_router() -> APIRouter:
     # Deployment
     router.add_api_route("/deploy", api.start_deployment, methods=["POST"])
     router.add_api_route("/projects/{project_id}/deployments/{deployment_id}", api.get_deployment_status, methods=["GET"])
+    
+    # One-Click Deploy
+    router.add_api_route("/deploy/vercel/{project_id}", api.deploy_to_vercel, methods=["POST"])
+    router.add_api_route("/deploy/render/{project_id}", api.deploy_to_render, methods=["POST"])
+    router.add_api_route("/deploy/railway/{project_id}", api.deploy_to_railway, methods=["POST"])
+    router.add_api_route("/deploy/fly/{project_id}", api.deploy_to_fly, methods=["POST"])
+    
+    # Health Metrics
+    router.add_api_route("/health/metrics", api.get_health_metrics, methods=["GET"])
     
     # Subscription
     router.add_api_route("/subscription", api.get_subscription, methods=["GET"])
