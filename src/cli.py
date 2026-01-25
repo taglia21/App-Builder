@@ -1,5 +1,7 @@
-"""
-Command-line interface for the Startup Generator.
+# -*- coding: utf-8 -*-
+"""LaunchForge - AI-Powered Startup Builder
+
+Command-line interface for generating and deploying startup applications.
 """
 
 import asyncio
@@ -8,6 +10,7 @@ from pathlib import Path
 
 import click
 from loguru import logger
+from rich.console import Console
 
 from .config import load_config
 from .models import BuyerPersona, PricingHypothesis, RevenueModel, StartupIdea
@@ -15,12 +18,33 @@ from .pipeline import StartupGenerationPipeline
 from .utils.ui import UI
 from .deployment.engine import DeploymentEngine
 from .deployment.models import DeploymentConfig, DeploymentProviderType, DeploymentEnvironment
+from .branding import print_banner, print_welcome, print_success_banner, VERSION, TAGLINE
 
 
-@click.group()
-def cli():
-    """Automated Startup Generation Pipeline"""
-    pass
+@click.group(invoke_without_command=True)
+@click.pass_context
+@click.version_option(VERSION, prog_name="LaunchForge")
+def cli(ctx):
+    """LaunchForge - AI-Powered Startup Builder
+    
+    Generate validated startup ideas and production-ready apps
+    using AI with real-time market intelligence.
+    
+    \b
+    QUICK START:
+      launchforge generate --demo        # Try with sample data
+      launchforge generate               # Use real AI providers
+    
+    \b  
+    API KEYS:
+      PERPLEXITY_API_KEY  - Primary (real-time web search)
+      GROQ_API_KEY        - Backup (fast inference)
+    """
+    if ctx.invoked_subcommand is None:
+        # Show welcome banner if no command given
+        console = Console()
+        print_welcome(console)
+        console.print("[dim]Run [bold]launchforge --help[/bold] for commands[/dim]\n")
 
 
 @cli.command()
@@ -54,9 +78,9 @@ def cli():
 )
 @click.option(
     "--llm-provider",
-    type=click.Choice(['auto', 'perplexity', 'gemini', 'groq', 'openrouter', 'openai', 'anthropic', 'mock', 'multi']),
+    type=click.Choice(['auto', 'perplexity', 'groq', 'mock', 'multi']),
     default='auto',
-    help="LLM provider to use (perplexity has real-time web search, auto tries providers in order, multi uses failover)",
+    help="LLM provider: perplexity (real-time web search), groq (fast), mock (testing), multi (failover)",
 )
 @click.option(
     "--verbose",
@@ -77,14 +101,25 @@ def cli():
     help="UI theme for the generated app",
 )
 def generate(config, output, demo, skip_refinement, skip_code_gen, llm_provider, verbose, deploy, theme):
-    """Run the full pipeline once."""
-    UI.header("Startup Generator", "Full Pipeline Execution")
+    """🚀 Generate a complete startup application.
+    
+    Uses AI to discover market opportunities, generate ideas,
+    and build production-ready full-stack applications.
+    """
+    console = Console()
+    print_banner(console)
+    console.print()
+    
+    UI.header("LaunchForge", "Generating Your Startup")
     
     if demo:
-        UI.warning("MODE: Demo (using sample data)")
+        UI.warning("MODE: Demo (using sample data - no API calls)")
     if llm_provider == 'mock':
-        UI.warning("LLM: Mock (no real API calls)")
-    UI.info(f"Theme: [bold]{theme}[/]")
+        UI.warning("LLM: Mock mode (testing without real AI)")
+    else:
+        UI.info(f"LLM Provider: [bold cyan]{llm_provider}[/]")
+    UI.info(f"Theme: [bold]{theme}[/]   Output: [bold]{output}[/]")
+    console.print()
 
     try:
         # Load configuration
@@ -274,31 +309,77 @@ def test_intelligence(config):
 
 
 @cli.command()
-def list_providers():
-    """List available LLM providers."""
+def providers():
+    """📊 List available LLM providers and their status."""
     from src.llm import list_available_providers
+    from rich.console import Console
+    from rich.table import Table
+    
+    console = Console()
     
     available = list_available_providers()
     
     provider_info = {
-        "gemini": {"model": "gemini-1.5-flash", "desc": "Google AI Studio - 1,500 req/day"},
-        "groq": {"model": "llama-3.1-70b-versatile", "desc": "Groq Cloud - 14,400 req/day, very fast"},
-        "openrouter": {"model": "llama-3.1-8b-instruct:free", "desc": "OpenRouter - Multiple free models"},
-        "openai": {"model": "gpt-4-turbo-preview", "desc": "OpenAI - Paid only"},
-        "anthropic": {"model": "claude-sonnet-4-20250514", "desc": "Anthropic - Paid only"},
-        "mock": {"model": "mock-model", "desc": "Testing mode - no API calls"}
+        "perplexity": {
+            "model": "sonar-pro",
+            "desc": "Real-time web search - ideal for market research",
+            "badge": "⭐ PRIMARY"
+        },
+        "groq": {
+            "model": "llama-3.3-70b-versatile",
+            "desc": "Ultra-fast inference - great for iteration",
+            "badge": "🔄 BACKUP"
+        },
+        "mock": {
+            "model": "mock-model",
+            "desc": "Testing mode - no API calls needed",
+            "badge": "🧪 TEST"
+        },
+        "multi": {
+            "model": "auto-failover",
+            "desc": "Automatically tries Perplexity → Groq",
+            "badge": "🔀 FAILOVER"
+        }
     }
     
-    rows = []
+    table = Table(title="⚡ LaunchForge LLM Providers", show_header=True, header_style="bold cyan")
+    table.add_column("Status", style="dim", width=10)
+    table.add_column("Provider", style="cyan")
+    table.add_column("Type", style="magenta")
+    table.add_column("Model", style="green")
+    table.add_column("Description")
+    
     for provider, is_available in available.items():
-        status = "[green]✓ Ready[/]" if is_available else "[red]✗ No API key[/]"
+        status = "✅ Ready" if is_available else "❌ No key"
         info = provider_info.get(provider, {})
         model = info.get("model", "")
         desc = info.get("desc", "")
-        rows.append([status, provider, model, desc])
+        badge = info.get("badge", "")
+        table.add_row(status, provider, badge, model, desc)
     
-    UI.table("Available LLM Providers", ["Status", "Provider", "Model", "Description"], rows)
-    UI.info("\nUse [bold]--llm-provider <name>[/] to select a provider")
+    console.print()
+    console.print(table)
+    console.print()
+    
+    if not available.get("perplexity"):
+        console.print("[yellow]💡 To enable Perplexity (recommended):[/]")
+        console.print("   export PERPLEXITY_API_KEY=pplx-...")
+        console.print("   [dim]Get key: https://www.perplexity.ai/settings/api[/dim]")
+        console.print()
+    
+    if not available.get("groq"):
+        console.print("[yellow]💡 To enable Groq (fast & free):[/]")
+        console.print("   export GROQ_API_KEY=gsk_...")
+        console.print("   [dim]Get key: https://console.groq.com/keys[/dim]")
+        console.print()
+    
+    console.print("[dim]Use: launchforge generate --llm-provider <name>[/dim]")
+
+
+@cli.command(name="list-providers", hidden=True)
+def list_providers():
+    """Alias for providers command."""
+    providers()
 
 
 @cli.command()

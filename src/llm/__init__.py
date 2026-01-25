@@ -1,26 +1,18 @@
 """
-LLM Client Module
-Provides unified access to multiple LLM providers with retry and caching.
+LLM Client Module - Streamlined
+Provides unified access to LLM providers with retry and caching.
 
 Supported Providers:
-- Perplexity: Real-time web search (sonar-pro, sonar-deep-research, sonar-reasoning)
-- Gemini: Google AI Studio
-- Groq: Ultra-fast inference
-- OpenRouter: Multi-model access
-- OpenAI: GPT models
-- Anthropic: Claude models
+- Perplexity: PRIMARY - Real-time web search (sonar-pro, sonar-deep-research, sonar-reasoning)
+- Groq: BACKUP - Ultra-fast inference
 - Mock: Testing without API calls
 """
 
 from src.llm.client import (
     BaseLLMClient,
     LLMResponse,
-    GeminiClient,
-    GroqClient,
-    OpenRouterClient,
-    OpenAIClient,
-    AnthropicClient,
     PerplexityClient,
+    GroqClient,
     MockLLMClient,
     MultiProviderClient,
     get_llm_client,
@@ -43,12 +35,8 @@ __all__ = [
     # Client classes
     "BaseLLMClient",
     "LLMResponse",
-    "GeminiClient",
-    "GroqClient",
-    "OpenRouterClient",
-    "OpenAIClient",
-    "AnthropicClient",
     "PerplexityClient",
+    "GroqClient",
     "MockLLMClient",
     "MultiProviderClient",
     "get_llm_client",
