@@ -163,6 +163,10 @@ class DashboardRoutes:
             "incidents": [],
         })
     
+    async def contact(self, request: Request) -> HTMLResponse:
+        """Contact page."""
+        return self.render(request, "pages/contact.html", {})
+    
     async def billing(self, request: Request) -> HTMLResponse:
         """Billing and subscription page."""
         return self.render(request, "pages/billing.html", {
@@ -296,6 +300,7 @@ def create_dashboard_router(templates: Jinja2Templates) -> APIRouter:
     router.add_api_route("/dashboard", routes.dashboard, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/compare", routes.compare, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/health", routes.health_dashboard, methods=["GET"], response_class=HTMLResponse)
+    router.add_api_route("/contact", routes.contact, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/projects/new", routes.new_project, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/projects/{project_id}", routes.project_detail, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/settings", routes.settings, methods=["GET"], response_class=HTMLResponse)

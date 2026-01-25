@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Confirmed</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #1f2937;
+            margin: 0;
+            padding: 0;
+            background-color: #f3f4f6;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo h1 {
+            color: #7c3aed;
+            font-size: 28px;
+            margin: 0;
+        }
+        h2 {
+            color: #1f2937;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        p {
+            color: #4b5563;
+            margin-bottom: 20px;
+        }
+        .success-badge {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            display: inline-block;
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        .receipt-box {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .receipt-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .receipt-row:last-child {
+            border-bottom: none;
+            font-weight: 600;
+        }
+        .receipt-label {
+            color: #6b7280;
+        }
+        .receipt-value {
+            color: #1f2937;
+        }
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+            color: white !important;
+            text-decoration: none;
+            padding: 14px 32px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            margin: 20px 0;
+        }
+        .button-secondary {
+            display: inline-block;
+            background: #f3f4f6;
+            color: #374151 !important;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 14px;
+            margin: 10px 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            color: #9ca3af;
+            font-size: 14px;
+        }
+        .footer a {
+            color: #7c3aed;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="logo">
+                <h1>⚡ LaunchForge</h1>
+            </div>
+            
+            <div class="success-badge">✓ Payment Successful</div>
+            
+            <h2>Thank you for your purchase!</h2>
+            
+            <p>Hey {{ name }},</p>
+            
+            <p>Your payment has been processed successfully. Here are the details:</p>
+            
+            <div class="receipt-box">
+                <div class="receipt-row">
+                    <span class="receipt-label">Plan</span>
+                    <span class="receipt-value">{{ plan_name }}</span>
+                </div>
+                <div class="receipt-row">
+                    <span class="receipt-label">Date</span>
+                    <span class="receipt-value">{{ now().strftime('%B %d, %Y') if now is defined else 'Today' }}</span>
+                </div>
+                <div class="receipt-row">
+                    <span class="receipt-label">Amount</span>
+                    <span class="receipt-value">{{ amount }}</span>
+                </div>
+            </div>
+            
+            <p>Your subscription is now active and you have access to all {{ plan_name }} features:</p>
+            
+            <ul style="color: #4b5563; padding-left: 20px;">
+                <li>Unlimited app generations</li>
+                <li>Priority AI processing</li>
+                <li>Advanced market validation</li>
+                <li>Priority support</li>
+            </ul>
+            
+            <p style="text-align: center;">
+                <a href="https://launchforge.dev/dashboard" class="button">Go to Dashboard</a>
+            </p>
+            
+            {% if receipt_url %}
+            <p style="text-align: center;">
+                <a href="{{ receipt_url }}" class="button-secondary">View Receipt</a>
+            </p>
+            {% endif %}
+        </div>
+        
+        <div class="footer">
+            <p>
+                Questions about your subscription? <a href="mailto:support@launchforge.dev">Contact Support</a>
+            </p>
+            <p>
+                © {{ year }} LaunchForge. All rights reserved.<br>
+                <a href="https://launchforge.dev/privacy">Privacy Policy</a> · 
+                <a href="https://launchforge.dev/terms">Terms of Service</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

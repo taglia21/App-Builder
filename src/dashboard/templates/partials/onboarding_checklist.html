@@ -1,0 +1,238 @@
+<!-- Onboarding Checklist Widget -->
+<div x-data="onboardingChecklist()" 
+     x-show="showChecklist && !dismissed"
+     x-transition
+     class="bg-gradient-to-r from-forge-600 to-forge-700 rounded-xl shadow-lg p-6 mb-6 text-white">
+    
+    <!-- Header -->
+    <div class="flex items-start justify-between mb-4">
+        <div>
+            <h3 class="text-lg font-semibold">Welcome to LaunchForge! 🚀</h3>
+            <p class="text-forge-200 text-sm mt-1">Complete these steps to get started</p>
+        </div>
+        <button @click="dismissChecklist()" 
+                class="text-forge-200 hover:text-white p-1 rounded-full hover:bg-forge-500/50 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+    </div>
+    
+    <!-- Progress Bar -->
+    <div class="mb-6">
+        <div class="flex justify-between text-sm mb-2">
+            <span class="text-forge-200">Progress</span>
+            <span class="font-medium"><span x-text="completedCount"></span> of <span x-text="totalSteps"></span></span>
+        </div>
+        <div class="w-full h-2 bg-forge-800 rounded-full overflow-hidden">
+            <div class="h-full bg-white rounded-full transition-all duration-500"
+                 :style="`width: ${progressPercent}%`"></div>
+        </div>
+    </div>
+    
+    <!-- Steps -->
+    <div class="space-y-3">
+        <!-- Step 1: Verify Email -->
+        <div class="flex items-center gap-3 p-3 rounded-lg transition-colors"
+             :class="steps.emailVerified ? 'bg-forge-500/30' : 'bg-forge-800/50'">
+            <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center"
+                 :class="steps.emailVerified ? 'bg-green-500' : 'bg-forge-600 border-2 border-forge-400'">
+                <template x-if="steps.emailVerified">
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                </template>
+                <template x-if="!steps.emailVerified">
+                    <span class="text-sm font-medium">1</span>
+                </template>
+            </div>
+            <div class="flex-1">
+                <p class="font-medium" :class="steps.emailVerified ? 'line-through opacity-75' : ''">
+                    Verify your email
+                </p>
+                <p class="text-sm text-forge-200" x-show="!steps.emailVerified">
+                    Check your inbox for the verification link
+                </p>
+            </div>
+            <a x-show="!steps.emailVerified" 
+               href="#" 
+               @click.prevent="resendVerification()"
+               class="text-sm text-forge-200 hover:text-white underline">
+                Resend
+            </a>
+        </div>
+        
+        <!-- Step 2: Add API Keys -->
+        <div class="flex items-center gap-3 p-3 rounded-lg transition-colors"
+             :class="steps.apiKeysAdded ? 'bg-forge-500/30' : 'bg-forge-800/50'">
+            <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center"
+                 :class="steps.apiKeysAdded ? 'bg-green-500' : 'bg-forge-600 border-2 border-forge-400'">
+                <template x-if="steps.apiKeysAdded">
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                </template>
+                <template x-if="!steps.apiKeysAdded">
+                    <span class="text-sm font-medium">2</span>
+                </template>
+            </div>
+            <div class="flex-1">
+                <p class="font-medium" :class="steps.apiKeysAdded ? 'line-through opacity-75' : ''">
+                    Add your API keys
+                </p>
+                <p class="text-sm text-forge-200" x-show="!steps.apiKeysAdded">
+                    Configure OpenAI or Anthropic for AI generation
+                </p>
+            </div>
+            <a x-show="!steps.apiKeysAdded" 
+               href="/dashboard/settings"
+               class="px-3 py-1 text-sm bg-white/10 hover:bg-white/20 rounded-md transition-colors">
+                Add Keys
+            </a>
+        </div>
+        
+        <!-- Step 3: Generate First App -->
+        <div class="flex items-center gap-3 p-3 rounded-lg transition-colors"
+             :class="steps.firstAppGenerated ? 'bg-forge-500/30' : 'bg-forge-800/50'">
+            <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center"
+                 :class="steps.firstAppGenerated ? 'bg-green-500' : 'bg-forge-600 border-2 border-forge-400'">
+                <template x-if="steps.firstAppGenerated">
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                </template>
+                <template x-if="!steps.firstAppGenerated">
+                    <span class="text-sm font-medium">3</span>
+                </template>
+            </div>
+            <div class="flex-1">
+                <p class="font-medium" :class="steps.firstAppGenerated ? 'line-through opacity-75' : ''">
+                    Generate your first app
+                </p>
+                <p class="text-sm text-forge-200" x-show="!steps.firstAppGenerated">
+                    Describe your idea and let AI build it
+                </p>
+            </div>
+            <a x-show="!steps.firstAppGenerated" 
+               href="/dashboard/new"
+               class="px-3 py-1 text-sm bg-white/10 hover:bg-white/20 rounded-md transition-colors">
+                Create App
+            </a>
+        </div>
+        
+        <!-- Step 4: Deploy -->
+        <div class="flex items-center gap-3 p-3 rounded-lg transition-colors"
+             :class="steps.firstDeploy ? 'bg-forge-500/30' : 'bg-forge-800/50'">
+            <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center"
+                 :class="steps.firstDeploy ? 'bg-green-500' : 'bg-forge-600 border-2 border-forge-400'">
+                <template x-if="steps.firstDeploy">
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                </template>
+                <template x-if="!steps.firstDeploy">
+                    <span class="text-sm font-medium">4</span>
+                </template>
+            </div>
+            <div class="flex-1">
+                <p class="font-medium" :class="steps.firstDeploy ? 'line-through opacity-75' : ''">
+                    Deploy to production
+                </p>
+                <p class="text-sm text-forge-200" x-show="!steps.firstDeploy">
+                    Go live with one-click deployment
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Completion Message -->
+    <div x-show="allComplete" 
+         x-transition
+         class="mt-4 p-4 bg-green-500/20 rounded-lg border border-green-400/30">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div>
+                <p class="font-semibold">You're all set! 🎉</p>
+                <p class="text-sm text-forge-200">You've completed all onboarding steps</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function onboardingChecklist() {
+    return {
+        showChecklist: true,
+        dismissed: false,
+        steps: {
+            emailVerified: {{ 'true' if user and user.email_verified else 'false' }},
+            apiKeysAdded: {{ 'true' if has_api_keys else 'false' }},
+            firstAppGenerated: {{ 'true' if projects_count > 0 else 'false' }},
+            firstDeploy: {{ 'true' if has_deployment else 'false' }}
+        },
+        
+        init() {
+            // Check if user has dismissed the checklist
+            this.dismissed = localStorage.getItem('onboarding_dismissed') === 'true';
+            
+            // Load latest status from server
+            this.fetchStatus();
+        },
+        
+        get totalSteps() {
+            return 4;
+        },
+        
+        get completedCount() {
+            return Object.values(this.steps).filter(Boolean).length;
+        },
+        
+        get progressPercent() {
+            return (this.completedCount / this.totalSteps) * 100;
+        },
+        
+        get allComplete() {
+            return this.completedCount === this.totalSteps;
+        },
+        
+        dismissChecklist() {
+            this.dismissed = true;
+            localStorage.setItem('onboarding_dismissed', 'true');
+        },
+        
+        async fetchStatus() {
+            try {
+                const response = await fetch('/api/onboarding/status');
+                if (response.ok) {
+                    const data = await response.json();
+                    this.steps = data.steps;
+                }
+            } catch (error) {
+                console.error('Failed to fetch onboarding status:', error);
+            }
+        },
+        
+        async resendVerification() {
+            try {
+                const response = await fetch('/verify/resend', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email: '{{ user.email if user else "" }}' })
+                });
+                
+                if (response.ok) {
+                    alert('Verification email sent! Check your inbox.');
+                }
+            } catch (error) {
+                console.error('Failed to resend verification:', error);
+            }
+        }
+    };
+}
+</script>

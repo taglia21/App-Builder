@@ -124,6 +124,30 @@ class APIKeyResponse(BaseModel):
     last_used: Optional[datetime] = None
 
 
+class FeedbackRequest(BaseModel):
+    """Request to submit feedback."""
+    type: str = Field(default="general", description="Type: general, bug, feature, improvement")
+    message: str = Field(..., min_length=10, max_length=5000)
+    page: Optional[str] = None
+    userAgent: Optional[str] = None
+
+
+class ContactRequest(BaseModel):
+    """Request to submit contact form."""
+    name: str = Field(..., min_length=1, max_length=255)
+    email: str = Field(..., min_length=5, max_length=255)
+    subject: str = Field(..., min_length=1, max_length=100)
+    message: str = Field(..., min_length=10, max_length=5000)
+
+
+class OnboardingStatusResponse(BaseModel):
+    """Onboarding status response."""
+    steps: Dict[str, bool]
+    completedCount: int
+    totalSteps: int
+    allComplete: bool
+
+
 # ==================== API Routes ====================
 
 class APIRoutes:
@@ -412,6 +436,54 @@ class APIRoutes:
             }
         }
 
+    # ==================== Feedback & Contact ====================
+
+    async def submit_feedback(self, data: FeedbackRequest) -> dict:
+        """Submit user feedback."""
+        logger.info(f"Feedback received: type={data.type}, page={data.page}")
+        
+        # In production, this would save to database and send notification
+        # from src.database.engine import get_db
+        # from src.database.models import Feedback, FeedbackType
+        
+        return {
+            "success": True,
+            "message": "Thank you for your feedback!",
+            "feedback_id": "fb_" + str(hash(data.message))[:8]
+        }
+
+    async def submit_contact(self, data: ContactRequest) -> dict:
+        """Submit contact form."""
+        logger.info(f"Contact form received: email={data.email}, subject={data.subject}")
+        
+        # In production, this would save to database and send email
+        # from src.database.engine import get_db
+        # from src.database.models import ContactSubmission
+        
+        return {
+            "success": True,
+            "message": "Thank you for reaching out! We'll get back to you within 24 hours."
+        }
+
+    async def get_onboarding_status(self) -> OnboardingStatusResponse:
+        """Get user onboarding status."""
+        # Mock data - in production, fetch from database for current user
+        steps = {
+            "emailVerified": False,
+            "apiKeysAdded": False,
+            "firstAppGenerated": False,
+            "firstDeploy": False
+        }
+        
+        completed_count = sum(1 for v in steps.values() if v)
+        
+        return OnboardingStatusResponse(
+            steps=steps,
+            completedCount=completed_count,
+            totalSteps=4,
+            allComplete=completed_count == 4
+        )
+
 
 def create_api_router() -> APIRouter:
     """
@@ -456,5 +528,12 @@ def create_api_router() -> APIRouter:
     router.add_api_route("/api-keys", api.list_api_keys, methods=["GET"])
     router.add_api_route("/api-keys", api.create_api_key, methods=["POST"])
     router.add_api_route("/api-keys/{key_id}", api.revoke_api_key, methods=["DELETE"])
+    
+    # Feedback & Contact
+    router.add_api_route("/feedback", api.submit_feedback, methods=["POST"])
+    router.add_api_route("/contact", api.submit_contact, methods=["POST"])
+    
+    # Onboarding
+    router.add_api_route("/onboarding/status", api.get_onboarding_status, methods=["GET"])
     
     return router

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to LaunchForge</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #1f2937;
+            margin: 0;
+            padding: 0;
+            background-color: #f3f4f6;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo h1 {
+            color: #7c3aed;
+            font-size: 28px;
+            margin: 0;
+        }
+        h2 {
+            color: #1f2937;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        p {
+            color: #4b5563;
+            margin-bottom: 20px;
+        }
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+            color: white !important;
+            text-decoration: none;
+            padding: 14px 32px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            margin: 20px 0;
+        }
+        .feature-list {
+            background: #f9fafb;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .feature-list ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .feature-list li {
+            color: #4b5563;
+            margin-bottom: 10px;
+        }
+        .feature-list li:last-child {
+            margin-bottom: 0;
+        }
+        .steps {
+            margin: 30px 0;
+        }
+        .step {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+        .step-number {
+            background: #7c3aed;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+            flex-shrink: 0;
+            margin-right: 15px;
+        }
+        .step-content {
+            flex: 1;
+        }
+        .step-title {
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 4px;
+        }
+        .step-desc {
+            color: #6b7280;
+            font-size: 14px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            color: #9ca3af;
+            font-size: 14px;
+        }
+        .footer a {
+            color: #7c3aed;
+            text-decoration: none;
+        }
+        .social-links {
+            margin-top: 20px;
+        }
+        .social-links a {
+            display: inline-block;
+            margin: 0 10px;
+            color: #6b7280;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="logo">
+                <h1>⚡ LaunchForge</h1>
+            </div>
+            
+            <h2>Welcome to LaunchForge! 🎉</h2>
+            
+            <p>Hey {{ name }},</p>
+            
+            <p>Your email is verified and you're all set to start building. LaunchForge helps you go from startup idea to revenue-ready business in minutes.</p>
+            
+            <div class="feature-list">
+                <strong>What you can do with LaunchForge:</strong>
+                <ul>
+                    <li>🔬 <strong>Validate your idea</strong> with AI-powered market research</li>
+                    <li>🏗️ <strong>Generate full-stack apps</strong> with production-ready code</li>
+                    <li>💰 <strong>Launch with monetization</strong> built in from day one</li>
+                    <li>📋 <strong>Form your LLC</strong> and set up business banking</li>
+                    <li>🚀 <strong>Deploy anywhere</strong> with one-click deployment</li>
+                </ul>
+            </div>
+            
+            <div class="steps">
+                <h3 style="color: #1f2937; margin-bottom: 20px;">Get started in 3 steps:</h3>
+                
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <div class="step-title">Describe your startup idea</div>
+                        <div class="step-desc">Tell us what you want to build in plain English</div>
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <div class="step-title">Review market validation</div>
+                        <div class="step-desc">See competitor analysis and market opportunity</div>
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <div class="step-title">Generate and deploy</div>
+                        <div class="step-desc">Get your full-stack app with payments ready to go</div>
+                    </div>
+                </div>
+            </div>
+            
+            <p style="text-align: center;">
+                <a href="{{ dashboard_url }}" class="button">Go to Dashboard →</a>
+            </p>
+            
+            <p style="color: #6b7280; font-size: 14px;">
+                Need help getting started? Check out our <a href="https://launchforge.dev/docs" style="color: #7c3aed;">documentation</a> or reply to this email.
+            </p>
+        </div>
+        
+        <div class="footer">
+            <p>
+                © {{ year }} LaunchForge. All rights reserved.<br>
+                <a href="https://launchforge.dev/privacy">Privacy Policy</a> · 
+                <a href="https://launchforge.dev/terms">Terms of Service</a>
+            </p>
+            <div class="social-links">
+                <a href="https://twitter.com/launchforge">Twitter</a>
+                <a href="https://github.com/launchforge">GitHub</a>
+                <a href="https://discord.gg/launchforge">Discord</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

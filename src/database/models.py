@@ -486,3 +486,190 @@ class Deployment(Base, TimestampMixin):
             "message": message
         })
         self.logs = current_logs
+
+
+class FeedbackType(enum.Enum):
+    """Types of user feedback."""
+    GENERAL = "general"
+    BUG = "bug"
+    FEATURE = "feature"
+    IMPROVEMENT = "improvement"
+
+
+class Feedback(Base, TimestampMixin):
+    """
+    User feedback model.
+    
+    Stores feedback, bug reports, and feature requests from users.
+    """
+    __tablename__ = "feedback"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=lambda: str(uuid4())
+    )
+    user_id: Mapped[Optional[str]] = mapped_column(
+        String(36),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True
+    )
+    feedback_type: Mapped[FeedbackType] = mapped_column(
+        Enum(FeedbackType),
+        default=FeedbackType.GENERAL,
+        nullable=False
+    )
+    message: Mapped[str] = mapped_column(
+        Text,
+        nullable=False
+    )
+    page_url: Mapped[Optional[str]] = mapped_column(
+        String(500),
+        nullable=True
+    )
+    user_agent: Mapped[Optional[str]] = mapped_column(
+        String(500),
+        nullable=True
+    )
+    email: Mapped[Optional[str]] = mapped_column(
+        String(255),
+        nullable=True
+    )
+    status: Mapped[str] = mapped_column(
+        String(50),
+        default="new",
+        nullable=False
+    )
+
+    # Relationships
+    user: Mapped[Optional["User"]] = relationship("User", backref="feedback")
+
+    # Indexes
+    __table_args__ = (
+        Index("idx_feedback_type", "feedback_type"),
+        Index("idx_feedback_status", "status"),
+        Index("idx_feedback_created", "created_at"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<Feedback(id={self.id}, type={self.feedback_type.value}, status={self.status})>"
+
+
+class ContactSubmission(Base, TimestampMixin):
+    """
+    Contact form submissions.
+    
+    Stores messages from the public contact form.
+    """
+    __tablename__ = "contact_submissions"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=lambda: str(uuid4())
+    )
+    name: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False
+    )
+    email: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False
+    )
+    subject: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False
+    )
+    message: Mapped[str] = mapped_column(
+        Text,
+        nullable=False
+    )
+    status: Mapped[str] = mapped_column(
+        String(50),
+        default="new",
+        nullable=False
+    )
+    responded_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
+    # Indexes
+    __table_args__ = (
+        Index("idx_contact_status", "status"),
+        Index("idx_contact_created", "created_at"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<ContactSubmission(id={self.id}, email={self.email}, subject={self.subject})>"
+
+
+class OnboardingStatus(Base, TimestampMixin):
+    """
+    User onboarding progress tracking.
+    
+    Tracks which onboarding steps a user has completed.
+    """
+    __tablename__ = "onboarding_status"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=lambda: str(uuid4())
+    )
+    user_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False
+    )
+    email_verified: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False
+    )
+    api_keys_added: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False
+    )
+    first_app_generated: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False
+    )
+    first_deploy: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False
+    )
+    completed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+    dismissed: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False
+    )
+
+    # Relationships
+    user: Mapped["User"] = relationship("User", backref="onboarding")
+
+    def __repr__(self) -> str:
+        return f"<OnboardingStatus(user_id={self.user_id}, completed={self.completed_at is not None})>"
+
+    def check_complete(self) -> bool:
+        """Check if all onboarding steps are complete."""
+        return all([
+            self.email_verified,
+            self.api_keys_added,
+            self.first_app_generated,
+            self.first_deploy
+        ])
+
+    def mark_complete_if_done(self) -> None:
+        """Mark as complete if all steps are done."""
+        if self.check_complete() and not self.completed_at:
+            self.completed_at = datetime.now(timezone.utc)
