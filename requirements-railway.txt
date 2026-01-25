@@ -26,6 +26,7 @@ python-multipart>=0.0.6
 
 # Payments
 stripe>=7.0.0
+rich>=13.7.0
 
 # Email
 resend>=0.8.0
