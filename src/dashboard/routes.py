@@ -541,12 +541,12 @@ def create_dashboard_router(templates: Jinja2Templates) -> APIRouter:
     router.add_api_route("/projects", routes.create_project, methods=["POST"])
     router.add_api_route("/settings", routes.update_settings, methods=["POST"])
     
-    return router
+    @router.get("/about", response_class=HTMLResponse)
+    async def about_page(request: Request):
+        """About page"""
+        return templates.TemplateResponse(
+            "pages/about.html",
+            {"request": request}
+        )
 
-@router.get("/about", response_class=HTMLResponse)
-async def about_page(request: Request):
-    """About page"""
-    return templates.TemplateResponse(
-        "pages/about.html",
-        {"request": request}
-    )
+    return router
