@@ -1,3 +1,4 @@
+from starlette.requests import Request
 """FastAPI Dashboard Application with Security."""
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, JSONResponse
