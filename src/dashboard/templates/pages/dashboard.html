@@ -14,7 +14,7 @@
         </div>
         <div class="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
             <a href="/projects/new" 
-               class="inline-flex items-center gap-x-1.5 rounded-md bg-forge-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-forge-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forge-600">
+               class="inline-flex items-center gap-x-1.5 rounded-md btn-futuristic px-4 py-2.5 text-sm font-semibold text-white rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forge-600">
                 <svg class="-ml-0.5 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                     <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
                 </svg>
@@ -25,25 +25,25 @@
     
     <!-- Stats -->
     <dl class="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        <div class="relative overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:px-6">
+        <div class="stat-card glass-card relative overflow-hidden rounded-xl bg-white px-4 py-5 sm:px-6">
             <dt class="truncate text-sm font-medium text-gray-500">Total Projects</dt>
             <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900">{{ projects|length if projects else 0 }}</dd>
             <div class="absolute inset-x-0 bottom-0 h-1 bg-forge-500"></div>
         </div>
         
-        <div class="relative overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:px-6">
+        <div class="stat-card glass-card relative overflow-hidden rounded-xl bg-white px-4 py-5 sm:px-6">
             <dt class="truncate text-sm font-medium text-gray-500">Deployed</dt>
             <dd class="mt-1 text-3xl font-semibold tracking-tight text-green-600">{{ deployed_count|default(0) }}</dd>
             <div class="absolute inset-x-0 bottom-0 h-1 bg-green-500"></div>
         </div>
         
-        <div class="relative overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:px-6">
+        <div class="stat-card glass-card relative overflow-hidden rounded-xl bg-white px-4 py-5 sm:px-6">
             <dt class="truncate text-sm font-medium text-gray-500">In Progress</dt>
             <dd class="mt-1 text-3xl font-semibold tracking-tight text-yellow-600">{{ in_progress_count|default(0) }}</dd>
             <div class="absolute inset-x-0 bottom-0 h-1 bg-yellow-500"></div>
         </div>
         
-        <div class="relative overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:px-6">
+        <div class="stat-card glass-card relative overflow-hidden rounded-xl bg-white px-4 py-5 sm:px-6">
             <dt class="truncate text-sm font-medium text-gray-500">Subscription</dt>
             <dd class="mt-1 text-3xl font-semibold tracking-tight text-forge-600">{{ subscription.tier if subscription else 'FREE' }}</dd>
             <div class="absolute inset-x-0 bottom-0 h-1 bg-forge-500"></div>
@@ -84,7 +84,7 @@
         <h2 class="text-lg font-semibold leading-6 text-gray-900">Quick Actions</h2>
         <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <a href="/projects/new" 
-               class="relative flex items-center space-x-3 rounded-lg border border-gray-300 bg-white px-6 py-5 shadow-sm hover:border-forge-400 hover:ring-1 hover:ring-forge-400">
+               class="action-card relative flex items-center space-x-3 rounded-xl bg-white px-6 py-5 hover:ring-1 hover:ring-forge-400">
                 <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-forge-600">
                     <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -99,7 +99,7 @@
             
             <a href="https://docs.launchforge.dev" 
                target="_blank"
-               class="relative flex items-center space-x-3 rounded-lg border border-gray-300 bg-white px-6 py-5 shadow-sm hover:border-forge-400 hover:ring-1 hover:ring-forge-400">
+               class="action-card relative flex items-center space-x-3 rounded-xl bg-white px-6 py-5 hover:ring-1 hover:ring-forge-400">
                 <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-600">
                     <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
@@ -113,7 +113,7 @@
             </a>
             
             <a href="/billing" 
-               class="relative flex items-center space-x-3 rounded-lg border border-gray-300 bg-white px-6 py-5 shadow-sm hover:border-forge-400 hover:ring-1 hover:ring-forge-400">
+               class="action-card relative flex items-center space-x-3 rounded-xl bg-white px-6 py-5 hover:ring-1 hover:ring-forge-400">
                 <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-green-600">
                     <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z" />
