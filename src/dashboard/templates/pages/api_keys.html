@@ -1,111 +1,172 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
+
 {% block title %}API Keys - NexusAI{% endblock %}
+
 {% block content %}
-<div class="fade-in max-w-4xl mx-auto">
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
-        <div>
-            <h1 class="text-3xl font-bold bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">API Keys</h1>
-            <p class="mt-2 text-gray-400">Manage your API keys for programmatic access</p>
+<div class="flex-1 overflow-y-auto">
+    <div class="container mx-auto p-8 max-w-5xl">
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold mb-2">API Keys</h1>
+            <p class="text-gray-400">Manage your API keys for programmatic access to NexusAI</p>
         </div>
-        <button onclick="document.getElementById('create-key-modal').classList.remove('hidden')" class="px-5 py-2.5 bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500 text-white rounded-xl font-medium transition-all duration-200 flex items-center gap-2 shadow-lg shadow-cyan-500/20">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            Generate New Key
-        </button>
-    </div>
 
-    <!-- API Keys List -->
-    <div class="bg-gray-800/50 backdrop-blur-sm rounded-2xl border border-gray-700/50 overflow-hidden mb-8">
-        <div class="p-6 border-b border-gray-700/50">
-            <h2 class="text-lg font-semibold text-white">Your API Keys</h2>
-            <p class="text-sm text-gray-500 mt-1">Use these keys to authenticate API requests</p>
-        </div>
-        <div class="divide-y divide-gray-700/50">
-            <!-- Key 1 -->
-            <div class="p-6 hover:bg-gray-800/30 transition-colors">
-                <div class="flex items-start justify-between">
-                    <div class="flex-1">
-                        <div class="flex items-center gap-3 mb-2">
-                            <span class="text-white font-medium">Production Key</span>
-                            <span class="px-2 py-0.5 text-xs font-medium text-emerald-400 bg-emerald-500/10 rounded-full border border-emerald-500/30">Active</span>
-                        </div>
-                        <div class="flex items-center gap-2 mb-2">
-                            <code class="px-3 py-1.5 bg-gray-900/50 rounded-lg text-sm text-gray-400 font-mono">nx_live_••••••••••••••••</code>
-                            <button class="p-1.5 hover:bg-gray-700 rounded-lg transition-colors" title="Copy">
-                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-                            </button>
-                        </div>
-                        <p class="text-xs text-gray-500">Created Jan 15, 2026 • Last used 2 hours ago</p>
-                    </div>
-                    <button class="p-2 hover:bg-red-500/10 rounded-lg transition-colors group" title="Revoke">
-                        <svg class="w-5 h-5 text-gray-500 group-hover:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                    </button>
-                </div>
-            </div>
-            <!-- Key 2 -->
-            <div class="p-6 hover:bg-gray-800/30 transition-colors">
-                <div class="flex items-start justify-between">
-                    <div class="flex-1">
-                        <div class="flex items-center gap-3 mb-2">
-                            <span class="text-white font-medium">Test Key</span>
-                            <span class="px-2 py-0.5 text-xs font-medium text-yellow-400 bg-yellow-500/10 rounded-full border border-yellow-500/30">Test Mode</span>
-                        </div>
-                        <div class="flex items-center gap-2 mb-2">
-                            <code class="px-3 py-1.5 bg-gray-900/50 rounded-lg text-sm text-gray-400 font-mono">nx_test_••••••••••••••••</code>
-                            <button class="p-1.5 hover:bg-gray-700 rounded-lg transition-colors" title="Copy">
-                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-                            </button>
-                        </div>
-                        <p class="text-xs text-gray-500">Created Jan 10, 2026 • Last used 5 days ago</p>
-                    </div>
-                    <button class="p-2 hover:bg-red-500/10 rounded-lg transition-colors group" title="Revoke">
-                        <svg class="w-5 h-5 text-gray-500 group-hover:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                    </button>
-                </div>
+        <!-- Info Banner -->
+        <div class="bg-cyan-500/10 border border-cyan-500/30 rounded-xl p-4 mb-6 flex items-start">
+            <svg class="w-6 h-6 text-cyan-500 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <div>
+                <h3 class="font-semibold text-white mb-1">Keep your API keys secure</h3>
+                <p class="text-sm text-gray-400">Never share your API keys publicly. Store them securely and rotate them regularly.</p>
             </div>
         </div>
-    </div>
 
-    <!-- Quick Start Guide -->
-    <div class="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-700/50">
-        <h2 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
-            Quick Start
-        </h2>
-        <p class="text-gray-400 text-sm mb-4">Use your API key to authenticate requests. Include it in the Authorization header:</p>
-        <div class="bg-gray-900/70 rounded-xl p-4 overflow-x-auto">
-            <pre class="text-sm"><code class="text-gray-300"><span class="text-cyan-400">curl</span> -X POST https://api.nexusai.dev/v1/generate <span class="text-gray-500">\</span>
-  -H <span class="text-emerald-400">"Authorization: Bearer nx_live_your_key"</span> <span class="text-gray-500">\</span>
-  -H <span class="text-emerald-400">"Content-Type: application/json"</span> <span class="text-gray-500">\</span>
-  -d <span class="text-yellow-400">'{"prompt": "Create a todo app"}'</span></code></pre>
+        <!-- Create New Key Button -->
+        <div class="mb-6 flex justify-end">
+            <button class="px-6 py-3 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-lg font-semibold text-white hover:shadow-lg hover:shadow-cyan-500/30 hover:scale-105 transition-all flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Create New API Key
+            </button>
         </div>
-        <div class="mt-4 flex gap-4">
-            <a href="#" class="text-sm text-cyan-400 hover:text-cyan-300 transition-colors">View Full Documentation →</a>
-            <a href="#" class="text-sm text-cyan-400 hover:text-cyan-300 transition-colors">API Reference →</a>
-        </div>
-    </div>
-</div>
 
-<!-- Create Key Modal -->
-<div id="create-key-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-    <div class="bg-gray-800 rounded-2xl p-6 w-full max-w-md mx-4 border border-gray-700">
-        <h3 class="text-xl font-bold text-white mb-4">Generate New API Key</h3>
+        <!-- API Keys List -->
         <div class="space-y-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-400 mb-2">Key Name</label>
-                <input type="text" placeholder="e.g., Production, Staging" class="w-full px-4 py-3 bg-gray-900/50 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:border-cyan-500 transition-colors">
+            <!-- Example API Key 1 -->
+            <div class="bg-forge-800 rounded-xl border border-cyan-500/30 p-6 hover:border-cyan-500 transition-all">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-cyan-500/20 rounded-lg flex items-center justify-center mr-4">
+                            <svg class="w-6 h-6 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-white">Production API Key</h3>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm px-3 py-1 bg-green-500/20 text-green-400 rounded-full border border-green-500/30">Active</span>
+                                <span class="text-sm text-gray-400">Created: Jan 15, 2025</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button class="p-2 hover:bg-gray-700 rounded-lg transition-all" title="Regenerate">
+                            <svg class="w-5 h-5 text-gray-400 hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
+                        </button>
+                        <button class="p-2 hover:bg-red-500/20 rounded-lg transition-all" title="Delete">
+                            <svg class="w-5 h-5 text-gray-400 hover:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="bg-forge-900 rounded-lg p-4 font-mono text-sm">
+                    <div class="flex items-center justify-between">
+                        <code class="text-gray-400">nxs_prod_Ak29fJ3nRt7qL4mZ8vXp1cYs</code>
+                        <button class="ml-4 px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-all" onclick="copyToClipboard('nxs_prod_Ak29fJ3nRt7qL4mZ8vXp1cYs')">
+                            Copy
+                        </button>
+                    </div>
+                </div>
+                <div class="mt-4 grid grid-cols-3 gap-4 text-sm">
+                    <div>
+                        <div class="text-gray-400">Last Used</div>
+                        <div class="text-white font-semibold">2 hours ago</div>
+                    </div>
+                    <div>
+                        <div class="text-gray-400">API Calls (30d)</div>
+                        <div class="text-white font-semibold">1,247</div>
+                    </div>
+                    <div>
+                        <div class="text-gray-400">Expires</div>
+                        <div class="text-white font-semibold">Never</div>
+                    </div>
+                </div>
             </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-400 mb-2">Environment</label>
-                <select class="w-full px-4 py-3 bg-gray-900/50 border border-gray-600 rounded-xl text-white focus:border-cyan-500 transition-colors">
-                    <option>Production (Live)</option>
-                    <option>Test (Sandbox)</option>
-                </select>
+
+            <!-- Example API Key 2 -->
+            <div class="bg-forge-800 rounded-xl border border-purple-500/30 p-6 hover:border-purple-500 transition-all">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center mr-4">
+                            <svg class="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-white">Development API Key</h3>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm px-3 py-1 bg-green-500/20 text-green-400 rounded-full border border-green-500/30">Active</span>
+                                <span class="text-sm text-gray-400">Created: Jan 10, 2025</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button class="p-2 hover:bg-gray-700 rounded-lg transition-all" title="Regenerate">
+                            <svg class="w-5 h-5 text-gray-400 hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
+                        </button>
+                        <button class="p-2 hover:bg-red-500/20 rounded-lg transition-all" title="Delete">
+                            <svg class="w-5 h-5 text-gray-400 hover:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="bg-forge-900 rounded-lg p-4 font-mono text-sm">
+                    <div class="flex items-center justify-between">
+                        <code class="text-gray-400">nxs_dev_Bx38kT5pSu9wN6oY2dWr4eZa</code>
+                        <button class="ml-4 px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-all" onclick="copyToClipboard('nxs_dev_Bx38kT5pSu9wN6oY2dWr4eZa')">
+                            Copy
+                        </button>
+                    </div>
+                </div>
+                <div class="mt-4 grid grid-cols-3 gap-4 text-sm">
+                    <div>
+                        <div class="text-gray-400">Last Used</div>
+                        <div class="text-white font-semibold">5 days ago</div>
+                    </div>
+                    <div>
+                        <div class="text-gray-400">API Calls (30d)</div>
+                        <div class="text-white font-semibold">43</div>
+                    </div>
+                    <div>
+                        <div class="text-gray-400">Expires</div>
+                        <div class="text-white font-semibold">In 90 days</div>
+                    </div>
+                </div>
             </div>
         </div>
-        <div class="flex gap-3 mt-6">
-            <button onclick="document.getElementById('create-key-modal').classList.add('hidden')" class="flex-1 px-4 py-2.5 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-medium transition-colors">Cancel</button>
-            <button class="flex-1 px-4 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl font-medium transition-colors">Generate Key</button>
+
+        <!-- Documentation Section -->
+        <div class="mt-8 bg-forge-800 rounded-xl border border-gray-700 p-6">
+            <h2 class="text-xl font-bold mb-4">API Documentation</h2>
+            <div class="space-y-4">
+                <div>
+                    <h3 class="font-semibold text-white mb-2">Authentication</h3>
+                    <div class="bg-forge-900 rounded-lg p-4 font-mono text-sm">
+                        <code class="text-gray-400">curl -H "Authorization: Bearer YOUR_API_KEY" https://api.nexusai.com/v1/projects</code>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <a href="/docs" class="px-4 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg transition-all">View Full Docs</a>
+                    <a href="/examples" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-all">Code Examples</a>
+                </div>
+            </div>
         </div>
     </div>
 </div>
+
+<script>
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        alert('API key copied to clipboard!');
+    });
+}
+</script>
 {% endblock %}

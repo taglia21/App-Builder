@@ -1,144 +1,162 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
+
 {% block title %}Settings - NexusAI{% endblock %}
+
 {% block content %}
-<div class="fade-in max-w-4xl mx-auto">
-    <div class="mb-8">
-        <h1 class="text-3xl font-bold bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">Settings</h1>
-        <p class="mt-2 text-gray-400">Manage your account preferences and application settings</p>
-    </div>
+<div class="flex-1 overflow-y-auto">
+    <div class="container mx-auto p-8 max-w-4xl">
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold mb-2">Settings</h1>
+            <p class="text-gray-400">Manage your account preferences and application settings</p>
+        </div>
 
-    <!-- Profile Section -->
-    <div class="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-700/50 mb-6">
-        <h2 class="text-xl font-semibold text-white mb-6 flex items-center gap-3">
-            <svg class="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-            Profile Information
-        </h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-                <label class="block text-sm font-medium text-gray-400 mb-2">Display Name</label>
-                <input type="text" value="User" class="w-full px-4 py-3 bg-gray-900/50 border border-gray-600 rounded-xl text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors">
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-400 mb-2">Email Address</label>
-                <input type="email" value="user@example.com" class="w-full px-4 py-3 bg-gray-900/50 border border-gray-600 rounded-xl text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors">
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-400 mb-2">Company/Organization</label>
-                <input type="text" placeholder="Optional" class="w-full px-4 py-3 bg-gray-900/50 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors">
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-400 mb-2">Timezone</label>
-                <select class="w-full px-4 py-3 bg-gray-900/50 border border-gray-600 rounded-xl text-white focus:border-cyan-500 transition-colors">
-                    <option>UTC-05:00 Eastern Time</option>
-                    <option>UTC-08:00 Pacific Time</option>
-                    <option>UTC+00:00 GMT</option>
-                    <option>UTC+01:00 Central European</option>
-                </select>
+        <!-- Account Settings -->
+        <div class="bg-forge-800 rounded-xl border border-cyan-500/30 p-6 mb-6">
+            <h2 class="text-xl font-bold mb-4 flex items-center">
+                <svg class="w-6 h-6 mr-2 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                </svg>
+                Account Settings
+            </h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-2">Username</label>
+                    <input type="text" value="developer@nexusai.com" class="w-full px-4 py-2 bg-forge-900 border border-gray-700 rounded-lg text-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-2">Email</label>
+                    <input type="email" value="developer@nexusai.com" class="w-full px-4 py-2 bg-forge-900 border border-gray-700 rounded-lg text-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-2">Display Name</label>
+                    <input type="text" value="NexusAI Developer" class="w-full px-4 py-2 bg-forge-900 border border-gray-700 rounded-lg text-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all">
+                </div>
             </div>
         </div>
-        <div class="mt-6">
-            <button class="px-6 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-medium transition-colors">Save Profile</button>
-        </div>
-    </div>
 
-    <!-- Notifications Section -->
-    <div class="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-700/50 mb-6">
-        <h2 class="text-xl font-semibold text-white mb-6 flex items-center gap-3">
-            <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
-            Notification Preferences
-        </h2>
-        <div class="space-y-4">
-            <label class="flex items-center justify-between p-4 bg-gray-900/30 rounded-xl cursor-pointer hover:bg-gray-900/50 transition-colors">
-                <div>
-                    <div class="text-white font-medium">Email Notifications</div>
-                    <div class="text-sm text-gray-500">Receive updates about your projects via email</div>
+        <!-- Notification Preferences -->
+        <div class="bg-forge-800 rounded-xl border border-purple-500/30 p-6 mb-6">
+            <h2 class="text-xl font-bold mb-4 flex items-center">
+                <svg class="w-6 h-6 mr-2 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                </svg>
+                Notifications
+            </h2>
+            <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="font-medium text-white">Email Notifications</div>
+                        <div class="text-sm text-gray-400">Receive project updates via email</div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" class="sr-only peer" checked onchange="toggleSetting(this)">
+                        <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-cyan-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-500"></div>
+                    </label>
                 </div>
-                <div class="relative">
-                    <input type="checkbox" id="email-notif" class="sr-only peer" checked>
-                    <div class="w-14 h-7 bg-gray-600 peer-checked:bg-cyan-600 rounded-full transition-colors"></div>
-                    <div class="absolute left-1 top-1 w-5 h-5 bg-white rounded-full transition-transform peer-checked:translate-x-7"></div>
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="font-medium text-white">Push Notifications</div>
+                        <div class="text-sm text-gray-400">Get notified when projects complete</div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" class="sr-only peer" checked onchange="toggleSetting(this)">
+                        <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500"></div>
+                    </label>
                 </div>
-            </label>
-            <label class="flex items-center justify-between p-4 bg-gray-900/30 rounded-xl cursor-pointer hover:bg-gray-900/50 transition-colors">
-                <div>
-                    <div class="text-white font-medium">Build Notifications</div>
-                    <div class="text-sm text-gray-500">Get notified when builds complete or fail</div>
-                </div>
-                <div class="relative">
-                    <input type="checkbox" id="build-notif" class="sr-only peer" checked>
-                    <div class="w-14 h-7 bg-gray-600 peer-checked:bg-cyan-600 rounded-full transition-colors"></div>
-                    <div class="absolute left-1 top-1 w-5 h-5 bg-white rounded-full transition-transform peer-checked:translate-x-7"></div>
-                </div>
-            </label>
-            <label class="flex items-center justify-between p-4 bg-gray-900/30 rounded-xl cursor-pointer hover:bg-gray-900/50 transition-colors">
-                <div>
-                    <div class="text-white font-medium">Marketing Updates</div>
-                    <div class="text-sm text-gray-500">News about features and product updates</div>
-                </div>
-                <div class="relative">
-                    <input type="checkbox" id="marketing-notif" class="sr-only peer">
-                    <div class="w-14 h-7 bg-gray-600 peer-checked:bg-cyan-600 rounded-full transition-colors"></div>
-                    <div class="absolute left-1 top-1 w-5 h-5 bg-white rounded-full transition-transform peer-checked:translate-x-7"></div>
-                </div>
-            </label>
-            <label class="flex items-center justify-between p-4 bg-gray-900/30 rounded-xl cursor-pointer hover:bg-gray-900/50 transition-colors">
-                <div>
-                    <div class="text-white font-medium">Security Alerts</div>
-                    <div class="text-sm text-gray-500">Important security notifications (recommended)</div>
-                </div>
-                <div class="relative">
-                    <input type="checkbox" id="security-notif" class="sr-only peer" checked>
-                    <div class="w-14 h-7 bg-gray-600 peer-checked:bg-cyan-600 rounded-full transition-colors"></div>
-                    <div class="absolute left-1 top-1 w-5 h-5 bg-white rounded-full transition-transform peer-checked:translate-x-7"></div>
-                </div>
-            </label>
-        </div>
-    </div>
-
-    <!-- Appearance Section -->
-    <div class="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-700/50 mb-6">
-        <h2 class="text-xl font-semibold text-white mb-6 flex items-center gap-3">
-            <svg class="w-6 h-6 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
-            Appearance
-        </h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-                <label class="block text-sm font-medium text-gray-400 mb-3">Theme</label>
-                <div class="grid grid-cols-3 gap-3">
-                    <button class="p-3 bg-gray-900 border-2 border-cyan-500 rounded-xl text-center">
-                        <div class="text-white text-sm font-medium">Dark</div>
-                    </button>
-                    <button class="p-3 bg-gray-800 border border-gray-600 rounded-xl text-center hover:border-gray-500 transition-colors">
-                        <div class="text-gray-400 text-sm font-medium">Light</div>
-                    </button>
-                    <button class="p-3 bg-gray-800 border border-gray-600 rounded-xl text-center hover:border-gray-500 transition-colors">
-                        <div class="text-gray-400 text-sm font-medium">System</div>
-                    </button>
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="font-medium text-white">Weekly Reports</div>
+                        <div class="text-sm text-gray-400">Receive weekly activity summaries</div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" class="sr-only peer" onchange="toggleSetting(this)">
+                        <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-pink-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-500"></div>
+                    </label>
                 </div>
             </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-400 mb-3">Code Editor Font</label>
-                <select class="w-full px-4 py-3 bg-gray-900/50 border border-gray-600 rounded-xl text-white focus:border-cyan-500 transition-colors">
-                    <option>JetBrains Mono</option>
-                    <option>Fira Code</option>
-                    <option>Source Code Pro</option>
-                    <option>Monaco</option>
-                </select>
+        </div>
+
+        <!-- Privacy & Security -->
+        <div class="bg-forge-800 rounded-xl border border-pink-500/30 p-6 mb-6">
+            <h2 class="text-xl font-bold mb-4 flex items-center">
+                <svg class="w-6 h-6 mr-2 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                </svg>
+                Privacy & Security
+            </h2>
+            <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="font-medium text-white">Two-Factor Authentication</div>
+                        <div class="text-sm text-gray-400">Add an extra layer of security</div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" class="sr-only peer" onchange="toggleSetting(this)">
+                        <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-pink-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-500"></div>
+                    </label>
+                </div>
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="font-medium text-white">Public Profile</div>
+                        <div class="text-sm text-gray-400">Make your projects discoverable</div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" class="sr-only peer" onchange="toggleSetting(this)">
+                        <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-cyan-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-500"></div>
+                    </label>
+                </div>
+                <button class="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/50 rounded-lg transition-all">
+                    Change Password
+                </button>
             </div>
         </div>
-    </div>
 
-    <!-- Danger Zone -->
-    <div class="bg-red-900/20 backdrop-blur-sm rounded-2xl p-6 border border-red-500/30">
-        <h2 class="text-xl font-semibold text-red-400 mb-4 flex items-center gap-3">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-            Danger Zone
-        </h2>
-        <p class="text-gray-400 mb-4">These actions are irreversible. Please be careful.</p>
-        <div class="flex flex-wrap gap-4">
-            <button class="px-4 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 rounded-lg font-medium transition-colors">Delete All Projects</button>
-            <button class="px-4 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 rounded-lg font-medium transition-colors">Delete Account</button>
+        <!-- Appearance -->
+        <div class="bg-forge-800 rounded-xl border border-orange-500/30 p-6 mb-6">
+            <h2 class="text-xl font-bold mb-4 flex items-center">
+                <svg class="w-6 h-6 mr-2 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+                </svg>
+                Appearance
+            </h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-2">Theme</label>
+                    <select class="w-full px-4 py-2 bg-forge-900 border border-gray-700 rounded-lg text-white focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all">
+                        <option>Dark (Current)</option>
+                        <option>Light</option>
+                        <option>Auto</option>
+                    </select>
+                </div>
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="font-medium text-white">Compact Mode</div>
+                        <div class="text-sm text-gray-400">Reduce spacing for more content</div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" class="sr-only peer" onchange="toggleSetting(this)">
+                        <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Save Button -->
+        <div class="flex justify-end gap-4">
+            <button class="px-6 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold text-white transition-all">
+                Cancel
+            </button>
+            <button class="px-6 py-3 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-lg font-semibold text-white hover:shadow-lg hover:shadow-cyan-500/30 hover:scale-105 transition-all">
+                Save Changes
+            </button>
         </div>
     </div>
 </div>
+
+<script>
+function toggleSetting(checkbox) {
+    console.log('Toggle:', checkbox.checked);
+    // Add your toggle logic here
+}
+</script>
 {% endblock %}

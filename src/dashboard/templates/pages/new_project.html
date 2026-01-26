@@ -1,122 +1,153 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
+
 {% block title %}Create New Project - NexusAI{% endblock %}
+
 {% block content %}
-<div class="fade-in max-w-4xl mx-auto">
-    <!-- Header -->
-    <div class="text-center mb-10">
-        <h1 class="text-4xl font-bold bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 bg-clip-text text-transparent mb-3">Create Your App</h1>
-        <p class="text-gray-400 text-lg">Describe your idea and let AI build it for you</p>
-    </div>
+<div class="flex-1 overflow-y-auto">
+    <div class="container mx-auto p-8 max-w-4xl">
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold mb-2 bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">Create New Project</h1>
+            <p class="text-gray-400">Build your next AI-powered application with NexusAI</p>
+        </div>
 
-    <!-- Progress Steps -->
-    <div class="flex items-center justify-center mb-12">
-        <div class="flex items-center">
-            <div class="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-r from-cyan-500 to-purple-500 text-white font-bold">1</div>
-            <span class="ml-3 text-white font-medium">Describe</span>
+        <!-- Progress Steps -->
+        <div class="mb-8">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 rounded-full bg-cyan-500 flex items-center justify-center text-white font-bold">1</div>
+                    <span class="ml-3 font-semibold text-white">Project Details</span>
+                </div>
+                <div class="flex-1 h-1 mx-4 bg-gray-700 rounded">
+                    <div class="w-0 h-1 bg-cyan-500 rounded transition-all duration-500" id="progress-bar"></div>
+                </div>
+                <div class="flex items-center">
+                    <div class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-gray-400 font-bold">2</div>
+                    <span class="ml-3 text-gray-400">Configuration</span>
+                </div>
+                <div class="flex-1 h-1 mx-4 bg-gray-700 rounded"></div>
+                <div class="flex items-center">
+                    <div class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-gray-400 font-bold">3</div>
+                    <span class="ml-3 text-gray-400">Generate</span>
+                </div>
+            </div>
         </div>
-        <div class="w-20 h-1 mx-4 bg-gray-700 rounded"></div>
-        <div class="flex items-center">
-            <div class="flex items-center justify-center w-10 h-10 rounded-full bg-gray-700 text-gray-400 font-bold">2</div>
-            <span class="ml-3 text-gray-400">Generate</span>
-        </div>
-        <div class="w-20 h-1 mx-4 bg-gray-700 rounded"></div>
-        <div class="flex items-center">
-            <div class="flex items-center justify-center w-10 h-10 rounded-full bg-gray-700 text-gray-400 font-bold">3</div>
-            <span class="ml-3 text-gray-400">Deploy</span>
-        </div>
-    </div>
 
-    <!-- Main Form Card -->
-    <div class="bg-gradient-to-br from-gray-800/80 to-gray-900/80 backdrop-blur-sm rounded-3xl p-8 border border-gray-700/50 shadow-2xl">
-        <form action="/projects" method="POST" class="space-y-8">
+        <!-- Form Card -->
+        <form action="/projects" method="POST" class="bg-forge-800 rounded-xl border border-cyan-500/30 p-8 shadow-lg">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
             <!-- Project Name -->
-            <div>
-                <label for="project_name" class="block text-sm font-semibold text-white mb-2">
-                    <span class="flex items-center gap-2">
-                        <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
-                        Project Name
-                    </span>
+            <div class="mb-6">
+                <label class="block text-white font-semibold mb-2">
+                    <svg class="inline-block w-5 h-5 mr-2 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                    </svg>
+                    Project Name <span class="text-red-500">*</span>
                 </label>
-                <input type="text" id="project_name" name="project_name" required
-                       class="w-full px-5 py-4 bg-gray-900/50 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all text-lg"
-                       placeholder="My Awesome App">
+                <input type="text" name="project_name" required placeholder="My Awesome App"
+                       class="w-full px-4 py-3 bg-forge-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all">
+                <p class="mt-2 text-sm text-gray-500">Choose a unique name for your project</p>
             </div>
 
-            <!-- App Description -->
-            <div>
-                <label for="description" class="block text-sm font-semibold text-white mb-2">
-                    <span class="flex items-center gap-2">
-                        <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
-                        Describe Your App
-                    </span>
+            <!-- Project Type -->
+            <div class="mb-6">
+                <label class="block text-white font-semibold mb-3">
+                    <svg class="inline-block w-5 h-5 mr-2 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/>
+                    </svg>
+                    Project Type <span class="text-red-500">*</span>
                 </label>
-                <textarea id="description" name="description" rows="6" required
-                          class="w-full px-5 py-4 bg-gray-900/50 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all resize-none"
-                          placeholder="Describe what you want to build. Be specific about features, target users, and any technical requirements..."></textarea>
-                <p class="mt-2 text-sm text-gray-500">Tip: The more detail you provide, the better the AI can understand your vision.</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <label class="cursor-pointer">
+                        <input type="radio" name="project_type" value="web" class="hidden peer" checked>
+                        <div class="p-4 bg-forge-900 border-2 border-gray-700 rounded-lg text-center peer-checked:border-cyan-500 peer-checked:bg-cyan-500/10 transition-all hover:border-cyan-500/50">
+                            <div class="text-3xl mb-2">🌐</div>
+                            <div class="font-semibold text-white">Web App</div>
+                            <div class="text-sm text-gray-400">Full-stack website</div>
+                        </div>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="project_type" value="api" class="hidden peer">
+                        <div class="p-4 bg-forge-900 border-2 border-gray-700 rounded-lg text-center peer-checked:border-purple-500 peer-checked:bg-purple-500/10 transition-all hover:border-purple-500/50">
+                            <div class="text-3xl mb-2">⚡</div>
+                            <div class="font-semibold text-white">API Service</div>
+                            <div class="text-sm text-gray-400">Backend microservice</div>
+                        </div>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="project_type" value="mobile" class="hidden peer">
+                        <div class="p-4 bg-forge-900 border-2 border-gray-700 rounded-lg text-center peer-checked:border-pink-500 peer-checked:bg-pink-500/10 transition-all hover:border-pink-500/50">
+                            <div class="text-3xl mb-2">📱</div>
+                            <div class="font-semibold text-white">Mobile App</div>
+                            <div class="text-sm text-gray-400">iOS/Android app</div>
+                        </div>
+                    </label>
+                </div>
             </div>
 
-            <!-- Tech Stack Selection -->
-            <div>
-                <label class="block text-sm font-semibold text-white mb-3">
-                    <span class="flex items-center gap-2">
-                        <svg class="w-5 h-5 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
-                        Preferred Tech Stack (Optional)
-                    </span>
+            <!-- Description -->
+            <div class="mb-6">
+                <label class="block text-white font-semibold mb-2">
+                    <svg class="inline-block w-5 h-5 mr-2 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"/>
+                    </svg>
+                    Project Description <span class="text-red-500">*</span>
                 </label>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <label class="flex items-center gap-3 p-3 bg-gray-900/50 rounded-xl border border-gray-700 cursor-pointer hover:border-cyan-500/50 transition-colors">
-                        <input type="checkbox" name="stack" value="react" class="w-4 h-4 rounded border-gray-600 text-cyan-500 focus:ring-cyan-500">
-                        <span class="text-gray-300">React</span>
+                <textarea name="description" required rows="4" placeholder="Describe what your application should do..."
+                          class="w-full px-4 py-3 bg-forge-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all resize-none"></textarea>
+                <p class="mt-2 text-sm text-gray-500">Be specific about features, user flows, and functionality</p>
+            </div>
+
+            <!-- Tech Stack -->
+            <div class="mb-8">
+                <label class="block text-white font-semibold mb-3">
+                    <svg class="inline-block w-5 h-5 mr-2 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+                    </svg>
+                    Preferred Tech Stack
+                </label>
+                <div class="flex flex-wrap gap-3">
+                    <label class="cursor-pointer">
+                        <input type="checkbox" name="tech_stack" value="react" class="hidden peer">
+                        <span class="px-4 py-2 bg-forge-900 border border-gray-700 rounded-full text-sm peer-checked:border-cyan-500 peer-checked:bg-cyan-500/10 peer-checked:text-cyan-400 transition-all hover:border-cyan-500/50">React</span>
                     </label>
-                    <label class="flex items-center gap-3 p-3 bg-gray-900/50 rounded-xl border border-gray-700 cursor-pointer hover:border-cyan-500/50 transition-colors">
-                        <input type="checkbox" name="stack" value="python" class="w-4 h-4 rounded border-gray-600 text-cyan-500 focus:ring-cyan-500">
-                        <span class="text-gray-300">Python</span>
+                    <label class="cursor-pointer">
+                        <input type="checkbox" name="tech_stack" value="python" class="hidden peer">
+                        <span class="px-4 py-2 bg-forge-900 border border-gray-700 rounded-full text-sm peer-checked:border-cyan-500 peer-checked:bg-cyan-500/10 peer-checked:text-cyan-400 transition-all hover:border-cyan-500/50">Python</span>
                     </label>
-                    <label class="flex items-center gap-3 p-3 bg-gray-900/50 rounded-xl border border-gray-700 cursor-pointer hover:border-cyan-500/50 transition-colors">
-                        <input type="checkbox" name="stack" value="node" class="w-4 h-4 rounded border-gray-600 text-cyan-500 focus:ring-cyan-500">
-                        <span class="text-gray-300">Node.js</span>
+                    <label class="cursor-pointer">
+                        <input type="checkbox" name="tech_stack" value="nodejs" class="hidden peer">
+                        <span class="px-4 py-2 bg-forge-900 border border-gray-700 rounded-full text-sm peer-checked:border-cyan-500 peer-checked:bg-cyan-500/10 peer-checked:text-cyan-400 transition-all hover:border-cyan-500/50">Node.js</span>
                     </label>
-                    <label class="flex items-center gap-3 p-3 bg-gray-900/50 rounded-xl border border-gray-700 cursor-pointer hover:border-cyan-500/50 transition-colors">
-                        <input type="checkbox" name="stack" value="postgres" class="w-4 h-4 rounded border-gray-600 text-cyan-500 focus:ring-cyan-500">
-                        <span class="text-gray-300">PostgreSQL</span>
+                    <label class="cursor-pointer">
+                        <input type="checkbox" name="tech_stack" value="postgresql" class="hidden peer">
+                        <span class="px-4 py-2 bg-forge-900 border border-gray-700 rounded-full text-sm peer-checked:border-purple-500 peer-checked:bg-purple-500/10 peer-checked:text-purple-400 transition-all hover:border-purple-500/50">PostgreSQL</span>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="checkbox" name="tech_stack" value="mongodb" class="hidden peer">
+                        <span class="px-4 py-2 bg-forge-900 border border-gray-700 rounded-full text-sm peer-checked:border-purple-500 peer-checked:bg-purple-500/10 peer-checked:text-purple-400 transition-all hover:border-purple-500/50">MongoDB</span>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="checkbox" name="tech_stack" value="tailwind" class="hidden peer">
+                        <span class="px-4 py-2 bg-forge-900 border border-gray-700 rounded-full text-sm peer-checked:border-pink-500 peer-checked:bg-pink-500/10 peer-checked:text-pink-400 transition-all hover:border-pink-500/50">Tailwind CSS</span>
                     </label>
                 </div>
             </div>
 
             <!-- Submit Button -->
-            <div class="pt-4">
-                <button type="submit" class="w-full py-4 px-6 bg-gradient-to-r from-cyan-600 via-purple-600 to-pink-600 hover:from-cyan-500 hover:via-purple-500 hover:to-pink-500 text-white rounded-xl font-bold text-lg transition-all duration-300 shadow-lg shadow-purple-500/25 flex items-center justify-center gap-3">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                    Generate My App
+            <div class="flex items-center justify-between pt-6 border-t border-gray-700">
+                <a href="/dashboard" class="px-6 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold text-white transition-all">
+                    Cancel
+                </a>
+                <button type="submit" class="px-8 py-3 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-lg font-semibold text-white hover:shadow-lg hover:shadow-cyan-500/30 hover:scale-105 transition-all">
+                    <svg class="inline-block w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                    Generate Project
                 </button>
             </div>
         </form>
-    </div>
-
-    <!-- Features Info -->
-    <div class="mt-10 grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div class="text-center p-5">
-            <div class="w-12 h-12 mx-auto mb-3 rounded-xl bg-cyan-500/10 flex items-center justify-center">
-                <svg class="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-            </div>
-            <h3 class="text-white font-semibold mb-1">Lightning Fast</h3>
-            <p class="text-gray-500 text-sm">Get a working app in minutes, not weeks</p>
-        </div>
-        <div class="text-center p-5">
-            <div class="w-12 h-12 mx-auto mb-3 rounded-xl bg-purple-500/10 flex items-center justify-center">
-                <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
-            </div>
-            <h3 class="text-white font-semibold mb-1">Production Ready</h3>
-            <p class="text-gray-500 text-sm">Clean, maintainable code you can customize</p>
-        </div>
-        <div class="text-center p-5">
-            <div class="w-12 h-12 mx-auto mb-3 rounded-xl bg-pink-500/10 flex items-center justify-center">
-                <svg class="w-6 h-6 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
-            </div>
-            <h3 class="text-white font-semibold mb-1">One-Click Deploy</h3>
-            <p class="text-gray-500 text-sm">Deploy instantly to cloud infrastructure</p>
-        </div>
     </div>
 </div>
 {% endblock %}
