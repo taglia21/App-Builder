@@ -247,7 +247,14 @@ class DashboardRoutes:
     
     # ==================== Form Handlers ====================
     
-    async def create_project(
+    
+@router.get("/projects", response_class=HTMLResponse)
+async def projects_page(request: Request):
+    """My Projects page - list all user projects"""
+    return templates.TemplateResponse("pages/projects.html", {"request": request})
+
+
+async def create_project(
         self,
         request: Request,
         idea: str = Form(...),

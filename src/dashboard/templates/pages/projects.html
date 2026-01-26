@@ -1,82 +1,106 @@
-{% extends 'base.html' %}
-{% block title %}My Projects - NexusAI{% endblock %}
+{% extends "base.html" %}
+
 {% block content %}
-<div class="fade-in">
-    <!-- Header with Search and Filters -->
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
-        <div>
-            <h1 class="text-3xl font-bold bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">My Projects</h1>
-            <p class="mt-1 text-gray-400">Manage and monitor all your AI-generated applications</p>
+<!-- My Projects Page -->
+<div class="flex-1 overflow-y-auto">
+    <div class="container mx-auto p-8">
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold mb-2">My Projects</h1>
+            <p class="text-gray-400">Manage and track all your NexusAI projects</p>
         </div>
-        <div class="flex items-center gap-3">
-            <div class="relative">
-                <input type="text" placeholder="Search projects..." class="w-64 px-4 py-2 pl-10 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors">
-                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-            </div>
-            <select class="px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-xl text-white focus:border-cyan-500 transition-colors">
-                <option>All Status</option>
-                <option>Deployed</option>
-                <option>Building</option>
-                <option>Draft</option>
-            </select>
-            <a href="/projects/new" class="px-4 py-2 bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500 text-white rounded-xl font-medium transition-all duration-200 flex items-center gap-2 shadow-lg shadow-cyan-500/20">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                New Project
+
+        <!-- Create New Project Button -->
+        <div class="mb-6">
+            <a href="/projects/new" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-lg font-semibold text-white hover:shadow-lg hover:scale-105 transition-all">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Create New Project
             </a>
         </div>
-    </div>
 
-    <!-- Projects Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <!-- Project Card 1 -->
-        <div class="group bg-gradient-to-br from-gray-800/80 to-gray-900/80 backdrop-blur-sm rounded-2xl border border-gray-700/50 hover:border-cyan-500/50 transition-all duration-300 overflow-hidden">
-            <div class="h-32 bg-gradient-to-br from-cyan-500/20 to-purple-500/20 flex items-center justify-center">
-                <span class="text-4xl">🚀</span>
-            </div>
-            <div class="p-5">
-                <div class="flex items-start justify-between mb-3">
-                    <h3 class="text-lg font-semibold text-white group-hover:text-cyan-400 transition-colors">My SaaS App</h3>
-                    <span class="px-2 py-0.5 text-xs font-medium text-emerald-400 bg-emerald-500/10 rounded-full border border-emerald-500/30">Deployed</span>
-                </div>
-                <p class="text-gray-400 text-sm mb-4 line-clamp-2">A customer relationship management tool with AI-powered insights and automation.</p>
-                <div class="flex items-center justify-between text-xs text-gray-500">
-                    <span>Updated 2 hours ago</span>
-                    <div class="flex items-center gap-2">
-                        <a href="#" class="p-1.5 hover:bg-gray-700 rounded-lg transition-colors" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></a>
-                        <a href="#" class="p-1.5 hover:bg-gray-700 rounded-lg transition-colors" title="View"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></a>
+        <!-- Project Filters -->
+        <div class="flex gap-4 mb-6">
+            <button class="px-4 py-2 bg-forge-800 rounded-lg text-white border border-cyan-500">All Projects</button>
+            <button class="px-4 py-2 bg-forge-800 rounded-lg text-gray-400 hover:text-white hover:border-cyan-500 border border-transparent transition-all">In Progress</button>
+            <button class="px-4 py-2 bg-forge-800 rounded-lg text-gray-400 hover:text-white hover:border-cyan-500 border border-transparent transition-all">Deployed</button>
+            <button class="px-4 py-2 bg-forge-800 rounded-lg text-gray-400 hover:text-white hover:border-cyan-500 border border-transparent transition-all">Archived</button>
+        </div>
+
+        <!-- Projects Grid -->
+        <div id="projects-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Example Project Card 1 -->
+            <div class="bg-forge-800 rounded-lg border border-cyan-500/30 hover:border-cyan-500 transition-all p-6 group hover:shadow-lg hover:shadow-cyan-500/20">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h3 class="text-xl font-bold text-white mb-1">E-commerce Platform</h3>
+                        <span class="text-sm px-3 py-1 bg-green-500/20 text-green-400 rounded-full border border-green-500/30">Deployed</span>
                     </div>
+                    <button class="text-gray-400 hover:text-white">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"/>
+                        </svg>
+                    </button>
+                </div>
+                <p class="text-gray-400 mb-4 text-sm">Full-stack online store with payment integration</p>
+                <div class="space-y-2 mb-4">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">Progress:</span>
+                        <span class="text-white font-semibold">100%</span>
+                    </div>
+                    <div class="w-full bg-forge-700 rounded-full h-2">
+                        <div class="bg-gradient-to-r from-cyan-500 to-purple-600 h-2 rounded-full" style="width: 100%"></div>
+                    </div>
+                </div>
+                <div class="flex justify-between items-center pt-4 border-t border-gray-700">
+                    <span class="text-sm text-gray-400">Created: Jan 15, 2025</span>
+                    <button class="px-4 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-sm transition-all">View</button>
+                </div>
+            </div>
+
+            <!-- Example Project Card 2 -->
+            <div class="bg-forge-800 rounded-lg border border-orange-500/30 hover:border-orange-500 transition-all p-6 group hover:shadow-lg hover:shadow-orange-500/20">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h3 class="text-xl font-bold text-white mb-1">Social Media App</h3>
+                        <span class="text-sm px-3 py-1 bg-orange-500/20 text-orange-400 rounded-full border border-orange-500/30">In Progress</span>
+                    </div>
+                    <button class="text-gray-400 hover:text-white">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"/>
+                        </svg>
+                    </button>
+                </div>
+                <p class="text-gray-400 mb-4 text-sm">Real-time chat and content sharing platform</p>
+                <div class="space-y-2 mb-4">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">Progress:</span>
+                        <span class="text-white font-semibold">65%</span>
+                    </div>
+                    <div class="w-full bg-forge-700 rounded-full h-2">
+                        <div class="bg-gradient-to-r from-orange-500 to-pink-600 h-2 rounded-full" style="width: 65%"></div>
+                    </div>
+                </div>
+                <div class="flex justify-between items-center pt-4 border-t border-gray-700">
+                    <span class="text-sm text-gray-400">Created: Jan 20, 2025</span>
+                    <button class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm transition-all">Continue</button>
+                </div>
+            </div>
+
+            <!-- Empty State (when no projects) -->
+            <div id="empty-state" class="col-span-full hidden">
+                <div class="bg-forge-800 rounded-lg border-2 border-dashed border-gray-700 p-12 text-center">
+                    <svg class="w-16 h-16 mx-auto mb-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    <h3 class="text-xl font-bold mb-2">No projects yet</h3>
+                    <p class="text-gray-400 mb-4">Get started by creating your first NexusAI project</p>
+                    <a href="/projects/new" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-lg font-semibold text-white hover:shadow-lg hover:scale-105 transition-all">
+                        Create Your First Project
+                    </a>
                 </div>
             </div>
         </div>
-
-        <!-- Project Card 2 -->
-        <div class="group bg-gradient-to-br from-gray-800/80 to-gray-900/80 backdrop-blur-sm rounded-2xl border border-gray-700/50 hover:border-purple-500/50 transition-all duration-300 overflow-hidden">
-            <div class="h-32 bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
-                <span class="text-4xl">📊</span>
-            </div>
-            <div class="p-5">
-                <div class="flex items-start justify-between mb-3">
-                    <h3 class="text-lg font-semibold text-white group-hover:text-purple-400 transition-colors">Portfolio Site</h3>
-                    <span class="px-2 py-0.5 text-xs font-medium text-yellow-400 bg-yellow-500/10 rounded-full border border-yellow-500/30">Building</span>
-                </div>
-                <p class="text-gray-400 text-sm mb-4 line-clamp-2">Personal portfolio website with project showcase and contact form.</p>
-                <div class="flex items-center justify-between text-xs text-gray-500">
-                    <span>Updated 1 day ago</span>
-                    <div class="flex items-center gap-2">
-                        <a href="#" class="p-1.5 hover:bg-gray-700 rounded-lg transition-colors" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></a>
-                        <a href="#" class="p-1.5 hover:bg-gray-700 rounded-lg transition-colors" title="View"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- New Project Card -->
-        <a href="/projects/new" class="group bg-gray-800/30 backdrop-blur-sm rounded-2xl border-2 border-dashed border-gray-700 hover:border-cyan-500/50 transition-all duration-300 flex flex-col items-center justify-center min-h-[280px] cursor-pointer">
-            <div class="w-16 h-16 rounded-full bg-gray-800 flex items-center justify-center mb-4 group-hover:bg-cyan-500/10 transition-colors">
-                <svg class="w-8 h-8 text-gray-500 group-hover:text-cyan-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            </div>
-            <span class="text-gray-500 group-hover:text-cyan-400 font-medium transition-colors">Create New Project</span>
-        </a>
     </div>
 </div>
 {% endblock %}
