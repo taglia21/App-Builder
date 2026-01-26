@@ -1,6 +1,5 @@
 """FastAPI Dashboard Application with Security."""
 from fastapi import FastAPI
-from starlette_csrf import CSRFMiddleware, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -81,13 +80,6 @@ def create_app() -> FastAPI:
     app.add_middleware(
         TrustedHostMiddleware,
         allowed_hosts=["*"]  # Configure for production
-    )
-    # CSRF Protection
-    app.add_middleware(
-        CSRFMiddleware,
-        secret=os.getenv("CSRF_SECRET", os.urandom(32).hex()),
-        cookie_secure=True,
-        cookie_samesite="lax"
     )
 
     
