@@ -537,3 +537,11 @@ def create_api_router() -> APIRouter:
     router.add_api_route("/onboarding/status", api.get_onboarding_status, methods=["GET"])
     
     return router
+
+@app.get("/about", response_class=HTMLResponse)
+async def about_page(request: Request):
+    """About page"""
+    return templates.TemplateResponse(
+        "pages/about.html",
+        {"request": request}
+    )

@@ -3,279 +3,136 @@
 {% block title %}Create New Project - LaunchForge{% endblock %}
 
 {% block content %}
-<div class="fade-in max-w-3xl mx-auto">
-    <!-- Header -->
+<div class="fade-in">
+    <!-- Page Header -->
     <div class="mb-8">
-        <h1 class="text-2xl font-semibold leading-6 text-gray-900">Create New Project</h1>
-        <p class="mt-2 text-sm text-gray-700">
-            Describe your app idea and let LaunchForge build it for you.
-        </p>
+        <h1 class="text-3xl font-bold text-gray-900">Create New Project</h1>
+        <p class="mt-2 text-gray-600">Describe your app idea and let LaunchForge build it for you.</p>
     </div>
-    
-    <!-- Progress Steps -->
-    <nav aria-label="Progress" class="mb-8">
-        <ol role="list" class="flex items-center">
-            <li class="relative flex-1">
-                <div class="flex items-center">
-                    <span class="relative flex h-8 w-8 items-center justify-center rounded-full bg-forge-600 text-white">
-                        <span>1</span>
-                    </span>
-                    <span class="ml-4 text-sm font-medium text-forge-600">Describe</span>
-                </div>
-                <div class="absolute right-0 top-4 h-0.5 w-full bg-gray-200" aria-hidden="true">
-                    <div class="h-0.5 bg-forge-600" style="width: 0%"></div>
-                </div>
-            </li>
-            <li class="relative flex-1">
-                <div class="flex items-center">
-                    <span class="relative flex h-8 w-8 items-center justify-center rounded-full border-2 border-gray-300 bg-white text-gray-500">
-                        <span>2</span>
-                    </span>
-                    <span class="ml-4 text-sm font-medium text-gray-500">Generate</span>
-                </div>
-                <div class="absolute right-0 top-4 h-0.5 w-full bg-gray-200" aria-hidden="true"></div>
-            </li>
-            <li class="relative flex-1">
-                <div class="flex items-center">
-                    <span class="relative flex h-8 w-8 items-center justify-center rounded-full border-2 border-gray-300 bg-white text-gray-500">
-                        <span>3</span>
-                    </span>
-                    <span class="ml-4 text-sm font-medium text-gray-500">Deploy</span>
-                </div>
-            </li>
-        </ol>
-    </nav>
-    
-    <!-- Form -->
-    <form hx-post="/projects"
-          hx-target="body"
-          hx-swap="outerHTML"
-          hx-indicator="#submit-indicator"
-          class="space-y-8 bg-white shadow rounded-lg p-6">
+
+    <!-- Progress Stepper - FIXED -->
+    <div class="stepper-container mb-10">
+        <!-- Background Line -->
+        <div class="stepper-line">
+            <div class="stepper-line-progress" style="width: {{ (step - 1) * 50 }}%"></div>
+        </div>
         
-        <!-- Project Name -->
-        <div>
-            <label for="name" class="block text-sm font-medium leading-6 text-gray-900">
-                Project Name
-            </label>
-            <div class="mt-2">
-                <input type="text" 
-                       name="name" 
-                       id="name" 
-                       required
-                       placeholder="e.g., TaskFlow Pro"
-                       class="block w-full rounded-md border-0 py-2 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-forge-600 sm:text-sm">
+        <!-- Step 1 -->
+        <div class="stepper-step {% if step >= 1 %}{% if step > 1 %}completed{% else %}active{% endif %}{% endif %}">
+            <div class="stepper-circle">
+                {% if step > 1 %}
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                {% else %}1{% endif %}
             </div>
-            <p class="mt-1 text-sm text-gray-500">A short, memorable name for your project.</p>
+            <span class="stepper-label">Describe</span>
         </div>
         
-        <!-- Description -->
-        <div>
-            <label for="description" class="block text-sm font-medium leading-6 text-gray-900">
-                App Description
-            </label>
-            <div class="mt-2">
-                <textarea name="description" 
-                          id="description" 
-                          rows="6" 
-                          required
-                          placeholder="Describe your app idea in detail. Include:
-- What problem does it solve?
-- Who are the target users?
-- What are the main features?
-- Any specific tech requirements?"
-                          class="block w-full rounded-md border-0 py-2 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-forge-600 sm:text-sm"></textarea>
+        <!-- Step 2 -->
+        <div class="stepper-step {% if step >= 2 %}{% if step > 2 %}completed{% else %}active{% endif %}{% endif %}">
+            <div class="stepper-circle">
+                {% if step > 2 %}
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                {% else %}2{% endif %}
             </div>
-            <p class="mt-1 text-sm text-gray-500">The more detail you provide, the better the generated app will be.</p>
+            <span class="stepper-label">Generate</span>
         </div>
         
-        <!-- Tech Stack Preferences (Optional) -->
-        <div>
-            <label class="block text-sm font-medium leading-6 text-gray-900 mb-4">
-                Tech Stack Preferences (Optional)
-            </label>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <label for="frontend" class="block text-sm text-gray-700">Frontend</label>
-                    <select name="frontend" 
-                            id="frontend"
-                            class="mt-1 block w-full rounded-md border-0 py-2 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-forge-600 sm:text-sm">
-                        <option value="auto">Auto-detect (Recommended)</option>
-                        <option value="nextjs">Next.js</option>
-                        <option value="react">React + Vite</option>
-                        <option value="vue">Vue.js</option>
-                        <option value="svelte">SvelteKit</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="backend" class="block text-sm text-gray-700">Backend</label>
-                    <select name="backend" 
-                            id="backend"
-                            class="mt-1 block w-full rounded-md border-0 py-2 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-forge-600 sm:text-sm">
-                        <option value="auto">Auto-detect (Recommended)</option>
-                        <option value="fastapi">FastAPI (Python)</option>
-                        <option value="express">Express (Node.js)</option>
-                        <option value="django">Django (Python)</option>
-                        <option value="rails">Ruby on Rails</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="database" class="block text-sm text-gray-700">Database</label>
-                    <select name="database" 
-                            id="database"
-                            class="mt-1 block w-full rounded-md border-0 py-2 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-forge-600 sm:text-sm">
-                        <option value="auto">Auto-detect (Recommended)</option>
-                        <option value="postgres">PostgreSQL</option>
-                        <option value="mysql">MySQL</option>
-                        <option value="mongodb">MongoDB</option>
-                        <option value="sqlite">SQLite</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="auth" class="block text-sm text-gray-700">Authentication</label>
-                    <select name="auth" 
-                            id="auth"
-                            class="mt-1 block w-full rounded-md border-0 py-2 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-forge-600 sm:text-sm">
-                        <option value="auto">Auto-detect (Recommended)</option>
-                        <option value="jwt">JWT Tokens</option>
-                        <option value="session">Session-based</option>
-                        <option value="oauth">OAuth 2.0</option>
-                        <option value="none">None</option>
-                    </select>
-                </div>
-            </div>
+        <!-- Step 3 -->
+        <div class="stepper-step {% if step >= 3 %}active{% endif %}">
+            <div class="stepper-circle">3</div>
+            <span class="stepper-label">Deploy</span>
         </div>
-        
-        <!-- Features -->
-        <div>
-            <label class="block text-sm font-medium leading-6 text-gray-900 mb-4">
-                Include Features
-            </label>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                <label class="relative flex cursor-pointer rounded-lg border bg-white p-4 shadow-sm focus:outline-none">
-                    <input type="checkbox" name="features" value="auth" class="sr-only" checked>
-                    <span class="flex flex-1">
-                        <span class="flex flex-col">
-                            <span class="block text-sm font-medium text-gray-900">Authentication</span>
-                            <span class="mt-1 flex items-center text-sm text-gray-500">Login, signup, password reset</span>
-                        </span>
-                    </span>
-                    <span class="pointer-events-none absolute -inset-px rounded-lg border-2 border-transparent peer-checked:border-forge-600" aria-hidden="true"></span>
-                </label>
-                
-                <label class="relative flex cursor-pointer rounded-lg border bg-white p-4 shadow-sm focus:outline-none">
-                    <input type="checkbox" name="features" value="billing" class="sr-only">
-                    <span class="flex flex-1">
-                        <span class="flex flex-col">
-                            <span class="block text-sm font-medium text-gray-900">Stripe Billing</span>
-                            <span class="mt-1 flex items-center text-sm text-gray-500">Subscriptions, payments</span>
-                        </span>
-                    </span>
-                </label>
-                
-                <label class="relative flex cursor-pointer rounded-lg border bg-white p-4 shadow-sm focus:outline-none">
-                    <input type="checkbox" name="features" value="admin" class="sr-only">
-                    <span class="flex flex-1">
-                        <span class="flex flex-col">
-                            <span class="block text-sm font-medium text-gray-900">Admin Panel</span>
-                            <span class="mt-1 flex items-center text-sm text-gray-500">Manage users & data</span>
-                        </span>
-                    </span>
-                </label>
-                
-                <label class="relative flex cursor-pointer rounded-lg border bg-white p-4 shadow-sm focus:outline-none">
-                    <input type="checkbox" name="features" value="api" class="sr-only">
-                    <span class="flex flex-1">
-                        <span class="flex flex-col">
-                            <span class="block text-sm font-medium text-gray-900">REST API</span>
-                            <span class="mt-1 flex items-center text-sm text-gray-500">Full API with docs</span>
-                        </span>
-                    </span>
-                </label>
-                
-                <label class="relative flex cursor-pointer rounded-lg border bg-white p-4 shadow-sm focus:outline-none">
-                    <input type="checkbox" name="features" value="analytics" class="sr-only">
-                    <span class="flex flex-1">
-                        <span class="flex flex-col">
-                            <span class="block text-sm font-medium text-gray-900">Analytics</span>
-                            <span class="mt-1 flex items-center text-sm text-gray-500">Usage tracking & charts</span>
-                        </span>
-                    </span>
-                </label>
-                
-                <label class="relative flex cursor-pointer rounded-lg border bg-white p-4 shadow-sm focus:outline-none">
-                    <input type="checkbox" name="features" value="email" class="sr-only">
-                    <span class="flex flex-1">
-                        <span class="flex flex-col">
-                            <span class="block text-sm font-medium text-gray-900">Email</span>
-                            <span class="mt-1 flex items-center text-sm text-gray-500">Transactional emails</span>
-                        </span>
-                    </span>
-                </label>
-            </div>
-        </div>
-        
-        <!-- Submit -->
-        <div class="flex items-center justify-end gap-x-4 pt-4 border-t">
-            <a href="/dashboard" class="text-sm font-semibold leading-6 text-gray-900">Cancel</a>
-            <button type="submit" 
-                    class="inline-flex items-center rounded-md bg-forge-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-forge-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forge-600">
-                <span id="submit-indicator" class="htmx-indicator mr-2">
-                    <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                </span>
-                Create Project
-            </button>
-        </div>
-    </form>
-    
-    <!-- Examples -->
-    <div class="mt-8 rounded-lg bg-blue-50 p-4">
-        <div class="flex">
+    </div>
+
+    <!-- Help Card -->
+    <div class="glass-card rounded-xl p-4 mb-8 border-l-4 border-cyan-400">
+        <div class="flex items-start gap-3">
             <div class="flex-shrink-0">
-                <svg class="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clip-rule="evenodd" />
+                <svg class="w-6 h-6 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
             </div>
-            <div class="ml-3">
-                <h3 class="text-sm font-medium text-blue-800">Need inspiration?</h3>
-                <div class="mt-2 text-sm text-blue-700">
-                    <p>Try describing apps like:</p>
-                    <ul class="list-disc list-inside mt-1">
-                        <li>A project management tool for remote teams</li>
-                        <li>An AI-powered recipe generator</li>
-                        <li>A marketplace for freelance services</li>
-                        <li>A habit tracking app with social features</li>
-                    </ul>
-                </div>
+            <div>
+                <h3 class="font-semibold text-gray-900">How it works</h3>
+                <p class="text-sm text-gray-600 mt-1">Tell us about your app idea in plain English. Our AI will generate a complete, deployable application with all the features you need. You own 100% of the code.</p>
             </div>
         </div>
     </div>
-</div>
 
-<script>
-// Toggle feature checkbox styling
-document.querySelectorAll('input[type="checkbox"][name="features"]').forEach(checkbox => {
-    checkbox.addEventListener('change', function() {
-        const label = this.closest('label');
-        const border = label.querySelector('span[aria-hidden]');
-        if (this.checked) {
-            border.classList.add('border-forge-600');
-            border.classList.remove('border-transparent');
-        } else {
-            border.classList.remove('border-forge-600');
-            border.classList.add('border-transparent');
-        }
-    });
-    
-    // Initialize checked state
-    if (checkbox.checked) {
-        const label = checkbox.closest('label');
-        const border = label.querySelector('span[aria-hidden]');
-        border.classList.add('border-forge-600');
-    }
-});
-</script>
+    <!-- Form Card -->
+    <div class="glass-card rounded-2xl p-8">
+        <form method="POST" action="/projects/create" class="space-y-6">
+            <!-- Project Name -->
+            <div>
+                <label for="name" class="block text-sm font-semibold text-gray-900 mb-2">
+                    Project Name <span class="text-red-500">*</span>
+                </label>
+                <input type="text" 
+                       id="name" 
+                       name="name" 
+                       required
+                       placeholder="e.g., TaskFlow Pro"
+                       class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all">
+                <p class="mt-2 text-sm text-gray-500">A short, memorable name for your project.</p>
+            </div>
+
+            <!-- App Description -->
+            <div>
+                <label for="description" class="block text-sm font-semibold text-gray-900 mb-2">
+                    App Description <span class="text-red-500">*</span>
+                </label>
+                <textarea id="description" 
+                          name="description" 
+                          rows="5" 
+                          required
+                          placeholder="Describe your app idea in detail. What problem does it solve? Who is it for? What features should it have?"
+                          class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all resize-none"></textarea>
+                <p class="mt-2 text-sm text-gray-500">Be as detailed as possible. The more context you provide, the better your app will be.</p>
+            </div>
+
+            <!-- AI Model Selection -->
+            <div>
+                <label class="block text-sm font-semibold text-gray-900 mb-2">AI Model</label>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <label class="relative cursor-pointer">
+                        <input type="radio" name="model" value="gpt-4" class="peer sr-only" checked>
+                        <div class="p-4 rounded-xl border-2 border-gray-200 peer-checked:border-cyan-400 peer-checked:bg-cyan-50 transition-all">
+                            <div class="font-semibold text-gray-900">GPT-4</div>
+                            <div class="text-sm text-gray-500">Best for complex apps</div>
+                        </div>
+                    </label>
+                    <label class="relative cursor-pointer">
+                        <input type="radio" name="model" value="claude" class="peer sr-only">
+                        <div class="p-4 rounded-xl border-2 border-gray-200 peer-checked:border-purple-400 peer-checked:bg-purple-50 transition-all">
+                            <div class="font-semibold text-gray-900">Claude</div>
+                            <div class="text-sm text-gray-500">Great for detailed code</div>
+                        </div>
+                    </label>
+                    <label class="relative cursor-pointer">
+                        <input type="radio" name="model" value="gemini" class="peer sr-only">
+                        <div class="p-4 rounded-xl border-2 border-gray-200 peer-checked:border-pink-400 peer-checked:bg-pink-50 transition-all">
+                            <div class="font-semibold text-gray-900">Gemini</div>
+                            <div class="text-sm text-gray-500">Fast generation</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="pt-4">
+                <button type="submit" 
+                        class="btn-futuristic w-full md:w-auto px-8 py-4 text-white font-semibold rounded-xl flex items-center justify-center gap-2">
+                    <span>Generate My App</span>
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 {% endblock %}
