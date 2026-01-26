@@ -16,6 +16,33 @@
     <script defer src="https://unpkg.com/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
     <!-- Alpine.js -->
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script>
+    function cookieConsent() {
+        return {
+            showBanner: !localStorage.getItem('cookieConsent'),
+            showSettings: false,
+            preferences: {
+                essential: true,
+                functional: true,
+                analytics: true,
+                marketing: false
+            },
+            acceptAll() {
+                localStorage.setItem('cookieConsent', 'all');
+                this.showBanner = false;
+            },
+            rejectAll() {
+                localStorage.setItem('cookieConsent', 'essential');
+                this.showBanner = false;
+            },
+            savePreferences() {
+                localStorage.setItem('cookieConsent', JSON.stringify(this.preferences));
+                this.showBanner = false;
+                this.showSettings = false;
+            }
+        }
+    }
+    </script>
     
     <!-- Custom styles -->
     <style>
