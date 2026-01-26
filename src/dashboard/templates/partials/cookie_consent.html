@@ -104,11 +104,11 @@
                         class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
                     <span x-text="showDetails ? 'Hide Details' : 'Customize'"></span>
                 </button>
-                <button @click="rejectAll()" onclick="rejectAllCookies()"
+                <button id="btn-reject-all" @click="rejectAll()" onclick="rejectAllCookies()"
                         class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
                     Essential Only
                 </button>
-                <button @click="acceptAll()" onclick="acceptAllCookies()"
+                <button id="btn-accept-all" @click="acceptAll()" onclick="acceptAllCookies()"
                         class="px-6 py-2 text-sm font-medium text-white bg-forge-600 hover:bg-forge-700 rounded-lg transition-colors shadow-sm">
                     Accept All
                 </button>
@@ -249,4 +249,27 @@ function rejectAllCookies() {
     localStorage.setItem('cookie_consent', JSON.stringify({essential:true,analytics:false,marketing:false}));
     hideCookieBanner();
 }
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var acceptBtn = document.getElementById('btn-accept-all');
+    var rejectBtn = document.getElementById('btn-reject-all');
+    var banner = document.getElementById('cookie-consent');
+    
+    if (acceptBtn) {
+        acceptBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            localStorage.setItem('cookie_consent', JSON.stringify({essential:true,analytics:true,marketing:true}));
+            if (banner) banner.style.display = 'none';
+        });
+    }
+    
+    if (rejectBtn) {
+        rejectBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            localStorage.setItem('cookie_consent', JSON.stringify({essential:true,analytics:false,marketing:false}));
+            if (banner) banner.style.display = 'none';
+        });
+    }
+});
 </script>
