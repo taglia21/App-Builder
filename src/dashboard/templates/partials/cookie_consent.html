@@ -104,11 +104,11 @@
                         class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
                     <span x-text="showDetails ? 'Hide Details' : 'Customize'"></span>
                 </button>
-                <button @click="rejectAll()" onclick="document.getElementById('cookie-consent').style.display='none'; localStorage.setItem('cookie_consent', JSON.stringify({essential:true,analytics:false,marketing:false}));"
+                <button @click="rejectAll()" onclick="rejectAllCookies()"
                         class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
                     Essential Only
                 </button>
-                <button @click="acceptAll()" onclick="document.getElementById('cookie-consent').style.display='none'; localStorage.setItem('cookie_consent', JSON.stringify({essential:true,analytics:true,marketing:true}));"
+                <button @click="acceptAll()" onclick="acceptAllCookies()"
                         class="px-6 py-2 text-sm font-medium text-white bg-forge-600 hover:bg-forge-700 rounded-lg transition-colors shadow-sm">
                     Accept All
                 </button>
@@ -235,3 +235,18 @@ function cookieConsent() {
 <style>
     [x-cloak] { display: none !important; }
 </style>
+<script>
+// Simple cookie consent handler - fallback for Alpine.js
+function hideCookieBanner() {
+    var banner = document.getElementById('cookie-consent');
+    if (banner) banner.style.display = 'none';
+}
+function acceptAllCookies() {
+    localStorage.setItem('cookie_consent', JSON.stringify({essential:true,analytics:true,marketing:true}));
+    hideCookieBanner();
+}
+function rejectAllCookies() {
+    localStorage.setItem('cookie_consent', JSON.stringify({essential:true,analytics:false,marketing:false}));
+    hideCookieBanner();
+}
+</script>
