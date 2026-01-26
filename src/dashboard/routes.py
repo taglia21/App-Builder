@@ -483,11 +483,17 @@ class AdminRoutes:
             
             return JSONResponse({"success": True})
             
-        except Exception as e:
-            logger.error(f"Error replying to contact {contact_id}: {e}")
+        except (ValueError, KeyError) as e:
+            logger.warning(f"Invalid data for contact reply {contact_id}: {e}")
             return JSONResponse(
-                {"error": "Failed to send reply"},
-                status_code=500
+                {"error": "Invalid request data"},
+                status_code=400
+            )
+        except (ConnectionError, TimeoutError) as e:
+            logger.error(f"Network error replying to contact {contact_id}: {e}")
+            return JSONResponse(
+                {"error": "Failed to send reply - network error"},
+                status_code=503
             )
     
     async def email_templates(self, request: Request) -> HTMLResponse:
