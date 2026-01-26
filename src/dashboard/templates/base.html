@@ -256,37 +256,36 @@
          hx-swap-oob="true">
     </div>
     
-        <!-- GDPR Cookie Consent Banner -->
-    <div id="cookie-banner"
-         class="fixed inset-x-0 bottom-0 z-50 bg-gray-900/95 backdrop-blur-sm border-t border-gray-700/50 p-4"
-         style="display: none;">
+            <!-- GDPR Cookie Consent Banner -->
+    <div id="cookie-banner" class="fixed inset-x-0 bottom-0 z-50 bg-gray-900/95 backdrop-blur-sm border-t border-gray-700/50 p-4" style="display: none;">
         <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
             <div class="flex-1 pr-4">
-                <h3 class="text-lg font-semibold mb-1 text-white">🍪 Cookie Preferences</h3>
-                <p class="text-gray-300 text-sm">
-                    We use cookies to enhance your experience, analyze site traffic, and for marketing purposes. By clicking "Accept All",
-                    you consent to our use of cookies. <a href="/privacy" class="text-forge-500 hover:underline">Privacy Policy</a> - <a href="/terms" class="text-forge-500 hover:underline">Terms of Service</a>
-                </p>
+                <h3 class="text-lg font-semibold mb-1 text-white">Cookie Preferences</h3>
+                <p class="text-gray-300 text-sm">We use cookies to enhance your experience. <a href="/privacy" class="text-forge-500 hover:underline">Privacy Policy</a> - <a href="/terms" class="text-forge-500 hover:underline">Terms of Service</a></p>
             </div>
             <div class="flex items-center gap-3">
-                <button onclick="document.getElementById('cookie-banner').style.display='none'; localStorage.setItem('cookieConsent', 'rejected');"
-                        class="px-6 py-2 text-sm font-medium text-white bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors">
-                    Reject All
-                </button>
-                <button onclick="document.getElementById('cookie-banner').style.display='none'; localStorage.setItem('cookieConsent', 'accepted');"
-                        class="px-6 py-2 text-sm font-medium bg-forge-600 hover:bg-forge-700 rounded-lg transition-colors text-white">
-                    Accept All
-                </button>
+                <button id="cookie-reject" class="px-6 py-2 text-sm font-medium text-white bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors">Reject All</button>
+                <button id="cookie-accept" class="px-6 py-2 text-sm font-medium bg-forge-600 hover:bg-forge-700 rounded-lg transition-colors text-white">Accept All</button>
             </div>
         </div>
     </div>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            if (!localStorage.getItem('cookieConsent')) {
-                document.getElementById('cookie-banner').style.display = 'block';
+        document.addEventListener("DOMContentLoaded", function() {
+            var banner = document.getElementById("cookie-banner");
+            if (!localStorage.getItem("cookieConsent")) {
+                banner.style.display = "block";
             }
+            document.getElementById("cookie-reject").addEventListener("click", function() {
+                localStorage.setItem("cookieConsent", "rejected");
+                banner.style.display = "none";
+            });
+            document.getElementById("cookie-accept").addEventListener("click", function() {
+                localStorage.setItem("cookieConsent", "accepted");
+                banner.style.display = "none";
+            });
         });
     </script>
+
 
     
     {% block scripts %}{% endblock %}
