@@ -1,120 +1,117 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 {% block title %}Why NexusAI - AI-Powered App Generation{% endblock %}
 {% block content %}
-<div class="py-8 px-4 max-w-7xl mx-auto">
+<div class="fade-in">
     <!-- Hero Section -->
     <div class="text-center mb-16">
-        <h1 class="text-5xl font-bold mb-4">
-            <span class="text-gradient">Why Choose</span>
-            <span class="text-white">NexusAI?</span>
-        </h1>
-        <p class="text-xl text-gray-300 max-w-3xl mx-auto">
-            Transform your startup ideas into production-ready applications in minutes, not months.
-            Powered by advanced AI and built for the future.
-        </p>
+        <h1 class="text-5xl font-bold bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 bg-clip-text text-transparent mb-4">Why Choose NexusAI?</h1>
+        <p class="text-xl text-gray-400 max-w-2xl mx-auto">Transform your ideas into production-ready applications in minutes, not months.</p>
     </div>
 
-    <!-- Stats Section -->
+    <!-- Key Stats -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-16">
-        <div class="glass-card p-6 text-center neon-border">
-            <div class="text-4xl font-bold text-gradient mb-2">10x</div>
-            <div class="text-gray-400">Faster Development</div>
+        <div class="bg-gradient-to-br from-cyan-900/30 to-cyan-800/10 rounded-2xl p-6 text-center border border-cyan-500/20">
+            <div class="text-4xl font-bold text-cyan-400 mb-2">10x</div>
+            <div class="text-gray-400 text-sm">Faster Development</div>
         </div>
-        <div class="glass-card p-6 text-center neon-border">
-            <div class="text-4xl font-bold text-gradient mb-2">85%</div>
-            <div class="text-gray-400">Cost Reduction</div>
+        <div class="bg-gradient-to-br from-purple-900/30 to-purple-800/10 rounded-2xl p-6 text-center border border-purple-500/20">
+            <div class="text-4xl font-bold text-purple-400 mb-2">85%</div>
+            <div class="text-gray-400 text-sm">Cost Reduction</div>
         </div>
-        <div class="glass-card p-6 text-center neon-border">
-            <div class="text-4xl font-bold text-gradient mb-2">24/7</div>
-            <div class="text-gray-400">AI Assistance</div>
+        <div class="bg-gradient-to-br from-pink-900/30 to-pink-800/10 rounded-2xl p-6 text-center border border-pink-500/20">
+            <div class="text-4xl font-bold text-pink-400 mb-2">24/7</div>
+            <div class="text-gray-400 text-sm">AI Assistance</div>
         </div>
-        <div class="glass-card p-6 text-center neon-border">
-            <div class="text-4xl font-bold text-gradient mb-2">100+</div>
-            <div class="text-gray-400">Tech Integrations</div>
+        <div class="bg-gradient-to-br from-emerald-900/30 to-emerald-800/10 rounded-2xl p-6 text-center border border-emerald-500/20">
+            <div class="text-4xl font-bold text-emerald-400 mb-2">100+</div>
+            <div class="text-gray-400 text-sm">Tech Integrations</div>
         </div>
     </div>
 
-    <!-- Feature Comparison Table -->
-    <div class="mb-16">
-        <h2 class="text-3xl font-bold text-center mb-8 text-gradient">NexusAI vs Traditional Development</h2>
-        <div class="glass-card overflow-hidden">
+    <!-- Comparison Table -->
+    <div class="bg-gray-800/50 backdrop-blur-sm rounded-3xl p-8 border border-gray-700/50 mb-16">
+        <h2 class="text-2xl font-bold text-white text-center mb-8">NexusAI vs Traditional Development</h2>
+        <div class="overflow-x-auto">
             <table class="w-full">
-                <thead class="bg-gradient-to-r from-pink-500/20 to-purple-600/20">
-                    <tr>
-                        <th class="p-4 text-left text-white">Feature</th>
-                        <th class="p-4 text-center text-pink-400">NexusAI</th>
-                        <th class="p-4 text-center text-gray-400">Traditional</th>
+                <thead>
+                    <tr class="border-b border-gray-700">
+                        <th class="text-left py-4 px-4 text-gray-400 font-medium">Feature</th>
+                        <th class="text-center py-4 px-4"><span class="text-cyan-400 font-bold">NexusAI</span></th>
+                        <th class="text-center py-4 px-4"><span class="text-gray-400">Traditional</span></th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-700">
-                    <tr><td class="p-4 text-gray-300">Time to MVP</td><td class="p-4 text-center text-cyan-400 font-bold">Minutes</td><td class="p-4 text-center text-gray-500">3-6 Months</td></tr>
-                    <tr><td class="p-4 text-gray-300">Development Cost</td><td class="p-4 text-center text-cyan-400 font-bold">$49/month</td><td class="p-4 text-center text-gray-500">$50,000+</td></tr>
-                    <tr><td class="p-4 text-gray-300">Code Quality</td><td class="p-4 text-center text-cyan-400 font-bold">AI-Optimized</td><td class="p-4 text-center text-gray-500">Variable</td></tr>
-                    <tr><td class="p-4 text-gray-300">Deployment</td><td class="p-4 text-center text-cyan-400 font-bold">One-Click</td><td class="p-4 text-center text-gray-500">Manual Setup</td></tr>
-                    <tr><td class="p-4 text-gray-300">Scalability</td><td class="p-4 text-center text-cyan-400 font-bold">Built-in</td><td class="p-4 text-center text-gray-500">Requires Planning</td></tr>
-                    <tr><td class="p-4 text-gray-300">Security</td><td class="p-4 text-center text-cyan-400 font-bold">Enterprise-Grade</td><td class="p-4 text-center text-gray-500">Depends on Team</td></tr>
+                <tbody class="divide-y divide-gray-700/50">
+                    <tr>
+                        <td class="py-4 px-4 text-white">Time to MVP</td>
+                        <td class="py-4 px-4 text-center"><span class="text-emerald-400 font-semibold">Minutes</span></td>
+                        <td class="py-4 px-4 text-center text-gray-500">Weeks/Months</td>
+                    </tr>
+                    <tr>
+                        <td class="py-4 px-4 text-white">Development Cost</td>
+                        <td class="py-4 px-4 text-center"><span class="text-emerald-400 font-semibold">From $0/mo</span></td>
+                        <td class="py-4 px-4 text-center text-gray-500">$50K-500K+</td>
+                    </tr>
+                    <tr>
+                        <td class="py-4 px-4 text-white">Technical Expertise</td>
+                        <td class="py-4 px-4 text-center"><span class="text-emerald-400 font-semibold">Not Required</span></td>
+                        <td class="py-4 px-4 text-center text-gray-500">Team of Experts</td>
+                    </tr>
+                    <tr>
+                        <td class="py-4 px-4 text-white">Deployment</td>
+                        <td class="py-4 px-4 text-center"><span class="text-emerald-400 font-semibold">One-Click</span></td>
+                        <td class="py-4 px-4 text-center text-gray-500">Complex Setup</td>
+                    </tr>
+                    <tr>
+                        <td class="py-4 px-4 text-white">Maintenance</td>
+                        <td class="py-4 px-4 text-center"><span class="text-emerald-400 font-semibold">Automated</span></td>
+                        <td class="py-4 px-4 text-center text-gray-500">Ongoing Effort</td>
+                    </tr>
+                    <tr>
+                        <td class="py-4 px-4 text-white">Scalability</td>
+                        <td class="py-4 px-4 text-center"><span class="text-emerald-400 font-semibold">Built-In</span></td>
+                        <td class="py-4 px-4 text-center text-gray-500">Manual Planning</td>
+                    </tr>
                 </tbody>
             </table>
         </div>
     </div>
 
-    <!-- Key Features Grid -->
+    <!-- Features Grid -->
     <div class="mb-16">
-        <h2 class="text-3xl font-bold text-center mb-8 text-gradient">Powerful Features</h2>
-        <div class="grid md:grid-cols-3 gap-6">
-            <div class="glass-card p-6 hover:scale-105 transition-transform">
-                <div class="w-12 h-12 bg-gradient-to-r from-pink-500 to-purple-600 rounded-lg flex items-center justify-center mb-4">
-                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        <h2 class="text-3xl font-bold text-white text-center mb-10">Powerful Features</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="group bg-gradient-to-br from-gray-800/80 to-gray-900/80 rounded-2xl p-6 border border-gray-700/50 hover:border-cyan-500/50 transition-all duration-300">
+                <div class="w-14 h-14 rounded-xl bg-cyan-500/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <svg class="w-7 h-7 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
                 </div>
-                <h3 class="text-xl font-semibold text-white mb-2">AI-Powered Generation</h3>
-                <p class="text-gray-400">Describe your app idea in plain English and watch as our AI generates production-ready code instantly.</p>
+                <h3 class="text-xl font-bold text-white mb-2">AI-Powered Generation</h3>
+                <p class="text-gray-400">Advanced language models understand your requirements and generate optimized, production-ready code automatically.</p>
             </div>
-            <div class="glass-card p-6 hover:scale-105 transition-transform">
-                <div class="w-12 h-12 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center mb-4">
-                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+            <div class="group bg-gradient-to-br from-gray-800/80 to-gray-900/80 rounded-2xl p-6 border border-gray-700/50 hover:border-purple-500/50 transition-all duration-300">
+                <div class="w-14 h-14 rounded-xl bg-purple-500/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <svg class="w-7 h-7 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
                 </div>
-                <h3 class="text-xl font-semibold text-white mb-2">One-Click Deploy</h3>
-                <p class="text-gray-400">Deploy to Railway, Vercel, or AWS with a single click. No DevOps experience required.</p>
+                <h3 class="text-xl font-bold text-white mb-2">One-Click Deploy</h3>
+                <p class="text-gray-400">Deploy your applications instantly to scalable cloud infrastructure. No DevOps expertise required.</p>
             </div>
-            <div class="glass-card p-6 hover:scale-105 transition-transform">
-                <div class="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-600 rounded-lg flex items-center justify-center mb-4">
-                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            <div class="group bg-gradient-to-br from-gray-800/80 to-gray-900/80 rounded-2xl p-6 border border-gray-700/50 hover:border-pink-500/50 transition-all duration-300">
+                <div class="w-14 h-14 rounded-xl bg-pink-500/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <svg class="w-7 h-7 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                 </div>
-                <h3 class="text-xl font-semibold text-white mb-2">Enterprise Security</h3>
-                <p class="text-gray-400">SOC 2 compliant infrastructure with encryption at rest and in transit. Your data is always protected.</p>
+                <h3 class="text-xl font-bold text-white mb-2">Enterprise Security</h3>
+                <p class="text-gray-400">Built-in security best practices, encrypted data handling, and compliance-ready infrastructure.</p>
             </div>
-        </div>
-    </div>
-
-    <!-- Technology Integrations -->
-    <div class="mb-16">
-        <h2 class="text-3xl font-bold text-center mb-8 text-gradient">Integrates With Your Stack</h2>
-        <div class="glass-card p-8">
-            <div class="grid grid-cols-3 md:grid-cols-6 gap-8 items-center justify-items-center">
-                <div class="text-center"><div class="text-2xl mb-2">⚛️</div><span class="text-gray-400 text-sm">React</span></div>
-                <div class="text-center"><div class="text-2xl mb-2">🐍</div><span class="text-gray-400 text-sm">Python</span></div>
-                <div class="text-center"><div class="text-2xl mb-2">🟢</div><span class="text-gray-400 text-sm">Node.js</span></div>
-                <div class="text-center"><div class="text-2xl mb-2">🐘</div><span class="text-gray-400 text-sm">PostgreSQL</span></div>
-                <div class="text-center"><div class="text-2xl mb-2">🔥</div><span class="text-gray-400 text-sm">Firebase</span></div>
-                <div class="text-center"><div class="text-2xl mb-2">☁️</div><span class="text-gray-400 text-sm">AWS</span></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Testimonial -->
-    <div class="mb-16">
-        <div class="glass-card p-8 text-center neon-border">
-            <p class="text-xl text-gray-300 italic mb-4">"NexusAI helped us launch our MVP in 2 days instead of 2 months. The AI understood exactly what we needed."</p>
-            <div class="text-pink-400 font-semibold">Sarah Chen</div>
-            <div class="text-gray-500">Founder, TechStart Inc.</div>
         </div>
     </div>
 
     <!-- CTA Section -->
-    <div class="text-center">
-        <h2 class="text-3xl font-bold mb-4 text-white">Ready to Build Your Future?</h2>
-        <p class="text-gray-400 mb-8">Join thousands of entrepreneurs who have already launched with NexusAI</p>
-        <a href="/projects/new" class="inline-block px-8 py-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold rounded-lg hover:opacity-90 transition text-lg">Start Building Now →</a>
+    <div class="text-center bg-gradient-to-r from-cyan-900/30 via-purple-900/30 to-pink-900/30 rounded-3xl p-12 border border-purple-500/20">
+        <h2 class="text-3xl font-bold text-white mb-4">Ready to Build Something Amazing?</h2>
+        <p class="text-gray-400 mb-8 max-w-xl mx-auto">Join thousands of developers and entrepreneurs who are building faster with AI.</p>
+        <a href="/projects/new" class="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-cyan-600 via-purple-600 to-pink-600 hover:from-cyan-500 hover:via-purple-500 hover:to-pink-500 text-white rounded-xl font-bold text-lg transition-all duration-300 shadow-lg shadow-purple-500/25">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            Start Building Free
+        </a>
     </div>
 </div>
 {% endblock %}

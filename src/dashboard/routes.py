@@ -86,6 +86,11 @@ class DashboardRoutes:
             },
         })
     
+    
+    async def projects_list(self, request: Request) -> HTMLResponse:
+        """Projects listing page."""
+        return self.render(request, "pages/projects.html", {"active_page": "projects"})
+
     async def new_project(self, request: Request) -> HTMLResponse:
         """New project wizard."""
         return self.render(request, "pages/new_project.html", {
