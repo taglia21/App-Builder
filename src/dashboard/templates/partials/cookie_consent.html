@@ -241,7 +241,7 @@ function hideCookieBanner() {
     var banner = document.getElementById('cookie-consent');
     if (banner) banner.style.display = 'none';
 }
-function acceptAllCookies() {
+function acceptAllCookies() { console.log('Accept clicked'); alert('Accept clicked');
     localStorage.setItem('cookie_consent', JSON.stringify({essential:true,analytics:true,marketing:true}));
     hideCookieBanner();
 }
