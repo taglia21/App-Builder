@@ -1,5 +1,5 @@
 """
-LaunchForge Database Utilities
+NexusAI Database Utilities
 
 Connection management, session handling, and database operations.
 Provides a production-ready database layer with connection pooling,
@@ -60,8 +60,8 @@ def get_database_url() -> str:
     # Build from components
     db_host = os.getenv("DB_HOST", "localhost")
     db_port = os.getenv("DB_PORT", "5432")
-    db_name = os.getenv("DB_NAME", "launchforge")
-    db_user = os.getenv("DB_USER", "launchforge")
+    db_name = os.getenv("DB_NAME", "nexusai")
+    db_user = os.getenv("DB_USER", "nexusai")
     db_password = os.getenv("DB_PASSWORD", "")
     
     if db_password:
@@ -69,7 +69,7 @@ def get_database_url() -> str:
     
     # Fallback to SQLite for development
     logger.warning("No PostgreSQL configuration found. Using SQLite for development.")
-    return "sqlite:///./launchforge_dev.db"
+    return "sqlite:///./nexusai_dev.db"
 
 
 class DatabaseError(Exception):

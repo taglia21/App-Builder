@@ -1,5 +1,5 @@
 """
-LaunchForge Token Utilities
+NexusAI Token Utilities
 
 Generation and verification of various tokens:
 - Email verification tokens

@@ -20,7 +20,7 @@
     var rejectBtn = document.getElementById('cookie-reject');
     
     // Check if user has already made a choice
-    var consent = localStorage.getItem('launchforge_cookies');
+    var consent = localStorage.getItem('nexusai_cookies');
     
     if (!consent) {
         // Show banner if no choice made
@@ -29,14 +29,14 @@
     
     if (acceptBtn) {
         acceptBtn.onclick = function() {
-            localStorage.setItem('launchforge_cookies', 'accepted');
+            localStorage.setItem('nexusai_cookies', 'accepted');
             banner.style.display = 'none';
         };
     }
     
     if (rejectBtn) {
         rejectBtn.onclick = function() {
-            localStorage.setItem('launchforge_cookies', 'rejected');
+            localStorage.setItem('nexusai_cookies', 'rejected');
             banner.style.display = 'none';
         };
     }

@@ -1,5 +1,5 @@
 """
-LaunchForge Database CRUD Operations
+NexusAI Database CRUD Operations
 
 Repository pattern implementation for database operations.
 Provides type-safe, reusable CRUD operations for all models.

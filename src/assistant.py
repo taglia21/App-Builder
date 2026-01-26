@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-LaunchForge Interactive AI Assistant
+NexusAI Interactive AI Assistant
 
 The killer feature - users describe their startup idea in plain English
 and get working, production-ready code in minutes.
@@ -127,7 +127,7 @@ class InteractiveAssistant:
         self.console.print()
         
         welcome_text = """
-[bold white]Welcome to LaunchForge Build Mode![/bold white]
+[bold white]Welcome to NexusAI Build Mode![/bold white]
 
 I'm your AI startup builder. Describe your app idea in plain English, 
 and I'll help you:
@@ -480,7 +480,7 @@ Return ONLY valid JSON. Make it compelling and market-ready.
         
         self.console.print()
         if not self._confirm("Does this capture your vision? Generate the app?"):
-            self.console.print("[yellow]You can restart with 'launchforge build' to try again.[/yellow]")
+            self.console.print("[yellow]You can restart with 'nexusai build' to try again.[/yellow]")
             return False
         
         return True
@@ -598,7 +598,7 @@ Return ONLY valid JSON. Make it compelling and market-ready.
   Then visit: [underline cyan]http://localhost:8000/docs[/underline cyan]
 
 [bold white]Deploy to Cloud:[/bold white]
-  [cyan]launchforge deploy {output_path}[/cyan]
+  [cyan]nexusai deploy {output_path}[/cyan]
 
 [dim]Your startup journey begins! 🚀[/dim]
 """
@@ -649,11 +649,11 @@ Return ONLY valid JSON. Make it compelling and market-ready.
             self.console.print()
             if self._confirm("Would you like to deploy your app now?"):
                 self.console.print()
-                self.console.print(f"[cyan]Run:[/cyan] launchforge deploy {self.context.output_path}")
+                self.console.print(f"[cyan]Run:[/cyan] nexusai deploy {self.context.output_path}")
                 self.console.print("[dim]Deployment will push to Vercel (frontend) + Render (backend)[/dim]")
             
             self.console.print()
-            self.console.print("[bold cyan]Thank you for using LaunchForge![/bold cyan]")
+            self.console.print("[bold cyan]Thank you for using NexusAI![/bold cyan]")
             self.console.print("[dim]Build something amazing! 🚀[/dim]")
             self.console.print()
             

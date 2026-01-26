@@ -1,7 +1,7 @@
 """
 Dashboard Routes
 
-HTML routes for the LaunchForge dashboard using HTMX.
+HTML routes for the NexusAI dashboard using HTMX.
 """
 
 from fastapi import APIRouter, Request, Depends, Form, HTTPException
@@ -39,7 +39,7 @@ class DashboardRoutes:
         """Render a template with context."""
         ctx = {
             "request": request,
-            "title": "LaunchForge",
+            "title": "NexusAI",
             "user": getattr(request.state, "user", None),
         }
         if context:
@@ -302,7 +302,7 @@ class AdminRoutes:
         """Render a template with context."""
         ctx = {
             "request": request,
-            "title": "Admin - LaunchForge",
+            "title": "Admin - NexusAI",
             "user": getattr(request.state, "user", None),
         }
         if context:
@@ -373,7 +373,7 @@ class AdminRoutes:
                 "name": "John Smith",
                 "email": "john@company.com",
                 "subject": "Enterprise pricing question",
-                "message": "We're interested in using LaunchForge for our team...",
+                "message": "We're interested in using NexusAI for our team...",
                 "status": "pending",
                 "created_at": type('obj', (object,), {'strftime': lambda self, f: '2026-01-25 09:00'})(),
             },

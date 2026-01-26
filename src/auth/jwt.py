@@ -1,5 +1,5 @@
 """
-LaunchForge JWT Token Module
+NexusAI JWT Token Module
 
 JWT token generation and verification for authentication.
 Supports access tokens (short-lived) and refresh tokens (long-lived).
@@ -37,7 +37,7 @@ class InvalidTokenError(TokenError):
 
 
 # Token configuration
-DEFAULT_SECRET_KEY = "launchforge-dev-secret-key-change-in-production"
+DEFAULT_SECRET_KEY = "nexusai-dev-secret-key-change-in-production"
 ACCESS_TOKEN_EXPIRE_MINUTES = 15
 REFRESH_TOKEN_EXPIRE_DAYS = 7
 EMAIL_VERIFICATION_EXPIRE_HOURS = 24

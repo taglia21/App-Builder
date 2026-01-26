@@ -561,7 +561,7 @@ class MockFormationProvider(FormationProvider):
         result.status = FormationStatus.COMPLETED
         result.ein = ein
         result.formation_date = datetime.utcnow()
-        result.certificate_url = f"https://mock.launchforge.dev/certs/{request_id}"
+        result.certificate_url = f"https://mock.nexusai.dev/certs/{request_id}"
         result.updated_at = datetime.utcnow()
         
         return result
@@ -602,7 +602,7 @@ class MockFormationProvider(FormationProvider):
         result = self._eins[request_id]
         result.status = EINStatus.RECEIVED
         result.ein = ein
-        result.confirmation_letter_url = f"https://mock.launchforge.dev/ein/{request_id}"
+        result.confirmation_letter_url = f"https://mock.nexusai.dev/ein/{request_id}"
         result.updated_at = datetime.utcnow()
         
         return result

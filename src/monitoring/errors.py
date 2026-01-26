@@ -60,7 +60,7 @@ class ErrorContext:
     
     # Environment
     environment: str = "development"
-    service: str = "launchforge"
+    service: str = "nexusai"
     version: Optional[str] = None
     hostname: Optional[str] = None
     
@@ -302,7 +302,7 @@ class WebhookReporter(ErrorReporter):
                 "title": f"🚨 {error.severity.value.upper()}: {error.message[:100]}",
                 "text": error.message,
                 "fields": fields,
-                "footer": "LaunchForge Error Monitor",
+                "footer": "NexusAI Error Monitor",
                 "ts": int(error.timestamp.timestamp()),
             }]
         }

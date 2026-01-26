@@ -1,7 +1,7 @@
 """
 Subscription Management
 
-Handles subscription tiers, pricing, and plan management for LaunchForge.
+Handles subscription tiers, pricing, and plan management for NexusAI.
 """
 
 from enum import Enum
@@ -79,7 +79,7 @@ PRICING_PLANS: Dict[SubscriptionTier, PricingPlan] = {
     SubscriptionTier.FREE: PricingPlan(
         tier=SubscriptionTier.FREE,
         name="Free",
-        description="Perfect for trying out LaunchForge",
+        description="Perfect for trying out NexusAI",
         price_monthly=0,
         price_yearly=0,
         apps_per_month=1,

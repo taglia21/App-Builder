@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""LaunchForge - AI-Powered Startup Builder
+"""NexusAI - AI-Powered Startup Builder
 
 Command-line interface for generating and deploying startup applications.
 """
@@ -23,18 +23,18 @@ from .branding import print_banner, print_welcome, print_success_banner, VERSION
 
 @click.group(invoke_without_command=True)
 @click.pass_context
-@click.version_option(VERSION, prog_name="LaunchForge")
+@click.version_option(VERSION, prog_name="NexusAI")
 def cli(ctx):
-    """LaunchForge - AI-Powered Startup Builder
+    """NexusAI - AI-Powered Startup Builder
     
     Generate validated startup ideas and production-ready apps
     using AI with real-time market intelligence.
     
     \b
     QUICK START:
-      launchforge build                  # 🚀 Interactive AI assistant (recommended!)
-      launchforge generate --demo        # Try with sample data
-      launchforge generate               # Use real AI providers
+      nexusai build                  # 🚀 Interactive AI assistant (recommended!)
+      nexusai generate --demo        # Try with sample data
+      nexusai generate               # Use real AI providers
     
     \b  
     API KEYS:
@@ -45,8 +45,8 @@ def cli(ctx):
         # Show welcome banner if no command given
         console = Console()
         print_welcome(console)
-        console.print("[bold cyan]🚀 Quick Start:[/bold cyan] Run [bold]launchforge build[/bold] to describe your idea and get code!\n")
-        console.print("[dim]Run [bold]launchforge --help[/bold] for all commands[/dim]\n")
+        console.print("[bold cyan]🚀 Quick Start:[/bold cyan] Run [bold]nexusai build[/bold] to describe your idea and get code!\n")
+        console.print("[dim]Run [bold]nexusai --help[/bold] for all commands[/dim]\n")
 
 
 @cli.command()
@@ -112,7 +112,7 @@ def generate(config, output, demo, skip_refinement, skip_code_gen, llm_provider,
     print_banner(console)
     console.print()
     
-    UI.header("LaunchForge", "Generating Your Startup")
+    UI.header("NexusAI", "Generating Your Startup")
     
     if demo:
         UI.warning("MODE: Demo (using sample data - no API calls)")
@@ -184,19 +184,19 @@ def generate(config, output, demo, skip_refinement, skip_code_gen, llm_provider,
 @click.option(
     "--output",
     "-o",
-    default="./launchforge-demo",
+    default="./nexusai-demo",
     help="Output directory for demo app",
 )
 def demo(output):
-    """🎮 Generate a sample app to see LaunchForge in action.
+    """🎮 Generate a sample app to see NexusAI in action.
     
     Creates a complete demo startup app using sample data.
-    No API keys required - perfect for trying out LaunchForge!
+    No API keys required - perfect for trying out NexusAI!
     
     \b
     Example:
       python main.py demo
-      cd launchforge-demo/backend
+      cd nexusai-demo/backend
       pip install -r requirements.txt
       uvicorn main:app --reload
     """
@@ -204,7 +204,7 @@ def demo(output):
     print_banner(console)
     console.print()
     
-    UI.header("LaunchForge Demo", "Generating Sample Startup App")
+    UI.header("NexusAI Demo", "Generating Sample Startup App")
     UI.info("This demo uses sample data - no API keys required!")
     console.print()
     
@@ -423,7 +423,7 @@ def providers():
         }
     }
     
-    table = Table(title="⚡ LaunchForge LLM Providers", show_header=True, header_style="bold cyan")
+    table = Table(title="⚡ NexusAI LLM Providers", show_header=True, header_style="bold cyan")
     table.add_column("Status", style="dim", width=10)
     table.add_column("Provider", style="cyan")
     table.add_column("Type", style="magenta")
@@ -454,7 +454,7 @@ def providers():
         console.print("   [dim]Get key: https://console.groq.com/keys[/dim]")
         console.print()
     
-    console.print("[dim]Use: launchforge generate --llm-provider <name>[/dim]")
+    console.print("[dim]Use: nexusai generate --llm-provider <name>[/dim]")
 
 
 @cli.command(name="list-providers", hidden=True)
@@ -713,7 +713,7 @@ def build(output, llm_provider, verbose):
     """🚀 Interactive AI assistant - describe your idea, get working code!
     
     This is the killer feature - just describe your startup in plain English
-    and LaunchForge will:
+    and NexusAI will:
     
     \b
     1. Research the market using real-time web intelligence
@@ -722,9 +722,9 @@ def build(output, llm_provider, verbose):
     
     \b
     Example:
-      launchforge build
+      nexusai build
       > Describe your idea: An AI tool that helps developers write better tests
-      ... LaunchForge researches, asks questions, and builds your app!
+      ... NexusAI researches, asks questions, and builds your app!
     
     No complex configuration needed - just your idea and we handle the rest.
     """

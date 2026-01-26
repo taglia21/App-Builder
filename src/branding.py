@@ -1,5 +1,5 @@
 """
-LaunchForge - AI-Powered Startup Builder
+NexusAI - AI-Powered Startup Builder
 Professional branding and CLI presentation.
 """
 
@@ -26,7 +26,7 @@ LOGO_ASCII = """
 """
 
 # Alternative compact logo
-LOGO_COMPACT = "⚡ LaunchForge"
+LOGO_COMPACT = "⚡ NexusAI"
 
 # Taglines
 TAGLINE = "AI-Powered Startup Builder"
@@ -34,7 +34,7 @@ TAGLINE_FULL = "From idea to deployed app in minutes, not months."
 
 # Product description
 DESCRIPTION = """
-LaunchForge uses AI with real-time web intelligence to:
+NexusAI uses AI with real-time web intelligence to:
 • Discover validated market opportunities
 • Generate production-ready applications  
 • Deploy to cloud with one command
@@ -154,13 +154,13 @@ def get_cli_help_text() -> str:
 {TAGLINE_FULL}
 
 QUICK START:
-  launchforge generate --demo           # Try with sample data
-  launchforge generate --llm-provider perplexity  # Use real AI
+  nexusai generate --demo           # Try with sample data
+  nexusai generate --llm-provider perplexity  # Use real AI
 
 EXAMPLES:
-  launchforge generate -o ./my-startup  # Custom output directory
-  launchforge generate --deploy         # Generate and deploy
-  launchforge providers                 # List available AI providers
+  nexusai generate -o ./my-startup  # Custom output directory
+  nexusai generate --deploy         # Generate and deploy
+  nexusai providers                 # List available AI providers
 
 API KEYS:
   PERPLEXITY_API_KEY  - Primary (real-time web search)

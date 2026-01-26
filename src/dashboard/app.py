@@ -50,7 +50,7 @@ logger = get_logger(__name__)
 def create_app() -> FastAPI:
     """Create and configure FastAPI application."""
     app = FastAPI(
-        title="LaunchForge Dashboard",
+        title="NexusAI Dashboard",
         description="AI-Powered Startup Builder Dashboard",
         version="1.0.0",
         docs_url="/docs",
@@ -108,7 +108,7 @@ def create_app() -> FastAPI:
     @app.get("/")
     async def root():
         """Root endpoint - landing or redirect."""
-        return {"status": "healthy", "service": "LaunchForge Dashboard"}
+        return {"status": "healthy", "service": "NexusAI Dashboard"}
     
     # Health check endpoint
     @app.get("/health")
@@ -117,7 +117,7 @@ def create_app() -> FastAPI:
         from datetime import datetime
         return {
             "status": "ok",
-            "service": "launchforge-dashboard",
+            "service": "nexusai-dashboard",
             "version": "1.0.0",
             "timestamp": datetime.utcnow().isoformat() + "Z"
         }
@@ -145,7 +145,7 @@ def create_app() -> FastAPI:
 class DashboardApp:
     """Dashboard application wrapper for compatibility."""
     
-    def __init__(self, title: str = "LaunchForge"):
+    def __init__(self, title: str = "NexusAI"):
         self.title = title
         self.app = create_app()
         # Update app title if custom

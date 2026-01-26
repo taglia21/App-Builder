@@ -1,7 +1,7 @@
 """
 Success Metrics Tracking
 
-Track and analyze user success metrics for LaunchForge.
+Track and analyze user success metrics for NexusAI.
 """
 
 from datetime import datetime, timedelta
@@ -161,7 +161,7 @@ class MetricsCollector:
 
 class SuccessMetrics:
     """
-    Track key success metrics for LaunchForge.
+    Track key success metrics for NexusAI.
     
     Key metrics:
     - Activation Rate: % of signups who create first project

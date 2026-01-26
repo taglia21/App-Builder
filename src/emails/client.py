@@ -1,5 +1,5 @@
 """
-Email client for LaunchForge using Resend.com API.
+Email client for NexusAI using Resend.com API.
 
 Provides transactional email functionality for:
 - Email verification
@@ -91,7 +91,7 @@ class EmailClient:
         self,
         api_key: Optional[str] = None,
         from_email: Optional[str] = None,
-        from_name: str = "LaunchForge"
+        from_name: str = "NexusAI"
     ):
         """
         Initialize email client.
@@ -106,7 +106,7 @@ class EmailClient:
         """
         settings = get_settings()
         self.api_key = api_key or getattr(settings, 'resend_api_key', None)
-        self.from_email = from_email or getattr(settings, 'email_from', 'noreply@launchforge.dev')
+        self.from_email = from_email or getattr(settings, 'email_from', 'noreply@nexusai.dev')
         self.from_name = from_name
         
         # Set up Jinja2 template environment
@@ -455,7 +455,7 @@ async def send_verification_email(
     
     return await client.send_email(
         to=email,
-        subject="Verify your LaunchForge email",
+        subject="Verify your NexusAI email",
         html=html,
         tags={"type": "verification"}
     )
@@ -471,13 +471,13 @@ async def send_welcome_email(
     html = client.render_template(
         "welcome.html",
         name=name or "there",
-        dashboard_url="https://launchforge.dev/dashboard",
+        dashboard_url="https://nexusai.dev/dashboard",
         year=2026
     )
     
     return await client.send_email(
         to=email,
-        subject="Welcome to LaunchForge! 🚀",
+        subject="Welcome to NexusAI! 🚀",
         html=html,
         tags={"type": "welcome"}
     )
@@ -500,7 +500,7 @@ async def send_password_reset_email(
     
     return await client.send_email(
         to=email,
-        subject="Reset your LaunchForge password",
+        subject="Reset your NexusAI password",
         html=html,
         tags={"type": "password_reset"}
     )

@@ -48,7 +48,7 @@ class PlausibleClient:
         Initialize Plausible client.
         
         Args:
-            domain: Plausible site domain (e.g., 'launchforge.dev')
+            domain: Plausible site domain (e.g., 'nexusai.dev')
             api_key: Optional API key for stats access
         """
         settings = get_settings()
@@ -101,7 +101,7 @@ class PlausibleClient:
         
         headers = {
             "Content-Type": "application/json",
-            "User-Agent": user_agent or "LaunchForge/1.0",
+            "User-Agent": user_agent or "NexusAI/1.0",
         }
         
         if ip_address:
@@ -155,9 +155,9 @@ class PlausibleClient:
         )
 
 
-# Pre-defined events for LaunchForge
+# Pre-defined events for NexusAI
 class Events:
-    """Standard LaunchForge analytics events."""
+    """Standard NexusAI analytics events."""
     
     # User events
     SIGNUP = "Signup"

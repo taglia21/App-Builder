@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block title %}My Projects - NexusAI{% endblock %}
+{% block content %}
+<div class="fade-in">
+    <!-- Header with Search and Filters -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+        <div>
+            <h1 class="text-3xl font-bold bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">My Projects</h1>
+            <p class="mt-1 text-gray-400">Manage and monitor all your AI-generated applications</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <div class="relative">
+                <input type="text" placeholder="Search projects..." class="w-64 px-4 py-2 pl-10 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors">
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            </div>
+            <select class="px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-xl text-white focus:border-cyan-500 transition-colors">
+                <option>All Status</option>
+                <option>Deployed</option>
+                <option>Building</option>
+                <option>Draft</option>
+            </select>
+            <a href="/projects/new" class="px-4 py-2 bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500 text-white rounded-xl font-medium transition-all duration-200 flex items-center gap-2 shadow-lg shadow-cyan-500/20">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                New Project
+            </a>
+        </div>
+    </div>
+
+    <!-- Projects Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Project Card 1 -->
+        <div class="group bg-gradient-to-br from-gray-800/80 to-gray-900/80 backdrop-blur-sm rounded-2xl border border-gray-700/50 hover:border-cyan-500/50 transition-all duration-300 overflow-hidden">
+            <div class="h-32 bg-gradient-to-br from-cyan-500/20 to-purple-500/20 flex items-center justify-center">
+                <span class="text-4xl">🚀</span>
+            </div>
+            <div class="p-5">
+                <div class="flex items-start justify-between mb-3">
+                    <h3 class="text-lg font-semibold text-white group-hover:text-cyan-400 transition-colors">My SaaS App</h3>
+                    <span class="px-2 py-0.5 text-xs font-medium text-emerald-400 bg-emerald-500/10 rounded-full border border-emerald-500/30">Deployed</span>
+                </div>
+                <p class="text-gray-400 text-sm mb-4 line-clamp-2">A customer relationship management tool with AI-powered insights and automation.</p>
+                <div class="flex items-center justify-between text-xs text-gray-500">
+                    <span>Updated 2 hours ago</span>
+                    <div class="flex items-center gap-2">
+                        <a href="#" class="p-1.5 hover:bg-gray-700 rounded-lg transition-colors" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></a>
+                        <a href="#" class="p-1.5 hover:bg-gray-700 rounded-lg transition-colors" title="View"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Project Card 2 -->
+        <div class="group bg-gradient-to-br from-gray-800/80 to-gray-900/80 backdrop-blur-sm rounded-2xl border border-gray-700/50 hover:border-purple-500/50 transition-all duration-300 overflow-hidden">
+            <div class="h-32 bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
+                <span class="text-4xl">📊</span>
+            </div>
+            <div class="p-5">
+                <div class="flex items-start justify-between mb-3">
+                    <h3 class="text-lg font-semibold text-white group-hover:text-purple-400 transition-colors">Portfolio Site</h3>
+                    <span class="px-2 py-0.5 text-xs font-medium text-yellow-400 bg-yellow-500/10 rounded-full border border-yellow-500/30">Building</span>
+                </div>
+                <p class="text-gray-400 text-sm mb-4 line-clamp-2">Personal portfolio website with project showcase and contact form.</p>
+                <div class="flex items-center justify-between text-xs text-gray-500">
+                    <span>Updated 1 day ago</span>
+                    <div class="flex items-center gap-2">
+                        <a href="#" class="p-1.5 hover:bg-gray-700 rounded-lg transition-colors" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></a>
+                        <a href="#" class="p-1.5 hover:bg-gray-700 rounded-lg transition-colors" title="View"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- New Project Card -->
+        <a href="/projects/new" class="group bg-gray-800/30 backdrop-blur-sm rounded-2xl border-2 border-dashed border-gray-700 hover:border-cyan-500/50 transition-all duration-300 flex flex-col items-center justify-center min-h-[280px] cursor-pointer">
+            <div class="w-16 h-16 rounded-full bg-gray-800 flex items-center justify-center mb-4 group-hover:bg-cyan-500/10 transition-colors">
+                <svg class="w-8 h-8 text-gray-500 group-hover:text-cyan-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            </div>
+            <span class="text-gray-500 group-hover:text-cyan-400 font-medium transition-colors">Create New Project</span>
+        </a>
+    </div>
+</div>
+{% endblock %}

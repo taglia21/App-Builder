@@ -144,8 +144,8 @@ class PipelineConfig(BaseSettings):
     
     # Email configuration
     resend_api_key: Optional[str] = None
-    from_email: str = "noreply@launchforge.app"
-    support_email: str = "support@launchforge.app"
+    from_email: str = "noreply@nexusai.app"
+    support_email: str = "support@nexusai.app"
 
     # Sub-configurations
     intelligence: Optional[IntelligenceConfig] = None
