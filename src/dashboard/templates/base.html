@@ -257,7 +257,7 @@
     </div>
     
     <!-- GDPR Cookie Consent Banner -->
-    <div x-data="cookieConsent()" 
+    <div id="cookie-banner" x-data="cookieConsent()" 
          x-show="showBanner" 
          x-cloak
          x-transition:enter="transition ease-out duration-300"
@@ -286,11 +286,11 @@
                             class="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white border border-gray-600 rounded-lg hover:border-gray-500 transition-colors">
                         <span x-text="showSettings ? 'Hide Settings' : 'Cookie Settings'"></span>
                     </button>
-                    <button @click="rejectAll()"
+                    <button onclick="document.getElementById('cookie-banner').style.display='none'; localStorage.setItem('cookieConsent', 'rejected');"
                             class="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white border border-gray-600 rounded-lg hover:border-gray-500 transition-colors">
                         Reject All
                     </button>
-                    <button @click="acceptAll()"
+                    <button onclick="document.getElementById('cookie-banner').style.display='none'; localStorage.setItem('cookieConsent', 'accepted');"
                             class="px-6 py-2 text-sm font-medium bg-forge-600 hover:bg-forge-700 rounded-lg transition-colors">
                         Accept All
                     </button>
