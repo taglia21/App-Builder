@@ -1,7 +1,7 @@
 [build]
 dockerfilePath = "Dockerfile.simple"
 [deploy]
-startCommand = "python -m uvicorn src.dashboard.app:app --host 0.0.0.0 --port $PORT"
+startCommand = "sh -c 'python -m uvicorn src.dashboard.app:app --host 0.0.0.0 --port ${PORT:-8000}'"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
 healthcheckPath = "/health"
