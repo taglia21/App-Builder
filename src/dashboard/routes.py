@@ -581,6 +581,7 @@ def create_dashboard_router(templates: Jinja2Templates) -> APIRouter:
     router.add_api_route("/projects", routes.create_project, methods=["POST"])
     router.add_api_route("/settings", routes.update_settings, methods=["POST"])
 
+    router.add_api_route("/projects/{project_id}/workspace", agent_workspace, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/projects/{project_id}/generated", project_generated, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/projects/{project_id}/review", project_review, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/api/generate", generate_app_api, methods=["POST"])
@@ -595,6 +596,25 @@ def create_dashboard_router(templates: Jinja2Templates) -> APIRouter:
 
 
 
+
+
+
+async def agent_workspace(request: Request) -> HTMLResponse:
+    """Agent workspace for customizing generated apps."""
+    project_id = request.path_params.get('project_id')
+    
+    project = _projects_store.get(project_id)
+    if not project:
+        from starlette.responses import RedirectResponse
+        return RedirectResponse(url="/dashboard", status_code=302)
+    
+    from jinja2 import Environment, FileSystemLoader
+    from pathlib import Path
+    template_dir = Path(__file__).parent / "templates"
+    env = Environment(loader=FileSystemLoader(str(template_dir)))
+    template = env.get_template("pages/agent_workspace.html")
+    html_content = template.render(project=project)
+    return HTMLResponse(content=html_content)
 
 async def project_generated(request: Request) -> HTMLResponse:
     """Project generated page showing download and next steps."""
