@@ -11,6 +11,7 @@ import os
 import time
 import logging
 from pathlib import Path
+import secrets
 
 from .routes import create_dashboard_router
 from .api import create_api_router
@@ -129,6 +130,7 @@ def create_app() -> FastAPI:
     templates_path = Path(__file__).parent / "templates"
     if templates_path.exists():
         templates = Jinja2Templates(directory=str(templates_path))
+        templates.env.globals['csrf_token'] = lambda: secrets.token_hex(32)
         app.include_router(create_dashboard_router(templates))
     
     app.include_router(create_api_router(), prefix="/api")
