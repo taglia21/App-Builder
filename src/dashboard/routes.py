@@ -192,7 +192,6 @@ class DashboardRoutes:
         """API Keys management page."""
         return self.render(request, "pages/api_keys.html", {"active": "api-keys"})
 
-    @router.route("/billing")
     async def billing_page(self, request):
         """Billing page"""
         return self.render(request, "pages/billing.html", {"active": "billing"})
