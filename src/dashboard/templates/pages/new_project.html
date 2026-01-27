@@ -1,129 +1,192 @@
-{% extends "base.html" %}
-
+{% extends "base_modern.html" %}
 {% block title %}Create New Project - NexusAI{% endblock %}
 
 {% block content %}
-<div class="flex-1 overflow-y-auto bg-forge-900">
-    <div class="max-w-4xl mx-auto px-6 py-10">
-        <!-- Header -->
-        <div class="mb-10">
-            <h1 class="text-3xl font-bold text-white mb-2">Create New Project</h1>
-            <p class="text-gray-400">Configure your AI-powered application</p>
+<div class="content-wrapper">
+    <div class="content-header">
+        <div>
+            <h1>Create New Project</h1>
+            <p class="subtitle">Configure your AI-powered application</p>
         </div>
+    </div>
 
-        <!-- Progress Indicator -->
-        <div class="mb-10">
-            <div class="flex items-center justify-between relative">
-                <div class="absolute left-0 right-0 top-1/2 h-0.5 bg-gray-700 -translate-y-1/2 z-0"></div>
-                <div class="relative z-10 flex items-center justify-center w-10 h-10 rounded-full bg-cyan-500 text-white font-semibold">1</div>
-                <div class="relative z-10 flex items-center justify-center w-10 h-10 rounded-full bg-gray-700 text-gray-400 font-semibold">2</div>
-                <div class="relative z-10 flex items-center justify-center w-10 h-10 rounded-full bg-gray-700 text-gray-400 font-semibold">3</div>
-            </div>
-            <div class="flex justify-between mt-2 text-sm">
-                <span class="text-cyan-400 font-medium">Details</span>
-                <span class="text-gray-500">Configure</span>
-                <span class="text-gray-500">Generate</span>
-            </div>
-        </div>
-
-        <!-- Form -->
-        <form action="/projects" method="POST" class="space-y-8">
+    <div class="form-container" style="max-width: 800px; margin: 0 auto;">
+        <form method="POST" action="{{ url_for('dashboard.create_project') }}" id="projectForm">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <!-- Project Details Section -->
+            <div class="form-section">
+                <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #1a1a1a;">Project Details</h2>
+                
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="name" style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px; color: #333;">Project Name *</label>
+                    <input 
+                        type="text" 
+                        id="name" 
+                        name="name" 
+                        required 
+                        placeholder="Enter project name"
+                        style="width: 100%; padding: 10px 14px; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 14px; transition: all 0.2s;"
+                        onfocus="this.style.borderColor='#6366f1'; this.style.boxShadow='0 0 0 3px rgba(99, 102, 241, 0.1)'"
+                        onblur="this.style.borderColor='#e0e0e0'; this.style.boxShadow='none'"
+                    >
+                </div>
 
-            <!-- Project Name -->
-            <div class="bg-forge-800 rounded-lg p-6 border border-gray-700">
-                <label class="block text-white font-semibold mb-3">Project Name</label>
-                <input type="text" name="project_name" required 
-                       placeholder="Enter project name"
-                       class="w-full px-4 py-3 bg-forge-900 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors">
-                <p class="mt-2 text-sm text-gray-500">Choose a descriptive name for your project</p>
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="description" style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px; color: #333;">Description</label>
+                    <textarea 
+                        id="description" 
+                        name="description" 
+                        rows="3" 
+                        placeholder="Briefly describe your project"
+                        style="width: 100%; padding: 10px 14px; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 14px; resize: vertical; transition: all 0.2s;"
+                        onfocus="this.style.borderColor='#6366f1'; this.style.boxShadow='0 0 0 3px rgba(99, 102, 241, 0.1)'"
+                        onblur="this.style.borderColor='#e0e0e0'; this.style.boxShadow='none'"
+                    ></textarea>
+                </div>
             </div>
 
-            <!-- Project Type -->
-            <div class="bg-forge-800 rounded-lg p-6 border border-gray-700">
-                <label class="block text-white font-semibold mb-4">Project Type</label>
-                <div class="grid grid-cols-3 gap-4">
-                    <label class="cursor-pointer group">
-                        <input type="radio" name="project_type" value="web" class="hidden peer" checked>
-                        <div class="p-5 bg-forge-900 border-2 border-gray-600 rounded-lg text-center peer-checked:border-cyan-500 peer-checked:bg-cyan-500/5 transition-all hover:border-gray-500">
-                            <svg class="w-8 h-8 mx-auto mb-3 text-gray-400 peer-checked:text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
-                            </svg>
-                            <div class="font-semibold text-white mb-1">Web Application</div>
-                            <div class="text-xs text-gray-500">Full-stack web app</div>
+            <!-- Project Type Section -->
+            <div class="form-section" style="margin-top: 32px;">
+                <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #1a1a1a;">Project Type</h2>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                    <label class="radio-card" style="position: relative; display: block; padding: 16px; border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                        <input type="radio" name="type" value="web_app" checked style="position: absolute; opacity: 0;">
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                                    <line x1="3" y1="9" x2="21" y2="9"/>
+                                    <line x1="9" y1="21" x2="9" y2="9"/>
+                                </svg>
+                                <span style="font-weight: 600; font-size: 14px;">Web Application</span>
+                            </div>
+                            <p style="font-size: 13px; color: #666; margin: 0;">Full-stack web app</p>
                         </div>
                     </label>
-                    <label class="cursor-pointer group">
-                        <input type="radio" name="project_type" value="api" class="hidden peer">
-                        <div class="p-5 bg-forge-900 border-2 border-gray-600 rounded-lg text-center peer-checked:border-purple-500 peer-checked:bg-purple-500/5 transition-all hover:border-gray-500">
-                            <svg class="w-8 h-8 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                            </svg>
-                            <div class="font-semibold text-white mb-1">API Service</div>
-                            <div class="text-xs text-gray-500">RESTful backend</div>
+
+                    <label class="radio-card" style="position: relative; display: block; padding: 16px; border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                        <input type="radio" name="type" value="api" style="position: absolute; opacity: 0;">
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <line x1="2" y1="12" x2="22" y2="12"/>
+                                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                                </svg>
+                                <span style="font-weight: 600; font-size: 14px;">API Service</span>
+                            </div>
+                            <p style="font-size: 13px; color: #666; margin: 0;">RESTful API backend</p>
                         </div>
                     </label>
-                    <label class="cursor-pointer group">
-                        <input type="radio" name="project_type" value="mobile" class="hidden peer">
-                        <div class="p-5 bg-forge-900 border-2 border-gray-600 rounded-lg text-center peer-checked:border-pink-500 peer-checked:bg-pink-500/5 transition-all hover:border-gray-500">
-                            <svg class="w-8 h-8 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-                            </svg>
-                            <div class="font-semibold text-white mb-1">Mobile App</div>
-                            <div class="text-xs text-gray-500">Cross-platform</div>
+
+                    <label class="radio-card" style="position: relative; display: block; padding: 16px; border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                        <input type="radio" name="type" value="microservice" style="position: absolute; opacity: 0;">
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="2" y="2" width="8" height="8" rx="1"/>
+                                    <rect x="14" y="2" width="8" height="8" rx="1"/>
+                                    <rect x="2" y="14" width="8" height="8" rx="1"/>
+                                    <rect x="14" y="14" width="8" height="8" rx="1"/>
+                                </svg>
+                                <span style="font-weight: 600; font-size: 14px;">Microservice</span>
+                            </div>
+                            <p style="font-size: 13px; color: #666; margin: 0;">Distributed service</p>
                         </div>
                     </label>
                 </div>
             </div>
 
-            <!-- Description -->
-            <div class="bg-forge-800 rounded-lg p-6 border border-gray-700">
-                <label class="block text-white font-semibold mb-3">Project Description</label>
-                <textarea name="description" required rows="4" 
-                          placeholder="Describe your application's functionality, features, and requirements..."
-                          class="w-full px-4 py-3 bg-forge-900 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors resize-none"></textarea>
-                <p class="mt-2 text-sm text-gray-500">Provide detailed requirements for better AI generation</p>
-            </div>
+            <!-- Technology Stack -->
+            <div class="form-section" style="margin-top: 32px;">
+                <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #1a1a1a;">Technology Stack</h2>
+                
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="framework" style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px; color: #333;">Framework</label>
+                    <select 
+                        id="framework" 
+                        name="framework"
+                        style="width: 100%; padding: 10px 14px; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 14px; background: white; cursor: pointer;"
+                    >
+                        <option value="flask">Flask (Python)</option>
+                        <option value="django">Django (Python)</option>
+                        <option value="fastapi">FastAPI (Python)</option>
+                        <option value="express">Express (Node.js)</option>
+                        <option value="nextjs">Next.js (React)</option>
+                    </select>
+                </div>
 
-            <!-- Tech Stack -->
-            <div class="bg-forge-800 rounded-lg p-6 border border-gray-700">
-                <label class="block text-white font-semibold mb-4">Technology Stack</label>
-                <div class="flex flex-wrap gap-3">
-                    <label class="cursor-pointer">
-                        <input type="checkbox" name="tech_stack" value="react" class="hidden peer">
-                        <span class="inline-block px-4 py-2 bg-forge-900 border border-gray-600 rounded-lg text-sm text-gray-300 peer-checked:border-cyan-500 peer-checked:text-cyan-400 peer-checked:bg-cyan-500/5 transition-all hover:border-gray-500">React</span>
-                    </label>
-                    <label class="cursor-pointer">
-                        <input type="checkbox" name="tech_stack" value="python" class="hidden peer">
-                        <span class="inline-block px-4 py-2 bg-forge-900 border border-gray-600 rounded-lg text-sm text-gray-300 peer-checked:border-cyan-500 peer-checked:text-cyan-400 peer-checked:bg-cyan-500/5 transition-all hover:border-gray-500">Python</span>
-                    </label>
-                    <label class="cursor-pointer">
-                        <input type="checkbox" name="tech_stack" value="nodejs" class="hidden peer">
-                        <span class="inline-block px-4 py-2 bg-forge-900 border border-gray-600 rounded-lg text-sm text-gray-300 peer-checked:border-cyan-500 peer-checked:text-cyan-400 peer-checked:bg-cyan-500/5 transition-all hover:border-gray-500">Node.js</span>
-                    </label>
-                    <label class="cursor-pointer">
-                        <input type="checkbox" name="tech_stack" value="postgresql" class="hidden peer">
-                        <span class="inline-block px-4 py-2 bg-forge-900 border border-gray-600 rounded-lg text-sm text-gray-300 peer-checked:border-purple-500 peer-checked:text-purple-400 peer-checked:bg-purple-500/5 transition-all hover:border-gray-500">PostgreSQL</span>
-                    </label>
-                    <label class="cursor-pointer">
-                        <input type="checkbox" name="tech_stack" value="mongodb" class="hidden peer">
-                        <span class="inline-block px-4 py-2 bg-forge-900 border border-gray-600 rounded-lg text-sm text-gray-300 peer-checked:border-purple-500 peer-checked:text-purple-400 peer-checked:bg-purple-500/5 transition-all hover:border-gray-500">MongoDB</span>
-                    </label>
-                    <label class="cursor-pointer">
-                        <input type="checkbox" name="tech_stack" value="tailwind" class="hidden peer">
-                        <span class="inline-block px-4 py-2 bg-forge-900 border border-gray-600 rounded-lg text-sm text-gray-300 peer-checked:border-pink-500 peer-checked:text-pink-400 peer-checked:bg-pink-500/5 transition-all hover:border-gray-500">Tailwind CSS</span>
-                    </label>
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="database" style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px; color: #333;">Database</label>
+                    <select 
+                        id="database" 
+                        name="database"
+                        style="width: 100%; padding: 10px 14px; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 14px; background: white; cursor: pointer;"
+                    >
+                        <option value="postgresql">PostgreSQL</option>
+                        <option value="mysql">MySQL</option>
+                        <option value="mongodb">MongoDB</option>
+                        <option value="sqlite">SQLite</option>
+                    </select>
                 </div>
             </div>
 
-            <!-- Actions -->
-            <div class="flex items-center justify-between pt-6 border-t border-gray-700">
-                <a href="/dashboard" class="px-6 py-3 text-gray-400 hover:text-white transition-colors">Cancel</a>
-                <button type="submit" class="px-8 py-3 bg-gradient-to-r from-cyan-500 to-purple-600 text-white font-semibold rounded-lg hover:shadow-lg hover:shadow-cyan-500/25 transition-all">
-                    Generate Project
+            <!-- Action Buttons -->
+            <div style="display: flex; gap: 12px; margin-top: 32px; padding-top: 24px; border-top: 1px solid #e0e0e0;">
+                <button 
+                    type="submit" 
+                    style="flex: 1; padding: 12px 24px; background: #1a1a1a; color: white; border: none; border-radius: 6px; font-weight: 500; font-size: 14px; cursor: pointer; transition: all 0.2s;"
+                    onmouseover="this.style.background='#333'"
+                    onmouseout="this.style.background='#1a1a1a'"
+                >
+                    Create Project
                 </button>
+                <a 
+                    href="{{ url_for('dashboard.projects') }}" 
+                    style="flex: 1; padding: 12px 24px; background: transparent; color: #666; border: 1px solid #e0e0e0; border-radius: 6px; font-weight: 500; font-size: 14px; text-align: center; text-decoration: none; cursor: pointer; display: block; transition: all 0.2s;"
+                    onmouseover="this.style.borderColor='#999'; this.style.color='#333'"
+                    onmouseout="this.style.borderColor='#e0e0e0'; this.style.color='#666'"
+                >
+                    Cancel
+                </a>
             </div>
         </form>
     </div>
 </div>
+
+<script>
+// Radio card interactions
+document.querySelectorAll('.radio-card').forEach(card => {
+    const radio = card.querySelector('input[type="radio"]');
+    
+    // Check initial state
+    if (radio.checked) {
+        card.style.borderColor = '#6366f1';
+        card.style.background = '#f8f9ff';
+    }
+    
+    card.addEventListener('click', function() {
+        document.querySelectorAll('.radio-card').forEach(c => {
+            c.style.borderColor = '#e0e0e0';
+            c.style.background = 'transparent';
+        });
+        this.style.borderColor = '#6366f1';
+        this.style.background = '#f8f9ff';
+    });
+    
+    card.addEventListener('mouseenter', function() {
+        if (!radio.checked) {
+            this.style.borderColor = '#999';
+        }
+    });
+    
+    card.addEventListener('mouseleave', function() {
+        if (!radio.checked) {
+            this.style.borderColor = '#e0e0e0';
+        }
+    });
+});
+</script>
 {% endblock %}
