@@ -96,11 +96,7 @@ def create_app() -> FastAPI:
         response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;"
         return response
     
-    @app.middleware("http")
-        response.headers["X-Process-Time"] = str(process_time)
-        return response
     
-    # Root endpoint
     
     # Health check endpoint
     @app.get("/health")
