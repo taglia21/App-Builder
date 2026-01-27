@@ -584,12 +584,4 @@ def create_dashboard_router(templates: Jinja2Templates) -> APIRouter:
         return templates.TemplateResponse("pages/api_keys.html", {"request": request})
     return router
 
-@router.route('/about')
-async def about(request: Request):
-    """About page."""
-    return render(request, 'pages/about.html')
 
-@router.route('/billing')
-async def billing(request: Request):
-    """Billing page."""
-    return render(request, 'pages/billing.html')
