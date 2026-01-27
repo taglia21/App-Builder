@@ -560,39 +560,6 @@ def create_dashboard_router(templates: Jinja2Templates) -> APIRouter:
     router.add_api_route("/projects", routes.create_project, methods=["POST"])
     router.add_api_route("/settings", routes.update_settings, methods=["POST"])
     
-    @router.get("/about", response_class=HTMLResponse)
-    async def about_page(request: Request):
-        """About page"""
-        return templates.TemplateResponse(
-            "pages/about.html",
-            {"request": request}
-        )
-
-    @router.get("/privacy", response_class=HTMLResponse)
-    async def privacy_page(request: Request):
-        """Privacy policy page"""
-        return templates.TemplateResponse("pages/privacy.html", {"request": request})
-
-    @router.get("/terms", response_class=HTMLResponse)
-    async def terms_page(request: Request):
-        """Terms of service page"""
-        return templates.TemplateResponse("pages/terms.html", {"request": request})
-
-    @router.get("/api-keys", response_class=HTMLResponse)
-    async def api_keys_page(request: Request):
-        """API keys management page"""
-        return templates.TemplateResponse("pages/api_keys.html", {"request": request})
-    
-    @router.get("/about", response_class=HTMLResponse)
-    async def about_page(request: Request):
-        """About page"""
-        return markupsafe.TemplateResponse("pages/about.html", {"request": request})
-    
-    @router.get("/billing", response_class=HTMLResponse)
-    async def billing_page(request: Request):
-        """Billing page"""
-        return markupsafe.TemplateResponse("pages/billing.html", {"request": request})
-    
 return router
 
 
