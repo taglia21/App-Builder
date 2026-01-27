@@ -4,107 +4,143 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}NexusAI{% endblock %}</title>
-    
-    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Lucide Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
-    
-    <!-- Modern CSS -->
-    <link rel="stylesheet" href="/static/css/modern.css">
-    
-    <!-- HTMX -->
-    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    
-    {% block extra_head %}{% endblock %}
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0a0a0f;
+            color: #e5e7eb;
+            min-height: 100vh;
+        }
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            left: 0; top: 0;
+            width: 260px;
+            height: 100vh;
+            background: linear-gradient(180deg, #0f0f14 0%, #0a0a0f 100%);
+            border-right: 1px solid rgba(255,255,255,0.06);
+            padding: 24px 16px;
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+        }
+        .sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 12px;
+            margin-bottom: 32px;
+            text-decoration: none;
+        }
+        .sidebar-logo-icon {
+            width: 36px; height: 36px;
+            background: linear-gradient(135deg, #a855f7, #6366f1);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .sidebar-logo-icon svg { width: 20px; height: 20px; color: white; }
+        .sidebar-logo span { font-size: 1.25rem; font-weight: 700; color: white; }
+        .sidebar-section { margin-bottom: 24px; }
+        .sidebar-section-title {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 0 12px;
+            margin-bottom: 8px;
+        }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            color: #9ca3af;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.15s ease;
+            margin-bottom: 2px;
+        }
+        .nav-item:hover { background: rgba(255,255,255,0.04); color: #e5e7eb; }
+        .nav-item.active {
+            background: linear-gradient(135deg, rgba(168,85,247,0.12), rgba(99,102,241,0.12));
+            color: #a855f7;
+        }
+        .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+        /* Main Content */
+        .main-content {
+            margin-left: 260px;
+            min-height: 100vh;
+            padding: 32px 40px;
+        }
+        .page-header {
+            margin-bottom: 32px;
+        }
+        .page-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 8px;
+        }
+        .page-subtitle {
+            font-size: 0.9375rem;
+            color: #9ca3af;
+        }
+        /* Cards */
+        .card {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: white;
+            margin-bottom: 16px;
+        }
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: all 0.15s ease;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #a855f7, #6366f1);
+            color: white;
+        }
+        .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-secondary {
+            background: rgba(255,255,255,0.06);
+            color: #e5e7eb;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .btn-secondary:hover { background: rgba(255,255,255,0.1); }
+    </style>
+    {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <div class="app-container">
-        <!-- Sidebar -->
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <a href="/dashboard" class="sidebar-logo">
-                    <div class="sidebar-logo-icon">
-                        <i data-lucide="zap"></i>
-                    </div>
-                    <span>NexusAI</span>
-                </a>
-            </div>
-            
-            <nav class="sidebar-nav">
-                <div class="nav-section">
-                    <div class="nav-section-title">Main</div>
-                    <a href="/dashboard" class="nav-item {% if request.url.path == '/dashboard' %}active{% endif %}">
-                        <i data-lucide="layout-dashboard" class="nav-item-icon"></i>
-                        <span>Dashboard</span>
-                    </a>
-                    <a href="/projects" class="nav-item {% if '/projects' in request.url.path %}active{% endif %}">
-                        <i data-lucide="folder" class="nav-item-icon"></i>
-                        <span>Projects</span>
-                    </a>
-                    <a href="/api-keys" class="nav-item {% if request.url.path == '/api-keys' %}active{% endif %}">
-                        <i data-lucide="key" class="nav-item-icon"></i>
-                        <span>API Keys</span>
-                    </a>
-                </div>
-                
-                <div class="nav-section">
-                    <div class="nav-section-title">Account</div>
-                    <a href="/settings" class="nav-item {% if request.url.path == '/settings' %}active{% endif %}">
-                        <i data-lucide="settings" class="nav-item-icon"></i>
-                        <span>Settings</span>
-                    </a>
-                    <a href="/billing" class="nav-item {% if request.url.path == '/billing' %}active{% endif %}">
-                        <i data-lucide="credit-card" class="nav-item-icon"></i>
-                        <span>Billing</span>
-                    </a>
-                </div>
-                
-                <div class="nav-section">
-                    <div class="nav-section-title">Resources</div>
-                    <a href="/about" class="nav-item {% if request.url.path == '/about' %}active{% endif %}">
-                        <i data-lucide="info" class="nav-item-icon"></i>
-                        <span>About Us</span>
-                    </a>
-                    <a href="/terms" class="nav-item {% if request.url.path == '/terms' %}active{% endif %}">
-                        <i data-lucide="file-text" class="nav-item-icon"></i>
-                        <span>Terms</span>
-                    </a>
-                    <a href="/contact" class="nav-item {% if request.url.path == '/contact' %}active{% endif %}">
-                        <i data-lucide="mail" class="nav-item-icon"></i>
-                        <span>Contact</span>
-                    </a>
-                </div>
-            </nav>
-            
-            <!-- User Profile -->
-            <div class="sidebar-footer" style="margin-top: auto; padding-top: var(--space-6); border-top: 1px solid var(--border-secondary);">
-                <a href="/settings" class="nav-item">
-                    <div style="width: 36px; height: 36px; background: var(--gradient-primary); border-radius: var(--radius-full); display: flex; align-items: center; justify-content: center;">
-                        <i data-lucide="user" style="width: 18px; height: 18px;"></i>
-                    </div>
-                    <div style="flex: 1;">
-                        <div style="font-weight: 600; font-size: 0.875rem; color: var(--text-primary);">{{ user.name if user else 'User' }}</div>
-                        <div style="font-size: 0.75rem; color: var(--text-muted);">Pro Plan</div>
-                    </div>
-                </a>
-            </div>
-        </aside>
-        
-        <!-- Main Content -->
-        <main class="main-content">
-            {% block content %}{% endblock %}
-        </main>
-    </div>
-    
-    <!-- Initialize Lucide Icons -->
-    <script>
-        lucide.createIcons();
-    </script>
-    
-    {% block extra_scripts %}{% endblock %}
+    {% include "partials/sidebar_modern.html" %}
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+    <script>lucide.createIcons();</script>
+    {% block extra_js %}{% endblock %}
 </body>
 </html>

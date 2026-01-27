@@ -1,78 +1,139 @@
-{% extends "base_modern.html" %}
+{% extends "base.html" %}
 {% block title %}About Us - NexusAI{% endblock %}
 
+{% block extra_css %}
+<style>
+    .about-hero {
+        text-align: center;
+        padding: 48px 0 64px;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    .about-hero h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #a855f7, #6366f1);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 16px;
+    }
+    .about-hero p {
+        font-size: 1.125rem;
+        color: #9ca3af;
+        line-height: 1.7;
+    }
+    .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 24px;
+        margin-bottom: 48px;
+    }
+    .feature-card {
+        background: rgba(255,255,255,0.02);
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 16px;
+        padding: 28px;
+        transition: all 0.2s ease;
+    }
+    .feature-card:hover {
+        border-color: rgba(168,85,247,0.3);
+        transform: translateY(-2px);
+    }
+    .feature-icon {
+        width: 48px; height: 48px;
+        background: linear-gradient(135deg, rgba(168,85,247,0.15), rgba(99,102,241,0.15));
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 16px;
+    }
+    .feature-icon svg { width: 24px; height: 24px; color: #a855f7; }
+    .feature-card h3 {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: white;
+        margin-bottom: 8px;
+    }
+    .feature-card p {
+        font-size: 0.9375rem;
+        color: #9ca3af;
+        line-height: 1.6;
+    }
+    .stats-section {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+        padding: 48px 0;
+        border-top: 1px solid rgba(255,255,255,0.06);
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+        margin-bottom: 48px;
+    }
+    .stat-item { text-align: center; }
+    .stat-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #a855f7;
+        margin-bottom: 4px;
+    }
+    .stat-label {
+        font-size: 0.875rem;
+        color: #9ca3af;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="content-wrapper">
-    <div class="content-header">
-        <div>
-            <h1>About NexusAI</h1>
-            <p class="subtitle">Building the future of AI-powered application development</p>
-        </div>
+<div class="about-hero">
+    <h1>Building the Future of App Development</h1>
+    <p>NexusAI empowers developers and businesses to create production-ready applications in minutes, not months. Our AI-powered platform handles the complexity so you can focus on what matters.</p>
+</div>
+
+<div class="features-grid">
+    <div class="feature-card">
+        <div class="feature-icon"><i data-lucide="sparkles"></i></div>
+        <h3>AI-Powered Generation</h3>
+        <p>Describe your app and watch as our AI generates complete, production-ready code with best practices built in.</p>
     </div>
+    <div class="feature-card">
+        <div class="feature-icon"><i data-lucide="rocket"></i></div>
+        <h3>One-Click Deployment</h3>
+        <p>Deploy to the cloud instantly. We handle infrastructure, scaling, and DevOps so you don't have to.</p>
+    </div>
+    <div class="feature-card">
+        <div class="feature-icon"><i data-lucide="github"></i></div>
+        <h3>Full Code Ownership</h3>
+        <p>Export your complete source code anytime. No vendor lock-in, full GitHub integration included.</p>
+    </div>
+    <div class="feature-card">
+        <div class="feature-icon"><i data-lucide="shield-check"></i></div>
+        <h3>Enterprise Security</h3>
+        <p>SOC 2 compliant infrastructure with end-to-end encryption and role-based access controls.</p>
+    </div>
+    <div class="feature-card">
+        <div class="feature-icon"><i data-lucide="headphones"></i></div>
+        <h3>24/7 Expert Support</h3>
+        <p>Our team of engineers is always available to help you build and scale your applications.</p>
+    </div>
+    <div class="feature-card">
+        <div class="feature-icon"><i data-lucide="bar-chart-3"></i></div>
+        <h3>Built-in Analytics</h3>
+        <p>Monitor performance, track usage, and gain insights with our comprehensive analytics dashboard.</p>
+    </div>
+</div>
 
-    <div style="max-width: 900px; margin: 0 auto;">
-        <!-- Mission Section -->
-        <div class="stat-card" style="margin-bottom: 24px;">
-            <h2 style="font-size: 20px; font-weight: 600; margin: 0 0 16px 0;">Our Mission</h2>
-            <p style="color: #666; line-height: 1.8; margin: 0;">NexusAI is dedicated to democratizing application development through advanced AI technology. We empower developers and businesses to build production-ready applications faster, smarter, and more efficiently than ever before.</p>
-        </div>
-
-        <!-- What We Do -->
-        <div class="stat-card" style="margin-bottom: 24px;">
-            <h2 style="font-size: 20px; font-weight: 600; margin: 0 0 16px 0;">What We Do</h2>
-            <div style="display: grid; gap: 20px;">
-                <div style="display: flex; gap: 16px;">
-                    <div style="flex-shrink: 0; width: 48px; height: 48px; border-radius: 8px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 24px;">⚡</div>
-                    <div>
-                        <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 8px 0;">AI-Powered Generation</h3>
-                        <p style="color: #666; margin: 0; line-height: 1.6;">Leverage cutting-edge AI to generate complete application architectures, from backend APIs to frontend interfaces.</p>
-                    </div>
-                </div>
-                <div style="display: flex; gap: 16px;">
-                    <div style="flex-shrink: 0; width: 48px; height: 48px; border-radius: 8px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 24px;">🚀</div>
-                    <div>
-                        <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 8px 0;">Rapid Deployment</h3>
-                        <p style="color: #666; margin: 0; line-height: 1.6;">Deploy your applications to production with a single click. We handle the infrastructure, scaling, and monitoring.</p>
-                    </div>
-                </div>
-                <div style="display: flex; gap: 16px;">
-                    <div style="flex-shrink: 0; width: 48px; height: 48px; border-radius: 8px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 24px;">🔧</div>
-                    <div>
-                        <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 8px 0;">Full Control</h3>
-                        <p style="color: #666; margin: 0; line-height: 1.6;">Access complete source code with GitHub integration. Customize, extend, and maintain your applications with ease.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Why Choose Us -->
-        <div class="stat-card" style="margin-bottom: 24px;">
-            <h2 style="font-size: 20px; font-weight: 600; margin: 0 0 16px 0;">Why Choose NexusAI</h2>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
-                <div style="text-align: center; padding: 20px;">
-                    <div style="font-size: 32px; font-weight: 700; color: #667eea; margin-bottom: 8px;">10x</div>
-                    <div style="color: #666; font-size: 14px;">Faster Development</div>
-                </div>
-                <div style="text-align: center; padding: 20px;">
-                    <div style="font-size: 32px; font-weight: 700; color: #667eea; margin-bottom: 8px;">99.9%</div>
-                    <div style="color: #666; font-size: 14px;">Uptime SLA</div>
-                </div>
-                <div style="text-align: center; padding: 20px;">
-                    <div style="font-size: 32px; font-weight: 700; color: #667eea; margin-bottom: 8px;">24/7</div>
-                    <div style="color: #666; font-size: 14px;">Expert Support</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Contact Section -->
-        <div class="stat-card">
-            <h2 style="font-size: 20px; font-weight: 600; margin: 0 0 16px 0;">Get in Touch</h2>
-            <p style="color: #666; line-height: 1.8; margin: 0 0 20px 0;">Have questions or want to learn more? We'd love to hear from you.</p>
-            <div style="display: flex; gap: 12px;">
-                <a href="mailto:hello@nexusai.dev" style="padding: 12px 24px; background: #1a1a1a; color: white; border-radius: 6px; text-decoration: none; font-weight: 500; font-size: 14px;">Contact Sales</a>
-                <a href="/docs" style="padding: 12px 24px; background: transparent; border: 1px solid #e0e0e0; color: #333; border-radius: 6px; text-decoration: none; font-weight: 500; font-size: 14px;">Documentation</a>
-            </div>
-        </div>
+<div class="stats-section">
+    <div class="stat-item">
+        <div class="stat-value">10K+</div>
+        <div class="stat-label">Apps Deployed</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-value">99.9%</div>
+        <div class="stat-label">Uptime SLA</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-value">24/7</div>
+        <div class="stat-label">Expert Support</div>
     </div>
 </div>
 {% endblock %}

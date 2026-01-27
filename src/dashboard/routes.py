@@ -190,15 +190,15 @@ class DashboardRoutes:
 
     async def api_keys_page(self, request: Request) -> HTMLResponse:
         """API Keys management page."""
-        return self.render(request, "pages/api_keys.html", {})
+        return self.render(request, "pages/api_keys.html", {"active": "api-keys"})
 
     async def about_page(self, request: Request) -> HTMLResponse:
         """About Us page."""
-        return self.render(request, "pages/about.html", {})
+        return self.render(request, "pages/about.html", {"active": "about"})
 
     async def terms_page(self, request: Request) -> HTMLResponse:
         """Terms of Service page."""
-        return self.render(request, "pages/terms.html", {})
+        return self.render(request, "pages/terms.html", {"active": "terms"})
     
     # ==================== HTMX Partial Routes ====================
     
