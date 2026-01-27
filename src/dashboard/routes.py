@@ -96,6 +96,18 @@ class DashboardRoutes:
                 {"num": 3, "title": "Review & Generate"},
             ],
         })
+    async def projects_list(self, request: Request) -> HTMLResponse:
+        """Display list of all projects."""
+        projects = [
+            {"id": "proj_1", "name": "My SaaS App", "status": "deployed", "description": "Full-stack SaaS application", "url": "https://my-saas.vercel.app", "created_at": "Jan 15, 2024"},
+            {"id": "proj_2", "name": "Portfolio Site", "status": "building", "description": "Personal portfolio", "url": None, "created_at": "Jan 20, 2024"},
+            {"id": "proj_3", "name": "Task Manager", "status": "draft", "description": "Team productivity app", "url": None, "created_at": "Jan 22, 2024"},
+        ]
+        return self.render(request, "pages/projects.html", {
+            "active_page": "projects",
+            "projects": projects,
+        })
+
     
     async def project_detail(
         self,
@@ -544,6 +556,7 @@ def create_dashboard_router(templates: Jinja2Templates) -> APIRouter:
     router.add_api_route("/htmx/projects/{project_id}/progress", routes.htmx_generate_progress, methods=["GET"], response_class=HTMLResponse)
     
     # Form handlers
+    router.add_api_route("/projects", routes.projects_list, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/projects", routes.create_project, methods=["POST"])
     router.add_api_route("/settings", routes.update_settings, methods=["POST"])
     
