@@ -11,7 +11,7 @@
     </div>
 
     <div class="form-container" style="max-width: 800px; margin: 0 auto;">
-        <form method="POST" action="{{ url_for('dashboard.create_project') }}" id="projectForm">
+        <form method="POST" action="/projects" id="projectForm">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             
             <!-- Project Details Section -->
@@ -144,7 +144,7 @@
                     Create Project
                 </button>
                 <a 
-                    href="{{ url_for('dashboard.projects') }}" 
+                    href="/projects" 
                     style="flex: 1; padding: 12px 24px; background: transparent; color: #666; border: 1px solid #e0e0e0; border-radius: 6px; font-weight: 500; font-size: 14px; text-align: center; text-decoration: none; cursor: pointer; display: block; transition: all 0.2s;"
                     onmouseover="this.style.borderColor='#999'; this.style.color='#333'"
                     onmouseout="this.style.borderColor='#e0e0e0'; this.style.color='#666'"
