@@ -1,136 +1,126 @@
-{% extends "base.html" %}
+{% extends "base_public.html" %}
 {% block title %}LaunchForge - Start Your AI Business in Minutes{% endblock %}
 {% block content %}
-<style>
-    .landing-container { max-width: 900px; margin: 0 auto; padding: 40px 20px; }
-    .hero { text-align: center; margin-bottom: 60px; }
-    .hero h1 { font-size: 3rem; font-weight: 800; margin-bottom: 16px; background: linear-gradient(135deg, #8b5cf6, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-    .hero .tagline { font-size: 1.5rem; color: var(--nexus-text); margin-bottom: 32px; }
-    .idea-card { background: var(--nexus-card); border: 1px solid var(--nexus-border); border-radius: 16px; padding: 40px; margin-bottom: 40px; }
-    .idea-card h2 { font-size: 1.5rem; margin-bottom: 24px; }
-    .idea-input { width: 100%; min-height: 150px; padding: 16px; background: var(--nexus-dark); border: 1px solid var(--nexus-border); border-radius: 12px; color: white; font-size: 1rem; resize: vertical; font-family: inherit; }
-    .idea-input:focus { outline: none; border-color: var(--nexus-purple); }
-    .idea-input::placeholder { color: #666; }
-    .btn-generate { width: 100%; padding: 16px 32px; background: linear-gradient(135deg, #8b5cf6, #6366f1); color: white; border: none; border-radius: 12px; font-size: 1.1rem; font-weight: 600; cursor: pointer; margin-top: 20px; transition: transform 0.2s, box-shadow 0.2s; }
-    .btn-generate:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(139, 92, 246, 0.4); }
-    .btn-generate:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-    .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 60px; }
-    .feature-card { background: var(--nexus-card); border: 1px solid var(--nexus-border); border-radius: 12px; padding: 24px; text-align: center; }
-    .feature-icon { font-size: 2.5rem; margin-bottom: 16px; }
-    .feature-card h3 { font-size: 1.1rem; margin-bottom: 8px; }
-    .feature-card p { color: var(--nexus-text); font-size: 0.9rem; }
-    .steps { margin-bottom: 60px; }
-    .steps h2 { text-align: center; font-size: 1.75rem; margin-bottom: 32px; }
-    .step-list { display: flex; justify-content: space-between; position: relative; }
-    .step-list::before { content: ''; position: absolute; top: 24px; left: 60px; right: 60px; height: 2px; background: var(--nexus-border); }
-    .step { text-align: center; position: relative; z-index: 1; flex: 1; }
-    .step-number { width: 48px; height: 48px; background: var(--nexus-purple); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.25rem; margin: 0 auto 12px; }
-    .step-title { font-weight: 600; margin-bottom: 4px; }
-    .step-desc { color: var(--nexus-text); font-size: 0.85rem; }
-    .loading { display: none; text-align: center; padding: 40px; }
-    .loading.active { display: block; }
-    .spinner { width: 48px; height: 48px; border: 3px solid var(--nexus-border); border-top-color: var(--nexus-purple); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .loading-text { color: var(--nexus-text); }
-    @media (max-width: 768px) { .features { grid-template-columns: 1fr; } .step-list { flex-direction: column; gap: 24px; } .step-list::before { display: none; } }
-</style>
+<div class="min-h-screen bg-gradient-to-b from-gray-900 via-purple-900 to-gray-900">
+    <!-- Hero Section -->
+    <header class="pt-6 px-8">
+        <nav class="flex justify-between items-center max-w-7xl mx-auto">
+            <div class="flex items-center gap-2">
+                <svg class="w-8 h-8 text-purple-400" fill="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                <span class="text-2xl font-bold text-white">LaunchForge</span>
+            </div>
+            <div class="flex gap-4">
+                <a href="/pricing" class="text-gray-300 hover:text-white">Pricing</a>
+                <a href="/about" class="text-gray-300 hover:text-white">About</a>
+                <a href="/dashboard" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">Get Started</a>
+            </div>
+        </nav>
+    </header>
 
-<div class="landing-container">
-    <div class="hero">
-        <h1>Start Your AI Business in Minutes</h1>
-        <p class="tagline">Describe your idea. We build it. You own it.</p>
-    </div>
+    <main class="max-w-7xl mx-auto px-8 pt-20 pb-32">
+        <div class="text-center">
+            <h1 class="text-5xl md:text-7xl font-bold text-white mb-6">
+                Start Your AI Business<br>
+                <span class="text-purple-400">In Minutes, Not Months</span>
+            </h1>
+            <p class="text-xl text-gray-300 max-w-2xl mx-auto mb-10">
+                From idea to deployed business in one platform. Generate production-ready code, 
+                register your LLC, and launch your AI startup—all without writing a single line of code.
+            </p>
+            <div class="flex gap-4 justify-center">
+                <a href="/dashboard" class="px-8 py-4 bg-purple-600 text-white text-lg font-semibold rounded-lg hover:bg-purple-700 transition">
+                    Start Building Free
+                </a>
+                <a href="#how-it-works" class="px-8 py-4 border border-gray-600 text-white text-lg font-semibold rounded-lg hover:border-purple-400 transition">
+                    See How It Works
+                </a>
+            </div>
+        </div>
 
-    <div class="features">
-        <div class="feature-card">
-            <div class="feature-icon">💡</div>
-            <h3>Describe Your Vision</h3>
-            <p>Tell us your AI business idea in plain English</p>
-        </div>
-        <div class="feature-card">
-            <div class="feature-icon">⚙️</div>
-            <h3>We Build It</h3>
-            <p>Get a production-ready codebase, customized by AI agents</p>
-        </div>
-        <div class="feature-card">
-            <div class="feature-icon">🚀</div>
-            <h3>Launch & Own</h3>
-            <p>Deploy instantly, register your business, start earning</p>
-        </div>
-    </div>
+        <!-- How It Works -->
+        <section id="how-it-works" class="mt-32">
+            <h2 class="text-3xl font-bold text-white text-center mb-16">How It Works</h2>
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="bg-gray-800/50 rounded-xl p-8 border border-gray-700">
+                    <div class="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center mb-4">
+                        <span class="text-white font-bold">1</span>
+                    </div>
+                    <h3 class="text-xl font-semibold text-white mb-3">Describe Your Idea</h3>
+                    <p class="text-gray-400">Tell us your AI business idea in plain English. Our system analyzes market viability and refines your concept.</p>
+                </div>
+                <div class="bg-gray-800/50 rounded-xl p-8 border border-gray-700">
+                    <div class="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center mb-4">
+                        <span class="text-white font-bold">2</span>
+                    </div>
+                    <h3 class="text-xl font-semibold text-white mb-3">Generate & Customize</h3>
+                    <p class="text-gray-400">We generate a complete, modular codebase. Use AI agents to customize every aspect to your specifications.</p>
+                </div>
+                <div class="bg-gray-800/50 rounded-xl p-8 border border-gray-700">
+                    <div class="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center mb-4">
+                        <span class="text-white font-bold">3</span>
+                    </div>
+                    <h3 class="text-xl font-semibold text-white mb-3">Deploy & Register</h3>
+                    <p class="text-gray-400">One-click deployment to production. Form your LLC, get your EIN, and own your business—all from here.</p>
+                </div>
+            </div>
+        </section>
 
-    <div class="idea-card">
-        <h2>What's your AI business idea?</h2>
-        <form id="ideaForm" action="/generate" method="POST">
-            <textarea class="idea-input" name="idea" id="ideaInput" placeholder="Example: I want to build an AI tool that helps real estate agents automatically generate property descriptions from photos. It should analyze images, identify key features, and write compelling listings optimized for different platforms like Zillow, Realtor.com, and social media."></textarea>
-            <button type="submit" class="btn-generate" id="generateBtn">
-                🔮 Analyze & Generate My App
-            </button>
-        </form>
-        <div class="loading" id="loadingState">
-            <div class="spinner"></div>
-            <p class="loading-text">Analyzing your idea and researching the market...</p>
-        </div>
-    </div>
+        <!-- Features -->
+        <section class="mt-32">
+            <h2 class="text-3xl font-bold text-white text-center mb-16">Everything You Need to Launch</h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="flex gap-4 p-6 bg-gray-800/30 rounded-xl">
+                    <div class="text-purple-400">✓</div>
+                    <div>
+                        <h4 class="text-white font-semibold">AI-Powered Code Generation</h4>
+                        <p class="text-gray-400 text-sm">Production-ready, modular code that works out of the box</p>
+                    </div>
+                </div>
+                <div class="flex gap-4 p-6 bg-gray-800/30 rounded-xl">
+                    <div class="text-purple-400">✓</div>
+                    <div>
+                        <h4 class="text-white font-semibold">Agent-Assisted Customization</h4>
+                        <p class="text-gray-400 text-sm">AI agents help you build and modify features to your exact specs</p>
+                    </div>
+                </div>
+                <div class="flex gap-4 p-6 bg-gray-800/30 rounded-xl">
+                    <div class="text-purple-400">✓</div>
+                    <div>
+                        <h4 class="text-white font-semibold">One-Click Deployment</h4>
+                        <p class="text-gray-400 text-sm">Deploy to cloud infrastructure instantly with zero DevOps knowledge</p>
+                    </div>
+                </div>
+                <div class="flex gap-4 p-6 bg-gray-800/30 rounded-xl">
+                    <div class="text-purple-400">✓</div>
+                    <div>
+                        <h4 class="text-white font-semibold">Business Formation</h4>
+                        <p class="text-gray-400 text-sm">LLC registration, EIN application, and legal documents—all in one place</p>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-    <div class="steps">
-        <h2>How It Works</h2>
-        <div class="step-list">
-            <div class="step">
-                <div class="step-number">1</div>
-                <div class="step-title">Describe</div>
-                <div class="step-desc">Share your idea</div>
+        <!-- CTA -->
+        <section class="mt-32 text-center">
+            <div class="bg-gradient-to-r from-purple-600 to-purple-800 rounded-2xl p-12">
+                <h2 class="text-3xl font-bold text-white mb-4">Ready to Launch Your AI Business?</h2>
+                <p class="text-purple-100 mb-8">Join thousands of entrepreneurs building the future with LaunchForge</p>
+                <a href="/dashboard" class="px-8 py-4 bg-white text-purple-700 text-lg font-semibold rounded-lg hover:bg-gray-100 transition">
+                    Get Started Free
+                </a>
             </div>
-            <div class="step">
-                <div class="step-number">2</div>
-                <div class="step-title">Validate</div>
-                <div class="step-desc">We research & vet</div>
-            </div>
-            <div class="step">
-                <div class="step-number">3</div>
-                <div class="step-title">Generate</div>
-                <div class="step-desc">AI builds your app</div>
-            </div>
-            <div class="step">
-                <div class="step-number">4</div>
-                <div class="step-title">Customize</div>
-                <div class="step-desc">Agents help refine</div>
-            </div>
-            <div class="step">
-                <div class="step-number">5</div>
-                <div class="step-title">Launch</div>
-                <div class="step-desc">Deploy & register</div>
+        </section>
+    </main>
+
+    <footer class="border-t border-gray-800 py-12">
+        <div class="max-w-7xl mx-auto px-8 flex justify-between items-center">
+            <div class="text-gray-500">© 2026 LaunchForge. All rights reserved.</div>
+            <div class="flex gap-6">
+                <a href="/terms" class="text-gray-500 hover:text-white">Terms</a>
+                <a href="/about" class="text-gray-500 hover:text-white">About</a>
+                <a href="/contact" class="text-gray-500 hover:text-white">Contact</a>
             </div>
         </div>
-    </div>
+    </footer>
 </div>
-
-<script>
-document.getElementById('ideaForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const idea = document.getElementById('ideaInput').value.trim();
-    if (!idea) return;
-    
-    document.getElementById('generateBtn').disabled = true;
-    document.getElementById('loadingState').classList.add('active');
-    
-    // Submit to backend
-    fetch('/api/ideas/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idea: idea })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.project_id) {
-            window.location.href = '/projects/' + data.project_id + '/review';
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        document.getElementById('generateBtn').disabled = false;
-        document.getElementById('loadingState').classList.remove('active');
-    });
-});
-</script>
 {% endblock %}
