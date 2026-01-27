@@ -1,77 +1,71 @@
 {% extends "base.html" %}
-
-{% block title %}Settings - NexusAI{% endblock %}
-
+{% block title %}Settings{% endblock %}
 {% block content %}
-<div class="max-w-4xl">
-    <h1 class="text-3xl font-bold mb-2">Settings</h1>
-    <p class="text-nexus-text mb-8">Manage your account settings and preferences.</p>
-    
-    <!-- Profile Section -->
-    <div class="bg-nexus-card border border-nexus-border rounded-xl p-6 mb-6">
-        <h2 class="text-lg font-semibold mb-6">Profile Information</h2>
-        <form class="space-y-6">
-            <div class="grid md:grid-cols-2 gap-6">
+<div style="max-width: 800px;">
+    <h1 style="font-size: 2rem; font-weight: 700; margin-bottom: 8px;">Settings</h1>
+    <p style="color: var(--nexus-text); margin-bottom: 32px;">Manage your account settings and preferences.</p>
+
+    <!-- Profile Information Card -->
+    <div class="card" style="padding: 24px; margin-bottom: 24px;">
+        <h2 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 20px;">Profile Information</h2>
+        <div style="display: grid; gap: 16px;">
+            <div>
+                <label style="display: block; font-size: 0.875rem; color: var(--nexus-text); margin-bottom: 6px;">Full Name</label>
+                <input type="text" value="John Doe" style="width: 100%; padding: 10px 14px; background: var(--nexus-dark); border: 1px solid var(--nexus-border); border-radius: 8px; color: white; font-size: 0.95rem;">
+            </div>
+            <div>
+                <label style="display: block; font-size: 0.875rem; color: var(--nexus-text); margin-bottom: 6px;">Email Address</label>
+                <input type="email" value="john@example.com" style="width: 100%; padding: 10px 14px; background: var(--nexus-dark); border: 1px solid var(--nexus-border); border-radius: 8px; color: white; font-size: 0.95rem;">
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                 <div>
-                    <label class="block text-sm font-medium mb-2">Full Name</label>
-                    <input type="text" value="John Doe" class="w-full bg-nexus-dark border border-nexus-border rounded-lg px-4 py-3 text-white focus:border-nexus-purple focus:outline-none transition">
+                    <label style="display: block; font-size: 0.875rem; color: var(--nexus-text); margin-bottom: 6px;">Company</label>
+                    <input type="text" value="Acme Inc." style="width: 100%; padding: 10px 14px; background: var(--nexus-dark); border: 1px solid var(--nexus-border); border-radius: 8px; color: white; font-size: 0.95rem;">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium mb-2">Email Address</label>
-                    <input type="email" value="john@example.com" class="w-full bg-nexus-dark border border-nexus-border rounded-lg px-4 py-3 text-white focus:border-nexus-purple focus:outline-none transition">
+                    <label style="display: block; font-size: 0.875rem; color: var(--nexus-text); margin-bottom: 6px;">Role</label>
+                    <input type="text" value="Developer" style="width: 100%; padding: 10px 14px; background: var(--nexus-dark); border: 1px solid var(--nexus-border); border-radius: 8px; color: white; font-size: 0.95rem;">
                 </div>
             </div>
-            <div class="grid md:grid-cols-2 gap-6">
-                <div>
-                    <label class="block text-sm font-medium mb-2">Company</label>
-                    <input type="text" value="Acme Inc." class="w-full bg-nexus-dark border border-nexus-border rounded-lg px-4 py-3 text-white focus:border-nexus-purple focus:outline-none transition">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-2">Role</label>
-                    <input type="text" value="Developer" class="w-full bg-nexus-dark border border-nexus-border rounded-lg px-4 py-3 text-white focus:border-nexus-purple focus:outline-none transition">
-                </div>
+            <div style="margin-top: 8px;">
+                <button style="padding: 10px 20px; background: var(--nexus-purple); color: white; border: none; border-radius: 8px; font-weight: 500; cursor: pointer;">Save Changes</button>
             </div>
-            <button type="submit" class="bg-nexus-purple hover:bg-nexus-purple/80 text-white px-6 py-2 rounded-lg font-medium transition">
-                Save Changes
-            </button>
-        </form>
+        </div>
     </div>
-    
-    <!-- Notifications Section -->
-    <div class="bg-nexus-card border border-nexus-border rounded-xl p-6 mb-6">
-        <h2 class="text-lg font-semibold mb-6">Notification Preferences</h2>
-        <div class="space-y-4">
-            <label class="flex items-center justify-between p-3 rounded-lg hover:bg-nexus-dark/50 transition cursor-pointer">
+
+    <!-- Notification Preferences Card -->
+    <div class="card" style="padding: 24px; margin-bottom: 24px;">
+        <h2 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 20px;">Notification Preferences</h2>
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+            <label style="display: flex; align-items: flex-start; gap: 12px; cursor: pointer;">
+                <input type="checkbox" checked style="width: 18px; height: 18px; accent-color: var(--nexus-purple); margin-top: 2px;">
                 <div>
-                    <div class="font-medium">Email Notifications</div>
-                    <div class="text-sm text-nexus-text">Receive updates about your account via email</div>
+                    <div style="font-weight: 500;">Email Notifications</div>
+                    <div style="font-size: 0.875rem; color: var(--nexus-text);">Receive updates about your account via email</div>
                 </div>
-                <input type="checkbox" checked class="w-5 h-5 rounded border-nexus-border bg-nexus-dark accent-nexus-purple">
             </label>
-            <label class="flex items-center justify-between p-3 rounded-lg hover:bg-nexus-dark/50 transition cursor-pointer">
+            <label style="display: flex; align-items: flex-start; gap: 12px; cursor: pointer;">
+                <input type="checkbox" checked style="width: 18px; height: 18px; accent-color: var(--nexus-purple); margin-top: 2px;">
                 <div>
-                    <div class="font-medium">API Usage Alerts</div>
-                    <div class="text-sm text-nexus-text">Get notified when approaching usage limits</div>
+                    <div style="font-weight: 500;">API Usage Alerts</div>
+                    <div style="font-size: 0.875rem; color: var(--nexus-text);">Get notified when approaching usage limits</div>
                 </div>
-                <input type="checkbox" checked class="w-5 h-5 rounded border-nexus-border bg-nexus-dark accent-nexus-purple">
             </label>
-            <label class="flex items-center justify-between p-3 rounded-lg hover:bg-nexus-dark/50 transition cursor-pointer">
+            <label style="display: flex; align-items: flex-start; gap: 12px; cursor: pointer;">
+                <input type="checkbox" style="width: 18px; height: 18px; accent-color: var(--nexus-purple); margin-top: 2px;">
                 <div>
-                    <div class="font-medium">Marketing Updates</div>
-                    <div class="text-sm text-nexus-text">Receive news about new features and promotions</div>
+                    <div style="font-weight: 500;">Marketing Updates</div>
+                    <div style="font-size: 0.875rem; color: var(--nexus-text);">Receive news about new features and promotions</div>
                 </div>
-                <input type="checkbox" class="w-5 h-5 rounded border-nexus-border bg-nexus-dark accent-nexus-purple">
             </label>
         </div>
     </div>
-    
-    <!-- Danger Zone -->
-    <div class="bg-nexus-card border border-red-500/30 rounded-xl p-6">
-        <h2 class="text-lg font-semibold text-red-400 mb-4">Danger Zone</h2>
-        <p class="text-nexus-text mb-4">Once you delete your account, there is no going back. Please be certain.</p>
-        <button class="bg-red-500/20 hover:bg-red-500/30 text-red-400 px-6 py-2 rounded-lg font-medium transition">
-            Delete Account
-        </button>
+
+    <!-- Danger Zone Card -->
+    <div class="card" style="padding: 24px; border: 1px solid rgba(239, 68, 68, 0.3);">
+        <h2 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 8px; color: #ef4444;">Danger Zone</h2>
+        <p style="color: var(--nexus-text); margin-bottom: 16px; font-size: 0.95rem;">Once you delete your account, there is no going back. Please be certain.</p>
+        <button style="padding: 10px 20px; background: transparent; color: #ef4444; border: 1px solid #ef4444; border-radius: 8px; font-weight: 500; cursor: pointer;">Delete Account</button>
     </div>
 </div>
 {% endblock %}
