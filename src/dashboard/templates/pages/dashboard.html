@@ -3,179 +3,107 @@
 {% block title %}Dashboard - NexusAI{% endblock %}
 
 {% block content %}
-<div class="animate-fadeInUp">
-    <!-- Page Header -->
-    <div class="page-header">
-        <h1 class="page-title">Welcome back! 👋</h1>
-        <p class="page-subtitle">Here's an overview of your projects and recent activity.</p>
-    </div>
+<div>
+    <h1 class="text-3xl font-bold mb-2">Welcome back</h1>
+    <p class="text-nexus-text mb-8">Here's an overview of your NexusAI usage and activity.</p>
     
     <!-- Stats Grid -->
-    <div class="stats-grid mb-8">
-        <div class="stat-card animate-fadeInUp stagger-1">
-            <div class="stat-icon">
-                <i data-lucide="folder" style="width: 24px; height: 24px;"></i>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="bg-nexus-card border border-nexus-border rounded-xl p-6">
+            <div class="flex items-center justify-between mb-4">
+                <span class="text-nexus-text text-sm">API Calls Today</span>
+                <i data-lucide="activity" class="w-4 h-4 text-nexus-text"></i>
             </div>
-            <div class="stat-value">{{ stats.total_projects if stats else 3 }}</div>
-            <div class="stat-label">Total Projects</div>
-            <div class="stat-change positive">
-                <i data-lucide="trending-up" style="width: 14px; height: 14px;"></i>
-                +2 this month
-            </div>
+            <div class="text-2xl font-bold">12,543</div>
+            <div class="text-sm text-green-500 mt-1">+12.5% from yesterday</div>
         </div>
-        
-        <div class="stat-card animate-fadeInUp stagger-2">
-            <div class="stat-icon" style="background: var(--gradient-success);">
-                <i data-lucide="rocket" style="width: 24px; height: 24px;"></i>
+        <div class="bg-nexus-card border border-nexus-border rounded-xl p-6">
+            <div class="flex items-center justify-between mb-4">
+                <span class="text-nexus-text text-sm">Active Projects</span>
+                <i data-lucide="folder" class="w-4 h-4 text-nexus-text"></i>
             </div>
-            <div class="stat-value" style="background: var(--gradient-success); -webkit-background-clip: text;">{{ stats.deployed if stats else 2 }}</div>
-            <div class="stat-label">Deployed</div>
-            <div class="stat-change positive">
-                <i data-lucide="check-circle" style="width: 14px; height: 14px;"></i>
-                Live now
-            </div>
+            <div class="text-2xl font-bold">8</div>
+            <div class="text-sm text-nexus-text mt-1">2 updated this week</div>
         </div>
-        
-        <div class="stat-card animate-fadeInUp stagger-3">
-            <div class="stat-icon" style="background: var(--gradient-info);">
-                <i data-lucide="loader" style="width: 24px; height: 24px;"></i>
+        <div class="bg-nexus-card border border-nexus-border rounded-xl p-6">
+            <div class="flex items-center justify-between mb-4">
+                <span class="text-nexus-text text-sm">API Keys</span>
+                <i data-lucide="key" class="w-4 h-4 text-nexus-text"></i>
             </div>
-            <div class="stat-value" style="background: var(--gradient-info); -webkit-background-clip: text;">{{ stats.building if stats else 1 }}</div>
-            <div class="stat-label">Building</div>
-            <div class="stat-change" style="background: rgba(79, 172, 254, 0.1); color: #4facfe;">
-                <i data-lucide="clock" style="width: 14px; height: 14px;"></i>
-                In progress
-            </div>
+            <div class="text-2xl font-bold">3</div>
+            <div class="text-sm text-nexus-text mt-1">1 production, 2 development</div>
         </div>
-        
-        <div class="stat-card animate-fadeInUp stagger-4">
-            <div class="stat-icon" style="background: var(--gradient-secondary);">
-                <i data-lucide="activity" style="width: 24px; height: 24px;"></i>
+        <div class="bg-nexus-card border border-nexus-border rounded-xl p-6">
+            <div class="flex items-center justify-between mb-4">
+                <span class="text-nexus-text text-sm">Billing</span>
+                <i data-lucide="credit-card" class="w-4 h-4 text-nexus-text"></i>
             </div>
-            <div class="stat-value" style="background: var(--gradient-secondary); -webkit-background-clip: text;">{{ stats.api_calls if stats else '12.4K' }}</div>
-            <div class="stat-label">API Calls</div>
-            <div class="stat-change positive">
-                <i data-lucide="trending-up" style="width: 14px; height: 14px;"></i>
-                +18% vs last week
-            </div>
+            <div class="text-2xl font-bold">$49/mo</div>
+            <div class="text-sm text-nexus-text mt-1">Pro Plan</div>
         </div>
     </div>
     
-    <!-- Recent Projects Section -->
-    <div class="card mb-8">
-        <div class="card-header">
-            <h3 class="card-title">Recent Projects</h3>
-            <a href="/projects/new" class="btn btn-primary btn-sm">
-                <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
-                New Project
-            </a>
+    <!-- Recent Activity & Quick Actions -->
+    <div class="grid lg:grid-cols-3 gap-6">
+        <!-- Recent Activity -->
+        <div class="lg:col-span-2 bg-nexus-card border border-nexus-border rounded-xl p-6">
+            <h2 class="text-lg font-semibold mb-4">Recent Activity</h2>
+            <div class="space-y-4">
+                <div class="flex items-center gap-4 py-3 border-b border-nexus-border">
+                    <div class="w-8 h-8 bg-nexus-purple/20 rounded-lg flex items-center justify-center">
+                        <i data-lucide="plus" class="w-4 h-4 text-nexus-purple"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="text-sm font-medium">New project created</div>
+                        <div class="text-xs text-nexus-text">AI Chatbot Assistant</div>
+                    </div>
+                    <div class="text-xs text-nexus-text">2h ago</div>
+                </div>
+                <div class="flex items-center gap-4 py-3 border-b border-nexus-border">
+                    <div class="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center">
+                        <i data-lucide="check" class="w-4 h-4 text-green-500"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="text-sm font-medium">API key generated</div>
+                        <div class="text-xs text-nexus-text">Production key for main app</div>
+                    </div>
+                    <div class="text-xs text-nexus-text">5h ago</div>
+                </div>
+                <div class="flex items-center gap-4 py-3">
+                    <div class="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                        <i data-lucide="upload" class="w-4 h-4 text-blue-500"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="text-sm font-medium">Model deployed</div>
+                        <div class="text-xs text-nexus-text">text-classification-v2</div>
+                    </div>
+                    <div class="text-xs text-nexus-text">1d ago</div>
+                </div>
+            </div>
         </div>
-        <div class="projects-grid">
-            {% for project in projects %}
-            <a href="/projects/{{ project.id }}" class="project-card animate-fadeInUp">
-                <div class="project-card-header">
-                    <div class="project-icon">
-                        <i data-lucide="{{ project.icon if project.icon else 'box' }}" style="width: 24px; height: 24px;"></i>
-                    </div>
-                    <div class="project-info">
-                        <h4 class="project-name">{{ project.name }}</h4>
-                        <p class="project-description">{{ project.description if project.description else 'AI-powered application' }}</p>
-                    </div>
-                </div>
-                <div class="project-meta">
-                    <span class="project-status {{ project.status if project.status else 'deployed' }}">
-                        <i data-lucide="{% if project.status == 'building' %}loader{% elif project.status == 'draft' %}file{% else %}check-circle{% endif %}" style="width: 12px; height: 12px;"></i>
-                        {{ project.status if project.status else 'Deployed' }}
-                    </span>
-                    <span class="text-muted" style="font-size: 0.75rem;">Updated {{ project.updated_at if project.updated_at else '2 hours ago' }}</span>
-                </div>
-            </a>
-            {% else %}
-            <!-- Default projects if none exist -->
-            <a href="/projects/1" class="project-card animate-fadeInUp stagger-1">
-                <div class="project-card-header">
-                    <div class="project-icon">
-                        <i data-lucide="shopping-cart" style="width: 24px; height: 24px;"></i>
-                    </div>
-                    <div class="project-info">
-                        <h4 class="project-name">E-Commerce Platform</h4>
-                        <p class="project-description">Full-stack online store with payment integration</p>
-                    </div>
-                </div>
-                <div class="project-meta">
-                    <span class="project-status deployed">
-                        <i data-lucide="check-circle" style="width: 12px; height: 12px;"></i>
-                        Deployed
-                    </span>
-                    <span class="text-muted" style="font-size: 0.75rem;">Updated 2 hours ago</span>
-                </div>
-            </a>
-            <a href="/projects/2" class="project-card animate-fadeInUp stagger-2">
-                <div class="project-card-header">
-                    <div class="project-icon" style="background: var(--gradient-info);">
-                        <i data-lucide="bot" style="width: 24px; height: 24px;"></i>
-                    </div>
-                    <div class="project-info">
-                        <h4 class="project-name">AI Chatbot</h4>
-                        <p class="project-description">Customer support automation with NLP</p>
-                    </div>
-                </div>
-                <div class="project-meta">
-                    <span class="project-status building">
-                        <i data-lucide="loader" style="width: 12px; height: 12px;"></i>
-                        Building
-                    </span>
-                    <span class="text-muted" style="font-size: 0.75rem;">Updated 30 mins ago</span>
-                </div>
-            </a>
-            <a href="/projects/3" class="project-card animate-fadeInUp stagger-3">
-                <div class="project-card-header">
-                    <div class="project-icon" style="background: var(--gradient-success);">
-                        <i data-lucide="bar-chart-3" style="width: 24px; height: 24px;"></i>
-                    </div>
-                    <div class="project-info">
-                        <h4 class="project-name">Analytics Dashboard</h4>
-                        <p class="project-description">Real-time business intelligence platform</p>
-                    </div>
-                </div>
-                <div class="project-meta">
-                    <span class="project-status deployed">
-                        <i data-lucide="check-circle" style="width: 12px; height: 12px;"></i>
-                        Deployed
-                    </span>
-                    <span class="text-muted" style="font-size: 0.75rem;">Updated yesterday</span>
-                </div>
-            </a>
-            {% endfor %}
-        </div>
-    </div>
-    
-    <!-- Quick Actions -->
-    <div class="card">
-        <div class="card-header">
-            <h3 class="card-title">Quick Actions</h3>
-        </div>
-        <div class="flex gap-4" style="flex-wrap: wrap;">
-            <a href="/projects/new" class="btn btn-primary">
-                <i data-lucide="plus" style="width: 18px; height: 18px;"></i>
-                Create Project
-            </a>
-            <a href="/api-keys" class="btn btn-secondary">
-                <i data-lucide="key" style="width: 18px; height: 18px;"></i>
-                Manage API Keys
-            </a>
-            <a href="/settings" class="btn btn-ghost">
-                <i data-lucide="settings" style="width: 18px; height: 18px;"></i>
-                Settings
-            </a>
+        
+        <!-- Quick Actions -->
+        <div class="bg-nexus-card border border-nexus-border rounded-xl p-6">
+            <h2 class="text-lg font-semibold mb-4">Quick Actions</h2>
+            <div class="space-y-3">
+                <a href="/projects" class="flex items-center gap-3 p-3 rounded-lg bg-nexus-dark hover:bg-nexus-purple/10 transition">
+                    <i data-lucide="plus" class="w-4 h-4 text-nexus-purple"></i>
+                    <span class="text-sm">Create new project</span>
+                </a>
+                <a href="/api-keys" class="flex items-center gap-3 p-3 rounded-lg bg-nexus-dark hover:bg-nexus-purple/10 transition">
+                    <i data-lucide="key" class="w-4 h-4 text-nexus-purple"></i>
+                    <span class="text-sm">Generate API key</span>
+                </a>
+                <a href="/docs" class="flex items-center gap-3 p-3 rounded-lg bg-nexus-dark hover:bg-nexus-purple/10 transition">
+                    <i data-lucide="book-open" class="w-4 h-4 text-nexus-purple"></i>
+                    <span class="text-sm">View documentation</span>
+                </a>
+                <a href="/billing" class="flex items-center gap-3 p-3 rounded-lg bg-nexus-dark hover:bg-nexus-purple/10 transition">
+                    <i data-lucide="credit-card" class="w-4 h-4 text-nexus-purple"></i>
+                    <span class="text-sm">Manage billing</span>
+                </a>
+            </div>
         </div>
     </div>
 </div>
-
-<script>
-    // Re-initialize icons after HTMX loads
-    document.addEventListener('htmx:afterSwap', function() {
-        lucide.createIcons();
-    });
-</script>
 {% endblock %}

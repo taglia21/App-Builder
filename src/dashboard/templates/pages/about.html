@@ -1,139 +1,68 @@
 {% extends "base.html" %}
+
 {% block title %}About Us - NexusAI{% endblock %}
 
-{% block extra_css %}
-<style>
-    .about-hero {
-        text-align: center;
-        padding: 48px 0 64px;
-        max-width: 800px;
-        margin: 0 auto;
-    }
-    .about-hero h1 {
-        font-size: 2.5rem;
-        font-weight: 700;
-        background: linear-gradient(135deg, #a855f7, #6366f1);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin-bottom: 16px;
-    }
-    .about-hero p {
-        font-size: 1.125rem;
-        color: #9ca3af;
-        line-height: 1.7;
-    }
-    .features-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 24px;
-        margin-bottom: 48px;
-    }
-    .feature-card {
-        background: rgba(255,255,255,0.02);
-        border: 1px solid rgba(255,255,255,0.06);
-        border-radius: 16px;
-        padding: 28px;
-        transition: all 0.2s ease;
-    }
-    .feature-card:hover {
-        border-color: rgba(168,85,247,0.3);
-        transform: translateY(-2px);
-    }
-    .feature-icon {
-        width: 48px; height: 48px;
-        background: linear-gradient(135deg, rgba(168,85,247,0.15), rgba(99,102,241,0.15));
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: 16px;
-    }
-    .feature-icon svg { width: 24px; height: 24px; color: #a855f7; }
-    .feature-card h3 {
-        font-size: 1.125rem;
-        font-weight: 600;
-        color: white;
-        margin-bottom: 8px;
-    }
-    .feature-card p {
-        font-size: 0.9375rem;
-        color: #9ca3af;
-        line-height: 1.6;
-    }
-    .stats-section {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 24px;
-        padding: 48px 0;
-        border-top: 1px solid rgba(255,255,255,0.06);
-        border-bottom: 1px solid rgba(255,255,255,0.06);
-        margin-bottom: 48px;
-    }
-    .stat-item { text-align: center; }
-    .stat-value {
-        font-size: 2.5rem;
-        font-weight: 700;
-        color: #a855f7;
-        margin-bottom: 4px;
-    }
-    .stat-label {
-        font-size: 0.875rem;
-        color: #9ca3af;
-    }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="about-hero">
-    <h1>Building the Future of App Development</h1>
-    <p>NexusAI empowers developers and businesses to create production-ready applications in minutes, not months. Our AI-powered platform handles the complexity so you can focus on what matters.</p>
-</div>
-
-<div class="features-grid">
-    <div class="feature-card">
-        <div class="feature-icon"><i data-lucide="sparkles"></i></div>
-        <h3>AI-Powered Generation</h3>
-        <p>Describe your app and watch as our AI generates complete, production-ready code with best practices built in.</p>
+<div class="max-w-4xl">
+    <h1 class="text-4xl font-bold mb-4">About NexusAI</h1>
+    <p class="text-nexus-text text-lg mb-12">We're building the future of AI-powered application development.</p>
+    
+    <!-- Mission Section -->
+    <div class="bg-nexus-card border border-nexus-border rounded-xl p-8 mb-8">
+        <h2 class="text-2xl font-semibold mb-4">Our Mission</h2>
+        <p class="text-nexus-text leading-relaxed">
+            NexusAI empowers developers and businesses to build intelligent applications faster than ever before. 
+            We believe that AI should be accessible to everyone, and our platform makes it easy to integrate 
+            cutting-edge machine learning capabilities into any project.
+        </p>
     </div>
-    <div class="feature-card">
-        <div class="feature-icon"><i data-lucide="rocket"></i></div>
-        <h3>One-Click Deployment</h3>
-        <p>Deploy to the cloud instantly. We handle infrastructure, scaling, and DevOps so you don't have to.</p>
+    
+    <!-- Values -->
+    <div class="grid md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-nexus-card border border-nexus-border rounded-xl p-6">
+            <div class="w-10 h-10 bg-nexus-purple/20 rounded-lg flex items-center justify-center mb-4">
+                <i data-lucide="zap" class="w-5 h-5 text-nexus-purple"></i>
+            </div>
+            <h3 class="text-lg font-semibold mb-2">Innovation</h3>
+            <p class="text-nexus-text text-sm">Pushing the boundaries of what's possible with AI and machine learning.</p>
+        </div>
+        <div class="bg-nexus-card border border-nexus-border rounded-xl p-6">
+            <div class="w-10 h-10 bg-nexus-purple/20 rounded-lg flex items-center justify-center mb-4">
+                <i data-lucide="shield" class="w-5 h-5 text-nexus-purple"></i>
+            </div>
+            <h3 class="text-lg font-semibold mb-2">Trust</h3>
+            <p class="text-nexus-text text-sm">Building secure, reliable systems that our customers can depend on.</p>
+        </div>
+        <div class="bg-nexus-card border border-nexus-border rounded-xl p-6">
+            <div class="w-10 h-10 bg-nexus-purple/20 rounded-lg flex items-center justify-center mb-4">
+                <i data-lucide="users" class="w-5 h-5 text-nexus-purple"></i>
+            </div>
+            <h3 class="text-lg font-semibold mb-2">Community</h3>
+            <p class="text-nexus-text text-sm">Supporting developers and fostering an inclusive tech community.</p>
+        </div>
     </div>
-    <div class="feature-card">
-        <div class="feature-icon"><i data-lucide="github"></i></div>
-        <h3>Full Code Ownership</h3>
-        <p>Export your complete source code anytime. No vendor lock-in, full GitHub integration included.</p>
-    </div>
-    <div class="feature-card">
-        <div class="feature-icon"><i data-lucide="shield-check"></i></div>
-        <h3>Enterprise Security</h3>
-        <p>SOC 2 compliant infrastructure with end-to-end encryption and role-based access controls.</p>
-    </div>
-    <div class="feature-card">
-        <div class="feature-icon"><i data-lucide="headphones"></i></div>
-        <h3>24/7 Expert Support</h3>
-        <p>Our team of engineers is always available to help you build and scale your applications.</p>
-    </div>
-    <div class="feature-card">
-        <div class="feature-icon"><i data-lucide="bar-chart-3"></i></div>
-        <h3>Built-in Analytics</h3>
-        <p>Monitor performance, track usage, and gain insights with our comprehensive analytics dashboard.</p>
-    </div>
-</div>
-
-<div class="stats-section">
-    <div class="stat-item">
-        <div class="stat-value">10K+</div>
-        <div class="stat-label">Apps Deployed</div>
-    </div>
-    <div class="stat-item">
-        <div class="stat-value">99.9%</div>
-        <div class="stat-label">Uptime SLA</div>
-    </div>
-    <div class="stat-item">
-        <div class="stat-value">24/7</div>
-        <div class="stat-label">Expert Support</div>
+    
+    <!-- Stats -->
+    <div class="bg-nexus-card border border-nexus-border rounded-xl p-8">
+        <h2 class="text-xl font-semibold mb-6">By the Numbers</h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div>
+                <div class="text-3xl font-bold text-nexus-purple">10K+</div>
+                <div class="text-nexus-text text-sm">Developers</div>
+            </div>
+            <div>
+                <div class="text-3xl font-bold text-nexus-purple">50M+</div>
+                <div class="text-nexus-text text-sm">API Calls/Day</div>
+            </div>
+            <div>
+                <div class="text-3xl font-bold text-nexus-purple">99.9%</div>
+                <div class="text-nexus-text text-sm">Uptime</div>
+            </div>
+            <div>
+                <div class="text-3xl font-bold text-nexus-purple">150+</div>
+                <div class="text-nexus-text text-sm">Countries</div>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

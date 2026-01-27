@@ -1,145 +1,66 @@
 {% extends "base.html" %}
+
 {% block title %}Terms of Service - NexusAI{% endblock %}
 
-{% block extra_css %}
-<style>
-    .terms-container { max-width: 800px; }
-    .terms-header {
-        margin-bottom: 48px;
-        padding-bottom: 32px;
-        border-bottom: 1px solid rgba(255,255,255,0.06);
-    }
-    .terms-header h1 {
-        font-size: 2rem;
-        font-weight: 700;
-        color: white;
-        margin-bottom: 8px;
-    }
-    .terms-header .updated {
-        font-size: 0.875rem;
-        color: #6b7280;
-    }
-    .terms-section {
-        margin-bottom: 40px;
-    }
-    .terms-section h2 {
-        font-size: 1.25rem;
-        font-weight: 600;
-        color: white;
-        margin-bottom: 16px;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }
-    .terms-section h2 .number {
-        width: 28px; height: 28px;
-        background: linear-gradient(135deg, rgba(168,85,247,0.2), rgba(99,102,241,0.2));
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.875rem;
-        color: #a855f7;
-    }
-    .terms-section p {
-        font-size: 0.9375rem;
-        color: #9ca3af;
-        line-height: 1.8;
-        margin-bottom: 12px;
-    }
-    .terms-section ul {
-        list-style: none;
-        padding: 0;
-        margin: 16px 0;
-    }
-    .terms-section li {
-        font-size: 0.9375rem;
-        color: #9ca3af;
-        line-height: 1.8;
-        padding-left: 24px;
-        position: relative;
-        margin-bottom: 8px;
-    }
-    .terms-section li::before {
-        content: "";
-        position: absolute;
-        left: 0;
-        top: 10px;
-        width: 6px; height: 6px;
-        background: #a855f7;
-        border-radius: 50%;
-    }
-    .terms-contact {
-        background: rgba(255,255,255,0.02);
-        border: 1px solid rgba(255,255,255,0.06);
-        border-radius: 12px;
-        padding: 24px;
-        margin-top: 48px;
-    }
-    .terms-contact h3 {
-        font-size: 1rem;
-        font-weight: 600;
-        color: white;
-        margin-bottom: 8px;
-    }
-    .terms-contact p {
-        font-size: 0.9375rem;
-        color: #9ca3af;
-    }
-    .terms-contact a {
-        color: #a855f7;
-        text-decoration: none;
-    }
-    .terms-contact a:hover { text-decoration: underline; }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="terms-container">
-    <div class="terms-header">
-        <h1>Terms of Service</h1>
-        <p class="updated">Last updated: January 2026</p>
-    </div>
+<div class="max-w-4xl">
+    <h1 class="text-4xl font-bold mb-4">Terms of Service</h1>
+    <p class="text-nexus-text text-lg mb-8">Last updated: January 27, 2026</p>
     
-    <div class="terms-section">
-        <h2><span class="number">1</span>Acceptance of Terms</h2>
-        <p>By accessing or using NexusAI's services, you agree to be bound by these Terms of Service and all applicable laws and regulations. If you do not agree with any of these terms, you are prohibited from using our services.</p>
-    </div>
-    
-    <div class="terms-section">
-        <h2><span class="number">2</span>Use of Service</h2>
-        <p>NexusAI provides an AI-powered platform for generating and deploying web applications. You may use our services for lawful purposes only. You agree not to:</p>
-        <ul>
-            <li>Use the service to generate harmful, illegal, or malicious content</li>
-            <li>Attempt to reverse engineer or compromise our systems</li>
-            <li>Resell or redistribute our services without authorization</li>
-            <li>Violate any applicable local, state, or international law</li>
-        </ul>
-    </div>
-    
-    <div class="terms-section">
-        <h2><span class="number">3</span>User Content</h2>
-        <p>You retain full ownership of all content and applications you create using NexusAI. We may use anonymized, aggregated data to improve our services. You grant us a limited license to host and serve your applications as part of our deployment services.</p>
-    </div>
-    
-    <div class="terms-section">
-        <h2><span class="number">4</span>Payment Terms</h2>
-        <p>Paid subscriptions are billed in advance on a monthly or annual basis. Refunds are available within 14 days of initial purchase for annual plans. Usage-based charges are billed at the end of each billing cycle.</p>
-    </div>
-    
-    <div class="terms-section">
-        <h2><span class="number">5</span>Limitation of Liability</h2>
-        <p>NexusAI is provided "as is" without warranties of any kind. We shall not be liable for any indirect, incidental, special, or consequential damages resulting from your use of our services. Our total liability shall not exceed the amount paid by you in the preceding 12 months.</p>
-    </div>
-    
-    <div class="terms-section">
-        <h2><span class="number">6</span>Termination</h2>
-        <p>We reserve the right to terminate or suspend your account at any time for violations of these terms. Upon termination, you may export your data within 30 days. After this period, your data may be permanently deleted.</p>
-    </div>
-    
-    <div class="terms-contact">
-        <h3>Questions about these terms?</h3>
-        <p>Contact our legal team at <a href="mailto:legal@nexusai.com">legal@nexusai.com</a></p>
+    <div class="bg-nexus-card border border-nexus-border rounded-xl p-8 space-y-8">
+        <section>
+            <h2 class="text-xl font-semibold mb-4">1. Acceptance of Terms</h2>
+            <p class="text-nexus-text leading-relaxed">
+                By accessing or using NexusAI's services, you agree to be bound by these Terms of Service. 
+                If you do not agree to these terms, please do not use our services.
+            </p>
+        </section>
+        
+        <section>
+            <h2 class="text-xl font-semibold mb-4">2. Description of Service</h2>
+            <p class="text-nexus-text leading-relaxed">
+                NexusAI provides AI-powered application development tools and APIs. Our platform enables 
+                developers to integrate machine learning capabilities into their applications through our 
+                suite of APIs and development tools.
+            </p>
+        </section>
+        
+        <section>
+            <h2 class="text-xl font-semibold mb-4">3. User Accounts</h2>
+            <p class="text-nexus-text leading-relaxed mb-4">
+                To access certain features of our service, you must create an account. You are responsible for:
+            </p>
+            <ul class="text-nexus-text space-y-2 ml-6 list-disc">
+                <li>Maintaining the confidentiality of your account credentials</li>
+                <li>All activities that occur under your account</li>
+                <li>Notifying us immediately of any unauthorized use</li>
+            </ul>
+        </section>
+        
+        <section>
+            <h2 class="text-xl font-semibold mb-4">4. Acceptable Use</h2>
+            <p class="text-nexus-text leading-relaxed">
+                You agree not to use our services for any unlawful purpose or in violation of these terms. 
+                Prohibited activities include but are not limited to: unauthorized access attempts, 
+                distribution of malware, and violation of intellectual property rights.
+            </p>
+        </section>
+        
+        <section>
+            <h2 class="text-xl font-semibold mb-4">5. API Usage</h2>
+            <p class="text-nexus-text leading-relaxed">
+                API usage is subject to rate limits and fair use policies as outlined in your subscription plan. 
+                Excessive or abusive API usage may result in temporary or permanent suspension of access.
+            </p>
+        </section>
+        
+        <section>
+            <h2 class="text-xl font-semibold mb-4">6. Contact</h2>
+            <p class="text-nexus-text leading-relaxed">
+                For questions about these Terms of Service, please contact us at 
+                <a href="mailto:legal@nexusai.com" class="text-nexus-purple hover:underline">legal@nexusai.com</a>.
+            </p>
+        </section>
     </div>
 </div>
 {% endblock %}

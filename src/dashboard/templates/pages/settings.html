@@ -1,163 +1,77 @@
 {% extends "base.html" %}
+
+{% block title %}Settings - NexusAI{% endblock %}
+
 {% block content %}
-<div class="flex-1 overflow-y-auto bg-forge-900">
-    <div class="max-w-4xl mx-auto px-6 py-10">
-        <!-- Header -->
-        <div class="mb-8">
-            <h1 class="text-3xl font-bold text-white mb-2">Settings</h1>
-            <p class="text-forge-300">Manage your account preferences and configurations</p>
-        </div>
-
-        <!-- Profile Section -->
-        <div class="bg-gradient-to-br from-forge-800/80 to-forge-900/80 backdrop-blur-xl rounded-2xl border border-forge-700/50 p-6 mb-6">
-            <h2 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                Profile Information
-            </h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="max-w-4xl">
+    <h1 class="text-3xl font-bold mb-2">Settings</h1>
+    <p class="text-nexus-text mb-8">Manage your account settings and preferences.</p>
+    
+    <!-- Profile Section -->
+    <div class="bg-nexus-card border border-nexus-border rounded-xl p-6 mb-6">
+        <h2 class="text-lg font-semibold mb-6">Profile Information</h2>
+        <form class="space-y-6">
+            <div class="grid md:grid-cols-2 gap-6">
                 <div>
-                    <label class="block text-sm text-forge-400 mb-2">Full Name</label>
-                    <input type="text" value="John Developer" class="w-full px-4 py-2.5 rounded-lg bg-forge-900/50 border border-forge-700/50 text-white focus:border-cyan-500/50 focus:outline-none">
+                    <label class="block text-sm font-medium mb-2">Full Name</label>
+                    <input type="text" value="John Doe" class="w-full bg-nexus-dark border border-nexus-border rounded-lg px-4 py-3 text-white focus:border-nexus-purple focus:outline-none transition">
                 </div>
                 <div>
-                    <label class="block text-sm text-forge-400 mb-2">Email Address</label>
-                    <input type="email" value="john@example.com" class="w-full px-4 py-2.5 rounded-lg bg-forge-900/50 border border-forge-700/50 text-white focus:border-cyan-500/50 focus:outline-none">
+                    <label class="block text-sm font-medium mb-2">Email Address</label>
+                    <input type="email" value="john@example.com" class="w-full bg-nexus-dark border border-nexus-border rounded-lg px-4 py-3 text-white focus:border-nexus-purple focus:outline-none transition">
+                </div>
+            </div>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Company</label>
+                    <input type="text" value="Acme Inc." class="w-full bg-nexus-dark border border-nexus-border rounded-lg px-4 py-3 text-white focus:border-nexus-purple focus:outline-none transition">
                 </div>
                 <div>
-                    <label class="block text-sm text-forge-400 mb-2">Company</label>
-                    <input type="text" value="Acme Inc" class="w-full px-4 py-2.5 rounded-lg bg-forge-900/50 border border-forge-700/50 text-white focus:border-cyan-500/50 focus:outline-none">
+                    <label class="block text-sm font-medium mb-2">Role</label>
+                    <input type="text" value="Developer" class="w-full bg-nexus-dark border border-nexus-border rounded-lg px-4 py-3 text-white focus:border-nexus-purple focus:outline-none transition">
                 </div>
+            </div>
+            <button type="submit" class="bg-nexus-purple hover:bg-nexus-purple/80 text-white px-6 py-2 rounded-lg font-medium transition">
+                Save Changes
+            </button>
+        </form>
+    </div>
+    
+    <!-- Notifications Section -->
+    <div class="bg-nexus-card border border-nexus-border rounded-xl p-6 mb-6">
+        <h2 class="text-lg font-semibold mb-6">Notification Preferences</h2>
+        <div class="space-y-4">
+            <label class="flex items-center justify-between p-3 rounded-lg hover:bg-nexus-dark/50 transition cursor-pointer">
                 <div>
-                    <label class="block text-sm text-forge-400 mb-2">Role</label>
-                    <select class="w-full px-4 py-2.5 rounded-lg bg-forge-900/50 border border-forge-700/50 text-white focus:border-cyan-500/50 focus:outline-none">
-                        <option>Developer</option>
-                        <option>Designer</option>
-                        <option>Product Manager</option>
-                        <option>Founder/CEO</option>
-                    </select>
+                    <div class="font-medium">Email Notifications</div>
+                    <div class="text-sm text-nexus-text">Receive updates about your account via email</div>
                 </div>
-            </div>
-            <button class="mt-4 px-4 py-2 bg-cyan-500/20 text-cyan-400 rounded-lg text-sm font-medium hover:bg-cyan-500/30 transition">Save Changes</button>
-        </div>
-
-        <!-- Notifications Section with Functional Toggles -->
-        <div class="bg-gradient-to-br from-forge-800/80 to-forge-900/80 backdrop-blur-xl rounded-2xl border border-forge-700/50 p-6 mb-6">
-            <h2 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
-                Notification Preferences
-            </h2>
-            <div class="space-y-4">
-                <!-- Email Notifications Toggle -->
-                <div class="flex items-center justify-between p-4 bg-forge-900/30 rounded-xl">
-                    <div>
-                        <h3 class="text-white font-medium">Email Notifications</h3>
-                        <p class="text-forge-400 text-sm">Receive project updates via email</p>
-                    </div>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" class="sr-only peer" checked>
-                        <div class="w-11 h-6 bg-forge-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-cyan-500 peer-checked:to-purple-500"></div>
-                    </label>
-                </div>
-                <!-- Build Notifications Toggle -->
-                <div class="flex items-center justify-between p-4 bg-forge-900/30 rounded-xl">
-                    <div>
-                        <h3 class="text-white font-medium">Build Notifications</h3>
-                        <p class="text-forge-400 text-sm">Get notified when builds complete</p>
-                    </div>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" class="sr-only peer" checked>
-                        <div class="w-11 h-6 bg-forge-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-cyan-500 peer-checked:to-purple-500"></div>
-                    </label>
-                </div>
-                <!-- Marketing Emails Toggle -->
-                <div class="flex items-center justify-between p-4 bg-forge-900/30 rounded-xl">
-                    <div>
-                        <h3 class="text-white font-medium">Marketing Emails</h3>
-                        <p class="text-forge-400 text-sm">Receive tips, updates and offers</p>
-                    </div>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" class="sr-only peer">
-                        <div class="w-11 h-6 bg-forge-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-cyan-500 peer-checked:to-purple-500"></div>
-                    </label>
-                </div>
-                <!-- Browser Notifications Toggle -->
-                <div class="flex items-center justify-between p-4 bg-forge-900/30 rounded-xl">
-                    <div>
-                        <h3 class="text-white font-medium">Browser Notifications</h3>
-                        <p class="text-forge-400 text-sm">Show desktop push notifications</p>
-                    </div>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" class="sr-only peer">
-                        <div class="w-11 h-6 bg-forge-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-cyan-500 peer-checked:to-purple-500"></div>
-                    </label>
-                </div>
-            </div>
-        </div>
-
-        <!-- Appearance Section -->
-        <div class="bg-gradient-to-br from-forge-800/80 to-forge-900/80 backdrop-blur-xl rounded-2xl border border-forge-700/50 p-6 mb-6">
-            <h2 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                <svg class="w-5 h-5 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
-                Appearance
-            </h2>
-            <div class="grid grid-cols-3 gap-4">
-                <button class="p-4 rounded-xl bg-forge-900/50 border-2 border-cyan-500 text-center">
-                    <div class="w-8 h-8 mx-auto mb-2 rounded-lg bg-forge-900"></div>
-                    <span class="text-sm text-white">Dark</span>
-                </button>
-                <button class="p-4 rounded-xl bg-forge-900/50 border border-forge-700/50 text-center hover:border-forge-600 transition">
-                    <div class="w-8 h-8 mx-auto mb-2 rounded-lg bg-white"></div>
-                    <span class="text-sm text-forge-400">Light</span>
-                </button>
-                <button class="p-4 rounded-xl bg-forge-900/50 border border-forge-700/50 text-center hover:border-forge-600 transition">
-                    <div class="w-8 h-8 mx-auto mb-2 rounded-lg bg-gradient-to-br from-forge-900 to-white"></div>
-                    <span class="text-sm text-forge-400">System</span>
-                </button>
-            </div>
-        </div>
-
-        <!-- Security Section -->
-        <div class="bg-gradient-to-br from-forge-800/80 to-forge-900/80 backdrop-blur-xl rounded-2xl border border-forge-700/50 p-6 mb-6">
-            <h2 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-                Security
-            </h2>
-            <div class="space-y-4">
-                <div class="flex items-center justify-between p-4 bg-forge-900/30 rounded-xl">
-                    <div>
-                        <h3 class="text-white font-medium">Two-Factor Authentication</h3>
-                        <p class="text-forge-400 text-sm">Add an extra layer of security</p>
-                    </div>
-                    <button class="px-4 py-2 rounded-lg bg-green-500/10 text-green-400 text-sm font-medium hover:bg-green-500/20 transition">Enable</button>
-                </div>
-                <div class="flex items-center justify-between p-4 bg-forge-900/30 rounded-xl">
-                    <div>
-                        <h3 class="text-white font-medium">Change Password</h3>
-                        <p class="text-forge-400 text-sm">Update your account password</p>
-                    </div>
-                    <button class="px-4 py-2 rounded-lg bg-forge-700/50 text-forge-200 text-sm font-medium hover:bg-forge-700 transition">Update</button>
-                </div>
-                <div class="flex items-center justify-between p-4 bg-forge-900/30 rounded-xl">
-                    <div>
-                        <h3 class="text-white font-medium">Active Sessions</h3>
-                        <p class="text-forge-400 text-sm">Manage your logged-in devices</p>
-                    </div>
-                    <button class="px-4 py-2 rounded-lg bg-forge-700/50 text-forge-200 text-sm font-medium hover:bg-forge-700 transition">View All</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Danger Zone -->
-        <div class="bg-gradient-to-br from-red-900/20 to-forge-900/80 backdrop-blur-xl rounded-2xl border border-red-500/20 p-6">
-            <h2 class="text-lg font-semibold text-red-400 mb-4">Danger Zone</h2>
-            <div class="flex items-center justify-between">
+                <input type="checkbox" checked class="w-5 h-5 rounded border-nexus-border bg-nexus-dark accent-nexus-purple">
+            </label>
+            <label class="flex items-center justify-between p-3 rounded-lg hover:bg-nexus-dark/50 transition cursor-pointer">
                 <div>
-                    <h3 class="text-white font-medium">Delete Account</h3>
-                    <p class="text-forge-400 text-sm">Permanently delete your account and all data</p>
+                    <div class="font-medium">API Usage Alerts</div>
+                    <div class="text-sm text-nexus-text">Get notified when approaching usage limits</div>
                 </div>
-                <button class="px-4 py-2 rounded-lg bg-red-500/10 text-red-400 text-sm font-medium hover:bg-red-500/20 transition">Delete Account</button>
-            </div>
+                <input type="checkbox" checked class="w-5 h-5 rounded border-nexus-border bg-nexus-dark accent-nexus-purple">
+            </label>
+            <label class="flex items-center justify-between p-3 rounded-lg hover:bg-nexus-dark/50 transition cursor-pointer">
+                <div>
+                    <div class="font-medium">Marketing Updates</div>
+                    <div class="text-sm text-nexus-text">Receive news about new features and promotions</div>
+                </div>
+                <input type="checkbox" class="w-5 h-5 rounded border-nexus-border bg-nexus-dark accent-nexus-purple">
+            </label>
         </div>
+    </div>
+    
+    <!-- Danger Zone -->
+    <div class="bg-nexus-card border border-red-500/30 rounded-xl p-6">
+        <h2 class="text-lg font-semibold text-red-400 mb-4">Danger Zone</h2>
+        <p class="text-nexus-text mb-4">Once you delete your account, there is no going back. Please be certain.</p>
+        <button class="bg-red-500/20 hover:bg-red-500/30 text-red-400 px-6 py-2 rounded-lg font-medium transition">
+            Delete Account
+        </button>
     </div>
 </div>
 {% endblock %}
