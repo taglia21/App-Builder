@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}Register Your Business - LaunchForge{% endblock %}
+{% block content %}
+<style>
+    .biz-container { max-width: 800px; margin: 0 auto; }
+    .step-indicator { display: flex; justify-content: space-between; margin-bottom: 40px; position: relative; }
+    .step-indicator::before { content: ''; position: absolute; top: 20px; left: 40px; right: 40px; height: 2px; background: var(--nexus-border); }
+    .step { text-align: center; position: relative; z-index: 1; }
+    .step-circle { width: 40px; height: 40px; background: var(--nexus-dark); border: 2px solid var(--nexus-border); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; font-weight: 600; }
+    .step.active .step-circle { background: var(--nexus-purple); border-color: var(--nexus-purple); }
+    .step.completed .step-circle { background: #22c55e; border-color: #22c55e; }
+    .step-label { font-size: 0.85rem; color: var(--nexus-text); }
+    .form-card { background: var(--nexus-card); border: 1px solid var(--nexus-border); border-radius: 12px; padding: 32px; }
+    .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+    .form-field { margin-bottom: 20px; }
+    .form-field label { display: block; font-size: 0.9rem; margin-bottom: 8px; }
+    .form-field input, .form-field select { width: 100%; padding: 12px; background: var(--nexus-dark); border: 1px solid var(--nexus-border); border-radius: 8px; color: white; font-size: 0.95rem; }
+    .form-field.full-width { grid-column: 1 / -1; }
+    .package-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+    .package-card { background: var(--nexus-dark); border: 2px solid var(--nexus-border); border-radius: 12px; padding: 20px; cursor: pointer; transition: all 0.2s; }
+    .package-card:hover { border-color: var(--nexus-purple); }
+    .package-card.selected { border-color: var(--nexus-purple); background: rgba(139, 92, 246, 0.1); }
+    .package-card h3 { font-size: 1.1rem; margin-bottom: 4px; }
+    .package-card .price { font-size: 1.5rem; font-weight: 700; color: var(--nexus-purple); margin: 12px 0; }
+    .package-card ul { list-style: none; padding: 0; font-size: 0.85rem; color: var(--nexus-text); }
+    .package-card li { padding: 4px 0; }
+    .package-card li::before { content: '✓ '; color: #22c55e; }
+    .btn-submit { width: 100%; padding: 16px; background: var(--nexus-purple); color: white; border: none; border-radius: 10px; font-size: 1.1rem; font-weight: 600; cursor: pointer; margin-top: 24px; }
+</style>
+
+<div class="biz-container">
+    <h1 style="font-size: 2rem; font-weight: 700; margin-bottom: 8px;">Register Your Business</h1>
+    <p style="color: var(--nexus-text); margin-bottom: 32px;">Form your LLC and get your EIN in minutes.</p>
+
+    <div class="step-indicator">
+        <div class="step active">
+            <div class="step-circle">1</div>
+            <div class="step-label">Business Info</div>
+        </div>
+        <div class="step">
+            <div class="step-circle">2</div>
+            <div class="step-label">Choose Package</div>
+        </div>
+        <div class="step">
+            <div class="step-circle">3</div>
+            <div class="step-label">Review</div>
+        </div>
+        <div class="step">
+            <div class="step-circle">4</div>
+            <div class="step-label">Complete</div>
+        </div>
+    </div>
+
+    <div class="form-card">
+        <h2 style="font-size: 1.25rem; margin-bottom: 24px;">Business Information</h2>
+        <div class="form-grid">
+            <div class="form-field">
+                <label>Business Name</label>
+                <input type="text" placeholder="Your Company LLC">
+            </div>
+            <div class="form-field">
+                <label>Business Type</label>
+                <select>
+                    <option>LLC (Recommended)</option>
+                    <option>Corporation (C-Corp)</option>
+                    <option>S-Corporation</option>
+                    <option>Sole Proprietorship</option>
+                </select>
+            </div>
+            <div class="form-field">
+                <label>State of Formation</label>
+                <select>
+                    <option>Delaware (Recommended)</option>
+                    <option>Wyoming</option>
+                    <option>Nevada</option>
+                    <option>California</option>
+                    <option>New York</option>
+                    <option>Texas</option>
+                    <option>Florida</option>
+                </select>
+            </div>
+            <div class="form-field">
+                <label>Industry</label>
+                <select>
+                    <option>Technology / Software</option>
+                    <option>Consulting</option>
+                    <option>E-commerce</option>
+                    <option>Other</option>
+                </select>
+            </div>
+            <div class="form-field full-width">
+                <label>Business Address</label>
+                <input type="text" placeholder="123 Main St, City, State ZIP">
+            </div>
+        </div>
+
+        <h2 style="font-size: 1.25rem; margin: 32px 0 24px;">Select Package</h2>
+        <div class="package-grid">
+            <div class="package-card">
+                <h3>Basic</h3>
+                <div class="price">$149</div>
+                <ul>
+                    <li>LLC Formation</li>
+                    <li>Operating Agreement</li>
+                    <li>EIN Application</li>
+                </ul>
+            </div>
+            <div class="package-card selected">
+                <h3>Standard</h3>
+                <div class="price">$299</div>
+                <ul>
+                    <li>Everything in Basic</li>
+                    <li>Registered Agent (1yr)</li>
+                    <li>Banking Resolution</li>
+                    <li>Business License Guide</li>
+                </ul>
+            </div>
+            <div class="package-card">
+                <h3>Premium</h3>
+                <div class="price">$499</div>
+                <ul>
+                    <li>Everything in Standard</li>
+                    <li>Business Bank Account</li>
+                    <li>Tax ID Numbers</li>
+                    <li>Annual Report Filing</li>
+                </ul>
+            </div>
+        </div>
+
+        <button class="btn-submit">🏢 Continue to Review</button>
+    </div>
+</div>
+
+<script>
+document.querySelectorAll('.package-card').forEach(card => {
+    card.addEventListener('click', function() {
+        document.querySelectorAll('.package-card').forEach(c => c.classList.remove('selected'));
+        this.classList.add('selected');
+    });
+});
+</script>
+{% endblock %}

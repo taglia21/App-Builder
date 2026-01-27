@@ -581,6 +581,8 @@ def create_dashboard_router(templates: Jinja2Templates) -> APIRouter:
     router.add_api_route("/projects", routes.create_project, methods=["POST"])
     router.add_api_route("/settings", routes.update_settings, methods=["POST"])
 
+    router.add_api_route("/projects/{project_id}/business", business_formation, methods=["GET"], response_class=HTMLResponse)
+    router.add_api_route("/projects/{project_id}/deploy", deploy_page, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/projects/{project_id}/workspace", agent_workspace, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/projects/{project_id}/generated", project_generated, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/projects/{project_id}/review", project_review, methods=["GET"], response_class=HTMLResponse)
@@ -598,6 +600,44 @@ def create_dashboard_router(templates: Jinja2Templates) -> APIRouter:
 
 
 
+
+
+
+
+
+async def business_formation(request: Request) -> HTMLResponse:
+    """Business formation page for LLC registration."""
+    project_id = request.path_params.get('project_id')
+    
+    project = _projects_store.get(project_id)
+    if not project:
+        from starlette.responses import RedirectResponse
+        return RedirectResponse(url="/dashboard", status_code=302)
+    
+    from jinja2 import Environment, FileSystemLoader
+    from pathlib import Path
+    template_dir = Path(__file__).parent / "templates"
+    env = Environment(loader=FileSystemLoader(str(template_dir)))
+    template = env.get_template("pages/business_formation.html")
+    html_content = template.render(project=project)
+    return HTMLResponse(content=html_content)
+
+async def deploy_page(request: Request) -> HTMLResponse:
+    """Deploy page for one-click deployment."""
+    project_id = request.path_params.get('project_id')
+    
+    project = _projects_store.get(project_id)
+    if not project:
+        from starlette.responses import RedirectResponse
+        return RedirectResponse(url="/dashboard", status_code=302)
+    
+    from jinja2 import Environment, FileSystemLoader
+    from pathlib import Path
+    template_dir = Path(__file__).parent / "templates"
+    env = Environment(loader=FileSystemLoader(str(template_dir)))
+    template = env.get_template("pages/deploy.html")
+    html_content = template.render(project=project)
+    return HTMLResponse(content=html_content)
 
 async def agent_workspace(request: Request) -> HTMLResponse:
     """Agent workspace for customizing generated apps."""

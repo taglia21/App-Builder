@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}Deploy Your App - LaunchForge{% endblock %}
+{% block content %}
+<style>
+    .deploy-container { max-width: 800px; margin: 0 auto; }
+    .deploy-card { background: var(--nexus-card); border: 1px solid var(--nexus-border); border-radius: 12px; padding: 24px; margin-bottom: 20px; }
+    .platform-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+    .platform-option { background: var(--nexus-dark); border: 2px solid var(--nexus-border); border-radius: 12px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.2s; }
+    .platform-option:hover { border-color: var(--nexus-purple); }
+    .platform-option.selected { border-color: var(--nexus-purple); background: rgba(139, 92, 246, 0.1); }
+    .platform-option .icon { font-size: 2.5rem; margin-bottom: 12px; }
+    .platform-option h3 { font-size: 1rem; margin-bottom: 4px; }
+    .platform-option p { color: var(--nexus-text); font-size: 0.8rem; }
+    .config-section { margin-top: 24px; }
+    .config-section h3 { font-size: 1rem; margin-bottom: 12px; }
+    .config-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .config-field label { display: block; font-size: 0.85rem; color: var(--nexus-text); margin-bottom: 6px; }
+    .config-field input, .config-field select { width: 100%; padding: 10px 12px; background: var(--nexus-dark); border: 1px solid var(--nexus-border); border-radius: 8px; color: white; font-size: 0.9rem; }
+    .deploy-btn { width: 100%; padding: 16px; background: linear-gradient(135deg, #8b5cf6, #6366f1); color: white; border: none; border-radius: 10px; font-size: 1.1rem; font-weight: 600; cursor: pointer; margin-top: 24px; }
+    .deploy-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .status-card { background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 12px; padding: 20px; display: none; }
+    .status-card.active { display: block; }
+    .status-card h3 { color: #22c55e; margin-bottom: 12px; }
+    .progress-bar { height: 8px; background: var(--nexus-dark); border-radius: 4px; overflow: hidden; margin: 16px 0; }
+    .progress-fill { height: 100%; background: #22c55e; width: 0%; transition: width 0.5s; }
+    .env-vars { margin-top: 16px; }
+    .env-var { display: flex; gap: 12px; margin-bottom: 8px; }
+    .env-var input { flex: 1; }
+</style>
+
+<div class="deploy-container">
+    <h1 style="font-size: 2rem; font-weight: 700; margin-bottom: 8px;">Deploy Your App</h1>
+    <p style="color: var(--nexus-text); margin-bottom: 32px;">Choose a platform and deploy your app in one click.</p>
+
+    <div class="deploy-card">
+        <h2 style="font-size: 1.25rem; margin-bottom: 16px;">Select Platform</h2>
+        <div class="platform-grid">
+            <div class="platform-option selected" data-platform="railway">
+                <div class="icon">🚂</div>
+                <h3>Railway</h3>
+                <p>Recommended</p>
+            </div>
+            <div class="platform-option" data-platform="vercel">
+                <div class="icon">▲</div>
+                <h3>Vercel</h3>
+                <p>Coming soon</p>
+            </div>
+            <div class="platform-option" data-platform="render">
+                <div class="icon">🟢</div>
+                <h3>Render</h3>
+                <p>Coming soon</p>
+            </div>
+        </div>
+
+        <div class="config-section">
+            <h3>Configuration</h3>
+            <div class="config-grid">
+                <div class="config-field">
+                    <label>App Name</label>
+                    <input type="text" id="appName" value="{{ project.id }}-app" placeholder="my-awesome-app">
+                </div>
+                <div class="config-field">
+                    <label>Region</label>
+                    <select id="region">
+                        <option value="us-west">US West</option>
+                        <option value="us-east">US East</option>
+                        <option value="eu-west">EU West</option>
+                        <option value="asia">Asia Pacific</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="env-vars">
+                <h3 style="font-size: 0.9rem; margin-bottom: 12px;">Environment Variables</h3>
+                <div class="env-var">
+                    <input type="text" placeholder="KEY" value="DATABASE_URL">
+                    <input type="text" placeholder="VALUE" value="postgresql://...">
+                </div>
+                <div class="env-var">
+                    <input type="text" placeholder="KEY" value="SECRET_KEY">
+                    <input type="text" placeholder="VALUE" value="your-secret-key">
+                </div>
+                <button style="padding: 6px 12px; background: var(--nexus-dark); border: 1px solid var(--nexus-border); border-radius: 6px; color: white; font-size: 0.85rem; cursor: pointer; margin-top: 8px;">+ Add Variable</button>
+            </div>
+        </div>
+
+        <button class="deploy-btn" id="deployBtn" onclick="deployApp()">
+            🚀 Deploy to Railway
+        </button>
+    </div>
+
+    <div class="status-card" id="statusCard">
+        <h3>✅ Deployment in Progress</h3>
+        <p id="statusText">Initializing deployment...</p>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div id="deploymentUrl" style="margin-top: 16px; display: none;">
+            <p style="color: var(--nexus-text); margin-bottom: 8px;">Your app is live at:</p>
+            <a href="#" id="liveUrl" target="_blank" style="color: var(--nexus-purple); font-size: 1.1rem;"></a>
+        </div>
+    </div>
+</div>
+
+<script>
+document.querySelectorAll('.platform-option').forEach(option => {
+    option.addEventListener('click', function() {
+        document.querySelectorAll('.platform-option').forEach(o => o.classList.remove('selected'));
+        this.classList.add('selected');
+    });
+});
+
+async function deployApp() {
+    const btn = document.getElementById('deployBtn');
+    const statusCard = document.getElementById('statusCard');
+    const progressFill = document.getElementById('progressFill');
+    const statusText = document.getElementById('statusText');
+    
+    btn.disabled = true;
+    btn.textContent = 'Deploying...';
+    statusCard.classList.add('active');
+    
+    // Simulate deployment progress
+    const stages = [
+        { progress: 20, text: 'Creating project...' },
+        { progress: 40, text: 'Uploading files...' },
+        { progress: 60, text: 'Building container...' },
+        { progress: 80, text: 'Configuring environment...' },
+        { progress: 100, text: 'Finalizing deployment...' }
+    ];
+    
+    for (const stage of stages) {
+        await new Promise(r => setTimeout(r, 1500));
+        progressFill.style.width = stage.progress + '%';
+        statusText.textContent = stage.text;
+    }
+    
+    await new Promise(r => setTimeout(r, 1000));
+    statusText.textContent = 'Deployment complete!';
+    btn.textContent = '✅ Deployed!';
+    
+    // Show live URL
+    document.getElementById('deploymentUrl').style.display = 'block';
+    const liveUrl = document.getElementById('liveUrl');
+    liveUrl.href = 'https://{{ project.id }}-app.up.railway.app';
+    liveUrl.textContent = 'https://{{ project.id }}-app.up.railway.app';
+}
+</script>
+{% endblock %}
