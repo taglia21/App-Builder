@@ -559,6 +559,8 @@ def create_dashboard_router(templates: Jinja2Templates) -> APIRouter:
     router.add_api_route("/projects", routes.projects_list, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/projects", routes.create_project, methods=["POST"])
     router.add_api_route("/settings", routes.update_settings, methods=["POST"])
+
+        return router
     
 
 
