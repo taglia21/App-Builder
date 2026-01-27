@@ -179,10 +179,10 @@
             <div class="bg-white shadow rounded-lg p-6">
                 <h2 class="text-lg font-medium text-gray-900">Tech Stack</h2>
                 <dl class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {% for key, value in project.tech_stack.items() %}
+                    {% for tech in project.tech_stack %}
                     <div class="border rounded-lg p-3">
-                        <dt class="text-xs font-medium text-gray-500 uppercase">{{ key }}</dt>
-                        <dd class="mt-1 text-sm font-semibold text-gray-900">{{ value }}</dd>
+                        <dt class="text-xs font-medium text-gray-500 uppercase">{{ tech }}</dt>
+                        <dd class="mt-1 text-sm font-semibold text-gray-900">{{ tech }}</dd>
                     </div>
                     {% endfor %}
                 </dl>
