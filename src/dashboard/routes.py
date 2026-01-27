@@ -104,7 +104,7 @@ class DashboardRoutes:
             {"id": "proj_3", "name": "Task Manager", "status": "draft", "description": "Team productivity app", "url": None, "created_at": "Jan 22, 2024"},
         ]
         return self.render(request, "pages/projects.html", {
-            "active_page": "projects",
+            "active": "projects",
             "projects": projects,
         })
 

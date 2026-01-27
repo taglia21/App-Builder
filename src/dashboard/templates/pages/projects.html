@@ -1,74 +1,151 @@
-{% extends "base_modern.html" %}
+{% extends "base.html" %}
 {% block title %}Projects - NexusAI{% endblock %}
 
-{% block content %}
-<div class="content-wrapper">
-    <div class="content-header">
-        <div>
-            <h1>My Projects</h1>
-            <p class="subtitle">Manage and monitor all your AI-generated applications</p>
-        </div>
-        <a href="/projects/new" style="padding: 10px 20px; background: #1a1a1a; color: white; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 500;">+ New Project</a>
-    </div>
+{% block extra_css %}
+<style>
+    .projects-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 32px;
+    }
+    .projects-header h1 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: white;
+    }
+    .projects-header p {
+        font-size: 0.9375rem;
+        color: #9ca3af;
+        margin-top: 4px;
+    }
+    .search-box {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 8px;
+        padding: 10px 16px;
+        margin-bottom: 24px;
+        max-width: 400px;
+    }
+    .search-box input {
+        background: transparent;
+        border: none;
+        outline: none;
+        color: white;
+        font-size: 0.875rem;
+        flex: 1;
+    }
+    .search-box input::placeholder { color: #6b7280; }
+    .search-box svg { width: 18px; height: 18px; color: #6b7280; }
+    .projects-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .projects-table th {
+        text-align: left;
+        padding: 12px 16px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .projects-table td {
+        padding: 16px;
+        border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .projects-table tr:hover { background: rgba(255,255,255,0.02); }
+    .project-name {
+        font-weight: 600;
+        color: white;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .project-icon {
+        width: 36px; height: 36px;
+        background: linear-gradient(135deg, rgba(168,85,247,0.15), rgba(99,102,241,0.15));
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .project-icon svg { width: 18px; height: 18px; color: #a855f7; }
+    .project-type { color: #9ca3af; font-size: 0.875rem; }
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    .status-deployed { background: rgba(34,197,94,0.15); color: #22c55e; }
+    .status-building { background: rgba(251,191,36,0.15); color: #fbbf24; }
+    .status-active { background: rgba(59,130,246,0.15); color: #3b82f6; }
+    .project-date { color: #6b7280; font-size: 0.875rem; }
+    .project-actions a {
+        color: #a855f7;
+        text-decoration: none;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    .project-actions a:hover { text-decoration: underline; }
+</style>
+{% endblock %}
 
-    {% if projects and projects|length > 0 %}
-    <div class="data-table-container">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Type</th>
-                    <th>Status</th>
-                    <th>Created</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for project in projects %}
-                <tr>
-                    <td>
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <div style="width: 40px; height: 40px; border-radius: 8px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 16px;">
-                                {{ project.name[0]|upper if project.name else 'P' }}
-                            </div>
-                            <div>
-                                <a href="/projects/{{ project.id }}" style="font-weight: 500; color: #1a1a1a; text-decoration: none;">{{ project.name }}</a>
-                                <div style="font-size: 13px; color: #666; margin-top: 2px;">{{ project.description or 'No description' }}</div>
-                            </div>
-                        </div>
-                    </td>
-                    <td>
-                        <span style="display: inline-block; padding: 4px 12px; background: #f5f5f5; border-radius: 4px; font-size: 13px; font-weight: 500; color: #666;">
-                            {{ project.type|replace('_', ' ')|title if project.type else 'Web App' }}
-                        </span>
-                    </td>
-                    <td>
-                        {% if project.status == 'deployed' %}
-                        <span class="badge badge-success">Deployed</span>
-                        {% elif project.status == 'building' %}
-                        <span class="badge badge-warning">Building</span>
-                        {% elif project.status == 'failed' %}
-                        <span class="badge badge-error">Failed</span>
-                        {% else %}
-                        <span class="badge badge-info">Active</span>
-                        {% endif %}
-                    </td>
-                    <td style="color: #666; font-size: 14px;">{{ project.created_at }}</td>
-                    <td>
-                        <a href="/projects/{{ project.id }}" style="color: #6366f1; text-decoration: none; font-size: 14px; font-weight: 500;">View →</a>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+{% block content %}
+<div class="projects-header">
+    <div>
+        <h1>Projects</h1>
+        <p>Manage and monitor your applications</p>
     </div>
-    {% else %}
-    <div style="text-align: center; padding: 80px 20px; background: #fafafa; border-radius: 12px; margin-top: 24px;">
-        <div style="font-size: 48px; margin-bottom: 16px;">📦</div>
-        <h3 style="font-size: 20px; font-weight: 600; margin-bottom: 8px; color: #1a1a1a;">No projects yet</h3>
-        <p style="color: #666; margin-bottom: 24px;">Get started by creating your first AI-powered application</p>
-        <a href="/projects/new" style="display: inline-block; padding: 12px 24px; background: #1a1a1a; color: white; border-radius: 6px; text-decoration: none; font-weight: 500;">Create Your First Project</a>
-    </div>
-    {% endif %}
+    <button class="btn btn-primary"><i data-lucide="plus" style="width:16px;height:16px;"></i> New Project</button>
 </div>
+
+<div class="search-box">
+    <i data-lucide="search"></i>
+    <input type="text" placeholder="Search projects...">
+</div>
+
+<table class="projects-table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for project in projects %}
+        <tr>
+            <td>
+                <div class="project-name">
+                    <div class="project-icon"><i data-lucide="folder"></i></div>
+                    {{ project.name }}
+                </div>
+            </td>
+            <td class="project-type">{{ project.description or "Web App" }}</td>
+            <td>
+                {% if project.status == "deployed" %}
+                <span class="status-badge status-deployed"><i data-lucide="check-circle" style="width:12px;height:12px;"></i> Deployed</span>
+                {% elif project.status == "building" %}
+                <span class="status-badge status-building"><i data-lucide="loader" style="width:12px;height:12px;"></i> Building</span>
+                {% else %}
+                <span class="status-badge status-active"><i data-lucide="activity" style="width:12px;height:12px;"></i> Active</span>
+                {% endif %}
+            </td>
+            <td class="project-date">{{ project.created_at }}</td>
+            <td class="project-actions"><a href="/projects/{{ project.id }}">View &rarr;</a></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
 {% endblock %}
