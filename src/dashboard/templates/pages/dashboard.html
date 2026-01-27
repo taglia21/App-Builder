@@ -3,114 +3,179 @@
 {% block title %}Dashboard - NexusAI{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1 class="page-title">Dashboard</h1>
-    <p class="page-subtitle">Welcome back! Here's an overview of your projects.</p>
-</div>
-
-<div class="stats-grid">
-    <div class="stat-card">
-        <div class="stat-header">
-            <span class="stat-label">Total Projects</span>
-            <div class="stat-icon indigo">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-                </svg>
+<div class="animate-fadeInUp">
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1 class="page-title">Welcome back! 👋</h1>
+        <p class="page-subtitle">Here's an overview of your projects and recent activity.</p>
+    </div>
+    
+    <!-- Stats Grid -->
+    <div class="stats-grid mb-8">
+        <div class="stat-card animate-fadeInUp stagger-1">
+            <div class="stat-icon">
+                <i data-lucide="folder" style="width: 24px; height: 24px;"></i>
+            </div>
+            <div class="stat-value">{{ stats.total_projects if stats else 3 }}</div>
+            <div class="stat-label">Total Projects</div>
+            <div class="stat-change positive">
+                <i data-lucide="trending-up" style="width: 14px; height: 14px;"></i>
+                +2 this month
             </div>
         </div>
-        <div class="stat-value">{{ projects|length }}</div>
-    </div>
-
-    <div class="stat-card">
-        <div class="stat-header">
-            <span class="stat-label">Deployed</span>
-            <div class="stat-icon green">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                </svg>
+        
+        <div class="stat-card animate-fadeInUp stagger-2">
+            <div class="stat-icon" style="background: var(--gradient-success);">
+                <i data-lucide="rocket" style="width: 24px; height: 24px;"></i>
+            </div>
+            <div class="stat-value" style="background: var(--gradient-success); -webkit-background-clip: text;">{{ stats.deployed if stats else 2 }}</div>
+            <div class="stat-label">Deployed</div>
+            <div class="stat-change positive">
+                <i data-lucide="check-circle" style="width: 14px; height: 14px;"></i>
+                Live now
             </div>
         </div>
-        <div class="stat-value">1</div>
-    </div>
-
-    <div class="stat-card">
-        <div class="stat-header">
-            <span class="stat-label">In Progress</span>
-            <div class="stat-icon amber">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
+        
+        <div class="stat-card animate-fadeInUp stagger-3">
+            <div class="stat-icon" style="background: var(--gradient-info);">
+                <i data-lucide="loader" style="width: 24px; height: 24px;"></i>
+            </div>
+            <div class="stat-value" style="background: var(--gradient-info); -webkit-background-clip: text;">{{ stats.building if stats else 1 }}</div>
+            <div class="stat-label">Building</div>
+            <div class="stat-change" style="background: rgba(79, 172, 254, 0.1); color: #4facfe;">
+                <i data-lucide="clock" style="width: 14px; height: 14px;"></i>
+                In progress
             </div>
         </div>
-        <div class="stat-value">{{ projects|length - 1 }}</div>
-    </div>
-
-    <div class="stat-card">
-        <div class="stat-header">
-            <span class="stat-label">API Calls</span>
-            <div class="stat-icon purple">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                </svg>
+        
+        <div class="stat-card animate-fadeInUp stagger-4">
+            <div class="stat-icon" style="background: var(--gradient-secondary);">
+                <i data-lucide="activity" style="width: 24px; height: 24px;"></i>
+            </div>
+            <div class="stat-value" style="background: var(--gradient-secondary); -webkit-background-clip: text;">{{ stats.api_calls if stats else '12.4K' }}</div>
+            <div class="stat-label">API Calls</div>
+            <div class="stat-change positive">
+                <i data-lucide="trending-up" style="width: 14px; height: 14px;"></i>
+                +18% vs last week
             </div>
         </div>
-        <div class="stat-value">1,234</div>
     </div>
-</div>
-
-<div class="content-grid">
-    <div>
-        <div class="card">
-            <div class="card-header">
-                <h2 class="card-title">Recent Projects</h2>
-                <a href="/projects" class="card-link">View all →</a>
-            </div>
-            <div class="card-body">
-                {% for project in projects[:3] %}
-                <a href="/projects/{{ project.id }}" class="project-item">
-                    <div class="project-avatar">{{ project.name[0] }}</div>
-                    <div class="project-info">
-                        <div class="project-name">{{ project.name }}</div>
-                        <div class="project-desc">{{ project.description or 'No description' }}</div>
+    
+    <!-- Recent Projects Section -->
+    <div class="card mb-8">
+        <div class="card-header">
+            <h3 class="card-title">Recent Projects</h3>
+            <a href="/projects/new" class="btn btn-primary btn-sm">
+                <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
+                New Project
+            </a>
+        </div>
+        <div class="projects-grid">
+            {% for project in projects %}
+            <a href="/projects/{{ project.id }}" class="project-card animate-fadeInUp">
+                <div class="project-card-header">
+                    <div class="project-icon">
+                        <i data-lucide="{{ project.icon if project.icon else 'box' }}" style="width: 24px; height: 24px;"></i>
                     </div>
-                    {% if project.status == 'deployed' %}
-                    <span class="project-status deployed">Deployed</span>
-                    {% else %}
-                    <span class="project-status building">{{ project.status|capitalize }}</span>
-                    {% endif %}
-                </a>
-                {% endfor %}
-            </div>
+                    <div class="project-info">
+                        <h4 class="project-name">{{ project.name }}</h4>
+                        <p class="project-description">{{ project.description if project.description else 'AI-powered application' }}</p>
+                    </div>
+                </div>
+                <div class="project-meta">
+                    <span class="project-status {{ project.status if project.status else 'deployed' }}">
+                        <i data-lucide="{% if project.status == 'building' %}loader{% elif project.status == 'draft' %}file{% else %}check-circle{% endif %}" style="width: 12px; height: 12px;"></i>
+                        {{ project.status if project.status else 'Deployed' }}
+                    </span>
+                    <span class="text-muted" style="font-size: 0.75rem;">Updated {{ project.updated_at if project.updated_at else '2 hours ago' }}</span>
+                </div>
+            </a>
+            {% else %}
+            <!-- Default projects if none exist -->
+            <a href="/projects/1" class="project-card animate-fadeInUp stagger-1">
+                <div class="project-card-header">
+                    <div class="project-icon">
+                        <i data-lucide="shopping-cart" style="width: 24px; height: 24px;"></i>
+                    </div>
+                    <div class="project-info">
+                        <h4 class="project-name">E-Commerce Platform</h4>
+                        <p class="project-description">Full-stack online store with payment integration</p>
+                    </div>
+                </div>
+                <div class="project-meta">
+                    <span class="project-status deployed">
+                        <i data-lucide="check-circle" style="width: 12px; height: 12px;"></i>
+                        Deployed
+                    </span>
+                    <span class="text-muted" style="font-size: 0.75rem;">Updated 2 hours ago</span>
+                </div>
+            </a>
+            <a href="/projects/2" class="project-card animate-fadeInUp stagger-2">
+                <div class="project-card-header">
+                    <div class="project-icon" style="background: var(--gradient-info);">
+                        <i data-lucide="bot" style="width: 24px; height: 24px;"></i>
+                    </div>
+                    <div class="project-info">
+                        <h4 class="project-name">AI Chatbot</h4>
+                        <p class="project-description">Customer support automation with NLP</p>
+                    </div>
+                </div>
+                <div class="project-meta">
+                    <span class="project-status building">
+                        <i data-lucide="loader" style="width: 12px; height: 12px;"></i>
+                        Building
+                    </span>
+                    <span class="text-muted" style="font-size: 0.75rem;">Updated 30 mins ago</span>
+                </div>
+            </a>
+            <a href="/projects/3" class="project-card animate-fadeInUp stagger-3">
+                <div class="project-card-header">
+                    <div class="project-icon" style="background: var(--gradient-success);">
+                        <i data-lucide="bar-chart-3" style="width: 24px; height: 24px;"></i>
+                    </div>
+                    <div class="project-info">
+                        <h4 class="project-name">Analytics Dashboard</h4>
+                        <p class="project-description">Real-time business intelligence platform</p>
+                    </div>
+                </div>
+                <div class="project-meta">
+                    <span class="project-status deployed">
+                        <i data-lucide="check-circle" style="width: 12px; height: 12px;"></i>
+                        Deployed
+                    </span>
+                    <span class="text-muted" style="font-size: 0.75rem;">Updated yesterday</span>
+                </div>
+            </a>
+            {% endfor %}
         </div>
     </div>
-
-    <div>
-        <div class="card">
-            <div class="card-header">
-                <h2 class="card-title">Quick Actions</h2>
-            </div>
-            <div class="quick-actions">
-                <a href="/projects/new" class="btn btn-primary">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                    </svg>
-                    New Project
-                </a>
-                <a href="/api-keys" class="btn btn-secondary">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
-                    </svg>
-                    API Keys
-                </a>
-                <a href="/settings" class="btn btn-secondary">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                    </svg>
-                    Settings
-                </a>
-            </div>
+    
+    <!-- Quick Actions -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Quick Actions</h3>
+        </div>
+        <div class="flex gap-4" style="flex-wrap: wrap;">
+            <a href="/projects/new" class="btn btn-primary">
+                <i data-lucide="plus" style="width: 18px; height: 18px;"></i>
+                Create Project
+            </a>
+            <a href="/api-keys" class="btn btn-secondary">
+                <i data-lucide="key" style="width: 18px; height: 18px;"></i>
+                Manage API Keys
+            </a>
+            <a href="/settings" class="btn btn-ghost">
+                <i data-lucide="settings" style="width: 18px; height: 18px;"></i>
+                Settings
+            </a>
         </div>
     </div>
 </div>
+
+<script>
+    // Re-initialize icons after HTMX loads
+    document.addEventListener('htmx:afterSwap', function() {
+        lucide.createIcons();
+    });
+</script>
 {% endblock %}
