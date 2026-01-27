@@ -581,6 +581,7 @@ def create_dashboard_router(templates: Jinja2Templates) -> APIRouter:
     router.add_api_route("/projects", routes.create_project, methods=["POST"])
     router.add_api_route("/settings", routes.update_settings, methods=["POST"])
 
+    router.add_api_route("/projects/{project_id}/review", project_review, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/api/ideas/analyze", analyze_idea_api, methods=["POST"])
     router.add_api_route("/api/projects/{project_id}", get_project_api, methods=["GET"])
     return router
@@ -589,6 +590,27 @@ def create_dashboard_router(templates: Jinja2Templates) -> APIRouter:
 
 
 # ============================================
+
+
+async def project_review(request: Request) -> HTMLResponse:
+    """Project review page showing idea analysis."""
+    project_id = request.path_params.get('project_id')
+    
+    # Get project from store
+    project = _projects_store.get(project_id)
+    if not project:
+        # Return 404 or redirect
+        from starlette.responses import RedirectResponse
+        return RedirectResponse(url="/dashboard", status_code=302)
+    
+    from jinja2 import Environment, FileSystemLoader
+    from pathlib import Path
+    template_dir = Path(__file__).parent / "templates"
+    env = Environment(loader=FileSystemLoader(str(template_dir)))
+    template = env.get_template("pages/project_review.html")
+    html_content = template.render(project=project)
+    return HTMLResponse(content=html_content)
+
 # Idea Analysis API Endpoints
 # ============================================
 import uuid
