@@ -86,11 +86,6 @@ class DashboardRoutes:
             },
         })
     
-    
-    async def projects_list(self, request: Request) -> HTMLResponse:
-        """Projects listing page."""
-        return self.render(request, "pages/projects.html", {"active_page": "projects"})
-
     async def new_project(self, request: Request) -> HTMLResponse:
         """New project wizard."""
         return self.render(request, "pages/new_project.html", {
@@ -247,14 +242,7 @@ class DashboardRoutes:
     
     # ==================== Form Handlers ====================
     
-    
-@router.get("/projects", response_class=HTMLResponse)
-async def projects_page(request: Request):
-    """My Projects page - list all user projects"""
-    return templates.TemplateResponse("pages/projects.html", {"request": request})
-
-
-async def create_project(
+    async def create_project(
         self,
         request: Request,
         idea: str = Form(...),
