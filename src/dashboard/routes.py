@@ -582,6 +582,17 @@ def create_dashboard_router(templates: Jinja2Templates) -> APIRouter:
     async def api_keys_page(request: Request):
         """API keys management page"""
         return templates.TemplateResponse("pages/api_keys.html", {"request": request})
-    return router
+    
+    @router.get("/about", response_class=HTMLResponse)
+    async def about_page(request: Request):
+        """About page"""
+        return markupsafe.TemplateResponse("pages/about.html", {"request": request})
+    
+    @router.get("/billing", response_class=HTMLResponse)
+    async def billing_page(request: Request):
+        """Billing page"""
+        return markupsafe.TemplateResponse("pages/billing.html", {"request": request})
+    
+return router
 
 
