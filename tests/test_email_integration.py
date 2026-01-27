@@ -37,7 +37,7 @@ class TestEmailClientInitialization:
             client = EmailClient()
             
             assert not client.is_configured
-            assert client.from_name == "LaunchForge"
+            assert client.from_name == "NexusAI"
     
     def test_client_creation_with_api_key(self):
         """Client should be configured when API key provided."""

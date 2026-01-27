@@ -25,7 +25,7 @@ class TestDashboardE2E:
         """Test dashboard home page loads successfully."""
         response = client.get("/")
         assert response.status_code == 200
-        assert b"LaunchForge" in response.content
+        assert b"NexusAI" in response.content
     
     def test_dashboard_accessible(self, client):
         """Test dashboard page is accessible."""
@@ -38,7 +38,7 @@ class TestDashboardE2E:
         response = client.get("/health")
         assert response.status_code == 200
         data = response.json()
-        assert data["status"] == "healthy"
+        assert data["status"] == "ok"
     
     def test_api_docs_available(self, client):
         """Test API documentation is available."""
