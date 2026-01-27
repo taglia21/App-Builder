@@ -615,7 +615,7 @@ async def pricing_page(request: Request) -> HTMLResponse:
     template_dir = Path(__file__).parent / "templates"
     env = Environment(loader=FileSystemLoader(str(template_dir)))
     template = env.get_template("pages/pricing.html")
-    html_content = template.render()
+    html_content = template.render(request=request)
     return HTMLResponse(content=html_content)
 
 async def business_formation(request: Request) -> HTMLResponse:
