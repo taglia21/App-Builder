@@ -187,6 +187,18 @@ class DashboardRoutes:
             "next_invoice": "Feb 1, 2024",
             "amount": "$29.00",
         })
+
+    async def api_keys_page(self, request: Request) -> HTMLResponse:
+        """API Keys management page."""
+        return self.render(request, "pages/api_keys.html", {})
+
+    async def about_page(self, request: Request) -> HTMLResponse:
+        """About Us page."""
+        return self.render(request, "pages/about.html", {})
+
+    async def terms_page(self, request: Request) -> HTMLResponse:
+        """Terms of Service page."""
+        return self.render(request, "pages/terms.html", {})
     
     # ==================== HTMX Partial Routes ====================
     
@@ -540,6 +552,10 @@ def create_dashboard_router(templates: Jinja2Templates) -> APIRouter:
     router.add_api_route("/projects/{project_id}", routes.project_detail, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/settings", routes.settings, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/billing", routes.billing, methods=["GET"], response_class=HTMLResponse)
+    router.add_api_route("/api-keys", routes.api_keys_page, methods=["GET"], response_class=HTMLResponse)
+    router.add_api_route("/about", routes.about_page, methods=["GET"], response_class=HTMLResponse)
+    router.add_api_route("/terms", routes.terms_page, methods=["GET"], response_class=HTMLResponse)
+
     
     # Admin routes
     router.add_api_route("/admin", admin_routes.admin_dashboard, methods=["GET"], response_class=HTMLResponse)
