@@ -1,158 +1,78 @@
-{% extends "base.html" %}
-
-{% block title %}About - NexusAI{% endblock %}
+{% extends "base_modern.html" %}
+{% block title %}About Us - NexusAI{% endblock %}
 
 {% block content %}
-<div class="fade-in">
-    <!-- Hero Section -->
-    <div class="relative overflow-hidden rounded-3xl mb-12" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);">
-        <div class="absolute inset-0 grid-bg opacity-30"></div>
-        <div class="relative px-8 py-16 text-center">
-            <h1 class="text-4xl md:text-5xl font-bold text-white mb-4">
-                About <span class="gradient-text">NexusAI</span>
-            </h1>
-            <p class="text-xl text-gray-300 max-w-2xl mx-auto">
-                The AI-powered platform that transforms your ideas into production-ready applications.
-            </p>
+<div class="content-wrapper">
+    <div class="content-header">
+        <div>
+            <h1>About NexusAI</h1>
+            <p class="subtitle">Building the future of AI-powered application development</p>
         </div>
     </div>
 
-    <!-- Mission Section -->
-    <div class="grid md:grid-cols-2 gap-8 mb-12">
-        <div class="glass-card rounded-2xl p-8">
-            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center mb-4">
-                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                </svg>
-            </div>
-            <h2 class="text-2xl font-bold text-gray-900 mb-3">Our Mission</h2>
-            <p class="text-gray-600 leading-relaxed">
-                We believe everyone should be able to build software. NexusAI democratizes app development by leveraging cutting-edge AI to turn your ideas into reality—no coding required.
-            </p>
+    <div style="max-width: 900px; margin: 0 auto;">
+        <!-- Mission Section -->
+        <div class="stat-card" style="margin-bottom: 24px;">
+            <h2 style="font-size: 20px; font-weight: 600; margin: 0 0 16px 0;">Our Mission</h2>
+            <p style="color: #666; line-height: 1.8; margin: 0;">NexusAI is dedicated to democratizing application development through advanced AI technology. We empower developers and businesses to build production-ready applications faster, smarter, and more efficiently than ever before.</p>
         </div>
-        
-        <div class="glass-card rounded-2xl p-8">
-            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center mb-4">
-                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
-                </svg>
-            </div>
-            <h2 class="text-2xl font-bold text-gray-900 mb-3">Our Vision</h2>
-            <p class="text-gray-600 leading-relaxed">
-                A world where the gap between idea and execution disappears. Where entrepreneurs, creators, and innovators can focus on what matters—solving problems—while we handle the technical complexity.
-            </p>
-        </div>
-    </div>
 
-    <!-- How It Works -->
-    <div class="mb-12">
-        <h2 class="text-3xl font-bold text-gray-900 mb-8 text-center">How NexusAI Works</h2>
-        <div class="grid md:grid-cols-3 gap-6">
-            <div class="text-center">
-                <div class="w-16 h-16 rounded-full bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center mx-auto mb-4 glow-cyan">
-                    <span class="text-2xl font-bold text-white">1</span>
+        <!-- What We Do -->
+        <div class="stat-card" style="margin-bottom: 24px;">
+            <h2 style="font-size: 20px; font-weight: 600; margin: 0 0 16px 0;">What We Do</h2>
+            <div style="display: grid; gap: 20px;">
+                <div style="display: flex; gap: 16px;">
+                    <div style="flex-shrink: 0; width: 48px; height: 48px; border-radius: 8px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 24px;">⚡</div>
+                    <div>
+                        <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 8px 0;">AI-Powered Generation</h3>
+                        <p style="color: #666; margin: 0; line-height: 1.6;">Leverage cutting-edge AI to generate complete application architectures, from backend APIs to frontend interfaces.</p>
+                    </div>
                 </div>
-                <h3 class="text-xl font-semibold text-gray-900 mb-2">Describe</h3>
-                <p class="text-gray-600">Tell us about your app idea in plain English. What problem does it solve? What features does it need?</p>
-            </div>
-            <div class="text-center">
-                <div class="w-16 h-16 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center mx-auto mb-4 glow-purple">
-                    <span class="text-2xl font-bold text-white">2</span>
+                <div style="display: flex; gap: 16px;">
+                    <div style="flex-shrink: 0; width: 48px; height: 48px; border-radius: 8px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 24px;">🚀</div>
+                    <div>
+                        <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 8px 0;">Rapid Deployment</h3>
+                        <p style="color: #666; margin: 0; line-height: 1.6;">Deploy your applications to production with a single click. We handle the infrastructure, scaling, and monitoring.</p>
+                    </div>
                 </div>
-                <h3 class="text-xl font-semibold text-gray-900 mb-2">Generate</h3>
-                <p class="text-gray-600">Our AI analyzes your requirements and generates production-quality code using multiple AI models.</p>
-            </div>
-            <div class="text-center">
-                <div class="w-16 h-16 rounded-full bg-gradient-to-br from-pink-400 to-pink-600 flex items-center justify-center mx-auto mb-4 glow-pink">
-                    <span class="text-2xl font-bold text-white">3</span>
-                </div>
-                <h3 class="text-xl font-semibold text-gray-900 mb-2">Deploy</h3>
-                <p class="text-gray-600">One click to deploy your app to the cloud. Get a live URL instantly and start sharing with users.</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Features Grid -->
-    <div class="glass-card rounded-2xl p-8 mb-12">
-        <h2 class="text-3xl font-bold text-gray-900 mb-8">Why Choose NexusAI?</h2>
-        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div class="flex gap-4">
-                <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-cyan-100 flex items-center justify-center">
-                    <svg class="w-5 h-5 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                </div>
-                <div>
-                    <h4 class="font-semibold text-gray-900">100% Code Ownership</h4>
-                    <p class="text-sm text-gray-600">Export and modify your code anytime</p>
-                </div>
-            </div>
-            <div class="flex gap-4">
-                <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                    <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                    </svg>
-                </div>
-                <div>
-                    <h4 class="font-semibold text-gray-900">Multi-Model AI</h4>
-                    <p class="text-sm text-gray-600">GPT-4, Claude, and Gemini at your fingertips</p>
-                </div>
-            </div>
-            <div class="flex gap-4">
-                <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-pink-100 flex items-center justify-center">
-                    <svg class="w-5 h-5 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                </div>
-                <div>
-                    <h4 class="font-semibold text-gray-900">Stripe Built-In</h4>
-                    <p class="text-sm text-gray-600">Start monetizing from day one</p>
-                </div>
-            </div>
-            <div class="flex gap-4">
-                <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
-                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
-                    </svg>
-                </div>
-                <div>
-                    <h4 class="font-semibold text-gray-900">Production Ready</h4>
-                    <p class="text-sm text-gray-600">Enterprise-grade security and scalability</p>
-                </div>
-            </div>
-            <div class="flex gap-4">
-                <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-yellow-100 flex items-center justify-center">
-                    <svg class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                </div>
-                <div>
-                    <h4 class="font-semibold text-gray-900">Minutes, Not Months</h4>
-                    <p class="text-sm text-gray-600">From idea to deployed app in under an hour</p>
-                </div>
-            </div>
-            <div class="flex gap-4">
-                <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center">
-                    <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                    </svg>
-                </div>
-                <div>
-                    <h4 class="font-semibold text-gray-900">No Vendor Lock-In</h4>
-                    <p class="text-sm text-gray-600">Deploy anywhere you want</p>
+                <div style="display: flex; gap: 16px;">
+                    <div style="flex-shrink: 0; width: 48px; height: 48px; border-radius: 8px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 24px;">🔧</div>
+                    <div>
+                        <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 8px 0;">Full Control</h3>
+                        <p style="color: #666; margin: 0; line-height: 1.6;">Access complete source code with GitHub integration. Customize, extend, and maintain your applications with ease.</p>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- CTA -->
-    <div class="text-center">
-        <a href="/projects/new" class="btn-futuristic inline-flex items-center gap-2 px-8 py-4 text-white font-semibold rounded-xl">
-            <span>Start Building Now</span>
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
-            </svg>
-        </a>
+        <!-- Why Choose Us -->
+        <div class="stat-card" style="margin-bottom: 24px;">
+            <h2 style="font-size: 20px; font-weight: 600; margin: 0 0 16px 0;">Why Choose NexusAI</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+                <div style="text-align: center; padding: 20px;">
+                    <div style="font-size: 32px; font-weight: 700; color: #667eea; margin-bottom: 8px;">10x</div>
+                    <div style="color: #666; font-size: 14px;">Faster Development</div>
+                </div>
+                <div style="text-align: center; padding: 20px;">
+                    <div style="font-size: 32px; font-weight: 700; color: #667eea; margin-bottom: 8px;">99.9%</div>
+                    <div style="color: #666; font-size: 14px;">Uptime SLA</div>
+                </div>
+                <div style="text-align: center; padding: 20px;">
+                    <div style="font-size: 32px; font-weight: 700; color: #667eea; margin-bottom: 8px;">24/7</div>
+                    <div style="color: #666; font-size: 14px;">Expert Support</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contact Section -->
+        <div class="stat-card">
+            <h2 style="font-size: 20px; font-weight: 600; margin: 0 0 16px 0;">Get in Touch</h2>
+            <p style="color: #666; line-height: 1.8; margin: 0 0 20px 0;">Have questions or want to learn more? We'd love to hear from you.</p>
+            <div style="display: flex; gap: 12px;">
+                <a href="mailto:hello@nexusai.dev" style="padding: 12px 24px; background: #1a1a1a; color: white; border-radius: 6px; text-decoration: none; font-weight: 500; font-size: 14px;">Contact Sales</a>
+                <a href="/docs" style="padding: 12px 24px; background: transparent; border: 1px solid #e0e0e0; color: #333; border-radius: 6px; text-decoration: none; font-weight: 500; font-size: 14px;">Documentation</a>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}
