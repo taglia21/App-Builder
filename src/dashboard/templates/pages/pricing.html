@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Pricing - LaunchForge{% endblock %}
+{% block content %}
+<style>
+    .pricing-container { max-width: 1000px; margin: 0 auto; text-align: center; }
+    .pricing-header { margin-bottom: 48px; }
+    .pricing-header h1 { font-size: 2.5rem; font-weight: 700; margin-bottom: 12px; }
+    .pricing-header p { font-size: 1.1rem; color: var(--nexus-text); }
+    .pricing-toggle { display: inline-flex; background: var(--nexus-dark); border-radius: 8px; padding: 4px; margin-bottom: 40px; }
+    .toggle-btn { padding: 8px 20px; border-radius: 6px; border: none; background: transparent; color: var(--nexus-text); cursor: pointer; font-size: 0.9rem; }
+    .toggle-btn.active { background: var(--nexus-purple); color: white; }
+    .pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+    .pricing-card { background: var(--nexus-card); border: 2px solid var(--nexus-border); border-radius: 16px; padding: 32px; text-align: left; transition: all 0.3s; }
+    .pricing-card:hover { transform: translateY(-4px); }
+    .pricing-card.featured { border-color: var(--nexus-purple); background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(99, 102, 241, 0.05)); }
+    .pricing-card .badge { display: inline-block; padding: 4px 12px; background: var(--nexus-purple); color: white; border-radius: 20px; font-size: 0.75rem; font-weight: 500; margin-bottom: 16px; }
+    .pricing-card h2 { font-size: 1.5rem; margin-bottom: 8px; }
+    .pricing-card .description { color: var(--nexus-text); font-size: 0.9rem; margin-bottom: 24px; }
+    .pricing-card .price { font-size: 3rem; font-weight: 700; margin-bottom: 8px; }
+    .pricing-card .price span { font-size: 1rem; color: var(--nexus-text); font-weight: 400; }
+    .pricing-card .billing { color: var(--nexus-text); font-size: 0.85rem; margin-bottom: 24px; }
+    .pricing-card ul { list-style: none; padding: 0; margin-bottom: 32px; }
+    .pricing-card li { padding: 10px 0; border-bottom: 1px solid var(--nexus-border); font-size: 0.95rem; display: flex; align-items: center; gap: 10px; }
+    .pricing-card li:last-child { border-bottom: none; }
+    .pricing-card li::before { content: '✓'; color: #22c55e; font-weight: bold; }
+    .pricing-card .btn { display: block; width: 100%; padding: 14px; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; text-decoration: none; text-align: center; }
+    .pricing-card .btn-primary { background: var(--nexus-purple); color: white; border: none; }
+    .pricing-card .btn-secondary { background: transparent; color: white; border: 1px solid var(--nexus-border); }
+    .enterprise-cta { margin-top: 48px; padding: 32px; background: var(--nexus-card); border: 1px solid var(--nexus-border); border-radius: 12px; }
+</style>
+
+<div class="pricing-container">
+    <div class="pricing-header">
+        <h1>Simple, Transparent Pricing</h1>
+        <p>Start your AI business today. No hidden fees.</p>
+    </div>
+
+    <div class="pricing-toggle">
+        <button class="toggle-btn active">Monthly</button>
+        <button class="toggle-btn">Annual (Save 20%)</button>
+    </div>
+
+    <div class="pricing-grid">
+        <div class="pricing-card">
+            <h2>Starter</h2>
+            <p class="description">Perfect for testing your idea</p>
+            <div class="price">$49<span>/mo</span></div>
+            <div class="billing">Billed monthly</div>
+            <ul>
+                <li>1 AI App Generation</li>
+                <li>Basic Templates</li>
+                <li>Email Support</li>
+                <li>Code Export (ZIP)</li>
+                <li>Community Access</li>
+            </ul>
+            <a href="#" class="btn btn-secondary">Get Started</a>
+        </div>
+
+        <div class="pricing-card featured">
+            <span class="badge">Most Popular</span>
+            <h2>Professional</h2>
+            <p class="description">For serious entrepreneurs</p>
+            <div class="price">$149<span>/mo</span></div>
+            <div class="billing">Billed monthly</div>
+            <ul>
+                <li>5 AI App Generations</li>
+                <li>Premium Templates</li>
+                <li>AI Agent Customization</li>
+                <li>One-Click Deployment</li>
+                <li>Priority Support</li>
+                <li>Business Formation ($149 value)</li>
+            </ul>
+            <a href="#" class="btn btn-primary">Get Started</a>
+        </div>
+
+        <div class="pricing-card">
+            <h2>Business</h2>
+            <p class="description">For growing companies</p>
+            <div class="price">$399<span>/mo</span></div>
+            <div class="billing">Billed monthly</div>
+            <ul>
+                <li>Unlimited App Generations</li>
+                <li>Custom Branding</li>
+                <li>Dedicated Agent Support</li>
+                <li>White-Label Options</li>
+                <li>API Access</li>
+                <li>Team Collaboration</li>
+                <li>Priority Deployment</li>
+            </ul>
+            <a href="#" class="btn btn-secondary">Get Started</a>
+        </div>
+    </div>
+
+    <div class="enterprise-cta">
+        <h2 style="font-size: 1.5rem; margin-bottom: 8px;">Need a Custom Solution?</h2>
+        <p style="color: var(--nexus-text); margin-bottom: 16px;">Contact us for enterprise pricing, volume discounts, and custom integrations.</p>
+        <a href="/contact" class="btn btn-primary" style="display: inline-block; padding: 12px 32px;">Contact Sales</a>
+    </div>
+</div>
+{% endblock %}

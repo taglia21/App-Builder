@@ -581,6 +581,7 @@ def create_dashboard_router(templates: Jinja2Templates) -> APIRouter:
     router.add_api_route("/projects", routes.create_project, methods=["POST"])
     router.add_api_route("/settings", routes.update_settings, methods=["POST"])
 
+    router.add_api_route("/pricing", pricing_page, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/projects/{project_id}/business", business_formation, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/projects/{project_id}/deploy", deploy_page, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/projects/{project_id}/workspace", agent_workspace, methods=["GET"], response_class=HTMLResponse)
@@ -604,6 +605,18 @@ def create_dashboard_router(templates: Jinja2Templates) -> APIRouter:
 
 
 
+
+
+
+async def pricing_page(request: Request) -> HTMLResponse:
+    """Pricing page with subscription plans."""
+    from jinja2 import Environment, FileSystemLoader
+    from pathlib import Path
+    template_dir = Path(__file__).parent / "templates"
+    env = Environment(loader=FileSystemLoader(str(template_dir)))
+    template = env.get_template("pages/pricing.html")
+    html_content = template.render()
+    return HTMLResponse(content=html_content)
 
 async def business_formation(request: Request) -> HTMLResponse:
     """Business formation page for LLC registration."""
