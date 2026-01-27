@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Projects - NexusAI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Projects</h1>
+    <p class="page-subtitle">Manage and monitor all your AI-generated applications</p>
+</div>
+
+<div class="table-container">
+    <div class="table-header">
+        <h2 class="table-title">All Projects</h2>
+        <div class="table-actions">
+            <input type="text" class="search-input" placeholder="Search projects..." style="width: 240px; height: 36px;">
+            <a href="/projects/new" class="btn btn-primary">New Project</a>
+        </div>
+    </div>
+    
+    <div class="filter-group">
+        <button class="filter-btn active">All Projects</button>
+        <button class="filter-btn">Deployed</button>
+        <button class="filter-btn">Building</button>
+        <button class="filter-btn">Draft</button>
+    </div>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th style="width: 35%;">Project</th>
+                <th style="width: 20%;">Status</th>
+                <th style="width: 25%;">Tech Stack</th>
+                <th style="width: 15%;">Created</th>
+                <th style="width: 5%;"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for project in projects %}
+            <tr>
+                <td>
+                    <div class="project-cell">
+                        <div class="project-icon">{{ project.name[0] }}</div>
+                        <div class="project-details">
+                            <div class="project-title">{{ project.name }}</div>
+                            <div class="project-subtitle">{{ project.description or 'No description provided' }}</div>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    {% if project.status == 'deployed' %}
+                    <span class="status-badge success">
+                        <span class="status-dot"></span>
+                        Deployed
+                    </span>
+                    {% elif project.status == 'building' %}
+                    <span class="status-badge warning">
+                        <span class="status-dot"></span>
+                        Building
+                    </span>
+                    {% else %}
+                    <span class="status-badge info">
+                        <span class="status-dot"></span>
+                        {{ project.status|capitalize }}
+                    </span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="tech-badges">
+                        {% if project.tech_stack %}
+                            {% for tech in project.tech_stack[:3] %}
+                            <span class="tech-badge">{{ tech }}</span>
+                            {% endfor %}
+                            {% if project.tech_stack|length > 3 %}
+                            <span class="tech-badge">+{{ project.tech_stack|length - 3 }}</span>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </td>
+                <td>
+                    <span class="date-text">{{ project.created_at }}</span>
+                </td>
+                <td>
+                    <a href="/projects/{{ project.id }}" class="action-link">View →</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
