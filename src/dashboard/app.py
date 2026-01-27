@@ -109,7 +109,7 @@ def create_app() -> FastAPI:
     @app.get("/")
     async def root():
         """Root endpoint - landing or redirect."""
-        return {"status": "healthy", "service": "NexusAI Dashboard"}
+        from starlette.responses import RedirectResponse; return RedirectResponse(url="/dashboard", status_code=302)
     
     # Health check endpoint
     @app.get("/health")
