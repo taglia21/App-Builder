@@ -333,7 +333,7 @@ class TestDashboardRoutes:
         
         mock_templates.TemplateResponse.assert_called()
         call_args = mock_templates.TemplateResponse.call_args
-        assert "pages/home.html" in str(call_args)
+        assert "pages/landing.html" in str(call_args)
     
     @pytest.mark.asyncio
     async def test_dashboard_route(self, mock_templates, mock_request):

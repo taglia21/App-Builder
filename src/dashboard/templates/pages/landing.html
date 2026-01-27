@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}LaunchForge - Start Your AI Business in Minutes{% endblock %}
+{% block content %}
+<style>
+    .landing-container { max-width: 900px; margin: 0 auto; padding: 40px 20px; }
+    .hero { text-align: center; margin-bottom: 60px; }
+    .hero h1 { font-size: 3rem; font-weight: 800; margin-bottom: 16px; background: linear-gradient(135deg, #8b5cf6, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .hero .tagline { font-size: 1.5rem; color: var(--nexus-text); margin-bottom: 32px; }
+    .idea-card { background: var(--nexus-card); border: 1px solid var(--nexus-border); border-radius: 16px; padding: 40px; margin-bottom: 40px; }
+    .idea-card h2 { font-size: 1.5rem; margin-bottom: 24px; }
+    .idea-input { width: 100%; min-height: 150px; padding: 16px; background: var(--nexus-dark); border: 1px solid var(--nexus-border); border-radius: 12px; color: white; font-size: 1rem; resize: vertical; font-family: inherit; }
+    .idea-input:focus { outline: none; border-color: var(--nexus-purple); }
+    .idea-input::placeholder { color: #666; }
+    .btn-generate { width: 100%; padding: 16px 32px; background: linear-gradient(135deg, #8b5cf6, #6366f1); color: white; border: none; border-radius: 12px; font-size: 1.1rem; font-weight: 600; cursor: pointer; margin-top: 20px; transition: transform 0.2s, box-shadow 0.2s; }
+    .btn-generate:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(139, 92, 246, 0.4); }
+    .btn-generate:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 60px; }
+    .feature-card { background: var(--nexus-card); border: 1px solid var(--nexus-border); border-radius: 12px; padding: 24px; text-align: center; }
+    .feature-icon { font-size: 2.5rem; margin-bottom: 16px; }
+    .feature-card h3 { font-size: 1.1rem; margin-bottom: 8px; }
+    .feature-card p { color: var(--nexus-text); font-size: 0.9rem; }
+    .steps { margin-bottom: 60px; }
+    .steps h2 { text-align: center; font-size: 1.75rem; margin-bottom: 32px; }
+    .step-list { display: flex; justify-content: space-between; position: relative; }
+    .step-list::before { content: ''; position: absolute; top: 24px; left: 60px; right: 60px; height: 2px; background: var(--nexus-border); }
+    .step { text-align: center; position: relative; z-index: 1; flex: 1; }
+    .step-number { width: 48px; height: 48px; background: var(--nexus-purple); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.25rem; margin: 0 auto 12px; }
+    .step-title { font-weight: 600; margin-bottom: 4px; }
+    .step-desc { color: var(--nexus-text); font-size: 0.85rem; }
+    .loading { display: none; text-align: center; padding: 40px; }
+    .loading.active { display: block; }
+    .spinner { width: 48px; height: 48px; border: 3px solid var(--nexus-border); border-top-color: var(--nexus-purple); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { color: var(--nexus-text); }
+    @media (max-width: 768px) { .features { grid-template-columns: 1fr; } .step-list { flex-direction: column; gap: 24px; } .step-list::before { display: none; } }
+</style>
+
+<div class="landing-container">
+    <div class="hero">
+        <h1>Start Your AI Business in Minutes</h1>
+        <p class="tagline">Describe your idea. We build it. You own it.</p>
+    </div>
+
+    <div class="features">
+        <div class="feature-card">
+            <div class="feature-icon">💡</div>
+            <h3>Describe Your Vision</h3>
+            <p>Tell us your AI business idea in plain English</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">⚙️</div>
+            <h3>We Build It</h3>
+            <p>Get a production-ready codebase, customized by AI agents</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🚀</div>
+            <h3>Launch & Own</h3>
+            <p>Deploy instantly, register your business, start earning</p>
+        </div>
+    </div>
+
+    <div class="idea-card">
+        <h2>What's your AI business idea?</h2>
+        <form id="ideaForm" action="/generate" method="POST">
+            <textarea class="idea-input" name="idea" id="ideaInput" placeholder="Example: I want to build an AI tool that helps real estate agents automatically generate property descriptions from photos. It should analyze images, identify key features, and write compelling listings optimized for different platforms like Zillow, Realtor.com, and social media."></textarea>
+            <button type="submit" class="btn-generate" id="generateBtn">
+                🔮 Analyze & Generate My App
+            </button>
+        </form>
+        <div class="loading" id="loadingState">
+            <div class="spinner"></div>
+            <p class="loading-text">Analyzing your idea and researching the market...</p>
+        </div>
+    </div>
+
+    <div class="steps">
+        <h2>How It Works</h2>
+        <div class="step-list">
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-title">Describe</div>
+                <div class="step-desc">Share your idea</div>
+            </div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-title">Validate</div>
+                <div class="step-desc">We research & vet</div>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-title">Generate</div>
+                <div class="step-desc">AI builds your app</div>
+            </div>
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-title">Customize</div>
+                <div class="step-desc">Agents help refine</div>
+            </div>
+            <div class="step">
+                <div class="step-number">5</div>
+                <div class="step-title">Launch</div>
+                <div class="step-desc">Deploy & register</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('ideaForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const idea = document.getElementById('ideaInput').value.trim();
+    if (!idea) return;
+    
+    document.getElementById('generateBtn').disabled = true;
+    document.getElementById('loadingState').classList.add('active');
+    
+    // Submit to backend
+    fetch('/api/ideas/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idea: idea })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.project_id) {
+            window.location.href = '/projects/' + data.project_id + '/review';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('generateBtn').disabled = false;
+        document.getElementById('loadingState').classList.remove('active');
+    });
+});
+</script>
+{% endblock %}

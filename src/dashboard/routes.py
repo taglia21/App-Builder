@@ -9,6 +9,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from typing import Optional
 import logging
+from fastapi.responses import JSONResponse
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +56,7 @@ class DashboardRoutes:
     
     async def home(self, request: Request) -> HTMLResponse:
         """Landing page."""
-        return self.render(request, "pages/home.html")
+        return self.render(request, "pages/landing.html")
     
     async def dashboard(self, request: Request) -> HTMLResponse:
         """Main dashboard page."""
@@ -580,7 +581,60 @@ def create_dashboard_router(templates: Jinja2Templates) -> APIRouter:
     router.add_api_route("/projects", routes.create_project, methods=["POST"])
     router.add_api_route("/settings", routes.update_settings, methods=["POST"])
 
+    router.add_api_route("/api/ideas/analyze", analyze_idea_api, methods=["POST"])
+    router.add_api_route("/api/projects/{project_id}", get_project_api, methods=["GET"])
     return router
     
 
 
+
+# ============================================
+# Idea Analysis API Endpoints
+# ============================================
+import uuid
+from datetime import datetime
+
+# In-memory project store (will be migrated to database)
+_projects_store = {}
+
+async def analyze_idea_api(request: Request) -> JSONResponse:
+    """Analyze a business idea and create a new project."""
+    try:
+        body = await request.json()
+        idea = body.get('idea', '').strip()
+        
+        if not idea:
+            return JSONResponse({'error': 'Please provide your business idea'}, status_code=400)
+        
+        project_id = str(uuid.uuid4())[:8]
+        
+        project = {
+            'id': project_id,
+            'idea': idea,
+            'status': 'analyzing',
+            'created_at': datetime.utcnow().isoformat(),
+            'analysis': {
+                'market_size': 'Analyzing...',
+                'competition': 'Researching...',
+                'feasibility': 'Evaluating...',
+                'recommended_features': []
+            }
+        }
+        
+        _projects_store[project_id] = project
+        
+        return JSONResponse({
+            'success': True,
+            'project_id': project_id,
+            'message': 'Project created successfully'
+        })
+    except Exception as e:
+        return JSONResponse({'error': str(e)}, status_code=500)
+
+
+async def get_project_api(request: Request) -> JSONResponse:
+    """Get project by ID."""
+    project_id = request.path_params.get('project_id')
+    if project_id not in _projects_store:
+        return JSONResponse({'error': 'Project not found'}, status_code=404)
+    return JSONResponse(_projects_store[project_id])
