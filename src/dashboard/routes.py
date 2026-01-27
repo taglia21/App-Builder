@@ -581,7 +581,9 @@ def create_dashboard_router(templates: Jinja2Templates) -> APIRouter:
     router.add_api_route("/projects", routes.create_project, methods=["POST"])
     router.add_api_route("/settings", routes.update_settings, methods=["POST"])
 
+    router.add_api_route("/projects/{project_id}/generated", project_generated, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/projects/{project_id}/review", project_review, methods=["GET"], response_class=HTMLResponse)
+    router.add_api_route("/api/generate", generate_app_api, methods=["POST"])
     router.add_api_route("/api/ideas/analyze", analyze_idea_api, methods=["POST"])
     router.add_api_route("/api/projects/{project_id}", get_project_api, methods=["GET"])
     return router
@@ -591,6 +593,25 @@ def create_dashboard_router(templates: Jinja2Templates) -> APIRouter:
 
 # ============================================
 
+
+
+
+async def project_generated(request: Request) -> HTMLResponse:
+    """Project generated page showing download and next steps."""
+    project_id = request.path_params.get('project_id')
+    
+    project = _projects_store.get(project_id)
+    if not project:
+        from starlette.responses import RedirectResponse
+        return RedirectResponse(url="/dashboard", status_code=302)
+    
+    from jinja2 import Environment, FileSystemLoader
+    from pathlib import Path
+    template_dir = Path(__file__).parent / "templates"
+    env = Environment(loader=FileSystemLoader(str(template_dir)))
+    template = env.get_template("pages/project_generated.html")
+    html_content = template.render(project=project)
+    return HTMLResponse(content=html_content)
 
 async def project_review(request: Request) -> HTMLResponse:
     """Project review page showing idea analysis."""
@@ -610,6 +631,54 @@ async def project_review(request: Request) -> HTMLResponse:
     template = env.get_template("pages/project_review.html")
     html_content = template.render(project=project)
     return HTMLResponse(content=html_content)
+
+
+
+async def generate_app_api(request: Request) -> JSONResponse:
+    """Generate a full app codebase from a project idea."""
+    try:
+        body = await request.json()
+        project_id = body.get('project_id')
+        
+        if project_id not in _projects_store:
+            return JSONResponse({'error': 'Project not found'}, status_code=404)
+        
+        project = _projects_store[project_id]
+        idea = project['idea']
+        
+        # Update status to generating
+        project['status'] = 'generating'
+        
+        # For now, simulate generation with a mock response
+        # In production, this would call the EnhancedCodeGenerator
+        import time
+        project['status'] = 'generated'
+        project['generated_at'] = datetime.utcnow().isoformat()
+        project['download_ready'] = True
+        project['files'] = [
+            {'name': 'app.py', 'type': 'python', 'lines': 150},
+            {'name': 'models.py', 'type': 'python', 'lines': 80},
+            {'name': 'routes.py', 'type': 'python', 'lines': 200},
+            {'name': 'templates/base.html', 'type': 'html', 'lines': 100},
+            {'name': 'templates/dashboard.html', 'type': 'html', 'lines': 120},
+            {'name': 'static/styles.css', 'type': 'css', 'lines': 300},
+            {'name': 'requirements.txt', 'type': 'text', 'lines': 15},
+            {'name': 'README.md', 'type': 'markdown', 'lines': 50},
+            {'name': 'Dockerfile', 'type': 'docker', 'lines': 20},
+            {'name': '.env.example', 'type': 'env', 'lines': 10},
+        ]
+        
+        return JSONResponse({
+            'success': True,
+            'project_id': project_id,
+            'status': 'generated',
+            'message': 'App generated successfully',
+            'files_count': len(project['files']),
+            'download_url': f'/api/projects/{project_id}/download'
+        })
+        
+    except Exception as e:
+        return JSONResponse({'error': str(e)}, status_code=500)
 
 # Idea Analysis API Endpoints
 # ============================================

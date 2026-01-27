@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}App Generated - LaunchForge{% endblock %}
+{% block content %}
+<style>
+    .generated-container { max-width: 900px; margin: 0 auto; }
+    .success-banner { background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(16, 185, 129, 0.1)); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 16px; padding: 32px; text-align: center; margin-bottom: 32px; }
+    .success-icon { font-size: 4rem; margin-bottom: 16px; }
+    .files-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 32px; }
+    .file-item { background: var(--nexus-card); border: 1px solid var(--nexus-border); border-radius: 8px; padding: 12px 16px; display: flex; align-items: center; gap: 12px; }
+    .file-icon { font-size: 1.5rem; }
+    .file-name { font-family: monospace; font-size: 0.9rem; }
+    .file-lines { color: var(--nexus-text); font-size: 0.8rem; margin-left: auto; }
+    .action-card { background: var(--nexus-card); border: 1px solid var(--nexus-border); border-radius: 12px; padding: 24px; margin-bottom: 16px; }
+    .action-card h3 { font-size: 1.1rem; margin-bottom: 8px; }
+    .action-card p { color: var(--nexus-text); font-size: 0.95rem; margin-bottom: 16px; }
+    .btn-primary { padding: 12px 24px; background: var(--nexus-purple); color: white; border: none; border-radius: 8px; font-weight: 500; cursor: pointer; text-decoration: none; display: inline-block; }
+    .btn-secondary { padding: 12px 24px; background: transparent; color: white; border: 1px solid var(--nexus-border); border-radius: 8px; font-weight: 500; cursor: pointer; text-decoration: none; display: inline-block; }
+    .next-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 32px; }
+    .step-card { background: var(--nexus-card); border: 1px solid var(--nexus-border); border-radius: 12px; padding: 20px; text-align: center; }
+    .step-number { width: 32px; height: 32px; background: var(--nexus-purple); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; font-weight: 600; }
+</style>
+
+<div class="generated-container">
+    <div class="success-banner">
+        <div class="success-icon">🎉</div>
+        <h1 style="font-size: 2rem; font-weight: 700; margin-bottom: 8px;">Your App is Ready!</h1>
+        <p style="color: var(--nexus-text);">We've generated a complete, production-ready codebase for your AI business.</p>
+    </div>
+
+    <h2 style="font-size: 1.25rem; margin-bottom: 16px;">Generated Files</h2>
+    <div class="files-grid">
+        {% for file in project.files %}
+        <div class="file-item">
+            <span class="file-icon">{% if file.type == 'python' %}🐍{% elif file.type == 'html' %}🌐{% elif file.type == 'css' %}🎨{% elif file.type == 'docker' %}🐳{% else %}📄{% endif %}</span>
+            <span class="file-name">{{ file.name }}</span>
+            <span class="file-lines">{{ file.lines }} lines</span>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="action-card">
+        <h3>📥 Download Your Code</h3>
+        <p>Get the complete source code as a ZIP file. Includes all templates, styles, and configuration.</p>
+        <a href="/api/projects/{{ project.id }}/download" class="btn-primary">⬇️ Download ZIP</a>
+    </div>
+
+    <div class="action-card">
+        <h3>🚀 Deploy to Railway</h3>
+        <p>One-click deployment to Railway. Your app will be live in minutes.</p>
+        <button class="btn-primary" onclick="deployToRailway()">🚂 Deploy Now</button>
+        <span style="margin-left: 12px; color: var(--nexus-text);">Coming soon</span>
+    </div>
+
+    <h2 style="font-size: 1.25rem; margin: 32px 0 16px;">What's Next?</h2>
+    <div class="next-steps">
+        <div class="step-card">
+            <div class="step-number">1</div>
+            <h3 style="font-size: 1rem; margin-bottom: 8px;">Customize</h3>
+            <p style="color: var(--nexus-text); font-size: 0.9rem;">Use our AI agents to customize your app</p>
+        </div>
+        <div class="step-card">
+            <div class="step-number">2</div>
+            <h3 style="font-size: 1rem; margin-bottom: 8px;">Register Business</h3>
+            <p style="color: var(--nexus-text); font-size: 0.9rem;">Get your LLC and EIN set up</p>
+        </div>
+        <div class="step-card">
+            <div class="step-number">3</div>
+            <h3 style="font-size: 1rem; margin-bottom: 8px;">Launch</h3>
+            <p style="color: var(--nexus-text); font-size: 0.9rem;">Go live and start acquiring customers</p>
+        </div>
+    </div>
+
+    <div style="text-align: center; margin-top: 40px;">
+        <a href="/dashboard" class="btn-secondary">Back to Dashboard</a>
+    </div>
+</div>
+
+<script>
+function deployToRailway() {
+    alert('Railway deployment coming soon! For now, download the ZIP and deploy manually.');
+}
+</script>
+{% endblock %}

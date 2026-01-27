@@ -83,6 +83,36 @@
 </div>
 
 <script>
+// Handle generate button click
+document.getElementById('generateBtn').addEventListener('click', async function() {
+    const btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Generating...';
+    
+    try {
+        const response = await fetch('/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ project_id: '{{ project.id }}' })
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            btn.innerHTML = '✅ Generated!';
+            // Show download section
+            setTimeout(() => {
+                window.location.href = '/projects/{{ project.id }}/generated';
+            }, 1000);
+        } else {
+            btn.innerHTML = '❌ Error: ' + data.error;
+            btn.disabled = false;
+        }
+    } catch (error) {
+        btn.innerHTML = '❌ Error';
+        btn.disabled = false;
+    }
+});
+
 // Poll for updates if still analyzing
 {% if project.status == 'analyzing' %}
 setInterval(async () => {
