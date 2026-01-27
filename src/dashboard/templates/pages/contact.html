@@ -1,71 +1,50 @@
 {% extends "base.html" %}
-
 {% block title %}Contact Us - NexusAI{% endblock %}
-
 {% block content %}
-<div class="max-w-4xl">
-    <h1 class="text-4xl font-bold mb-4">How can we help?</h1>
-    <p class="text-nexus-text text-lg mb-12">Get in touch with our team for demos, support, or product questions.</p>
+<div style="max-width: 800px;">
+    <h1 style="font-size: 36px; font-weight: 700; margin-bottom: 16px;">How can we help?</h1>
+    <p class="text-muted" style="font-size: 18px; margin-bottom: 48px;">Get in touch with our team for demos, support, or product questions.</p>
     
-    <div class="grid md:grid-cols-2 gap-6 mb-12">
-        <!-- Sales Card -->
-        <div class="bg-nexus-card border border-nexus-border rounded-xl p-6">
-            <div class="flex items-center gap-3 mb-4">
-                <i data-lucide="mail" class="w-5 h-5 text-nexus-purple"></i>
-                <h3 class="text-lg font-semibold">Sales</h3>
-            </div>
-            <p class="text-nexus-text mb-4">Speak to our sales team about plans, pricing, enterprise contracts, or request a demo.</p>
-            <a href="mailto:sales@nexusai.com" class="inline-flex items-center gap-2 bg-nexus-purple/20 text-nexus-purple px-4 py-2 rounded-lg text-sm font-medium hover:bg-nexus-purple/30 transition">
-                Talk to sales
-                <i data-lucide="arrow-right" class="w-4 h-4"></i>
-            </a>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 48px;">
+        <div class="card">
+            <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 12px;">Sales</h3>
+            <p class="text-muted" style="font-size: 14px; margin-bottom: 16px;">Speak to our sales team about plans, pricing, or request a demo.</p>
+            <a href="mailto:sales@nexusai.com" class="btn-primary" style="display: inline-block; text-decoration: none;">Talk to sales</a>
         </div>
-        
-        <!-- Support Card -->
-        <div class="bg-nexus-card border border-nexus-border rounded-xl p-6">
-            <div class="flex items-center gap-3 mb-4">
-                <i data-lucide="message-circle" class="w-5 h-5 text-nexus-purple"></i>
-                <h3 class="text-lg font-semibold">Help & Support</h3>
-            </div>
-            <p class="text-nexus-text mb-4">Ask product questions, report problems, or leave feedback about your experience.</p>
-            <a href="mailto:support@nexusai.com" class="inline-flex items-center gap-2 bg-nexus-purple/20 text-nexus-purple px-4 py-2 rounded-lg text-sm font-medium hover:bg-nexus-purple/30 transition">
-                Contact support
-                <i data-lucide="arrow-right" class="w-4 h-4"></i>
-            </a>
+        <div class="card">
+            <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 12px;">Support</h3>
+            <p class="text-muted" style="font-size: 14px; margin-bottom: 16px;">Ask product questions, report problems, or leave feedback.</p>
+            <a href="mailto:support@nexusai.com" class="btn-primary" style="display: inline-block; text-decoration: none;">Contact support</a>
         </div>
     </div>
     
-    <!-- Contact Form -->
-    <div class="bg-nexus-card border border-nexus-border rounded-xl p-8">
-        <h2 class="text-xl font-semibold mb-6">Send us a message</h2>
-        <form action="/contact" method="POST" class="space-y-6">
-            <div class="grid md:grid-cols-2 gap-6">
+    <div class="card">
+        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 24px;">Send us a message</h2>
+        <form action="/contact" method="POST">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
                 <div>
-                    <label class="block text-sm font-medium mb-2">Your Name</label>
-                    <input type="text" name="name" required class="w-full bg-nexus-dark border border-nexus-border rounded-lg px-4 py-3 text-white placeholder-nexus-text focus:border-nexus-purple focus:outline-none transition" placeholder="John Doe">
+                    <label style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">Your Name</label>
+                    <input type="text" name="name" required class="input-field" placeholder="John Doe">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium mb-2">Email Address</label>
-                    <input type="email" name="email" required class="w-full bg-nexus-dark border border-nexus-border rounded-lg px-4 py-3 text-white placeholder-nexus-text focus:border-nexus-purple focus:outline-none transition" placeholder="john@example.com">
+                    <label style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">Email Address</label>
+                    <input type="email" name="email" required class="input-field" placeholder="john@example.com">
                 </div>
             </div>
-            <div>
-                <label class="block text-sm font-medium mb-2">Subject</label>
-                <select name="subject" class="w-full bg-nexus-dark border border-nexus-border rounded-lg px-4 py-3 text-white focus:border-nexus-purple focus:outline-none transition">
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">Subject</label>
+                <select name="subject" class="input-field">
                     <option>General Inquiry</option>
                     <option>Sales Question</option>
                     <option>Technical Support</option>
                     <option>Partnership</option>
-                    <option>Other</option>
                 </select>
             </div>
-            <div>
-                <label class="block text-sm font-medium mb-2">Message</label>
-                <textarea name="message" rows="5" required class="w-full bg-nexus-dark border border-nexus-border rounded-lg px-4 py-3 text-white placeholder-nexus-text focus:border-nexus-purple focus:outline-none transition resize-none" placeholder="How can we help you?"></textarea>
+            <div style="margin-bottom: 24px;">
+                <label style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">Message</label>
+                <textarea name="message" rows="5" required class="input-field" style="resize: none;" placeholder="How can we help you?"></textarea>
             </div>
-            <button type="submit" class="bg-nexus-purple hover:bg-nexus-purple/80 text-white px-6 py-3 rounded-lg font-medium transition">
-                Send Message
-            </button>
+            <button type="submit" class="btn-primary">Send Message</button>
         </form>
     </div>
 </div>

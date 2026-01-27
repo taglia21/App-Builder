@@ -5,88 +5,113 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}NexusAI{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'nexus-dark': '#0a0a0b',
-                        'nexus-card': '#141416',
-                        'nexus-border': '#27272a',
-                        'nexus-text': '#a1a1aa',
-                        'nexus-purple': '#8b5cf6',
-                    }
-                }
-            }
-        }
-    </script>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-        .sidebar-link { transition: all 0.15s ease; }
+        :root {
+            --nexus-dark: #0a0a0b;
+            --nexus-card: #141416;
+            --nexus-border: #27272a;
+            --nexus-text: #a1a1aa;
+            --nexus-purple: #8b5cf6;
+        }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--nexus-dark);
+            color: white;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .sidebar {
+            width: 256px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            background: var(--nexus-dark);
+            border-right: 1px solid var(--nexus-border);
+        }
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #d1d5db;
+            text-decoration: none;
+            transition: all 0.15s ease;
+        }
         .sidebar-link:hover { background: rgba(139, 92, 246, 0.1); }
-        .sidebar-link.active { background: rgba(139, 92, 246, 0.15); color: #8b5cf6; }
+        .sidebar-link.active { background: rgba(139, 92, 246, 0.15); color: var(--nexus-purple); }
+        .main-content { margin-left: 256px; padding: 32px; min-height: 100vh; }
+        .card { background: var(--nexus-card); border: 1px solid var(--nexus-border); border-radius: 12px; padding: 24px; }
+        .text-muted { color: var(--nexus-text); }
+        .text-purple { color: var(--nexus-purple); }
+        .bg-purple { background: var(--nexus-purple); }
+        .section-title { font-size: 12px; font-weight: 500; color: var(--nexus-text); text-transform: uppercase; letter-spacing: 0.05em; padding: 0 12px; margin-bottom: 8px; }
+        .input-field { width: 100%; background: var(--nexus-dark); border: 1px solid var(--nexus-border); border-radius: 8px; padding: 12px 16px; color: white; outline: none; }
+        .input-field:focus { border-color: var(--nexus-purple); }
+        .btn-primary { background: var(--nexus-purple); color: white; padding: 10px 24px; border-radius: 8px; font-weight: 500; border: none; cursor: pointer; }
+        .btn-primary:hover { opacity: 0.9; }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
-<body class="bg-nexus-dark text-white min-h-screen">
-    <div class="flex">
+<body>
+    <div style="display: flex;">
         <!-- Sidebar -->
-        <aside class="w-64 h-screen fixed left-0 top-0 bg-nexus-dark border-r border-nexus-border">
-            <div class="p-6">
-                <a href="/dashboard" class="flex items-center gap-3">
-                    <div class="w-8 h-8 bg-nexus-purple rounded-lg flex items-center justify-center">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+        <aside class="sidebar">
+            <div style="padding: 24px;">
+                <a href="/dashboard" style="display: flex; align-items: center; gap: 12px; text-decoration: none; color: white;">
+                    <div style="width: 32px; height: 32px; background: var(--nexus-purple); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                        <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                     </div>
-                    <span class="text-lg font-semibold">NexusAI</span>
+                    <span style="font-size: 18px; font-weight: 600;">NexusAI</span>
                 </a>
             </div>
             
-            <nav class="px-3">
-                <div class="text-xs font-medium text-nexus-text uppercase tracking-wider px-3 mb-2">Main</div>
-                <a href="/dashboard" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm {% if request.path == '/dashboard' %}active{% endif %}">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+            <nav style="padding: 0 12px;">
+                <div class="section-title">Main</div>
+                <a href="/dashboard" class="sidebar-link {% if request.path == '/dashboard' %}active{% endif %}">
+                    <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
                     Dashboard
                 </a>
-                <a href="/projects" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm {% if request.path == '/projects' %}active{% endif %}">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+                <a href="/projects" class="sidebar-link {% if request.path == '/projects' %}active{% endif %}">
+                    <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
                     Projects
                 </a>
-                <a href="/api-keys" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm {% if request.path == '/api-keys' %}active{% endif %}">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+                <a href="/api-keys" class="sidebar-link {% if request.path == '/api-keys' %}active{% endif %}">
+                    <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
                     API Keys
                 </a>
                 
-                <div class="text-xs font-medium text-nexus-text uppercase tracking-wider px-3 mb-2 mt-6">Account</div>
-                <a href="/settings" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm {% if request.path == '/settings' %}active{% endif %}">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                <div class="section-title" style="margin-top: 24px;">Account</div>
+                <a href="/settings" class="sidebar-link {% if request.path == '/settings' %}active{% endif %}">
+                    <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                     Settings
                 </a>
-                <a href="/billing" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm {% if request.path == '/billing' %}active{% endif %}">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
+                <a href="/billing" class="sidebar-link {% if request.path == '/billing' %}active{% endif %}">
+                    <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
                     Billing
                 </a>
                 
-                <div class="text-xs font-medium text-nexus-text uppercase tracking-wider px-3 mb-2 mt-6">Resources</div>
-                <a href="/about" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm {% if request.path == '/about' %}active{% endif %}">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <div class="section-title" style="margin-top: 24px;">Resources</div>
+                <a href="/about" class="sidebar-link {% if request.path == '/about' %}active{% endif %}">
+                    <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     About Us
                 </a>
-                <a href="/terms" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm {% if request.path == '/terms' %}active{% endif %}">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                <a href="/terms" class="sidebar-link {% if request.path == '/terms' %}active{% endif %}">
+                    <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                     Terms
                 </a>
-                <a href="/contact" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm {% if request.path == '/contact' %}active{% endif %}">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                <a href="/contact" class="sidebar-link {% if request.path == '/contact' %}active{% endif %}">
+                    <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
                     Contact
                 </a>
             </nav>
         </aside>
         
         <!-- Main Content -->
-        <main class="ml-64 flex-1 min-h-screen">
-            <div class="p-8">
-                {% block content %}{% endblock %}
-            </div>
+        <main class="main-content">
+            {% block content %}{% endblock %}
         </main>
     </div>
     
