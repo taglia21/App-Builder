@@ -1,68 +1,107 @@
 {% extends "base.html" %}
-
-{% block title %}About Us - NexusAI{% endblock %}
-
+{% block title %}About Us{% endblock %}
 {% block content %}
-<div class="max-w-4xl">
-    <h1 class="text-4xl font-bold mb-4">About NexusAI</h1>
-    <p class="text-nexus-text text-lg mb-12">We're building the future of AI-powered application development.</p>
-    
-    <!-- Mission Section -->
-    <div class="bg-nexus-card border border-nexus-border rounded-xl p-8 mb-8">
-        <h2 class="text-2xl font-semibold mb-4">Our Mission</h2>
-        <p class="text-nexus-text leading-relaxed">
-            NexusAI empowers developers and businesses to build intelligent applications faster than ever before. 
-            We believe that AI should be accessible to everyone, and our platform makes it easy to integrate 
-            cutting-edge machine learning capabilities into any project.
-        </p>
+<div style="max-width: 1000px;">
+    <!-- Hero Section -->
+    <div style="text-align: center; margin-bottom: 48px;">
+        <h1 style="font-size: 2.5rem; font-weight: 700; margin-bottom: 16px;">About NexusAI</h1>
+        <p style="font-size: 1.25rem; color: var(--nexus-text); max-width: 600px; margin: 0 auto;">Empowering developers to build intelligent applications with cutting-edge AI technology</p>
     </div>
-    
-    <!-- Values -->
-    <div class="grid md:grid-cols-3 gap-6 mb-8">
-        <div class="bg-nexus-card border border-nexus-border rounded-xl p-6">
-            <div class="w-10 h-10 bg-nexus-purple/20 rounded-lg flex items-center justify-center mb-4">
-                <i data-lucide="zap" class="w-5 h-5 text-nexus-purple"></i>
+
+    <!-- Mission Card -->
+    <div class="card" style="padding: 32px; margin-bottom: 32px; background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(20, 20, 22, 1) 100%);">
+        <h2 style="font-size: 1.5rem; margin-bottom: 16px; color: var(--nexus-purple);">Our Mission</h2>
+        <p style="color: var(--nexus-text); line-height: 1.7; font-size: 1.05rem;">NexusAI empowers developers and businesses to build intelligent applications faster than ever before. We believe that AI should be accessible to everyone, and our platform makes it easy to integrate cutting-edge machine learning capabilities into any project.</p>
+    </div>
+
+    <!-- Values Grid -->
+    <h2 style="font-size: 1.5rem; margin-bottom: 24px;">Our Values</h2>
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 40px;">
+        <div class="card" style="padding: 24px;">
+            <div style="width: 48px; height: 48px; background: rgba(139, 92, 246, 0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+                <span style="font-size: 24px;">💡</span>
             </div>
-            <h3 class="text-lg font-semibold mb-2">Innovation</h3>
-            <p class="text-nexus-text text-sm">Pushing the boundaries of what's possible with AI and machine learning.</p>
+            <h3 style="font-size: 1.1rem; margin-bottom: 8px;">Innovation</h3>
+            <p style="color: var(--nexus-text); font-size: 0.95rem;">Pushing the boundaries of what's possible with AI and machine learning technology.</p>
         </div>
-        <div class="bg-nexus-card border border-nexus-border rounded-xl p-6">
-            <div class="w-10 h-10 bg-nexus-purple/20 rounded-lg flex items-center justify-center mb-4">
-                <i data-lucide="shield" class="w-5 h-5 text-nexus-purple"></i>
+        <div class="card" style="padding: 24px;">
+            <div style="width: 48px; height: 48px; background: rgba(139, 92, 246, 0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+                <span style="font-size: 24px;">🔒</span>
             </div>
-            <h3 class="text-lg font-semibold mb-2">Trust</h3>
-            <p class="text-nexus-text text-sm">Building secure, reliable systems that our customers can depend on.</p>
+            <h3 style="font-size: 1.1rem; margin-bottom: 8px;">Trust & Security</h3>
+            <p style="color: var(--nexus-text); font-size: 0.95rem;">Building secure, reliable systems that our customers can depend on every day.</p>
         </div>
-        <div class="bg-nexus-card border border-nexus-border rounded-xl p-6">
-            <div class="w-10 h-10 bg-nexus-purple/20 rounded-lg flex items-center justify-center mb-4">
-                <i data-lucide="users" class="w-5 h-5 text-nexus-purple"></i>
+        <div class="card" style="padding: 24px;">
+            <div style="width: 48px; height: 48px; background: rgba(139, 92, 246, 0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+                <span style="font-size: 24px;">🤝</span>
             </div>
-            <h3 class="text-lg font-semibold mb-2">Community</h3>
-            <p class="text-nexus-text text-sm">Supporting developers and fostering an inclusive tech community.</p>
+            <h3 style="font-size: 1.1rem; margin-bottom: 8px;">Community</h3>
+            <p style="color: var(--nexus-text); font-size: 0.95rem;">Supporting developers and fostering an inclusive, collaborative tech community.</p>
+        </div>
+        <div class="card" style="padding: 24px;">
+            <div style="width: 48px; height: 48px; background: rgba(139, 92, 246, 0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+                <span style="font-size: 24px;">⚡</span>
+            </div>
+            <h3 style="font-size: 1.1rem; margin-bottom: 8px;">Performance</h3>
+            <p style="color: var(--nexus-text); font-size: 0.95rem;">Delivering lightning-fast APIs with 99.9% uptime and low-latency responses.</p>
         </div>
     </div>
-    
-    <!-- Stats -->
-    <div class="bg-nexus-card border border-nexus-border rounded-xl p-8">
-        <h2 class="text-xl font-semibold mb-6">By the Numbers</h2>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
-            <div>
-                <div class="text-3xl font-bold text-nexus-purple">10K+</div>
-                <div class="text-nexus-text text-sm">Developers</div>
-            </div>
-            <div>
-                <div class="text-3xl font-bold text-nexus-purple">50M+</div>
-                <div class="text-nexus-text text-sm">API Calls/Day</div>
-            </div>
-            <div>
-                <div class="text-3xl font-bold text-nexus-purple">99.9%</div>
-                <div class="text-nexus-text text-sm">Uptime</div>
-            </div>
-            <div>
-                <div class="text-3xl font-bold text-nexus-purple">150+</div>
-                <div class="text-nexus-text text-sm">Countries</div>
-            </div>
+
+    <!-- Stats Section -->
+    <h2 style="font-size: 1.5rem; margin-bottom: 24px;">By the Numbers</h2>
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 40px;">
+        <div class="card" style="padding: 24px; text-align: center;">
+            <div style="font-size: 2rem; font-weight: 700; color: var(--nexus-purple); margin-bottom: 8px;">10K+</div>
+            <div style="color: var(--nexus-text); font-size: 0.9rem;">Developers</div>
         </div>
+        <div class="card" style="padding: 24px; text-align: center;">
+            <div style="font-size: 2rem; font-weight: 700; color: var(--nexus-purple); margin-bottom: 8px;">50M+</div>
+            <div style="color: var(--nexus-text); font-size: 0.9rem;">API Calls/Day</div>
+        </div>
+        <div class="card" style="padding: 24px; text-align: center;">
+            <div style="font-size: 2rem; font-weight: 700; color: var(--nexus-purple); margin-bottom: 8px;">99.9%</div>
+            <div style="color: var(--nexus-text); font-size: 0.9rem;">Uptime</div>
+        </div>
+        <div class="card" style="padding: 24px; text-align: center;">
+            <div style="font-size: 2rem; font-weight: 700; color: var(--nexus-purple); margin-bottom: 8px;">150+</div>
+            <div style="color: var(--nexus-text); font-size: 0.9rem;">Countries</div>
+        </div>
+    </div>
+
+    <!-- Team Section -->
+    <h2 style="font-size: 1.5rem; margin-bottom: 24px;">Leadership Team</h2>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 40px;">
+        <div class="card" style="padding: 24px; text-align: center;">
+            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #8b5cf6, #6366f1); border-radius: 50%; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center;">
+                <span style="font-size: 32px; color: white;">👤</span>
+            </div>
+            <h3 style="font-size: 1.1rem; margin-bottom: 4px;">Sarah Chen</h3>
+            <p style="color: var(--nexus-purple); font-size: 0.85rem; margin-bottom: 8px;">CEO & Co-Founder</p>
+            <p style="color: var(--nexus-text); font-size: 0.85rem;">Former Google AI Lead</p>
+        </div>
+        <div class="card" style="padding: 24px; text-align: center;">
+            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #8b5cf6, #6366f1); border-radius: 50%; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center;">
+                <span style="font-size: 32px; color: white;">👤</span>
+            </div>
+            <h3 style="font-size: 1.1rem; margin-bottom: 4px;">Marcus Johnson</h3>
+            <p style="color: var(--nexus-purple); font-size: 0.85rem; margin-bottom: 8px;">CTO & Co-Founder</p>
+            <p style="color: var(--nexus-text); font-size: 0.85rem;">Ex-OpenAI Engineer</p>
+        </div>
+        <div class="card" style="padding: 24px; text-align: center;">
+            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #8b5cf6, #6366f1); border-radius: 50%; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center;">
+                <span style="font-size: 32px; color: white;">👤</span>
+            </div>
+            <h3 style="font-size: 1.1rem; margin-bottom: 4px;">Emily Rodriguez</h3>
+            <p style="color: var(--nexus-purple); font-size: 0.85rem; margin-bottom: 8px;">VP of Engineering</p>
+            <p style="color: var(--nexus-text); font-size: 0.85rem;">Former AWS Architect</p>
+        </div>
+    </div>
+
+    <!-- CTA Section -->
+    <div class="card" style="padding: 32px; text-align: center; background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(99, 102, 241, 0.1) 100%);">
+        <h2 style="font-size: 1.5rem; margin-bottom: 12px;">Ready to Get Started?</h2>
+        <p style="color: var(--nexus-text); margin-bottom: 20px;">Join thousands of developers building the future with NexusAI</p>
+        <a href="/contact" class="btn-primary" style="display: inline-block; padding: 12px 32px; background: var(--nexus-purple); color: white; text-decoration: none; border-radius: 8px; font-weight: 500;">Contact Us</a>
     </div>
 </div>
 {% endblock %}
