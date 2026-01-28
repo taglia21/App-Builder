@@ -25,7 +25,7 @@ class TestDashboardE2E:
         """Test dashboard home page loads successfully."""
         response = client.get("/")
         assert response.status_code == 200
-        assert b"NexusAI" in response.content
+        assert b"LaunchForge" in response.content
     
     def test_dashboard_accessible(self, client):
         """Test dashboard page is accessible."""

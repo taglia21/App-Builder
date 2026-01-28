@@ -1,5 +1,5 @@
 """
-NexusAI Authentication Tests
+LaunchForge Authentication Tests
 
 Comprehensive tests for authentication system:
 - Password hashing and validation
