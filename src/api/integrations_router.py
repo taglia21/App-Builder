@@ -297,3 +297,25 @@ async def delete_project(project_id: str, user_id: str):
     if not result.get('success'):
         raise HTTPException(status_code=400, detail=result.get('error', 'Delete failed'))
     return result
+
+# Import Railway deployment service
+from src.integrations.railway_deployment import railway_deployment
+
+class DeployRequest(BaseModel):
+    app_name: str
+    github_repo: str
+    env_vars: Optional[Dict[str, str]] = None
+
+@router.post("/deploy/railway")
+async def deploy_to_railway(request: DeployRequest):
+    """Deploy an app to Railway."""
+    result = await railway_deployment.deploy_app(
+        app_name=request.app_name,
+        github_repo=request.github_repo,
+        env_vars=request.env_vars
+    )
+    
+    if not result.get('success'):
+        raise HTTPException(status_code=400, detail=result.get('error', 'Deployment failed'))
+    
+    return result
