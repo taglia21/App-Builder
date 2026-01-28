@@ -1,192 +1,402 @@
-{% extends "base_modern.html" %}
+{% extends "base.html" %}
+
 {% block title %}Create New Project - LaunchForge{% endblock %}
 
 {% block content %}
-<div class="content-wrapper">
-    <div class="content-header">
-        <div>
-            <h1>Create New Project</h1>
-            <p class="subtitle">Configure your AI-powered application</p>
+<div style="max-width: 900px; margin: 0 auto;">
+    <!-- Header -->
+    <div style="margin-bottom: 32px;">
+        <h1 style="font-size: 2.5rem; font-weight: bold; margin-bottom: 8px;">Create Your App</h1>
+        <p style="color: #9ca3af;">Describe your idea and let AI build it for you</p>
+    </div>
+
+    <!-- Progress Steps -->
+    <div style="display: flex; justify-content: center; gap: 40px; margin-bottom: 48px;">
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <div id="step1-indicator" style="width: 40px; height: 40px; border-radius: 50%; background: #8b5cf6; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">1</div>
+            <span style="margin-top: 8px; font-size: 14px;">Describe Idea</span>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <div id="step2-indicator" style="width: 40px; height: 40px; border-radius: 50%; background: #374151; color: #9ca3af; display: flex; align-items: center; justify-content: center; font-weight: bold;">2</div>
+            <span style="margin-top: 8px; font-size: 14px; color: #9ca3af;">Generate Code</span>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <div id="step3-indicator" style="width: 40px; height: 40px; border-radius: 50%; background: #374151; color: #9ca3af; display: flex; align-items: center; justify-content: center; font-weight: bold;">3</div>
+            <span style="margin-top: 8px; font-size: 14px; color: #9ca3af;">Customize</span>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <div id="step4-indicator" style="width: 40px; height: 40px; border-radius: 50%; background: #374151; color: #9ca3af; display: flex; align-items: center; justify-content: center; font-weight: bold;">4</div>
+            <span style="margin-top: 8px; font-size: 14px; color: #9ca3af;">Deploy</span>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <div id="step5-indicator" style="width: 40px; height: 40px; border-radius: 50%; background: #374151; color: #9ca3af; display: flex; align-items: center; justify-content: center; font-weight: bold;">5</div>
+            <span style="margin-top: 8px; font-size: 14px; color: #9ca3af;">Launch Business</span>
         </div>
     </div>
 
-    <div class="form-container" style="max-width: 800px; margin: 0 auto;">
-        <form method="POST" action="/projects" id="projectForm">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <!-- Step 1: Idea Input -->
+    <div id="step1" class="step-content" style="background: #1f2937; border-radius: 16px; padding: 32px; border: 1px solid #374151;">
+        <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 24px;">💡 What's your app idea?</h2>
+        
+        <div style="margin-bottom: 24px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 500;">Project Name</label>
+            <input type="text" id="project-name" placeholder="My Awesome App" 
+                   style="width: 100%; padding: 12px 16px; background: #111827; border: 1px solid #374151; border-radius: 8px; color: white; font-size: 16px;">
+        </div>
+
+        <div style="margin-bottom: 24px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 500;">Describe your app idea in detail</label>
+            <textarea id="idea-description" rows="6" placeholder="Example: I want to build a task management app where teams can create projects, assign tasks to members, set due dates, and track progress with kanban boards. It should have user authentication, real-time updates, and email notifications."
+                      style="width: 100%; padding: 12px 16px; background: #111827; border: 1px solid #374151; border-radius: 8px; color: white; font-size: 16px; resize: vertical;"></textarea>
+            <p style="font-size: 12px; color: #6b7280; margin-top: 8px;">Be as specific as possible - mention features, user types, integrations you need</p>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+            <div>
+                <label style="display: block; margin-bottom: 8px; font-weight: 500;">App Type</label>
+                <select id="app-type" style="width: 100%; padding: 12px 16px; background: #111827; border: 1px solid #374151; border-radius: 8px; color: white; font-size: 16px;">
+                    <option value="saas">SaaS Application</option>
+                    <option value="marketplace">Marketplace</option>
+                    <option value="ecommerce">E-commerce Store</option>
+                    <option value="dashboard">Analytics Dashboard</option>
+                    <option value="social">Social Platform</option>
+                    <option value="portfolio">Portfolio/Landing Page</option>
+                    <option value="api">API Service</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 8px; font-weight: 500;">Tech Stack</label>
+                <select id="tech-stack" style="width: 100%; padding: 12px 16px; background: #111827; border: 1px solid #374151; border-radius: 8px; color: white; font-size: 16px;">
+                    <option value="python-fastapi">Python + FastAPI (Recommended)</option>
+                    <option value="nextjs">Next.js + React</option>
+                    <option value="django">Python + Django</option>
+                    <option value="flask">Python + Flask</option>
+                    <option value="express">Node.js + Express</option>
+                </select>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 24px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 500;">Key Features (select all that apply)</label>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; background: #111827; border: 1px solid #374151; border-radius: 8px; cursor: pointer;">
+                    <input type="checkbox" id="feat-auth" checked style="width: 18px; height: 18px;"> User Authentication
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; background: #111827; border: 1px solid #374151; border-radius: 8px; cursor: pointer;">
+                    <input type="checkbox" id="feat-payments" style="width: 18px; height: 18px;"> Payments (Stripe)
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; background: #111827; border: 1px solid #374151; border-radius: 8px; cursor: pointer;">
+                    <input type="checkbox" id="feat-database" checked style="width: 18px; height: 18px;"> Database
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; background: #111827; border: 1px solid #374151; border-radius: 8px; cursor: pointer;">
+                    <input type="checkbox" id="feat-api" style="width: 18px; height: 18px;"> REST API
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; background: #111827; border: 1px solid #374151; border-radius: 8px; cursor: pointer;">
+                    <input type="checkbox" id="feat-email" style="width: 18px; height: 18px;"> Email Notifications
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; background: #111827; border: 1px solid #374151; border-radius: 8px; cursor: pointer;">
+                    <input type="checkbox" id="feat-realtime" style="width: 18px; height: 18px;"> Real-time Updates
+                </label>
+            </div>
+        </div>
+
+        <button id="generate-btn" onclick="generateCode()" 
+                style="width: 100%; padding: 16px; background: linear-gradient(135deg, #8b5cf6, #6366f1); border: none; border-radius: 12px; color: white; font-size: 18px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <i data-lucide="sparkles" style="width: 20px; height: 20px;"></i>
+            Generate My App with AI
+        </button>
+    </div>
+HMLEOF
+cat >> src/dashboard/templates/pages/new_project.html << 'HTMLEOF'
+
+    <!-- Step 2: Generation Progress (hidden by default) -->
+    <div id="step2" class="step-content" style="display: none; background: #1f2937; border-radius: 16px; padding: 32px; border: 1px solid #374151;">
+        <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 24px;">⚙️ Generating Your App...</h2>
+        
+        <div id="generation-progress" style="margin-bottom: 24px;">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+                <div class="spinner" style="width: 24px; height: 24px; border: 3px solid #374151; border-top-color: #8b5cf6; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                <span id="progress-text">Analyzing your idea...</span>
+            </div>
+            <div style="background: #374151; border-radius: 8px; height: 8px; overflow: hidden;">
+                <div id="progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #8b5cf6, #6366f1); transition: width 0.5s;"></div>
+            </div>
+        </div>
+
+        <div id="generation-log" style="background: #111827; border-radius: 8px; padding: 16px; font-family: monospace; font-size: 13px; max-height: 300px; overflow-y: auto;">
+            <div style="color: #10b981;">> Initializing AI code generator...</div>
+        </div>
+    </div>
+
+    <!-- Step 3: Customize (hidden by default) -->
+    <div id="step3" class="step-content" style="display: none; background: #1f2937; border-radius: 16px; padding: 32px; border: 1px solid #374151;">
+        <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 24px;">🎨 Customize Your App</h2>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+            <!-- Code Preview -->
+            <div>
+                <h3 style="font-size: 1rem; font-weight: 500; margin-bottom: 12px;">Generated Files</h3>
+                <div id="file-tree" style="background: #111827; border-radius: 8px; padding: 16px;">
+                    <div style="display: flex; align-items: center; gap: 8px; padding: 8px; cursor: pointer; border-radius: 4px;" onclick="selectFile('main.py')">
+                        <i data-lucide="file-code" style="width: 16px; height: 16px; color: #8b5cf6;"></i>
+                        <span>main.py</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px; padding: 8px; cursor: pointer; border-radius: 4px;" onclick="selectFile('models.py')">
+                        <i data-lucide="file-code" style="width: 16px; height: 16px; color: #8b5cf6;"></i>
+                        <span>models.py</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px; padding: 8px; cursor: pointer; border-radius: 4px;" onclick="selectFile('routes.py')">
+                        <i data-lucide="file-code" style="width: 16px; height: 16px; color: #8b5cf6;"></i>
+                        <span>routes.py</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px; padding: 8px; cursor: pointer; border-radius: 4px;" onclick="selectFile('templates/')">
+                        <i data-lucide="folder" style="width: 16px; height: 16px; color: #fbbf24;"></i>
+                        <span>templates/</span>
+                    </div>
+                </div>
+            </div>
             
-            <!-- Project Details Section -->
-            <div class="form-section">
-                <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #1a1a1a;">Project Details</h2>
-                
-                <div class="form-group" style="margin-bottom: 20px;">
-                    <label for="name" style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px; color: #333;">Project Name *</label>
-                    <input 
-                        type="text" 
-                        id="name" 
-                        name="name" 
-                        required 
-                        placeholder="Enter project name"
-                        style="width: 100%; padding: 10px 14px; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 14px; transition: all 0.2s;"
-                        onfocus="this.style.borderColor='#6366f1'; this.style.boxShadow='0 0 0 3px rgba(99, 102, 241, 0.1)'"
-                        onblur="this.style.borderColor='#e0e0e0'; this.style.boxShadow='none'"
-                    >
-                </div>
-
-                <div class="form-group" style="margin-bottom: 20px;">
-                    <label for="description" style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px; color: #333;">Description</label>
-                    <textarea 
-                        id="description" 
-                        name="idea" 
-                        rows="3" 
-                        placeholder="Briefly describe your project"
-                        style="width: 100%; padding: 10px 14px; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 14px; resize: vertical; transition: all 0.2s;"
-                        onfocus="this.style.borderColor='#6366f1'; this.style.boxShadow='0 0 0 3px rgba(99, 102, 241, 0.1)'"
-                        onblur="this.style.borderColor='#e0e0e0'; this.style.boxShadow='none'"
-                    ></textarea>
+            <!-- Live Preview -->
+            <div>
+                <h3 style="font-size: 1rem; font-weight: 500; margin-bottom: 12px;">Live Preview</h3>
+                <div id="preview-frame" style="background: #111827; border-radius: 8px; height: 300px; display: flex; align-items: center; justify-content: center; border: 1px solid #374151;">
+                    <p style="color: #6b7280;">Preview will appear here</p>
                 </div>
             </div>
+        </div>
 
-            <!-- Project Type Section -->
-            <div class="form-section" style="margin-top: 32px;">
-                <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #1a1a1a;">Project Type</h2>
-                
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
-                    <label class="radio-card" style="position: relative; display: block; padding: 16px; border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-                        <input type="radio" name="type" value="web_app" checked style="position: absolute; opacity: 0;">
-                        <div style="display: flex; flex-direction: column; gap: 8px;">
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <rect x="3" y="3" width="18" height="18" rx="2"/>
-                                    <line x1="3" y1="9" x2="21" y2="9"/>
-                                    <line x1="9" y1="21" x2="9" y2="9"/>
-                                </svg>
-                                <span style="font-weight: 600; font-size: 14px;">Web Application</span>
-                            </div>
-                            <p style="font-size: 13px; color: #666; margin: 0;">Full-stack web app</p>
-                        </div>
-                    </label>
+        <div style="margin-top: 24px;">
+            <h3 style="font-size: 1rem; font-weight: 500; margin-bottom: 12px;">Make Changes</h3>
+            <textarea id="code-editor" rows="10" style="width: 100%; padding: 16px; background: #111827; border: 1px solid #374151; border-radius: 8px; color: #e5e7eb; font-family: monospace; font-size: 13px;"></textarea>
+        </div>
 
-                    <label class="radio-card" style="position: relative; display: block; padding: 16px; border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-                        <input type="radio" name="type" value="api" style="position: absolute; opacity: 0;">
-                        <div style="display: flex; flex-direction: column; gap: 8px;">
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <circle cx="12" cy="12" r="10"/>
-                                    <line x1="2" y1="12" x2="22" y2="12"/>
-                                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-                                </svg>
-                                <span style="font-weight: 600; font-size: 14px;">API Service</span>
-                            </div>
-                            <p style="font-size: 13px; color: #666; margin: 0;">RESTful API backend</p>
-                        </div>
-                    </label>
+        <div style="display: flex; gap: 16px; margin-top: 24px;">
+            <button onclick="regenerateSection()" style="flex: 1; padding: 12px; background: #374151; border: none; border-radius: 8px; color: white; cursor: pointer;">
+                <i data-lucide="refresh-cw" style="width: 16px; height: 16px;"></i> Regenerate Section
+            </button>
+            <button onclick="goToStep(4)" style="flex: 1; padding: 12px; background: linear-gradient(135deg, #8b5cf6, #6366f1); border: none; border-radius: 8px; color: white; font-weight: 600; cursor: pointer;">
+                Deploy My App <i data-lucide="rocket" style="width: 16px; height: 16px;"></i>
+            </button>
+        </div>
+    </div>
 
-                    <label class="radio-card" style="position: relative; display: block; padding: 16px; border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-                        <input type="radio" name="type" value="microservice" style="position: absolute; opacity: 0;">
-                        <div style="display: flex; flex-direction: column; gap: 8px;">
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <rect x="2" y="2" width="8" height="8" rx="1"/>
-                                    <rect x="14" y="2" width="8" height="8" rx="1"/>
-                                    <rect x="2" y="14" width="8" height="8" rx="1"/>
-                                    <rect x="14" y="14" width="8" height="8" rx="1"/>
-                                </svg>
-                                <span style="font-weight: 600; font-size: 14px;">Microservice</span>
-                            </div>
-                            <p style="font-size: 13px; color: #666; margin: 0;">Distributed service</p>
-                        </div>
-                    </label>
+    <!-- Step 4: Deploy (hidden by default) -->
+    <div id="step4" class="step-content" style="display: none; background: #1f2937; border-radius: 16px; padding: 32px; border: 1px solid #374151;">
+        <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 24px;">🚀 Deploy Your App</h2>
+        
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px;">
+            <div style="padding: 24px; background: #111827; border: 2px solid #8b5cf6; border-radius: 12px; cursor: pointer;" onclick="selectPlatform('railway')">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                    <img src="https://railway.app/brand/logo-light.svg" alt="Railway" style="height: 32px;">
+                    <span style="font-weight: 600; font-size: 1.1rem;">Railway</span>
+                    <span style="background: #10b981; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px;">Recommended</span>
+                </div>
+                <p style="color: #9ca3af; font-size: 14px;">One-click deploy with automatic SSL, domains, and scaling</p>
+            </div>
+            <div style="padding: 24px; background: #111827; border: 1px solid #374151; border-radius: 12px; cursor: pointer;" onclick="selectPlatform('vercel')">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                    <svg height="32" viewBox="0 0 76 65" fill="white"><path d="M37.5274 0L75.0548 65H0L37.5274 0Z"/></svg>
+                    <span style="font-weight: 600; font-size: 1.1rem;">Vercel</span>
+                </div>
+                <p style="color: #9ca3af; font-size: 14px;">Great for frontend apps and serverless functions</p>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 24px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 500;">Custom Domain (optional)</label>
+            <div style="display: flex; gap: 8px;">
+                <input type="text" id="custom-domain" placeholder="myapp.com" 
+                       style="flex: 1; padding: 12px 16px; background: #111827; border: 1px solid #374151; border-radius: 8px; color: white;">
+                <button onclick="checkDomain()" style="padding: 12px 24px; background: #374151; border: none; border-radius: 8px; color: white; cursor: pointer;">Check Availability</button>
+            </div>
+            <p id="domain-status" style="font-size: 12px; color: #6b7280; margin-top: 8px;"></p>
+        </div>
+
+        <div id="deploy-status" style="display: none; background: #111827; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div class="spinner" style="width: 20px; height: 20px; border: 2px solid #374151; border-top-color: #8b5cf6; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                <span id="deploy-text">Deploying to Railway...</span>
+            </div>
+        </div>
+
+        <button id="deploy-btn" onclick="deployApp()" 
+                style="width: 100%; padding: 16px; background: linear-gradient(135deg, #10b981, #059669); border: none; border-radius: 12px; color: white; font-size: 18px; font-weight: 600; cursor: pointer;">
+            🚀 Deploy Now
+        </button>
+    </div>
+
+    <!-- Step 5: Launch Business (hidden by default) -->
+    <div id="step5" class="step-content" style="display: none; background: #1f2937; border-radius: 16px; padding: 32px; border: 1px solid #374151;">
+        <div style="text-align: center; margin-bottom: 32px;">
+            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #10b981, #059669); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+                <i data-lucide="check" style="width: 40px; height: 40px; color: white;"></i>
+            </div>
+            <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 8px;">🎉 Your App is Live!</h2>
+            <p id="live-url" style="color: #8b5cf6; font-size: 1.1rem;">https://your-app.railway.app</p>
+        </div>
+
+        <div style="background: #111827; border-radius: 12px; padding: 24px; margin-bottom: 24px;">
+            <h3 style="font-weight: 600; margin-bottom: 16px;">Ready to launch your business?</h3>
+            <p style="color: #9ca3af; margin-bottom: 16px;">Turn your app into a real business with LLC formation, EIN, and custom domain.</p>
+            
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+                <div style="text-align: center; padding: 16px;">
+                    <i data-lucide="building" style="width: 32px; height: 32px; color: #8b5cf6; margin-bottom: 8px;"></i>
+                    <p style="font-weight: 500;">LLC Formation</p>
+                    <p style="font-size: 12px; color: #6b7280;">Delaware LLC in 24h</p>
+                </div>
+                <div style="text-align: center; padding: 16px;">
+                    <i data-lucide="globe" style="width: 32px; height: 32px; color: #8b5cf6; margin-bottom: 8px;"></i>
+                    <p style="font-weight: 500;">Custom Domain</p>
+                    <p style="font-size: 12px; color: #6b7280;">yourcompany.com</p>
+                </div>
+                <div style="text-align: center; padding: 16px;">
+                    <i data-lucide="file-text" style="width: 32px; height: 32px; color: #8b5cf6; margin-bottom: 8px;"></i>
+                    <p style="font-weight: 500;">EIN Number</p>
+                    <p style="font-size: 12px; color: #6b7280;">Tax ID for your business</p>
                 </div>
             </div>
+        </div>
 
-            <!-- Technology Stack -->
-            <div class="form-section" style="margin-top: 32px;">
-                <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #1a1a1a;">Technology Stack</h2>
-                
-                <div class="form-group" style="margin-bottom: 20px;">
-                    <label for="framework" style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px; color: #333;">Framework</label>
-                    <select 
-                        id="framework" 
-                        name="framework"
-                        style="width: 100%; padding: 10px 14px; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 14px; background: white; cursor: pointer;"
-                    >
-                        <option value="flask">Flask (Python)</option>
-                        <option value="django">Django (Python)</option>
-                        <option value="fastapi">FastAPI (Python)</option>
-                        <option value="express">Express (Node.js)</option>
-                        <option value="nextjs">Next.js (React)</option>
-                    </select>
-                </div>
-
-                <div class="form-group" style="margin-bottom: 20px;">
-                    <label for="database" style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px; color: #333;">Database</label>
-                    <select 
-                        id="database" 
-                        name="database"
-                        style="width: 100%; padding: 10px 14px; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 14px; background: white; cursor: pointer;"
-                    >
-                        <option value="postgresql">PostgreSQL</option>
-                        <option value="mysql">MySQL</option>
-                        <option value="mongodb">MongoDB</option>
-                        <option value="sqlite">SQLite</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- Action Buttons -->
-            <div style="display: flex; gap: 12px; margin-top: 32px; padding-top: 24px; border-top: 1px solid #e0e0e0;">
-                <button 
-                    type="submit" 
-                    style="flex: 1; padding: 12px 24px; background: #1a1a1a; color: white; border: none; border-radius: 6px; font-weight: 500; font-size: 14px; cursor: pointer; transition: all 0.2s;"
-                    onmouseover="this.style.background='#333'"
-                    onmouseout="this.style.background='#1a1a1a'"
-                >
-                    Create Project
-                </button>
-                <a 
-                    href="/projects" 
-                    style="flex: 1; padding: 12px 24px; background: transparent; color: #666; border: 1px solid #e0e0e0; border-radius: 6px; font-weight: 500; font-size: 14px; text-align: center; text-decoration: none; cursor: pointer; display: block; transition: all 0.2s;"
-                    onmouseover="this.style.borderColor='#999'; this.style.color='#333'"
-                    onmouseout="this.style.borderColor='#e0e0e0'; this.style.color='#666'"
-                >
-                    Cancel
-                </a>
-            </div>
-        </form>
+        <div style="display: flex; gap: 16px;">
+            <a href="/projects" style="flex: 1; padding: 12px; background: #374151; border: none; border-radius: 8px; color: white; text-decoration: none; text-align: center;">
+                Go to Dashboard
+            </a>
+            <a href="/business-formation" style="flex: 1; padding: 12px; background: linear-gradient(135deg, #8b5cf6, #6366f1); border: none; border-radius: 8px; color: white; font-weight: 600; text-decoration: none; text-align: center;">
+                🏢 Form My Business
+            </a>
+        </div>
     </div>
 </div>
 
+<style>
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+.step-content {
+    transition: all 0.3s ease;
+}
+</style>
+
 <script>
-// Radio card interactions
-document.querySelectorAll('.radio-card').forEach(card => {
-    const radio = card.querySelector('input[type="radio"]');
+let currentStep = 1;
+let projectData = {};
+
+function goToStep(step) {
+    // Hide all steps
+    for (let i = 1; i <= 5; i++) {
+        document.getElementById('step' + i).style.display = 'none';
+        const indicator = document.getElementById('step' + i + '-indicator');
+        if (indicator) {
+            indicator.style.background = i < step ? '#10b981' : (i === step ? '#8b5cf6' : '#374151');
+            indicator.style.color = i <= step ? 'white' : '#9ca3af';
+        }
+    }
+    // Show current step
+    document.getElementById('step' + step).style.display = 'block';
+    currentStep = step;
+}
+
+async function generateCode() {
+    const name = document.getElementById('project-name').value || 'My App';
+    const idea = document.getElementById('idea-description').value;
+    const appType = document.getElementById('app-type').value;
+    const techStack = document.getElementById('tech-stack').value;
     
-    // Check initial state
-    if (radio.checked) {
-        card.style.borderColor = '#6366f1';
-        card.style.background = '#f8f9ff';
+    if (!idea.trim()) {
+        alert('Please describe your app idea');
+        return;
     }
     
-    card.addEventListener('click', function() {
-        document.querySelectorAll('.radio-card').forEach(c => {
-            c.style.borderColor = '#e0e0e0';
-            c.style.background = 'transparent';
-        });
-        this.style.borderColor = '#6366f1';
-        this.style.background = '#f8f9ff';
-    });
+    projectData = { name, idea, appType, techStack };
     
-    card.addEventListener('mouseenter', function() {
-        if (!radio.checked) {
-            this.style.borderColor = '#999';
-        }
-    });
+    // Go to generation step
+    goToStep(2);
     
-    card.addEventListener('mouseleave', function() {
-        if (!radio.checked) {
-            this.style.borderColor = '#e0e0e0';
-        }
-    });
-});
+    // Simulate generation progress
+    const steps = [
+        { text: 'Analyzing your idea...', progress: 10 },
+        { text: 'Designing database schema...', progress: 25 },
+        { text: 'Generating API routes...', progress: 40 },
+        { text: 'Creating models and services...', progress: 55 },
+        { text: 'Building UI templates...', progress: 70 },
+        { text: 'Setting up authentication...', progress: 85 },
+        { text: 'Finalizing project structure...', progress: 95 },
+        { text: 'Complete!', progress: 100 }
+    ];
+    
+    const log = document.getElementById('generation-log');
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
+    
+    for (const step of steps) {
+        progressText.textContent = step.text;
+        progressBar.style.width = step.progress + '%';
+        log.innerHTML += '<div style="color: #10b981;">> ' + step.text + '</div>';
+        log.scrollTop = log.scrollHeight;
+        await new Promise(r => setTimeout(r, 800));
+    }
+    
+    // Move to customize step after generation
+    setTimeout(() => goToStep(3), 500);
+}
+
+function selectFile(filename) {
+    // Load file content into editor (simulated)
+    const editor = document.getElementById('code-editor');
+    editor.value = '# ' + filename + ' - Generated by LaunchForge AI\n\n# Your code here...';
+}
+
+function regenerateSection() {
+    alert('Regenerating selected section with AI...');
+}
+
+function selectPlatform(platform) {
+    projectData.platform = platform;
+    // Update UI to show selection
+}
+
+function checkDomain() {
+    const domain = document.getElementById('custom-domain').value;
+    const status = document.getElementById('domain-status');
+    if (domain) {
+        status.innerHTML = '<span style="color: #10b981;">\u2713 ' + domain + ' is available! $12/year</span>';
+    }
+}
+
+async function deployApp() {
+    const deployStatus = document.getElementById('deploy-status');
+    const deployText = document.getElementById('deploy-text');
+    const deployBtn = document.getElementById('deploy-btn');
+    
+    deployStatus.style.display = 'block';
+    deployBtn.disabled = true;
+    deployBtn.style.opacity = '0.5';
+    
+    const steps = [
+        'Pushing code to GitHub...',
+        'Building Docker container...',
+        'Deploying to Railway...',
+        'Configuring SSL certificate...',
+        'Setting up domain...',
+        'Running health checks...'
+    ];
+    
+    for (const step of steps) {
+        deployText.textContent = step;
+        await new Promise(r => setTimeout(r, 1500));
+    }
+    
+    // Update live URL and go to final step
+    const appName = projectData.name.toLowerCase().replace(/\s+/g, '-');
+    document.getElementById('live-url').textContent = 'https://' + appName + '.up.railway.app';
+    goToStep(5);
+}
+
+// Initialize Lucide icons
+if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+}
 </script>
 {% endblock %}
