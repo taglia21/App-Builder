@@ -3,7 +3,7 @@ import os
 import stripe
 from fastapi import APIRouter, Request, Depends, HTTPException, Header
 from fastapi.responses import HTMLResponse, JSONResponse
-from ..auth.dependencies import get_current_user, get_optional_current_user
+from ..auth.middleware import get_current_user, get_optional_current_user
 from ..templates import templates
 
 # Stripe configuration
