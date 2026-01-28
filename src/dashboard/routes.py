@@ -210,7 +210,7 @@ class DashboardRoutes:
 
     async def privacy_page(self, request: Request) -> HTMLResponse:
         """Privacy Policy page."""
-        return self.render(request, "pages/privacy")
+        return self.render(request, "pages/privacy.html", {"active": "privacy"})
     
     # ==================== HTMX Partial Routes ====================
     
