@@ -820,3 +820,7 @@ async def get_project_api(request: Request) -> JSONResponse:
     if project_id not in _projects_store:
         return JSONResponse({'error': 'Project not found'}, status_code=404)
     return JSONResponse(_projects_store[project_id])
+
+@bp.route('/pricing')
+def pricing():
+    return render_template('pages/pricing.html', active='pricing')
