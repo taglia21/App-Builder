@@ -212,6 +212,10 @@ class DashboardRoutes:
         """Privacy Policy page."""
         return self.render(request, "pages/privacy.html", {"active": "privacy"})
 
+    async def pricing_page(self, request: Request) -> HTMLResponse:
+        """Pricing page with subscription plans."""
+        return self.render(request, "pages/pricing.html", {"active": "pricing"})
+
     async def business_formation_page(self, request: Request) -> HTMLResponse:
         """Business Formation page."""
         return self.render(request, "pages/business_formation.html", {"active": "business-formation"})
@@ -599,7 +603,7 @@ def create_dashboard_router(templates: Jinja2Templates) -> APIRouter:
     router.add_api_route("/projects", routes.create_project, methods=["POST"])
     router.add_api_route("/settings", routes.update_settings, methods=["POST"])
 
-    router.add_api_route("/pricing", pricing_page, methods=["GET"], response_class=HTMLResponse)
+    router.add_api_route("/pricing", routes.pricing_page, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/projects/{project_id}/business", business_formation, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/projects/{project_id}/deploy", deploy_page, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/projects/{project_id}/workspace", agent_workspace, methods=["GET"], response_class=HTMLResponse)
@@ -626,15 +630,6 @@ def create_dashboard_router(templates: Jinja2Templates) -> APIRouter:
 
 
 
-async def pricing_page(request: Request) -> HTMLResponse:
-    """Pricing page with subscription plans."""
-    from jinja2 import Environment, FileSystemLoader
-    from pathlib import Path
-    template_dir = Path(__file__).parent / "templates"
-    env = Environment(loader=FileSystemLoader(str(template_dir)))
-    template = env.get_template("pages/pricing.html")
-    html_content = template.render(request=request)
-    return HTMLResponse(content=html_content)
 
 async def business_formation(request: Request) -> HTMLResponse:
     """Business formation page for LLC registration."""
