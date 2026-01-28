@@ -1,66 +1,18 @@
-{% extends "base.html" %}
-
+{% extends "base_public.html" %}
 {% block title %}Terms of Service - LaunchForge{% endblock %}
-
 {% block content %}
-<div class="max-w-4xl">
-    <h1 class="text-4xl font-bold mb-4">Terms of Service</h1>
-    <p class="text-nexus-text text-lg mb-8">Last updated: January 27, 2026</p>
-    
-    <div class="bg-nexus-card border border-nexus-border rounded-xl p-8 space-y-8">
-        <section>
-            <h2 class="text-xl font-semibold mb-4">1. Acceptance of Terms</h2>
-            <p class="text-nexus-text leading-relaxed">
-                By accessing or using LaunchForge's services, you agree to be bound by these Terms of Service. 
-                If you do not agree to these terms, please do not use our services.
-            </p>
-        </section>
-        
-        <section>
-            <h2 class="text-xl font-semibold mb-4">2. Description of Service</h2>
-            <p class="text-nexus-text leading-relaxed">
-                LaunchForge provides AI-powered application development tools and APIs. Our platform enables 
-                developers to integrate machine learning capabilities into their applications through our 
-                suite of APIs and development tools.
-            </p>
-        </section>
-        
-        <section>
-            <h2 class="text-xl font-semibold mb-4">3. User Accounts</h2>
-            <p class="text-nexus-text leading-relaxed mb-4">
-                To access certain features of our service, you must create an account. You are responsible for:
-            </p>
-            <ul class="text-nexus-text space-y-2 ml-6 list-disc">
-                <li>Maintaining the confidentiality of your account credentials</li>
-                <li>All activities that occur under your account</li>
-                <li>Notifying us immediately of any unauthorized use</li>
-            </ul>
-        </section>
-        
-        <section>
-            <h2 class="text-xl font-semibold mb-4">4. Acceptable Use</h2>
-            <p class="text-nexus-text leading-relaxed">
-                You agree not to use our services for any unlawful purpose or in violation of these terms. 
-                Prohibited activities include but are not limited to: unauthorized access attempts, 
-                distribution of malware, and violation of intellectual property rights.
-            </p>
-        </section>
-        
-        <section>
-            <h2 class="text-xl font-semibold mb-4">5. API Usage</h2>
-            <p class="text-nexus-text leading-relaxed">
-                API usage is subject to rate limits and fair use policies as outlined in your subscription plan. 
-                Excessive or abusive API usage may result in temporary or permanent suspension of access.
-            </p>
-        </section>
-        
-        <section>
-            <h2 class="text-xl font-semibold mb-4">6. Contact</h2>
-            <p class="text-nexus-text leading-relaxed">
-                For questions about these Terms of Service, please contact us at 
-                <a href="mailto:legal@nexusai.com" class="text-nexus-purple hover:underline">legal@nexusai.com</a>.
-            </p>
-        </section>
+<div class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+  <div class="max-w-4xl mx-auto px-4 py-16">
+    <h1 class="text-4xl font-bold text-white mb-8 text-center">Terms of Service</h1>
+    <div class="bg-white/10 backdrop-blur-lg rounded-2xl p-8 mb-6">
+      <h2 class="text-xl font-semibold text-white mb-4">1. Acceptance</h2>
+      <p class="text-gray-300">By using LaunchForge, you agree to these Terms of Service.</p>
     </div>
+    <div class="bg-white/10 backdrop-blur-lg rounded-2xl p-8 mb-6">
+      <h2 class="text-xl font-semibold text-white mb-4">2. Service</h2>
+      <p class="text-gray-300">LaunchForge provides AI-powered application generation and deployment services.</p>
+    </div>
+    <div class="text-center mt-8"><a href="/" class="text-purple-400 hover:text-purple-300">Back to Home</a></div>
+  </div>
 </div>
 {% endblock %}

@@ -673,3 +673,118 @@ class OnboardingStatus(Base, TimestampMixin):
         """Mark as complete if all steps are done."""
         if self.check_complete() and not self.completed_at:
             self.completed_at = datetime.now(timezone.utc)
+
+
+# ==================== Subscription Models ====================
+
+class SubscriptionTier(enum.Enum):
+    """Subscription tier levels."""
+    FREE = "free"
+    STARTER = "starter"
+    PROFESSIONAL = "professional"
+    BUSINESS = "business"
+
+
+class SubscriptionStatus(enum.Enum):
+    """Subscription status."""
+    ACTIVE = "active"
+    CANCELED = "canceled"
+    PAST_DUE = "past_due"
+    TRIALING = "trialing"
+    PAUSED = "paused"
+
+
+class Subscription(Base, TimestampMixin):
+    """User subscription model."""
+    __tablename__ = "subscriptions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    
+    # Stripe fields
+    stripe_customer_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    stripe_subscription_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    stripe_price_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    
+    # Subscription details
+    tier: Mapped[SubscriptionTier] = mapped_column(
+        Enum(SubscriptionTier),
+        default=SubscriptionTier.FREE
+    )
+    status: Mapped[SubscriptionStatus] = mapped_column(
+        Enum(SubscriptionStatus),
+        default=SubscriptionStatus.ACTIVE
+    )
+    
+    # Usage limits
+    app_generations_limit: Mapped[int] = mapped_column(default=1)
+    app_generations_used: Mapped[int] = mapped_column(default=0)
+    
+    # Billing period
+    current_period_start: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+    current_period_end: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+    cancel_at_period_end: Mapped[bool] = mapped_column(default=False)
+    
+    # Relationship
+    user: Mapped["User"] = relationship(back_populates="subscription")
+
+
+class APIKey(Base, TimestampMixin, SoftDeleteMixin):
+    """API Key model for programmatic access."""
+    __tablename__ = "api_keys"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    key_hash: Mapped[str] = mapped_column(String(255), nullable=False)  # Hashed API key
+    key_prefix: Mapped[str] = mapped_column(String(10), nullable=False)  # First few chars for identification
+    
+    # Permissions and limits
+    is_active: Mapped[bool] = mapped_column(default=True)
+    rate_limit: Mapped[int] = mapped_column(default=1000)  # Requests per hour
+    
+    # Usage tracking
+    last_used_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+    total_requests: Mapped[int] = mapped_column(default=0)
+    
+    # Relationship
+    user: Mapped["User"] = relationship(back_populates="api_keys")
+
+
+class BusinessFormation(Base, TimestampMixin):
+    """Business formation/registration model."""
+    __tablename__ = "business_formations"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False)
+    
+    # Business details
+    business_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    business_type: Mapped[str] = mapped_column(String(50), default="LLC")  # LLC, Corporation, etc.
+    state: Mapped[str] = mapped_column(String(2), nullable=False)  # US state code
+    
+    # Registration status
+    status: Mapped[str] = mapped_column(String(50), default="pending")  # pending, processing, completed, failed
+    ein_number: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    formation_date: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+    
+    # External references
+    external_order_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    
+    # Relationships
+    user: Mapped["User"] = relationship(back_populates="business_formations")
+    project: Mapped["Project"] = relationship(back_populates="business_formation")
