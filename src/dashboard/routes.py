@@ -211,6 +211,10 @@ class DashboardRoutes:
     async def privacy_page(self, request: Request) -> HTMLResponse:
         """Privacy Policy page."""
         return self.render(request, "pages/privacy.html", {"active": "privacy"})
+
+    async def business_formation_page(self, request: Request) -> HTMLResponse:
+        """Business Formation page."""
+        return self.render(request, "pages/business_formation.html", active="business-formation")
     
     # ==================== HTMX Partial Routes ====================
     
@@ -568,6 +572,7 @@ def create_dashboard_router(templates: Jinja2Templates) -> APIRouter:
     router.add_api_route("/about", routes.about_page, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/terms", routes.terms_page, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/privacy", routes.privacy_page, methods=["GET"], response_class=HTMLResponse)
+    router.add_api_route("/business-formation", routes.business_formation_page, methods=["GET"], response_class=HTMLResponse)
 
     
     # Admin routes
