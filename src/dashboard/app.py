@@ -15,6 +15,11 @@ import secrets
 
 from .routes import create_dashboard_router
 from .api import create_api_router
+# Import integrations router
+try:
+    from src.api.integrations_router import router as integrations_router
+except ImportError:
+    integrations_router = None
 from .rate_limiter import setup_rate_limiting
 
 # Import logging system with fallback for minimal deployments
@@ -121,6 +126,9 @@ def create_app() -> FastAPI:
         app.include_router(create_dashboard_router(templates))
     
     app.include_router(create_api_router(), prefix="/api")
+    # Include integrations router
+    if integrations_router:
+        app.include_router(integrations_router)
     
     # Mount static files if directory exists
     static_path = Path(__file__).parent / "static"
