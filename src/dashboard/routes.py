@@ -214,7 +214,7 @@ class DashboardRoutes:
 
     async def business_formation_page(self, request: Request) -> HTMLResponse:
         """Business Formation page."""
-        return self.render(request, "pages/business_formation.html", active="business-formation")
+        return self.render(request, "pages/business_formation.html", {"active": "business-formation"})
     
     # ==================== HTMX Partial Routes ====================
     
