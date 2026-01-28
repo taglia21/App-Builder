@@ -1,4 +1,5 @@
 """
+from fastapi import Header
 LaunchForge Authentication Middleware
 
 JWT verification middleware for protecting API routes.
@@ -300,3 +301,12 @@ class JWTMiddleware:
 
 # Create default middleware instance
 jwt_middleware = JWTMiddleware()
+
+async def get_optional_current_user(auth_header: Optional[str] = Header(None, alias="Authorization")) -> Optional[dict]:
+    """Get current user if authenticated, otherwise return None."""
+    if not auth_header:
+        return None
+    try:
+        return await get_current_user(auth_header)
+    except Exception:
+        return None
