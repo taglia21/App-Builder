@@ -1,0 +1,19 @@
+{% extends "base_public.html" %}
+{% block title %}Payment Successful - LaunchForge{% endblock %}
+{% block content %}
+<div class="min-h-screen bg-gray-900 flex items-center justify-center py-12">
+  <div class="max-w-md mx-auto text-center">
+    <div class="bg-green-500 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-6">
+      <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+      </svg>
+    </div>
+    <h1 class="text-3xl font-bold text-white mb-4">Payment Successful!</h1>
+    <p class="text-gray-400 mb-8">Thank you for your subscription. Your account has been upgraded and you can now access all the features of your new plan.</p>
+    <div class="space-y-4">
+      <a href="/dashboard" class="block w-full py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition">Go to Dashboard</a>
+      <a href="/billing" class="block w-full py-3 px-4 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-lg transition">View Billing Details</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
