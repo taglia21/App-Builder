@@ -126,6 +126,35 @@
                 </ul>
             </div>
         </div>
+            <!-- Domain Registration -->
+            <div style="margin-top: 24px; padding: 24px; background: #111827; border-radius: 12px; border: 1px solid #374151;">
+                <h3 style="font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                    <i data-lucide="globe" style="width: 20px; height: 20px; color: #8b5cf6;"></i>
+                    Domain Registration
+                </h3>
+                <p style="color: #9ca3af; margin-bottom: 16px; font-size: 14px;">Get a professional domain for your business</p>
+                
+                <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+                    <input type="text" id="domain-name" placeholder="yourcompany" 
+                           style="flex: 1; padding: 12px 16px; background: #1f2937; border: 1px solid #374151; border-radius: 8px; color: white;">
+                    <select id="domain-ext" style="padding: 12px 16px; background: #1f2937; border: 1px solid #374151; border-radius: 8px; color: white;">
+                        <option value=".com">.com ($12/yr)</option>
+                        <option value=".io">.io ($39/yr)</option>
+                        <option value=".co">.co ($25/yr)</option>
+                        <option value=".app">.app ($14/yr)</option>
+                        <option value=".dev">.dev ($12/yr)</option>
+                    </select>
+                    <button onclick="checkDomainAvailability()" style="padding: 12px 24px; background: #374151; border: none; border-radius: 8px; color: white; cursor: pointer;">Check</button>
+                </div>
+                
+                <div id="domain-result" style="display: none; padding: 12px; border-radius: 8px; margin-bottom: 16px;"></div>
+                
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="include-domain" style="width: 18px; height: 18px;">
+                    <span>Include domain registration with my business package</span>
+                </label>
+            </div>
+
 
         <button class="btn-submit">🏢 Continue to Review</button>
     </div>
@@ -140,3 +169,26 @@ document.querySelectorAll('.package-card').forEach(card => {
 });
 </script>
 {% endblock %}
+<script>
+function checkDomainAvailability() {
+    const domain = document.getElementById('domain-name').value;
+    const ext = document.getElementById('domain-ext').value;
+    const result = document.getElementById('domain-result');
+    
+    if (!domain) {
+        result.style.display = 'block';
+        result.style.background = '#7f1d1d';
+        result.innerHTML = 'Please enter a domain name';
+        return;
+    }
+    
+    const fullDomain = domain + ext;
+    
+    // Simulate availability check
+    result.style.display = 'block';
+    result.style.background = '#064e3b';
+    result.innerHTML = '<span style="color: #10b981;">\u2713 ' + fullDomain + ' is available!</span>';
+    
+    document.getElementById('include-domain').checked = true;
+}
+</script>
