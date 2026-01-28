@@ -1,5 +1,5 @@
 """
-NexusAI Authentication API Routes
+LaunchForge Authentication API Routes
 
 REST API endpoints for authentication operations.
 Designed for use with FastAPI or similar frameworks.

@@ -1,5 +1,5 @@
 """
-NexusAI Database Models
+LaunchForge Database Models
 
 SQLAlchemy ORM models for PostgreSQL/SQLite database.
 Includes users, projects, generations, and deployments.
@@ -119,7 +119,7 @@ class SoftDeleteMixin:
 
 class User(Base, TimestampMixin, SoftDeleteMixin):
     """
-    User model for NexusAI accounts.
+    User model for LaunchForge accounts.
     
     Attributes:
         id: Unique user identifier (UUID)

@@ -1,5 +1,5 @@
 """
-NexusAI Dashboard Module
+LaunchForge Dashboard Module
 
 FastAPI-based web dashboard with HTMX for interactive UI.
 """

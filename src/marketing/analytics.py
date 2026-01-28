@@ -217,7 +217,7 @@ class PlausibleAnalytics(AnalyticsProvider):
                 response = await client.post(
                     self._base_url,
                     json=payload,
-                    headers={"User-Agent": "NexusAI/1.0"},
+                    headers={"User-Agent": "LaunchForge/1.0"},
                 )
                 return response.status_code == 202
         except Exception:

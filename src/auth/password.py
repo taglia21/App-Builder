@@ -1,5 +1,5 @@
 """
-NexusAI Password Security Module
+LaunchForge Password Security Module
 
 Secure password hashing using bcrypt with strength validation.
 """

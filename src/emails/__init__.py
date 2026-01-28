@@ -1,5 +1,5 @@
 """
-NexusAI Email Module
+LaunchForge Email Module
 
 Provides transactional email functionality via Resend.com.
 """

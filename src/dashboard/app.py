@@ -51,7 +51,7 @@ logger = get_logger(__name__)
 def create_app() -> FastAPI:
     """Create and configure FastAPI application."""
     app = FastAPI(
-        title="NexusAI Dashboard",
+        title="LaunchForge Dashboard",
         description="AI-Powered Startup Builder Dashboard",
         version="1.0.0",
         docs_url="/docs",
@@ -134,7 +134,7 @@ def create_app() -> FastAPI:
 class DashboardApp:
     """Dashboard application wrapper for compatibility."""
     
-    def __init__(self, title: str = "NexusAI"):
+    def __init__(self, title: str = "LaunchForge"):
         self.title = title
         self.app = create_app()
         # Update app title if custom

@@ -88,7 +88,7 @@ class EmailMessage:
     html_body: str
     text_body: str | None = None
     from_email: str = "noreply@nexusai.dev"
-    from_name: str = "NexusAI"
+    from_name: str = "LaunchForge"
     reply_to: str | None = None
     cc: list[EmailRecipient] = field(default_factory=list)
     bcc: list[EmailRecipient] = field(default_factory=list)
@@ -151,7 +151,7 @@ class EmailProvider(ABC):
         to: list[EmailRecipient],
         data: dict[str, Any],
         from_email: str = "noreply@nexusai.dev",
-        from_name: str = "NexusAI",
+        from_name: str = "LaunchForge",
     ) -> list[EmailResult]:
         """Send email using a template."""
         subject, html, text = template.render(data)
@@ -501,7 +501,7 @@ class EmailService:
         self,
         to_email: str,
         user_name: str,
-        app_name: str = "NexusAI",
+        app_name: str = "LaunchForge",
         dashboard_url: str = "https://app.nexusai.dev/dashboard",
     ) -> EmailResult:
         """Send welcome email."""
@@ -528,7 +528,7 @@ class EmailService:
         to_email: str,
         user_name: str,
         reset_url: str,
-        app_name: str = "NexusAI",
+        app_name: str = "LaunchForge",
     ) -> EmailResult:
         """Send password reset email."""
         template = self.templates["password_reset"]

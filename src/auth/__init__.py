@@ -1,5 +1,5 @@
 """
-NexusAI Authentication Module
+LaunchForge Authentication Module
 
 Production-ready authentication system with:
 - Password hashing (bcrypt)

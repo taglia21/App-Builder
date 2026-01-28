@@ -1,7 +1,7 @@
 """
 Stripe API Client
 
-Production-ready Stripe integration for NexusAI.
+Production-ready Stripe integration for LaunchForge.
 """
 
 import os

@@ -1,7 +1,7 @@
 """
 API Routes
 
-JSON API endpoints for the NexusAI platform.
+JSON API endpoints for the LaunchForge platform.
 """
 
 from fastapi import APIRouter, HTTPException, Depends, Query, Body
@@ -154,7 +154,7 @@ class APIRoutes:
     """
     JSON API endpoints.
     
-    Provides programmatic access to NexusAI features.
+    Provides programmatic access to LaunchForge features.
     """
     
     # ==================== Projects ====================

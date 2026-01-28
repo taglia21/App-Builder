@@ -1,5 +1,5 @@
 """
-NexusAI - AI-Powered Startup Builder
+LaunchForge - AI-Powered Startup Builder
 Professional branding and CLI presentation.
 """
 
@@ -26,7 +26,7 @@ LOGO_ASCII = """
 """
 
 # Alternative compact logo
-LOGO_COMPACT = "⚡ NexusAI"
+LOGO_COMPACT = "⚡ LaunchForge"
 
 # Taglines
 TAGLINE = "AI-Powered Startup Builder"
@@ -34,7 +34,7 @@ TAGLINE_FULL = "From idea to deployed app in minutes, not months."
 
 # Product description
 DESCRIPTION = """
-NexusAI uses AI with real-time web intelligence to:
+LaunchForge uses AI with real-time web intelligence to:
 • Discover validated market opportunities
 • Generate production-ready applications  
 • Deploy to cloud with one command

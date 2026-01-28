@@ -1,5 +1,5 @@
 """
-NexusAI Analytics Module
+LaunchForge Analytics Module
 
 Privacy-friendly analytics using Plausible.io.
 """

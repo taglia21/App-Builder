@@ -285,7 +285,7 @@ class DeploymentOrchestrator:
             # Create repository
             repo = self.github.create_repository(
                 name=plan.project_name,
-                description=f"NexusAI project: {plan.project_name}",
+                description=f"LaunchForge project: {plan.project_name}",
                 private=plan.github_private,
                 auto_init=True,
                 gitignore_template="Node",

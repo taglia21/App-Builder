@@ -1,5 +1,5 @@
 """
-Email client for NexusAI using Resend.com API.
+Email client for LaunchForge using Resend.com API.
 
 Provides transactional email functionality for:
 - Email verification
@@ -91,7 +91,7 @@ class EmailClient:
         self,
         api_key: Optional[str] = None,
         from_email: Optional[str] = None,
-        from_name: str = "NexusAI"
+        from_name: str = "LaunchForge"
     ):
         """
         Initialize email client.
@@ -455,7 +455,7 @@ async def send_verification_email(
     
     return await client.send_email(
         to=email,
-        subject="Verify your NexusAI email",
+        subject="Verify your LaunchForge email",
         html=html,
         tags={"type": "verification"}
     )
@@ -477,7 +477,7 @@ async def send_welcome_email(
     
     return await client.send_email(
         to=email,
-        subject="Welcome to NexusAI! 🚀",
+        subject="Welcome to LaunchForge! 🚀",
         html=html,
         tags={"type": "welcome"}
     )
@@ -500,7 +500,7 @@ async def send_password_reset_email(
     
     return await client.send_email(
         to=email,
-        subject="Reset your NexusAI password",
+        subject="Reset your LaunchForge password",
         html=html,
         tags={"type": "password_reset"}
     )

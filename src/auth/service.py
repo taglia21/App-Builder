@@ -1,5 +1,5 @@
 """
-NexusAI Authentication Service
+LaunchForge Authentication Service
 
 Core authentication logic connecting all auth components.
 Handles user registration, login, token management, and OAuth.
@@ -75,7 +75,7 @@ class EmailNotVerifiedError(AuthError):
 
 class AuthService:
     """
-    Authentication service for NexusAI.
+    Authentication service for LaunchForge.
     
     Handles all authentication operations including registration,
     login, token management, and password reset.

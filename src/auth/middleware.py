@@ -1,5 +1,5 @@
 """
-NexusAI Authentication Middleware
+LaunchForge Authentication Middleware
 
 JWT verification middleware for protecting API routes.
 """

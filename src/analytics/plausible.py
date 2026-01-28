@@ -101,7 +101,7 @@ class PlausibleClient:
         
         headers = {
             "Content-Type": "application/json",
-            "User-Agent": user_agent or "NexusAI/1.0",
+            "User-Agent": user_agent or "LaunchForge/1.0",
         }
         
         if ip_address:
@@ -155,9 +155,9 @@ class PlausibleClient:
         )
 
 
-# Pre-defined events for NexusAI
+# Pre-defined events for LaunchForge
 class Events:
-    """Standard NexusAI analytics events."""
+    """Standard LaunchForge analytics events."""
     
     # User events
     SIGNUP = "Signup"
