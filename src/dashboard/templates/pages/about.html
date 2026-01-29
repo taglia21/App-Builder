@@ -2,49 +2,105 @@
 {% block title %}About Us - LaunchForge{% endblock %}
 
 {% block content %}
-<div class="pro-page-header">
-    <div class="pro-container">
-        <h1 class="pro-page-title">About LaunchForge</h1>
-        <p class="pro-page-subtitle">Empowering developers to build faster with AI</p>
+<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 5rem 2rem; text-align: center; position: relative; overflow: hidden;">
+    <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(circle at 30% 50%, rgba(255,255,255,0.1) 0%, transparent 50%); pointer-events: none;"></div>
+    <div style="max-width: 1200px; margin: 0 auto; position: relative; z-index: 1;">
+        <h1 style="font-size: 3.5rem; font-weight: 800; color: white; margin: 0 0 1rem 0; letter-spacing: -1px;">About LaunchForge</h1>
+        <p style="font-size: 1.5rem; color: rgba(255,255,255,0.95); max-width: 700px; margin: 0 auto; line-height: 1.6;">Empowering developers to build faster with AI-powered technology</p>
     </div>
 </div>
 
-<div class="pro-container" style="padding: 3rem 1rem;">
-    <div class="pro-about-section">
-        <h2 class="pro-section-title">Our Mission</h2>
-        <p class="pro-text-lg">LaunchForge was built to democratize AI-powered application development. We believe every developer should have access to cutting-edge tools that amplify their creativity and productivity.</p>
+<div style="max-width: 1200px; margin: 0 auto; padding: 4rem 2rem;">
+    
+    <!-- Mission Section -->
+    <div style="background: white; border-radius: 16px; padding: 3rem; margin-bottom: 3rem; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid rgba(102,126,234,0.1);">
+        <h2 style="font-size: 2.5rem; font-weight: 700; margin-bottom: 1.5rem; color: #1a202c; background: linear-gradient(135deg, #667eea, #764ba2); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Our Mission</h2>
+        <p style="font-size: 1.25rem; line-height: 1.8; color: #4a5568; margin: 0;">LaunchForge was built to democratize AI-powered application development. We believe every developer should have access to cutting-edge tools that amplify their creativity and productivity. Our platform transforms ideas into production-ready applications in minutes, not months.</p>
     </div>
 
-    <div class="pro-about-section">
-        <h2 class="pro-section-title">What We Do</h2>
-        <div class="pro-grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
-            <div class="pro-feature-box">
-                <div class="pro-feature-icon">🚀</div>
-                <h3 class="pro-feature-title">Rapid Development</h3>
-                <p>Generate production-ready code in minutes, not hours</p>
+    <!-- Features Grid -->
+    <div style="margin-bottom: 4rem;">
+        <h2 style="font-size: 2.5rem; font-weight: 700; text-align: center; margin-bottom: 3rem; color: #1a202c;">What We Do</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem;">
+            
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 16px; padding: 2.5rem; text-align: center; position: relative; overflow: hidden; box-shadow: 0 8px 24px rgba(102,126,234,0.2);">
+                <div style="font-size: 4rem; margin-bottom: 1rem;">🚀</div>
+                <h3 style="font-size: 1.5rem; font-weight: 700; color: white; margin-bottom: 1rem;">Rapid Development</h3>
+                <p style="color: rgba(255,255,255,0.95); font-size: 1.1rem; line-height: 1.6; margin: 0;">Generate production-ready code in minutes, not hours. Ship features faster than ever before.</p>
             </div>
-            <div class="pro-feature-box">
-                <div class="pro-feature-icon">🤖</div>
-                <h3 class="pro-feature-title">AI-Powered</h3>
-                <p>Leverage advanced AI models to build smarter applications</p>
+
+            <div style="background: linear-gradient(135deg, #764ba2 0%, #667eea 100%); border-radius: 16px; padding: 2.5rem; text-align: center; position: relative; overflow: hidden; box-shadow: 0 8px 24px rgba(118,75,162,0.2);">
+                <div style="font-size: 4rem; margin-bottom: 1rem;">🤖</div>
+                <h3 style="font-size: 1.5rem; font-weight: 700; color: white; margin-bottom: 1rem;">AI-Powered</h3>
+                <p style="color: rgba(255,255,255,0.95); font-size: 1.1rem; line-height: 1.6; margin: 0;">Leverage advanced AI models to build smarter, more efficient applications with ease.</p>
             </div>
-            <div class="pro-feature-box">
-                <div class="pro-feature-icon">🔧</div>
-                <h3 class="pro-feature-title">Developer-Friendly</h3>
-                <p>Built by developers, for developers with best practices in mind</p>
+
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 16px; padding: 2.5rem; text-align: center; position: relative; overflow: hidden; box-shadow: 0 8px 24px rgba(102,126,234,0.2);">
+                <div style="font-size: 4rem; margin-bottom: 1rem;">🔧</div>
+                <h3 style="font-size: 1.5rem; font-weight: 700; color: white; margin-bottom: 1rem;">Developer-Friendly</h3>
+                <p style="color: rgba(255,255,255,0.95); font-size: 1.1rem; line-height: 1.6; margin: 0;">Built by developers, for developers with industry best practices baked in.</p>
             </div>
-            <div class="pro-feature-box">
-                <div class="pro-feature-icon">📈</div>
-                <h3 class="pro-feature-title">Scalable</h3>
-                <p>From prototypes to production-grade applications seamlessly</p>
+
+            <div style="background: linear-gradient(135deg, #764ba2 0%, #667eea 100%); border-radius: 16px; padding: 2.5rem; text-align: center; position: relative; overflow: hidden; box-shadow: 0 8px 24px rgba(118,75,162,0.2);">
+                <div style="font-size: 4rem; margin-bottom: 1rem;">📈</div>
+                <h3 style="font-size: 1.5rem; font-weight: 700; color: white; margin-bottom: 1rem;">Enterprise Scale</h3>
+                <p style="color: rgba(255,255,255,0.95); font-size: 1.1rem; line-height: 1.6; margin: 0;">From prototypes to production-grade applications that scale seamlessly.</p>
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- Values Section -->
+    <div style="background: #f7fafc; border-radius: 16px; padding: 3rem; margin-bottom: 3rem; border-left: 4px solid #667eea;">
+        <h2 style="font-size: 2.5rem; font-weight: 700; margin-bottom: 2rem; color: #1a202c;">Our Values</h2>
+        <div style="display: grid; gap: 1.5rem;">
+            <div style="display: flex; gap: 1rem; align-items: start;">
+                <div style="background: linear-gradient(135deg, #667eea, #764ba2); width: 8px; height: 8px; border-radius: 50%; margin-top: 0.6rem; flex-shrink: 0;"></div>
+                <div>
+                    <h4 style="font-size: 1.25rem; font-weight: 700; color: #2d3748; margin: 0 0 0.5rem 0;">Innovation First</h4>
+                    <p style="color: #4a5568; margin: 0; line-height: 1.6;">We're constantly pushing the boundaries of what's possible with AI and modern development practices.</p>
+                </div>
+            </div>
+            <div style="display: flex; gap: 1rem; align-items: start;">
+                <div style="background: linear-gradient(135deg, #667eea, #764ba2); width: 8px; height: 8px; border-radius: 50%; margin-top: 0.6rem; flex-shrink: 0;"></div>
+                <div>
+                    <h4 style="font-size: 1.25rem; font-weight: 700; color: #2d3748; margin: 0 0 0.5rem 0;">Quality Over Speed</h4>
+                    <p style="color: #4a5568; margin: 0; line-height: 1.6;">Every feature we ship is rigorously tested and production-ready from day one.</p>
+                </div>
+            </div>
+            <div style="display: flex; gap: 1rem; align-items: start;">
+                <div style="background: linear-gradient(135deg, #667eea, #764ba2); width: 8px; height: 8px; border-radius: 50%; margin-top: 0.6rem; flex-shrink: 0;"></div>
+                <div>
+                    <h4 style="font-size: 1.25rem; font-weight: 700; color: #2d3748; margin: 0 0 0.5rem 0;">Transparent Partnership</h4>
+                    <p style="color: #4a5568; margin: 0; line-height: 1.6;">Clear pricing, no hidden costs, and honest communication every step of the way.</p>
+                </div>
+            </div>
+            <div style="display: flex; gap: 1rem; align-items: start;">
+                <div style="background: linear-gradient(135deg, #667eea, #764ba2); width: 8px; height: 8px; border-radius: 50%; margin-top: 0.6rem; flex-shrink: 0;"></div>
+                <div>
+                    <h4 style="font-size: 1.25rem; font-weight: 700; color: #2d3748; margin: 0 0 0.5rem 0;">Community Driven</h4>
+                    <p style="color: #4a5568; margin: 0; line-height: 1.6;">We learn from and grow with our vibrant developer community worldwide.</p>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="pro-cta-section">
-        <h2 class="pro-section-title">Ready to Build Faster?</h2>
-        <p class="pro-text-lg">Join thousands of developers using LaunchForge to bring their ideas to life</p>
-        <button class="pro-btn-primary" onclick="window.location.href='/register'">Get Started Free</button>
+    <!-- CTA Section -->
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 20px; padding: 4rem 3rem; text-align: center; box-shadow: 0 12px 32px rgba(102,126,234,0.3); position: relative; overflow: hidden;">
+        <div style="position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%); animation: pulse 4s ease-in-out infinite;"></div>
+        <div style="position: relative; z-index: 1;">
+            <h2 style="font-size: 2.5rem; font-weight: 800; color: white; margin-bottom: 1rem;">Ready to Build Faster?</h2>
+            <p style="font-size: 1.25rem; color: rgba(255,255,255,0.95); margin-bottom: 2rem; max-width: 600px; margin-left: auto; margin-right: auto;">Join thousands of developers using LaunchForge to bring their ideas to life</p>
+            <a href="/register" style="display: inline-block; background: white; color: #667eea; padding: 1rem 3rem; border-radius: 50px; font-weight: 700; font-size: 1.1rem; text-decoration: none; box-shadow: 0 8px 20px rgba(0,0,0,0.2); transition: all 0.3s ease; border: 3px solid white;" onmouseover="this.style.background='#667eea'; this.style.color='white';" onmouseout="this.style.background='white'; this.style.color='#667eea';">Get Started Free →</a>
+        </div>
     </div>
+
 </div>
+
+<style>
+@keyframes pulse {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(-5%, -5%) scale(1.05); }
+}
+</style>
 {% endblock %}
