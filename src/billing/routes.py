@@ -2,8 +2,7 @@
 import os
 import stripe
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
-from ..templates import templates
+from fastapi.responses import HTMLResponse
 
 # Stripe configuration
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
@@ -16,6 +15,7 @@ PRICE_IDS = {
 }
 
 def create_billing_router(templates):
+    """Create billing router with templates."""
     router = APIRouter(tags=["billing"])
     
     @router.get("/plans", response_class=HTMLResponse)
