@@ -56,11 +56,7 @@ class DashboardRoutes:
     
     async def home(self, request: Request) -> HTMLResponse:
         """Landing page."""
-        import os
-        template_path = os.path.join(os.path.dirname(__file__), 'templates', 'pages', 'landing.html')
-        with open(template_path, 'r') as f:
-            html_content = f.read()
-        return HTMLResponse(content=html_content)    
+        return self.render(request, "pages/landing.html", {"active": "home"})
     async def dashboard(self, request: Request) -> HTMLResponse:
         """Main dashboard page."""
         # Mock data for now
