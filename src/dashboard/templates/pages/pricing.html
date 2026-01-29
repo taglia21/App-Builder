@@ -1,67 +1,74 @@
 {% extends "base.html" %}
 {% block title %}Pricing - LaunchForge{% endblock %}
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 py-12">
+<div class="max-w-6xl mx-auto py-12">
     <div class="text-center mb-12">
-        <h1 class="text-4xl font-bold text-white mb-4">Simple, Transparent Pricing</h1>
-        <p class="text-gray-400 text-lg">Choose the plan that works for you.</p>
+        <h1 class="text-4xl font-bold mb-4">Simple, Transparent Pricing</h1>
+        <p class="text-xl text-gray-600">Choose the plan that fits your needs. All plans include a 14-day free trial.</p>
     </div>
-    <div class="mb-16">
-        <h2 class="text-2xl font-bold text-white mb-8 text-center">Monthly Subscriptions</h2>
-        <div class="grid md:grid-cols-3 gap-8">
-            <div class="bg-[#141416] rounded-xl p-8 border border-[#27272a]">
-                <h3 class="text-xl font-bold text-white mb-2">Starter</h3>
-                <p class="text-gray-400 mb-4">Perfect for hobbyists</p>
-                <div class="mb-6"><span class="text-4xl font-bold text-white">$9</span><span class="text-gray-400">/month</span></div>
-                <ul class="space-y-3 mb-8 text-gray-300"><li>3 app generations/month</li><li>Basic templates</li><li>Community support</li></ul>
-                <a href="/billing" class="block w-full bg-purple-600 text-white text-center py-3 rounded-lg">Get Started</a>
+    
+    <div class="grid md:grid-cols-3 gap-8">
+        {% for plan in plans %}
+        <div class="bg-white rounded-xl shadow-lg p-8 {% if plan.name == 'Growth' %}border-2 border-purple-500 relative{% endif %}">
+            {% if plan.name == 'Growth' %}
+            <div class="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                <span class="bg-purple-500 text-white text-sm font-semibold px-4 py-1 rounded-full">Most Popular</span>
             </div>
-            <div class="bg-[#141416] rounded-xl p-8 border-2 border-purple-500 relative">
-                <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-purple-500 text-white px-4 py-1 rounded-full text-sm">Most Popular</div>
-                <h3 class="text-xl font-bold text-white mb-2">Pro</h3>
-                <p class="text-gray-400 mb-4">For freelancers</p>
-                <div class="mb-6"><span class="text-4xl font-bold text-white">$19</span><span class="text-gray-400">/month</span></div>
-                <ul class="space-y-3 mb-8 text-gray-300"><li>10 app generations/month</li><li>All templates</li><li>Priority support</li><li>Custom domains</li></ul>
-                <a href="/billing" class="block w-full bg-purple-600 text-white text-center py-3 rounded-lg">Get Started</a>
+            {% endif %}
+            <h3 class="text-2xl font-bold mb-2">{{ plan.name }}</h3>
+            <div class="mb-6">
+                <span class="text-4xl font-bold">${{ plan.price }}</span>
+                <span class="text-gray-600">/month</span>
             </div>
-            <div class="bg-[#141416] rounded-xl p-8 border border-[#27272a]">
-                <h3 class="text-xl font-bold text-white mb-2">Business</h3>
-                <p class="text-gray-400 mb-4">For agencies</p>
-                <div class="mb-6"><span class="text-4xl font-bold text-white">$49</span><span class="text-gray-400">/month</span></div>
-                <ul class="space-y-3 mb-8 text-gray-300"><li>Unlimited generations</li><li>White-label</li><li>API access</li><li>Dedicated support</li></ul>
-                <a href="/billing" class="block w-full bg-purple-600 text-white text-center py-3 rounded-lg">Get Started</a>
-            </div>
+            <ul class="space-y-3 mb-8">
+                {% for feature in plan.features %}
+                <li class="flex items-center">
+                    <svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    {{ feature }}
+                </li>
+                {% endfor %}
+            </ul>
+            <button onclick="checkout('{{ plan.id }}')" class="w-full py-3 px-6 rounded-lg font-semibold {% if plan.name == 'Growth' %}bg-purple-600 text-white hover:bg-purple-700{% else %}bg-gray-100 text-gray-800 hover:bg-gray-200{% endif %} transition-colors">
+                Get Started
+            </button>
         </div>
+        {% endfor %}
     </div>
-    <div>
-        <h2 class="text-2xl font-bold text-white mb-8 text-center">One-Time Purchases</h2>
-        <div class="grid md:grid-cols-4 gap-6">
-            <div class="bg-[#141416] rounded-xl p-6 border border-[#27272a] text-center">
-                <h3 class="text-lg font-bold text-white mb-2">Single App</h3>
-                <div class="text-2xl font-bold text-purple-400 mb-4">$4.99</div>
-                <p class="text-gray-400 text-sm mb-4">One app with source code</p>
-                <a href="/billing" class="block w-full bg-[#27272a] text-white py-2 rounded-lg">Buy Now</a>
-            </div>
-            <div class="bg-[#141416] rounded-xl p-6 border border-[#27272a] text-center">
-                <h3 class="text-lg font-bold text-white mb-2">App + Deploy</h3>
-                <div class="text-2xl font-bold text-purple-400 mb-4">$14.99</div>
-                <p class="text-gray-400 text-sm mb-4">App + live deployment</p>
-                <a href="/billing" class="block w-full bg-[#27272a] text-white py-2 rounded-lg">Buy Now</a>
-            </div>
-            <div class="bg-[#141416] rounded-xl p-6 border-2 border-green-500 text-center relative">
-                <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-3 py-1 rounded-full text-xs">Best Value</div>
-                <h3 class="text-lg font-bold text-white mb-2">Full Launch</h3>
-                <div class="text-2xl font-bold text-green-400 mb-4">$99</div>
-                <p class="text-gray-400 text-sm mb-4">App + Deploy + LLC</p>
-                <a href="/business-formation" class="block w-full bg-green-600 text-white py-2 rounded-lg">Buy Now</a>
-            </div>
-            <div class="bg-[#141416] rounded-xl p-6 border border-[#27272a] text-center">
-                <h3 class="text-lg font-bold text-white mb-2">Domain</h3>
-                <div class="text-2xl font-bold text-purple-400 mb-4">$12.99</div>
-                <p class="text-gray-400 text-sm mb-4">Custom domain + SSL</p>
-                <a href="/billing" class="block w-full bg-[#27272a] text-white py-2 rounded-lg">Buy Now</a>
-            </div>
-        </div>
+    
+    <div class="mt-12 text-center text-gray-600">
+        <p>All plans include: SSL certificates, automatic backups, and 99.9% uptime SLA</p>
+        <p class="mt-2">Questions? <a href="/contact" class="text-purple-600 hover:underline">Contact our sales team</a></p>
     </div>
 </div>
+
+<script>
+async function checkout(plan) {
+    const button = event.target;
+    button.disabled = true;
+    button.textContent = 'Processing...';
+    
+    try {
+        const response = await fetch('/billing/create-checkout-session', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({plan: plan})
+        });
+        const data = await response.json();
+        if (data.url) {
+            window.location.href = data.url;
+        } else {
+            alert('Error creating checkout session');
+            button.disabled = false;
+            button.textContent = 'Get Started';
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error processing request');
+        button.disabled = false;
+        button.textContent = 'Get Started';
+    }
+}
+</script>
 {% endblock %}

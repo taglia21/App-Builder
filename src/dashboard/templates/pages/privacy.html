@@ -1,18 +1,62 @@
-{% extends "base_public.html" %}
+{% extends "base.html" %}
 {% block title %}Privacy Policy - LaunchForge{% endblock %}
 {% block content %}
-<div class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-  <div class="max-w-4xl mx-auto px-4 py-16">
-    <h1 class="text-4xl font-bold text-white mb-8 text-center">Privacy Policy</h1>
-    <div class="bg-white/10 backdrop-blur-lg rounded-2xl p-8 mb-6">
-      <h2 class="text-xl font-semibold text-white mb-4">Information We Collect</h2>
-      <p class="text-gray-300">We collect account details and usage information to provide our services.</p>
+<div class="max-w-4xl mx-auto py-8">
+    <h1 class="text-3xl font-bold mb-2">Privacy Policy</h1>
+    <p class="text-gray-600 mb-8">Last updated: January 28, 2026</p>
+    
+    <div class="prose prose-lg max-w-none">
+        <h2 class="text-2xl font-semibold mt-8 mb-4">1. Information We Collect</h2>
+        <p class="mb-4">We collect information you provide directly, including:</p>
+        <ul class="list-disc pl-6 mb-4">
+            <li>Account information (name, email, password)</li>
+            <li>Payment information (processed securely by Stripe)</li>
+            <li>Project data and application configurations</li>
+            <li>Communications with our support team</li>
+        </ul>
+        
+        <h2 class="text-2xl font-semibold mt-8 mb-4">2. How We Use Your Information</h2>
+        <p class="mb-4">We use collected information to:</p>
+        <ul class="list-disc pl-6 mb-4">
+            <li>Provide and maintain the LaunchForge service</li>
+            <li>Process payments and manage subscriptions</li>
+            <li>Send service-related communications</li>
+            <li>Improve our platform and develop new features</li>
+            <li>Ensure security and prevent fraud</li>
+        </ul>
+        
+        <h2 class="text-2xl font-semibold mt-8 mb-4">3. Data Storage and Security</h2>
+        <p class="mb-4">Your data is stored on secure servers with encryption at rest and in transit. We implement industry-standard security measures to protect your information. Payment data is handled exclusively by Stripe and never stored on our servers.</p>
+        
+        <h2 class="text-2xl font-semibold mt-8 mb-4">4. Data Sharing</h2>
+        <p class="mb-4">We do not sell your personal information. We may share data with:</p>
+        <ul class="list-disc pl-6 mb-4">
+            <li>Service providers (hosting, payment processing, analytics)</li>
+            <li>Legal authorities when required by law</li>
+            <li>Business partners with your consent</li>
+        </ul>
+        
+        <h2 class="text-2xl font-semibold mt-8 mb-4">5. Your Rights</h2>
+        <p class="mb-4">You have the right to:</p>
+        <ul class="list-disc pl-6 mb-4">
+            <li>Access your personal data</li>
+            <li>Correct inaccurate information</li>
+            <li>Request deletion of your data</li>
+            <li>Export your data in a portable format</li>
+            <li>Opt-out of marketing communications</li>
+        </ul>
+        
+        <h2 class="text-2xl font-semibold mt-8 mb-4">6. Cookies and Tracking</h2>
+        <p class="mb-4">We use essential cookies for authentication and session management. Analytics cookies help us understand how users interact with our service. You can manage cookie preferences through your browser settings.</p>
+        
+        <h2 class="text-2xl font-semibold mt-8 mb-4">7. Children's Privacy</h2>
+        <p class="mb-4">LaunchForge is not intended for users under 18 years of age. We do not knowingly collect information from children.</p>
+        
+        <h2 class="text-2xl font-semibold mt-8 mb-4">8. Changes to This Policy</h2>
+        <p class="mb-4">We may update this Privacy Policy periodically. We will notify you of significant changes via email or through the service.</p>
+        
+        <h2 class="text-2xl font-semibold mt-8 mb-4">9. Contact Us</h2>
+        <p class="mb-4">For privacy-related questions, contact us at privacy@launchforge.io or through our <a href="/contact" class="text-purple-600 hover:text-purple-800">contact page</a>.</p>
     </div>
-    <div class="bg-white/10 backdrop-blur-lg rounded-2xl p-8 mb-6">
-      <h2 class="text-xl font-semibold text-white mb-4">Data Security</h2>
-      <p class="text-gray-300">We implement industry-standard security measures to protect your data.</p>
-    </div>
-    <div class="text-center mt-8"><a href="/" class="text-purple-400 hover:text-purple-300">Back to Home</a></div>
-  </div>
 </div>
 {% endblock %}

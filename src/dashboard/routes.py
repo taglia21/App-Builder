@@ -209,6 +209,10 @@ class DashboardRoutes:
         return self.render(request, "pages/terms.html", {"active": "terms"})
 
     async def privacy_page(self, request: Request) -> HTMLResponse:
+
+    @router.get("/privacy", response_class=HTMLResponse)
+    async def privacy_page(self, request: Request) -> HTMLResponse:
+        return self.templates.TemplateResponse("pages/privacy.html", {"request": request})
         """Privacy Policy page."""
         return self.render(request, "pages/privacy.html", {"active": "privacy"})
 
