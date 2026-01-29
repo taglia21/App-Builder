@@ -15,6 +15,7 @@ import secrets
 
 from .routes import create_dashboard_router
 from ..billing.routes import create_billing_router
+from ..auth.web_routes import router as auth_router
 from .api import create_api_router
 # Import integrations router
 try:
@@ -49,7 +50,8 @@ except ImportError:
 
 # Initialize logging
 setup_logging()
-setup_sentry()
+setup_sentry()cd /workspaces/App-Builder && ls -la src/dashboard/templates/pages/ | grep -E 'login|register|auth'
+
 
 logger = get_logger(__name__)
 
@@ -124,6 +126,8 @@ def create_app() -> FastAPI:
     if templates_path.exists():
         templates = Jinja2Templates(directory=str(templates_path))
         templates.env.globals['csrf_token'] = lambda: secrets.token_hex(32)
+    # Include auth routes
+    app.include_router(auth_router)
         app.include_router(create_dashboard_router(templates))
     app.include_router(create_billing_router(templates), prefix="/billing")
     
