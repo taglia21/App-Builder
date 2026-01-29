@@ -643,3 +643,4 @@ Made with ❤️ by the LaunchForge team
 [Star on GitHub](https://github.com/taglia21/App-Builder) · [Get Perplexity Key](https://www.perplexity.ai/settings/api) · [Read Docs](docs/API_REFERENCE.md)
 
 </div>
+# Trigger deploy
