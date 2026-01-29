@@ -1,0 +1,31 @@
+{% extends "base_pro.html" %}
+{% block title %}Contact Us - LaunchForge{% endblock %}
+
+{% block content %}
+<div class="pro-page-header">
+    <div class="pro-container">
+        <h1 class="pro-page-title">Contact Us</h1>
+        <p class="pro-page-subtitle">Get in touch with our team</p>
+    </div>
+</div>
+
+<div class="pro-container" style="padding: 3rem 1rem;">
+    <div style="max-width: 600px; margin: 0 auto;">
+        <form method="POST" action="/contact" class="pro-card">
+            <div class="pro-form-group">
+                <label class="pro-label">Name</label>
+                <input type="text" name="name" class="pro-input" required>
+            </div>
+            <div class="pro-form-group">
+                <label class="pro-label">Email</label>
+                <input type="email" name="email" class="pro-input" required>
+            </div>
+            <div class="pro-form-group">
+                <label class="pro-label">Message</label>
+                <textarea name="message" class="pro-textarea" rows="5" required></textarea>
+            </div>
+            <button type="submit" class="pro-btn-primary">Send Message</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
