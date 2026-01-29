@@ -125,5 +125,82 @@ def create_billing_router(templates):
             print(f"Subscription cancelled: {subscription['id']}")
         
         return JSONResponse({"status": "received"})
+cd /workspaces/App-Builder/src && cat > dashboard/templates/pages/about.html << 'ENDABOUT'
+{% extends "base_modern.html" %}
+{% block title %}About Us - LaunchForge{% endblock %}
+
+{% block content %}
+<!-- Professional About Page matching dashboard aesthetic -->
+<div class="content-wrapper">
+    <div class="page-header">
+        <h1>About LaunchForge</h1>
+        <p class="subtitle">Empowering developers to build faster with AI-powered technology</p>
+    </div>
+
+    <div class="content-section">
+        <div class="card">
+            <h2>Our Mission</h2>
+            <p>LaunchForge was built to democratize AI-powered application development. We believe every developer should have access to cutting-edge tools that amplify their creativity and productivity. Our platform transforms ideas into production-ready applications in minutes, not months.</p>
+        </div>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">🚀</div>
+                <h3>Rapid Development</h3>
+                <p>Generate production-ready code in minutes, not hours. Ship features faster than ever before.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">🤖</div>
+                <h3>AI-Powered</h3>
+                <p>Leverage advanced AI models to build smarter, more efficient applications with ease.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">🔧</div>
+                <h3>Developer-Friendly</h3>
+                <p>Built by developers, for developers with industry best practices baked in.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">📈</div>
+                <h3>Enterprise Scale</h3>
+                <p>From prototypes to production-grade applications that scale seamlessly.</p>
+            </div>
+        </div>
+
+        <div class="card values-section">
+            <h2>Our Core Values</h2>
+            <div class="values-list">
+                <div class="value-item">
+                    <h4>Innovation First</h4>
+                    <p>We're constantly pushing the boundaries of what's possible with AI and modern development practices.</p>
+                </div>
+                <div class="value-item">
+                    <h4>Quality Over Speed</h4>
+                    <p>Every feature we ship is rigorously tested and production-ready from day one.</p>
+                </div>
+                <div class="value-item">
+                    <h4>Transparent Partnership</h4>
+                    <p>Clear pricing, no hidden costs, and honest communication every step of the way.</p>
+                </div>
+                <div class="value-item">
+                    <h4>Community Driven</h4>
+                    <p>We learn from and grow with our vibrant developer community worldwide.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="cta-section">
+            <h2>Ready to Build Faster?</h2>
+            <p>Join thousands of developers using LaunchForge to bring their ideas to life</p>
+            <a href="/register" class="btn btn-primary">Get Started Free</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+ENDABOUT
+echo '✅ About page rebuilt to match dashboard professional style'
+cd /workspaces/App-Builder && git add -A && git commit -m "PROFESSIONAL REBUILD: About page now matches dashboard aesthetic exactly" && git push origin main
     
     return router

@@ -30,6 +30,7 @@ from src.auth.schemas import (
     RegisterRequest,
     LoginRequest,
     RefreshRequest,
+ls -la src/auth/web_routes.py src/dashboard/templates/pages/login.html src/dashboard/templates/pages/register.html
     VerifyEmailRequest,
     ForgotPasswordRequest,
     ResetPasswordRequest,
