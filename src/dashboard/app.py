@@ -119,38 +119,38 @@ def create_app() -> FastAPI:
         }
     
     # Setup rate limiting
-        setup_rate_limiting(app)
-        
-        # Setup templates and routers
-        templates_path = Path(__file__).parent / "templates"
-        if templates_path.exists():
-            templates = Jinja2Templates(directory=str(templates_path))
-            templates.env.globals['csrf_token'] = lambda: secrets.token_hex(32)
-        # Include auth routes
-        app.include_router(auth_router)
+    setup_rate_limiting(app)
+    
+    # Setup templates and routers
+    templates_path = Path(__file__).parent / "templates"
+    if templates_path.exists():
+        templates = Jinja2Templates(directory=str(templates_path))
+        templates.env.globals['csrf_token'] = lambda: secrets.token_hex(32)
+    # Include auth routes
+    app.include_router(auth_router)
     app.include_router(create_dashboard_router(templates))
-    app.include_router(create_billing_router(templates), prefix="/billing")
-        
-    app.include_router(create_api_router(), prefix="/api")
-    # Include integrations router
-    if integrations_router:
-        app.include_router(integrations_router)
+app.include_router(create_billing_router(templates), prefix="/billing")
     
-    # Mount static files if directory exists
-    static_path = Path(__file__).parent / "static"
-    if static_path.exists():
-            app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
-    
-    
-    # Error handlers
-    @app.exception_handler(404)
-    async def not_found(request, exc):
-        return templates.TemplateResponse("errors/404.html", {"request": request}, status_code=404)
-    
-    @app.exception_handler(500)
-    async def server_error(request, exc):
-            return templates.TemplateResponse("errors/500.html", {"request": request}, status_code=500)
-            return app
+app.include_router(create_api_router(), prefix="/api")
+# Include integrations router
+if integrations_router:
+    app.include_router(integrations_router)
+
+# Mount static files if directory exists
+static_path = Path(__file__).parent / "static"
+if static_path.exists():
+        app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
+
+
+# Error handlers
+@app.exception_handler(404)
+async def not_found(request, exc):
+    return templates.TemplateResponse("errors/404.html", {"request": request}, status_code=404)
+
+@app.exception_handler(500)
+async def server_error(request, exc):
+        return templates.TemplateResponse("errors/500.html", {"request": request}, status_code=500)
+        return app
 
 
 # Export for compatibility
