@@ -134,7 +134,7 @@ def create_app() -> FastAPI:
     app.include_router(create_api_router(), prefix="/api")
     # Include integrations router
 if integrations_router:
-    app.include_router(integrations_router)
+        app.include_router(integrations_router)
 
 # Mount static files if directory exists
 static_path = Path(__file__).parent / "static"
