@@ -127,12 +127,12 @@ def create_app() -> FastAPI:
         templates = Jinja2Templates(directory=str(templates_path))
         templates.env.globals['csrf_token'] = lambda: secrets.token_hex(32)
     # Include auth routes
-    app.include_router(auth_router)
-    app.include_router(create_dashboard_router(templates))
-app.include_router(create_billing_router(templates), prefix="/billing")
-    
-app.include_router(create_api_router(), prefix="/api")
-# Include integrations router
+        app.include_router(auth_router)
+        app.include_router(create_dashboard_router(templates))
+    app.include_router(create_billing_router(templates), prefix="/billing")
+        
+    app.include_router(create_api_router(), prefix="/api")
+    # Include integrations router
 if integrations_router:
     app.include_router(integrations_router)
 
