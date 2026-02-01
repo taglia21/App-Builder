@@ -22,6 +22,12 @@ try:
     from src.api.integrations_router import router as integrations_router
 except ImportError:
     integrations_router = None
+
+# Import multi-agent router for Organizational Intelligence
+try:
+    from src.agents.routes import multi_agent_router
+except ImportError:
+    multi_agent_router = None
 from .rate_limiter import setup_rate_limiting
 
 # Import logging system with fallback for minimal deployments
@@ -135,6 +141,10 @@ def create_app() -> FastAPI:
     # Include integrations router
     if integrations_router:
         app.include_router(integrations_router)
+    
+    # Include multi-agent router for Organizational Intelligence
+    if multi_agent_router:
+        app.include_router(multi_agent_router)
 
     # Mount static files if directory exists
     static_path = Path(__file__).parent / "static"
