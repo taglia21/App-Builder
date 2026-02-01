@@ -160,7 +160,7 @@ def create_app() -> FastAPI:
     @app.exception_handler(500)
     async def server_error(request, exc):
         return templates.TemplateResponse("errors/500.html", {"request": request}, status_code=500)
-        return app
+    return app
 
 
 # Export for compatibility

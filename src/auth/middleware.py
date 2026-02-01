@@ -1,5 +1,5 @@
-"""
 from fastapi import Header
+"""
 LaunchForge Authentication Middleware
 
 JWT verification middleware for protecting API routes.
