@@ -50,7 +50,7 @@ except ImportError:
 
 # Initialize logging
 setup_logging()
-    setup_sentry()
+    # p_sentry()
 
 
 logger = get_logger(__name__)
