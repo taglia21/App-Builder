@@ -50,7 +50,7 @@ except ImportError:
 
 # Initialize logging
 setup_logging()
-setup_sentry()cd /workspaces/App-Builder && ls -la src/dashboard/templates/pages/ | grep -E 'login|register|auth'
+    setup_sentry()
 
 
 logger = get_logger(__name__)
