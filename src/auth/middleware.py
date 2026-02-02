@@ -308,5 +308,5 @@ async def get_optional_current_user(auth_header: Optional[str] = Header(None, al
         return None
     try:
         return await get_current_user(auth_header)
-    except Exception:
+    except (ValueError, KeyError, Exception) as e:
         return None

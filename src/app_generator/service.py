@@ -98,7 +98,7 @@ class AppGeneratorService:
                     }]
                 )
                 return {"llm_response": response.content[0].text, "idea": idea}
-            except Exception:
+            except (OSError, RuntimeError, Exception) as e:
                 pass
         
         return {

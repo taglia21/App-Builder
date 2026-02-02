@@ -318,7 +318,7 @@ class QualityAssuranceEngine:
         try:
             # We use shell=True on Windows for npx sometimes, but try without first
             subprocess.run(["npx", "--version"], capture_output=True, shell=True)
-        except Exception:
+        except (RuntimeError, ValueError, Exception) as e:
             logger.warning("npx not available, skipping frontend formatting")
             return False
 

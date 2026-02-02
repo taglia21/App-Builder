@@ -1,0 +1,51 @@
+# Git
+.git
+.gitignore
+.github
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+.pytest_cache
+.coverage
+htmlcov
+.tox
+.nox
+*.egg-info
+.eggs
+
+# Virtual environments
+venv
+env
+.venv
+.env*
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Tests (not needed in production)
+tests/
+
+# Documentation
+*.md
+docs/
+
+# Build artifacts
+build/
+dist/
+*.egg
+
+# Docker
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Misc
+*.log
+*.tmp

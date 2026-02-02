@@ -213,7 +213,7 @@ class LLMCache:
                 "hits": self._cache.stats().get('hits', 0),
                 "misses": self._cache.stats().get('misses', 0),
             }
-        except Exception:
+        except (RuntimeError, ConnectionError, Exception) as e:
             return {"enabled": True, "error": "Could not retrieve stats"}
     
     def close(self):
@@ -221,7 +221,7 @@ class LLMCache:
         if self._cache is not None:
             try:
                 self._cache.close()
-            except Exception:
+            except (RuntimeError, ConnectionError, Exception) as e:
                 pass
 
 

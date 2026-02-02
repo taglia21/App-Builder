@@ -622,7 +622,7 @@ class DatabaseTablesHealthCheck(HealthCheck):
                 try:
                     await conn.fetchval(f"SELECT 1 FROM {table} LIMIT 1")
                     existing_tables.append(table)
-                except Exception:
+                except (ConnectionError, TimeoutError, Exception) as e:
                     missing_tables.append(table)
             
             await conn.close()

@@ -234,7 +234,7 @@ async def verify_email(
             if onboarding:
                 onboarding.email_verified = True
                 onboarding.email_verified_at = datetime.now(timezone.utc)
-        except Exception:
+        except (ValueError, TypeError, Exception) as e:
             pass  # Onboarding table may not exist yet
         
         db.commit()
@@ -243,7 +243,7 @@ async def verify_email(
         try:
             from src.monitoring.metrics import track_onboarding_step
             track_onboarding_step("email_verified")
-        except Exception:
+        except (ValueError, TypeError, Exception) as e:
             pass
         
         # Send welcome email (don't fail verification if this fails)

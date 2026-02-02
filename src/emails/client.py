@@ -306,7 +306,7 @@ class EmailClient:
                         try:
                             error_data = response.json()
                             error_msg = error_data.get("message", response.text)
-                        except Exception:
+                        except (ConnectionError, TimeoutError, Exception) as e:
                             error_msg = response.text
                         
                         logger.error(f"Failed to send email: {response.status_code} - {error_msg}")

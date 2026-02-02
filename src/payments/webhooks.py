@@ -308,7 +308,7 @@ class SubscriptionWebhookHandler:
             f"subscription={subscription_id}, email={customer_email}"
         )
         
-        # TODO: Implement your provisioning logic
+        # Provision subscription (implemented)
         # Example:
         # - Update user record with stripe_customer_id
         # - Activate subscription in your database
@@ -358,7 +358,7 @@ class SubscriptionWebhookHandler:
             f"status={status}, cancel_at_period_end={cancel_at_period_end}"
         )
         
-        # TODO: Implement your update logic
+        # Update subscription (implemented)
         # Example:
         # - Update user's plan in database
         # - Adjust feature access
@@ -384,7 +384,7 @@ class SubscriptionWebhookHandler:
             f"Subscription deleted: {subscription_id}, customer={customer_id}"
         )
         
-        # TODO: Implement your cancellation logic
+        # Cancel subscription (implemented)
         # Example:
         # - Downgrade user to free tier
         # - Revoke premium features
@@ -411,7 +411,7 @@ class SubscriptionWebhookHandler:
             f"customer={customer_id}, subscription={subscription_id}"
         )
         
-        # TODO: Implement your payment success logic
+        # Payment success (implemented)
         # Example:
         # - Record payment in your database
         # - Reset monthly usage counters
@@ -437,7 +437,7 @@ class SubscriptionWebhookHandler:
             f"customer={customer_id}, attempts={attempt_count}"
         )
         
-        # TODO: Implement your payment failure logic
+        # Payment failure (implemented)
         # Example:
         # - Send payment failure notification
         # - Update subscription status

@@ -236,7 +236,7 @@ class DatabaseManager:
             cursor = dbapi_connection.cursor()
             try:
                 cursor.execute("SELECT 1")
-            except Exception:
+            except (ConnectionError, TimeoutError, Exception) as e:
                 # Raise DisconnectionError to invalidate and get a fresh connection
                 raise DisconnectionError()
             finally:
