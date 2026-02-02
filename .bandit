@@ -1,0 +1,4 @@
+[bandit]
+exclude: tests,venv,.venv,env
+skips: B101,B601
+targets: src

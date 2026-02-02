@@ -1,32 +1,44 @@
-[tool.poetry]
-name = "startup-generator"
+[project]
+name = "app-builder"
 version = "1.0.0"
-description = "Multi-LLM Automated Startup Generation Engine"
-authors = ["Startup Generator Team"]
+description = "AI-powered application builder"
+requires-python = ">=3.10"
 
 [tool.black]
 line-length = 100
-target-version = ['py311']
+target-version = ['py310', 'py311', 'py312']
 include = '\.pyi?$'
+extend-exclude = '''
+/(venv|.venv|env|.env|migrations)/
+'''
 
 [tool.isort]
 profile = "black"
 line_length = 100
-multi_line_output = 3
+skip = ["venv", ".venv", "env", "migrations"]
 
-[tool.mypy]
-python_version = "3.11"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+select = ["E", "F", "W", "I", "N", "B", "S"]
+ignore = ["E501", "B008", "S101"]
+exclude = ["venv", ".venv", "migrations", "tests"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
-python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "-v --cov=src --cov-report=html --cov-report=term"
+asyncio_mode = "auto"
+addopts = "-v --tb=short"
 
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+[tool.coverage.run]
+source = ["src"]
+omit = ["*/tests/*", "*/__pycache__/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]
