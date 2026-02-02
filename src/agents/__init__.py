@@ -26,3 +26,28 @@ __all__ = [
     # Orchestrator
     "AIOfficeOrchestrator",
 ]
+
+# Organizational Intelligence Framework
+from .governance_orchestrator import GovernanceOrchestrator
+from .governance import (
+    ExecutiveBranch,
+    LegislativeBranch,
+    JudicialBranch,
+    ExecutionResult,
+    LegislativeSession,
+    JudicialReview,
+    ReviewDecision
+)
+
+__all__.extend([
+    # Governance Orchestrator
+    "GovernanceOrchestrator",
+    # Governance Branches
+    "ExecutiveBranch",
+    "LegislativeBranch",
+    "JudicialBranch",
+    "ExecutionResult",
+    "LegislativeSession",
+    "JudicialReview",
+    "ReviewDecision",
+])

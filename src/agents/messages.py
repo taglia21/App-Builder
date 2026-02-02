@@ -131,3 +131,84 @@ class OrchestrationState(BaseModel):
     def can_retry(self) -> bool:
         """Check if we can retry based on max retries."""
         return self.retry_count < self.max_retries
+
+
+# ============================================================================
+# Organizational Intelligence Framework - Extended Message Types
+# ============================================================================
+
+@dataclass
+class PlanStep:
+    """A single step in an execution plan."""
+    step_id: int
+    name: str
+    description: str
+    dependencies: List[int] = Field(default_factory=list)
+    validation_criteria: List[str] = Field(default_factory=list)
+    estimated_effort: str = "medium"  # low, medium, high
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ExtendedExecutionPlan(BaseModel):
+    """
+    Extended execution plan with support for rival planner synthesis.
+    
+    Extends the basic ExecutionPlan with fields needed for the
+    Organizational Intelligence framework.
+    """
+    plan_id: str
+    planner_type: str  # conservative, innovative, pragmatic, synthesized
+    steps: List[PlanStep]
+    confidence_score: float = 0.0
+    risk_assessment: str = "medium"  # low, medium, high
+    estimated_complexity: str = "moderate"  # simple, moderate, complex
+    technology_choices: List[Dict[str, Any]] = Field(default_factory=list)
+    risk_mitigations: List[str] = Field(default_factory=list)
+    testing_strategy: str = ""
+    reasoning: str = ""
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ExtendedCriticReview(BaseModel):
+    """
+    Extended critic review with specialty field for rival critics.
+    
+    Extends the basic CriticReview to support the multi-critic
+    judicial review system.
+    """
+    critic_role: AgentRole
+    specialty: str = "general"  # code, output, security, performance, ux
+    decision: CriticDecision
+    reasoning: str
+    issues: List[Dict[str, Any]] = Field(default_factory=list)
+    suggestions: List[str] = Field(default_factory=list)
+    score: float = 0.0
+    veto_reason: Optional[str] = None
+
+
+class GovernanceState(BaseModel):
+    """
+    State tracking for the governance model.
+    
+    Tracks the state across all three branches of the
+    organizational intelligence governance model.
+    """
+    # Legislative state
+    current_session_id: Optional[str] = None
+    proposals_received: int = 0
+    synthesis_complete: bool = False
+    
+    # Judicial state
+    review_id: Optional[str] = None
+    critics_completed: int = 0
+    approval_status: Optional[str] = None  # approved, rejected, needs_revision
+    
+    # Executive state
+    execution_id: Optional[str] = None
+    current_step: int = 0
+    total_steps: int = 0
+    execution_status: str = "pending"  # pending, in_progress, completed, failed, vetoed
+    
+    # Overall
+    phase: str = "planning"  # planning, review, execution, complete
+    error_log: List[str] = Field(default_factory=list)
