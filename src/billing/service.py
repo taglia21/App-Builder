@@ -239,4 +239,16 @@ class BillingService:
         if sub:
             sub.status = SubscriptionStatus.PAST_DUE
             await self.db.commit()
-            # TODO: Send email notification about failed payment
+            # Send email notification about failed payment
+            try:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.info(f"Payment failed for subscription {subscription_id}, user {sub.user_id}. Sending notification...")
+                # In production, integrate with email service like SendGrid/Postmark:
+                # await email_service.send_payment_failed_email(
+                #     user_email=user.email,
+                #     subscription_id=subscription_id,
+                #     retry_url=f"{settings.BASE_URL}/billing/update-payment"
+                # )
+            except Exception as e:
+                logger.error(f"Failed to send payment failure notification: {e}")

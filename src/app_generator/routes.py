@@ -108,7 +108,61 @@ async def get_files(generation_id: str):
 
 
 @router.get("/{generation_id}/download")
-async def download_generation(generation_id: str):
-    """Download generated app as ZIP (placeholder)."""
-    # TODO: Implement ZIP creation and download
-    raise HTTPException(status_code=501, detail="Download not yet implemented")
+async def download_generation(
+    generation_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """Download generated app as ZIP file."""
+    import io
+    import zipfile
+    from fastapi.responses import StreamingResponse
+    
+    # Get the generation from database
+    result = await db.execute(
+        select(Generation).where(Generation.id == generation_id)
+    )
+    generation = result.scalar_one_or_none()
+    
+    if not generation:
+        raise HTTPException(status_code=404, detail="Generation not found")
+    
+    if not generation.generated_code:
+        raise HTTPException(status_code=400, detail="No generated code available")
+    
+    # Create ZIP file in memory
+    zip_buffer = io.BytesIO()
+    
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+        generated_files = generation.generated_code
+        
+        # Handle both dict and list formats
+        if isinstance(generated_files, dict):
+            files_to_add = generated_files.get('files', generated_files)
+        else:
+            files_to_add = generated_files
+        
+        # Add each file to the ZIP
+        if isinstance(files_to_add, dict):
+            for filepath, content in files_to_add.items():
+                if isinstance(content, str):
+                    zf.writestr(filepath, content)
+                elif isinstance(content, dict) and 'content' in content:
+                    zf.writestr(filepath, content['content'])
+        elif isinstance(files_to_add, list):
+            for file_entry in files_to_add:
+                if isinstance(file_entry, dict):
+                    filepath = file_entry.get('path', file_entry.get('filename', 'unnamed_file'))
+                    content = file_entry.get('content', '')
+                    zf.writestr(filepath, content)
+    
+    zip_buffer.seek(0)
+    
+    # Generate filename from project name or generation ID
+    project_name = generation.generated_code.get('project_name', generation_id) if isinstance(generation.generated_code, dict) else generation_id
+    filename = f"{project_name.replace(' ', '_')}_app.zip"
+    
+    return StreamingResponse(
+        zip_buffer,
+        media_type="application/zip",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )

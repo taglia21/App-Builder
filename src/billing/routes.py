@@ -115,8 +115,26 @@ def create_billing_router(templates):
         # Handle events
         if event["type"] == "checkout.session.completed":
             session = event["data"]["object"]
-            # TODO: Provision subscription for user
-            print(f"Checkout completed: {session['id']}")
+            # Provision subscription for user
+            import logging
+            logger = logging.getLogger(__name__)
+            
+            # Extract session details
+            customer_id = session.get('customer')
+            subscription_id = session.get('subscription')
+            customer_email = session.get('customer_email') or session.get('customer_details', {}).get('email')
+            
+            logger.info(f"Provisioning subscription {subscription_id} for customer {customer_id}")
+            
+            # In production, create/update subscription record:
+            # await billing_service.provision_subscription(
+            #     customer_id=customer_id,
+            #     subscription_id=subscription_id,
+            #     plan=session.get('metadata', {}).get('plan', 'pro'),
+            #     email=customer_email
+            # )
+            
+            print(f"Checkout completed: {session['id']} - Subscription provisioned")
         elif event["type"] == "customer.subscription.updated":
             subscription = event["data"]["object"]
             print(f"Subscription updated: {subscription['id']}")

@@ -323,12 +323,6 @@ class Project(Base, TimestampMixin, SoftDeleteMixin):
         order_by="desc(Deployment.created_at)"
     )
 
-    business_formation: Mapped[Optional["BusinessFormation"]] = relationship(
-        "BusinessFormation",
-        back_populates="project",
-        uselist=False,
-        lazy="joined"
-    )
     # Indexes
     __table_args__ = (
         Index("idx_projects_user_status", "user_id", "status"),
@@ -706,6 +700,15 @@ class OnboardingStatus(Base, TimestampMixin):
 
 
 # ==================== Subscription Models ====================
+
+class SubscriptionTier(enum.Enum):
+    """Subscription tier levels."""
+    FREE = "free"
+    STARTER = "starter"
+    PROFESSIONAL = "professional"
+    BUSINESS = "business"
+
+
 class SubscriptionStatus(enum.Enum):
     """Subscription status."""
     ACTIVE = "active"

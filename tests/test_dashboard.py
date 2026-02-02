@@ -341,7 +341,7 @@ class TestDashboardRoutes:
         routes = DashboardRoutes(mock_templates)
         result = await routes.dashboard(mock_request)
         
-        assert "pages/dashboard.html" in str(call_args)
+        assert "pages/dashboard.html" in str(mock_templates.TemplateResponse.call_args)
     
     @pytest.mark.asyncio
     async def test_new_project_route(self, mock_templates, mock_request):
@@ -351,7 +351,7 @@ class TestDashboardRoutes:
         routes = DashboardRoutes(mock_templates)
         result = await routes.new_project(mock_request)
         
-        assert "pages/new_project.html" in str(call_args)
+        assert "pages/new_project.html" in str(mock_templates.TemplateResponse.call_args)
     
     @pytest.mark.asyncio
     async def test_settings_route(self, mock_templates, mock_request):
@@ -361,7 +361,7 @@ class TestDashboardRoutes:
         routes = DashboardRoutes(mock_templates)
         result = await routes.settings(mock_request)
         
-        assert "pages/settings.html" in str(call_args)
+        assert "pages/settings.html" in str(mock_templates.TemplateResponse.call_args)
     
     @pytest.mark.asyncio
     async def test_billing_route(self, mock_templates, mock_request):
@@ -371,7 +371,7 @@ class TestDashboardRoutes:
         routes = DashboardRoutes(mock_templates)
         result = await routes.billing(mock_request)
         
-        assert "pages/billing.html" in str(call_args)
+        assert "pages/billing.html" in str(mock_templates.TemplateResponse.call_args)
 
 
 class TestDashboardRouter:
