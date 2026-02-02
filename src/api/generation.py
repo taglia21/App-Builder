@@ -3,7 +3,7 @@ App Generation API - Handles generating full app codebases from ideas.
 """
 import uuid
 import asyncio
-from datetime import datetime
+from datetime import timezone, datetime
 from pathlib import Path
 from typing import Optional
 from starlette.requests import Request
@@ -81,7 +81,7 @@ async def generate_app(request: Request) -> JSONResponse:
             'status': 'generated',
             'output_dir': str(output_dir),
             'files_count': len(generated.files) if hasattr(generated, 'files') else 0,
-            'generated_at': datetime.utcnow().isoformat(),
+            'generated_at': datetime.now(timezone.utc).isoformat(),
             'download_ready': True
         }
         

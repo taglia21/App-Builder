@@ -5,7 +5,7 @@ Repository pattern implementation for database operations.
 Provides type-safe, reusable CRUD operations for all models.
 """
 
-from datetime import datetime
+from datetime import timezone, datetime
 from typing import Generic, List, Optional, Type, TypeVar
 from uuid import uuid4
 
@@ -157,7 +157,7 @@ class UserRepository(BaseRepository[User]):
     
     def update_login(self, user_id: str) -> Optional[User]:
         """Update user's last login timestamp."""
-        return self.update(user_id, last_login_at=datetime.utcnow())
+        return self.update(user_id, last_login_at=datetime.now(timezone.utc))
     
     def add_credits(self, user_id: str, amount: int) -> Optional[User]:
         """Add credits to user account."""

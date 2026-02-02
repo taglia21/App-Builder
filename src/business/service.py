@@ -13,7 +13,7 @@ This is the main entry point for business formation features.
 import os
 import logging
 from typing import Optional, Dict, Any, List
-from datetime import datetime
+from datetime import timezone, datetime
 from dataclasses import dataclass, field
 
 from src.business.models import (
@@ -209,7 +209,7 @@ class BusinessFormationService:
             result = await self.formation.form_llc(request)
             status.formation_id = result.request_id
             status.formation_status = result.status
-            status.updated_at = datetime.utcnow()
+            status.updated_at = datetime.now(timezone.utc)
             
             logger.info(f"Formation submitted: {result.request_id}")
         except FormationError as e:
@@ -258,7 +258,7 @@ class BusinessFormationService:
             status.ein_status = result.status
             if result.ein:
                 status.ein = result.ein
-            status.updated_at = datetime.utcnow()
+            status.updated_at = datetime.now(timezone.utc)
             
             logger.info(f"EIN application submitted: {result.request_id}")
         except FormationError as e:
@@ -286,7 +286,7 @@ class BusinessFormationService:
             status.banking_id = result.request_id
             status.banking_status = result.status
             status.bank_name = result.bank_name
-            status.updated_at = datetime.utcnow()
+            status.updated_at = datetime.now(timezone.utc)
             
             logger.info(f"Banking application submitted: {result.request_id}")
         except BankingError as e:
@@ -311,7 +311,7 @@ class BusinessFormationService:
             status.domain_id = result.request_id
             status.domain_status = result.status
             status.domain_name = result.domain_name
-            status.updated_at = datetime.utcnow()
+            status.updated_at = datetime.now(timezone.utc)
             
             logger.info(f"Domain registered: {result.domain_name}")
         except DomainError as e:
@@ -387,7 +387,7 @@ class BusinessFormationService:
         except DomainError:
             pass
         
-        status.updated_at = datetime.utcnow()
+        status.updated_at = datetime.now(timezone.utc)
         return status
     
     def estimate_costs(

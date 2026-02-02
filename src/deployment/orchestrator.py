@@ -10,7 +10,7 @@ import asyncio
 import logging
 from typing import Optional, Dict, Any, List
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import timezone, datetime
 from pathlib import Path
 from enum import Enum
 
@@ -192,7 +192,7 @@ class DeploymentOrchestrator:
             project_id=plan.project_id,
             project_name=plan.project_name,
             status=DeploymentStatus.IN_PROGRESS,
-            started_at=datetime.utcnow(),
+            started_at=datetime.now(timezone.utc),
         )
         
         self._deployments[plan.project_id] = summary
@@ -256,22 +256,22 @@ class DeploymentOrchestrator:
             
             # All stages complete
             summary.status = DeploymentStatus.SUCCESS
-            summary.completed_at = datetime.utcnow()
+            summary.completed_at = datetime.now(timezone.utc)
             
             logger.info(f"Deployment completed for {plan.project_name}")
             
         except Exception as e:
             logger.error(f"Deployment failed: {e}")
             summary.status = DeploymentStatus.FAILED
-            summary.completed_at = datetime.utcnow()
+            summary.completed_at = datetime.now(timezone.utc)
             
             # Add failure stage if not already added
             if not summary.stages or summary.stages[-1].status != DeploymentStatus.FAILED:
                 summary.stages.append(StageResult(
                     stage=DeploymentStage.VERIFICATION,
                     status=DeploymentStatus.FAILED,
-                    started_at=datetime.utcnow(),
-                    completed_at=datetime.utcnow(),
+                    started_at=datetime.now(timezone.utc),
+                    completed_at=datetime.now(timezone.utc),
                     error=str(e),
                 ))
         
@@ -279,7 +279,7 @@ class DeploymentOrchestrator:
     
     async def _create_github_repo(self, plan: DeploymentPlan) -> StageResult:
         """Create GitHub repository and push code."""
-        started_at = datetime.utcnow()
+        started_at = datetime.now(timezone.utc)
         
         try:
             # Create repository
@@ -315,7 +315,7 @@ class DeploymentOrchestrator:
                 stage=DeploymentStage.GITHUB_REPO,
                 status=DeploymentStatus.SUCCESS,
                 started_at=started_at,
-                completed_at=datetime.utcnow(),
+                completed_at=datetime.now(timezone.utc),
                 message=f"Created repository: {repo.full_name}",
                 data={
                     "full_name": repo.full_name,
@@ -329,7 +329,7 @@ class DeploymentOrchestrator:
                 stage=DeploymentStage.GITHUB_REPO,
                 status=DeploymentStatus.FAILED,
                 started_at=started_at,
-                completed_at=datetime.utcnow(),
+                completed_at=datetime.now(timezone.utc),
                 error=str(e),
             )
     
@@ -339,7 +339,7 @@ class DeploymentOrchestrator:
         github_repo: Optional[str],
     ) -> StageResult:
         """Deploy frontend to Vercel."""
-        started_at = datetime.utcnow()
+        started_at = datetime.now(timezone.utc)
         
         try:
             config = DeploymentConfig(
@@ -364,7 +364,7 @@ class DeploymentOrchestrator:
                 stage=DeploymentStage.FRONTEND_DEPLOY,
                 status=DeploymentStatus.SUCCESS if result.success else DeploymentStatus.FAILED,
                 started_at=started_at,
-                completed_at=datetime.utcnow(),
+                completed_at=datetime.now(timezone.utc),
                 message=f"Deployed to {result.frontend_url}" if result.success else "Deployment failed",
                 data={
                     "deployment_id": result.deployment_id,
@@ -379,7 +379,7 @@ class DeploymentOrchestrator:
                 stage=DeploymentStage.FRONTEND_DEPLOY,
                 status=DeploymentStatus.FAILED,
                 started_at=started_at,
-                completed_at=datetime.utcnow(),
+                completed_at=datetime.now(timezone.utc),
                 error=str(e),
             )
     
@@ -389,7 +389,7 @@ class DeploymentOrchestrator:
         github_repo: Optional[str],
     ) -> StageResult:
         """Deploy backend to Render."""
-        started_at = datetime.utcnow()
+        started_at = datetime.now(timezone.utc)
         
         try:
             config = DeploymentConfig(
@@ -414,7 +414,7 @@ class DeploymentOrchestrator:
                 stage=DeploymentStage.BACKEND_DEPLOY,
                 status=DeploymentStatus.SUCCESS if result.success else DeploymentStatus.FAILED,
                 started_at=started_at,
-                completed_at=datetime.utcnow(),
+                completed_at=datetime.now(timezone.utc),
                 message=f"Deployed to {result.backend_url}" if result.success else "Deployment failed",
                 data={
                     "deployment_id": result.deployment_id,
@@ -429,7 +429,7 @@ class DeploymentOrchestrator:
                 stage=DeploymentStage.BACKEND_DEPLOY,
                 status=DeploymentStatus.FAILED,
                 started_at=started_at,
-                completed_at=datetime.utcnow(),
+                completed_at=datetime.now(timezone.utc),
                 error=str(e),
             )
     
@@ -439,7 +439,7 @@ class DeploymentOrchestrator:
         summary: DeploymentSummary,
     ) -> StageResult:
         """Configure environment variables across services."""
-        started_at = datetime.utcnow()
+        started_at = datetime.now(timezone.utc)
         
         try:
             configured = []
@@ -462,7 +462,7 @@ class DeploymentOrchestrator:
                 stage=DeploymentStage.ENVIRONMENT_CONFIG,
                 status=DeploymentStatus.SUCCESS,
                 started_at=started_at,
-                completed_at=datetime.utcnow(),
+                completed_at=datetime.now(timezone.utc),
                 message=f"Configured: {', '.join(configured)}",
                 data={"configured": configured},
             )
@@ -472,13 +472,13 @@ class DeploymentOrchestrator:
                 stage=DeploymentStage.ENVIRONMENT_CONFIG,
                 status=DeploymentStatus.FAILED,
                 started_at=started_at,
-                completed_at=datetime.utcnow(),
+                completed_at=datetime.now(timezone.utc),
                 error=str(e),
             )
     
     async def _verify_deployment(self, summary: DeploymentSummary) -> StageResult:
         """Verify all deployments are healthy."""
-        started_at = datetime.utcnow()
+        started_at = datetime.now(timezone.utc)
         
         checks = []
         all_pass = True
@@ -520,7 +520,7 @@ class DeploymentOrchestrator:
                 stage=DeploymentStage.VERIFICATION,
                 status=DeploymentStatus.SUCCESS if all_pass else DeploymentStatus.FAILED,
                 started_at=started_at,
-                completed_at=datetime.utcnow(),
+                completed_at=datetime.now(timezone.utc),
                 message="All checks passed" if all_pass else "Some checks failed",
                 data={"checks": checks},
                 error=None if all_pass else "Verification failed",
@@ -531,7 +531,7 @@ class DeploymentOrchestrator:
                 stage=DeploymentStage.VERIFICATION,
                 status=DeploymentStatus.FAILED,
                 started_at=started_at,
-                completed_at=datetime.utcnow(),
+                completed_at=datetime.now(timezone.utc),
                 error=str(e),
             )
     

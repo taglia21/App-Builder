@@ -2,7 +2,7 @@
 Scoring and Evaluation Engine for ranking startup ideas.
 """
 
-from datetime import datetime
+from datetime import timezone, datetime
 from typing import Dict, List
 from uuid import UUID
 
@@ -75,7 +75,7 @@ class ScoringEngine:
         logger.info(f"Top idea has score: {evaluated_ideas[0].total_score:.2f}")
 
         return EvaluationReport(
-            evaluation_timestamp=datetime.utcnow(),
+            evaluation_timestamp=datetime.now(timezone.utc),
             evaluated_ideas=evaluated_ideas,
             selected_idea_id=selected_id,
             selection_reasoning=selection_reasoning,

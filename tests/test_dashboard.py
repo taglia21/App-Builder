@@ -5,7 +5,7 @@ Tests for FastAPI + HTMX dashboard functionality.
 """
 
 import pytest
-from datetime import datetime
+from datetime import timezone, datetime
 from unittest.mock import Mock, MagicMock, patch
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -126,7 +126,7 @@ class TestAPIModels:
             name="Production Key",
             key="lf_abc123",
             scopes=["read", "write"],
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )
         assert response.id == "key_123"
         assert response.key == "lf_abc123"

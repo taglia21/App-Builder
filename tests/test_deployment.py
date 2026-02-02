@@ -4,7 +4,7 @@ Tests for deployment module.
 
 import pytest
 from unittest.mock import Mock, MagicMock, patch, AsyncMock
-from datetime import datetime
+from datetime import timezone, datetime
 from pathlib import Path
 import tempfile
 import os
@@ -158,7 +158,7 @@ class TestWorkflowRun:
             status="completed",
             conclusion="success",
             html_url="https://github.com/...",
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )
         
         assert run.is_success is True
@@ -172,7 +172,7 @@ class TestWorkflowRun:
             status="in_progress",
             conclusion=None,
             html_url="https://github.com/...",
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )
         
         assert run.is_running is True
@@ -229,8 +229,8 @@ class TestStageResult:
         result = StageResult(
             stage=DeploymentStage.GITHUB_REPO,
             status=DeploymentStatus.SUCCESS,
-            started_at=datetime.utcnow(),
-            completed_at=datetime.utcnow(),
+            started_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(timezone.utc),
             message="Repository created",
             data={"full_name": "user/repo"},
         )
@@ -243,8 +243,8 @@ class TestStageResult:
         result = StageResult(
             stage=DeploymentStage.FRONTEND_DEPLOY,
             status=DeploymentStatus.FAILED,
-            started_at=datetime.utcnow(),
-            completed_at=datetime.utcnow(),
+            started_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(timezone.utc),
             error="Build failed",
         )
         
@@ -300,7 +300,7 @@ class TestDeploymentOrchestrator:
                 clone_url="https://github.com/user/test.git",
                 ssh_url="git@github.com:user/test.git",
                 default_branch="main",
-                created_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
             )
             mock_github.upload_directory.return_value = {"uploaded": 0, "files": [], "errors": []}
             mock_github.upload_file.return_value = {"commit_sha": "abc123"}
@@ -373,7 +373,7 @@ class TestDeploymentOrchestrator:
             project_id="proj_123",
             project_name="test",
             status=DeploymentStatus.SUCCESS,
-            started_at=datetime.utcnow(),
+            started_at=datetime.now(timezone.utc),
         )
         orchestrator._deployments["proj_123"] = summary
         
@@ -395,13 +395,13 @@ class TestDeploymentOrchestrator:
             project_id="proj_1",
             project_name="test1",
             status=DeploymentStatus.SUCCESS,
-            started_at=datetime.utcnow(),
+            started_at=datetime.now(timezone.utc),
         )
         orchestrator._deployments["proj_2"] = DeploymentSummary(
             project_id="proj_2",
             project_name="test2",
             status=DeploymentStatus.IN_PROGRESS,
-            started_at=datetime.utcnow(),
+            started_at=datetime.now(timezone.utc),
         )
         
         assert len(orchestrator.list_deployments()) == 2

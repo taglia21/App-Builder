@@ -10,7 +10,7 @@ import uuid
 import logging
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, Any, List
-from datetime import datetime, timedelta
+from datetime import timezone, datetime, timedelta
 import httpx
 
 from src.business.models import (
@@ -222,8 +222,8 @@ class NamecheapProvider(DomainProvider):
                         status=DomainStatus.REGISTERED,
                         domain_name=request.domain_name,
                         registrar=self.name,
-                        registered_date=datetime.utcnow(),
-                        expiry_date=datetime.utcnow() + timedelta(days=365 * request.years),
+                        registered_date=datetime.now(timezone.utc),
+                        expiry_date=datetime.now(timezone.utc) + timedelta(days=365 * request.years),
                         auto_renew=request.auto_renew,
                         privacy_protection=request.privacy_protection,
                         nameservers=request.nameservers,
@@ -436,7 +436,7 @@ class GoDaddyProvider(DomainProvider):
             body = {
                 "domain": request.domain_name,
                 "consent": {
-                    "agreedAt": datetime.utcnow().isoformat() + "Z",
+                    "agreedAt": datetime.now(timezone.utc).isoformat() + "Z",
                     "agreedBy": request.registrant_email,
                     "agreementKeys": ["DNRA"],
                 },
@@ -466,8 +466,8 @@ class GoDaddyProvider(DomainProvider):
                         status=DomainStatus.REGISTERED,
                         domain_name=request.domain_name,
                         registrar=self.name,
-                        registered_date=datetime.utcnow(),
-                        expiry_date=datetime.utcnow() + timedelta(days=365 * request.years),
+                        registered_date=datetime.now(timezone.utc),
+                        expiry_date=datetime.now(timezone.utc) + timedelta(days=365 * request.years),
                         auto_renew=request.auto_renew,
                         privacy_protection=request.privacy_protection,
                         nameservers=request.nameservers,
@@ -612,8 +612,8 @@ class MockDomainProvider(DomainProvider):
             status=DomainStatus.REGISTERED,
             domain_name=request.domain_name,
             registrar=self.name,
-            registered_date=datetime.utcnow(),
-            expiry_date=datetime.utcnow() + timedelta(days=365 * request.years),
+            registered_date=datetime.now(timezone.utc),
+            expiry_date=datetime.now(timezone.utc) + timedelta(days=365 * request.years),
             auto_renew=request.auto_renew,
             privacy_protection=request.privacy_protection,
             nameservers=request.nameservers,
@@ -652,7 +652,7 @@ class MockDomainProvider(DomainProvider):
         
         result = self._domains[domain_name]
         result.nameservers = nameservers
-        result.updated_at = datetime.utcnow()
+        result.updated_at = datetime.now(timezone.utc)
         result.message = "Nameservers updated successfully"
         
         return result

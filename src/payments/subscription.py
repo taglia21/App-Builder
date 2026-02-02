@@ -7,7 +7,7 @@ Handles subscription tiers, pricing, and plan management for LaunchForge.
 from enum import Enum
 from dataclasses import dataclass, field
 from typing import Optional, Dict, Any, List
-from datetime import datetime
+from datetime import timezone, datetime
 import os
 import logging
 
@@ -255,7 +255,7 @@ class SubscriptionManager:
                 user_id=user_id,
                 tier=tier,
                 status="active",
-                current_period_start=datetime.utcnow(),
+                current_period_start=datetime.now(timezone.utc),
             )
         
         # Get the appropriate price ID

@@ -5,7 +5,7 @@ Tests for LLC formation, EIN application, banking, and domain registration.
 """
 
 import pytest
-from datetime import datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 import uuid
 
@@ -157,7 +157,7 @@ class TestBusinessModels:
             ein="12-3456789",
             business_type=BusinessType.LLC,
             state=FormationState.DELAWARE,
-            formation_date=datetime.utcnow(),
+            formation_date=datetime.now(timezone.utc),
             owner_name="John Doe",
             owner_email="john@example.com",
             owner_phone="+1-555-123-4567",
@@ -561,7 +561,7 @@ class TestMockBankingProvider:
             ein="12-3456789",
             business_type=BusinessType.LLC,
             state=FormationState.DELAWARE,
-            formation_date=datetime.utcnow() - timedelta(days=7),
+            formation_date=datetime.now(timezone.utc) - timedelta(days=7),
             owner_name="John Doe",
             owner_email="john@example.com",
             owner_phone="+1-555-123-4567",
@@ -627,7 +627,7 @@ class TestBankingService:
             ein="98-7654321",
             business_type=BusinessType.LLC,
             state=FormationState.WYOMING,
-            formation_date=datetime.utcnow(),
+            formation_date=datetime.now(timezone.utc),
             owner_name="Test User",
             owner_email="test@example.com",
             owner_phone="+1-555-987-6543",

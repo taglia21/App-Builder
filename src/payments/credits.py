@@ -5,7 +5,7 @@ Tracks usage credits for app generation and other metered features.
 """
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from typing import Optional, Dict, Any, List
 from enum import Enum
 import logging
@@ -102,7 +102,7 @@ class CreditBalance:
         """Check if credits have expired."""
         if self.expires_at is None:
             return False
-        return datetime.utcnow() > self.expires_at
+        return datetime.now(timezone.utc) > self.expires_at
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
@@ -176,7 +176,7 @@ class CreditManager:
                 balance=0,
                 reserved=0,
                 expires_at=None,
-                last_updated=datetime.utcnow(),
+                last_updated=datetime.now(timezone.utc),
             )
         
         return self._balances[user_id][credit_type]
@@ -231,10 +231,10 @@ class CreditManager:
         
         # Update balance
         balance.balance += amount
-        balance.last_updated = datetime.utcnow()
+        balance.last_updated = datetime.now(timezone.utc)
         
         if expires_in_days:
-            balance.expires_at = datetime.utcnow() + timedelta(days=expires_in_days)
+            balance.expires_at = datetime.now(timezone.utc) + timedelta(days=expires_in_days)
         
         # Create transaction record
         self._transaction_counter += 1
@@ -246,7 +246,7 @@ class CreditManager:
             amount=amount,
             balance_after=balance.balance,
             description=description,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
             metadata=metadata or {},
             subscription_id=subscription_id,
             invoice_id=invoice_id,
@@ -307,7 +307,7 @@ class CreditManager:
         
         # Update balance
         balance.balance -= amount
-        balance.last_updated = datetime.utcnow()
+        balance.last_updated = datetime.now(timezone.utc)
         
         # Create transaction record
         self._transaction_counter += 1
@@ -319,7 +319,7 @@ class CreditManager:
             amount=-amount,
             balance_after=balance.balance,
             description=description,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
             metadata=metadata or {},
             project_id=project_id,
         )
@@ -363,7 +363,7 @@ class CreditManager:
             )
         
         balance.reserved += amount
-        balance.last_updated = datetime.utcnow()
+        balance.last_updated = datetime.now(timezone.utc)
         
         logger.debug(
             f"Reserved {amount} {credit_type.value} credits for user {user_id}"
@@ -387,7 +387,7 @@ class CreditManager:
         """
         balance = self.get_balance(user_id, credit_type)
         balance.reserved = max(0, balance.reserved - amount)
-        balance.last_updated = datetime.utcnow()
+        balance.last_updated = datetime.now(timezone.utc)
         
         logger.debug(
             f"Released {amount} {credit_type.value} credit reservation for user {user_id}"
@@ -423,7 +423,7 @@ class CreditManager:
         
         # Use from balance
         balance.balance -= amount
-        balance.last_updated = datetime.utcnow()
+        balance.last_updated = datetime.now(timezone.utc)
         
         # Create transaction record
         self._transaction_counter += 1
@@ -435,7 +435,7 @@ class CreditManager:
             amount=-amount,
             balance_after=balance.balance,
             description=description,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
             metadata=metadata or {},
             project_id=project_id,
         )
@@ -475,7 +475,7 @@ class CreditManager:
         
         # Add credits back
         balance.balance += amount
-        balance.last_updated = datetime.utcnow()
+        balance.last_updated = datetime.now(timezone.utc)
         
         # Create transaction record
         self._transaction_counter += 1
@@ -492,7 +492,7 @@ class CreditManager:
             amount=amount,
             balance_after=balance.balance,
             description=description,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
             metadata=meta,
         )
         
@@ -619,7 +619,7 @@ class CreditManager:
                 amount=0,
                 balance_after=self.get_balance(user_id, CreditType.APP_GENERATION).balance,
                 description=f"Free operation: {operation}",
-                created_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
                 metadata={"operation": operation},
                 project_id=project_id,
             )

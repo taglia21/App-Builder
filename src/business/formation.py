@@ -10,7 +10,7 @@ import uuid
 import logging
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, Any, List
-from datetime import datetime, timedelta
+from datetime import timezone, datetime, timedelta
 import httpx
 
 from src.business.models import (
@@ -160,7 +160,7 @@ class StripeAtlasProvider(FormationProvider):
                         provider=self.name,
                         provider_reference=data.get("application_url"),
                         message="Complete your Stripe Atlas application at the provided URL",
-                        estimated_completion=datetime.utcnow() + timedelta(days=5),
+                        estimated_completion=datetime.now(timezone.utc) + timedelta(days=5),
                     )
                 else:
                     raise FormationError(f"Stripe Atlas error: {response.text}")
@@ -336,7 +336,7 @@ class ZenBusinessProvider(FormationProvider):
                         provider=self.name,
                         provider_reference=data.get("order_id"),
                         message="Formation submitted successfully",
-                        estimated_completion=datetime.utcnow() + timedelta(days=3 if request.expedited else 7),
+                        estimated_completion=datetime.now(timezone.utc) + timedelta(days=3 if request.expedited else 7),
                     )
                 else:
                     raise FormationError(f"ZenBusiness error: {response.text}")
@@ -536,7 +536,7 @@ class MockFormationProvider(FormationProvider):
             provider=self.name,
             provider_reference=f"MOCK-{request_id[:8]}",
             message="Mock formation submitted",
-            estimated_completion=datetime.utcnow() + timedelta(days=3),
+            estimated_completion=datetime.now(timezone.utc) + timedelta(days=3),
         )
         
         self._formations[request_id] = result
@@ -560,9 +560,9 @@ class MockFormationProvider(FormationProvider):
         result = self._formations[request_id]
         result.status = FormationStatus.COMPLETED
         result.ein = ein
-        result.formation_date = datetime.utcnow()
+        result.formation_date = datetime.now(timezone.utc)
         result.certificate_url = f"https://mock.nexusai.dev/certs/{request_id}"
-        result.updated_at = datetime.utcnow()
+        result.updated_at = datetime.now(timezone.utc)
         
         return result
     
@@ -603,7 +603,7 @@ class MockFormationProvider(FormationProvider):
         result.status = EINStatus.RECEIVED
         result.ein = ein
         result.confirmation_letter_url = f"https://mock.nexusai.dev/ein/{request_id}"
-        result.updated_at = datetime.utcnow()
+        result.updated_at = datetime.now(timezone.utc)
         
         return result
     

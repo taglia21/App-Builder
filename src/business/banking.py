@@ -10,7 +10,7 @@ import uuid
 import logging
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, Any, List
-from datetime import datetime
+from datetime import timezone, datetime
 import httpx
 
 from src.business.models import (
@@ -445,7 +445,7 @@ class MockBankingProvider(BankingProvider):
         result.routing_number = "123456789"
         result.verification_steps = []
         result.message = "Account is active"
-        result.updated_at = datetime.utcnow()
+        result.updated_at = datetime.now(timezone.utc)
         
         return result
     

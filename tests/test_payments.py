@@ -4,7 +4,7 @@ Tests for Stripe payments module.
 
 import pytest
 from unittest.mock import Mock, patch, MagicMock
-from datetime import datetime, timedelta
+from datetime import timezone, datetime, timedelta
 import stripe
 
 from src.payments.stripe_client import (
@@ -518,7 +518,7 @@ class TestWebhookProcessor:
         event = WebhookEvent(
             id="evt_123",
             type="test.event",
-            created=datetime.utcnow(),
+            created=datetime.now(timezone.utc),
             data={"key": "value"},
             livemode=False,
         )
@@ -535,7 +535,7 @@ class TestWebhookProcessor:
         event = WebhookEvent(
             id="evt_123",
             type="unknown.event",
-            created=datetime.utcnow(),
+            created=datetime.now(timezone.utc),
             data={},
             livemode=False,
         )
@@ -555,7 +555,7 @@ class TestWebhookProcessor:
         event = WebhookEvent(
             id="evt_123",
             type="error.event",
-            created=datetime.utcnow(),
+            created=datetime.now(timezone.utc),
             data={},
             livemode=False,
         )
@@ -595,7 +595,7 @@ class TestSubscriptionWebhookHandler:
         event = WebhookEvent(
             id="evt_123",
             type=WebhookEventType.CHECKOUT_COMPLETED.value,
-            created=datetime.utcnow(),
+            created=datetime.now(timezone.utc),
             data={
                 "customer": "cus_123",
                 "subscription": "sub_123",
@@ -617,7 +617,7 @@ class TestSubscriptionWebhookHandler:
         event = WebhookEvent(
             id="evt_123",
             type=WebhookEventType.SUBSCRIPTION_DELETED.value,
-            created=datetime.utcnow(),
+            created=datetime.now(timezone.utc),
             data={
                 "id": "sub_123",
                 "customer": "cus_123",
@@ -643,7 +643,7 @@ class TestCreditBalance:
             balance=10,
             reserved=3,
             expires_at=None,
-            last_updated=datetime.utcnow(),
+            last_updated=datetime.now(timezone.utc),
         )
         
         assert balance.available == 7
@@ -655,8 +655,8 @@ class TestCreditBalance:
             credit_type=CreditType.APP_GENERATION,
             balance=10,
             reserved=0,
-            expires_at=datetime.utcnow() - timedelta(days=1),
-            last_updated=datetime.utcnow(),
+            expires_at=datetime.now(timezone.utc) - timedelta(days=1),
+            last_updated=datetime.now(timezone.utc),
         )
         
         assert balance.is_expired is True
@@ -668,8 +668,8 @@ class TestCreditBalance:
             credit_type=CreditType.APP_GENERATION,
             balance=10,
             reserved=0,
-            expires_at=datetime.utcnow() + timedelta(days=30),
-            last_updated=datetime.utcnow(),
+            expires_at=datetime.now(timezone.utc) + timedelta(days=30),
+            last_updated=datetime.now(timezone.utc),
         )
         
         assert balance.is_expired is False

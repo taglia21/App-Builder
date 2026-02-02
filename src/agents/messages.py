@@ -7,7 +7,7 @@ Based on the "Team of Rivals" paper architecture.
 
 from enum import Enum
 from typing import Any, Dict, List, Optional
-from datetime import datetime
+from datetime import timezone, datetime
 from pydantic import BaseModel, Field
 import uuid
 
@@ -125,8 +125,8 @@ class OrchestrationState(BaseModel):
 
     def add_error(self, error: str):
         """Add error to log and update timestamp."""
-        self.error_log.append(f"{datetime.utcnow().isoformat()}: {error}")
-        self.updated_at = datetime.utcnow()
+        self.error_log.append(f"{datetime.now(timezone.utc).isoformat()}: {error}")
+        self.updated_at = datetime.now(timezone.utc)
 
     def can_retry(self) -> bool:
         """Check if we can retry based on max retries."""

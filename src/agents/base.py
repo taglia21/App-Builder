@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, TypeVar, Generic
 import logging
 import json
-from datetime import datetime
+from datetime import timezone, datetime
 
 from anthropic import Anthropic
 from openai import OpenAI
@@ -94,7 +94,7 @@ class BaseAgent(ABC):
         llm_provider: Optional[LLMProvider] = None
     ):
         self.role = role
-        self.agent_id = agent_id or f"{role.value}_{datetime.utcnow().timestamp()}"
+        self.agent_id = agent_id or f"{role.value}_{datetime.now(timezone.utc).timestamp()}"
         self.llm = llm_provider or LLMProvider()
         self.message_history: List[AgentMessage] = []
     

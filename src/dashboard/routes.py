@@ -517,7 +517,7 @@ class AdminRoutes:
             
             # Update contact status
             # contact.status = "replied"
-            # contact.replied_at = datetime.utcnow()
+            # contact.replied_at = datetime.now(timezone.utc)
             # contact.reply_message = message
             # db.commit()
             
@@ -740,7 +740,7 @@ async def generate_app_api(request: Request) -> JSONResponse:
         # In production, this would call the EnhancedCodeGenerator
         import time
         project['status'] = 'generated'
-        project['generated_at'] = datetime.utcnow().isoformat()
+        project['generated_at'] = datetime.now(timezone.utc).isoformat()
         project['download_ready'] = True
         project['files'] = [
             {'name': 'app.py', 'type': 'python', 'lines': 150},
@@ -770,7 +770,7 @@ async def generate_app_api(request: Request) -> JSONResponse:
 # Idea Analysis API Endpoints
 # ============================================
 import uuid
-from datetime import datetime
+from datetime import timezone, datetime
 
 # In-memory project store (will be migrated to database)
 _projects_store = {}
@@ -790,7 +790,7 @@ async def analyze_idea_api(request: Request) -> JSONResponse:
             'id': project_id,
             'idea': idea,
             'status': 'analyzing',
-            'created_at': datetime.utcnow().isoformat(),
+            'created_at': datetime.now(timezone.utc).isoformat(),
             'analysis': {
                 'market_size': 'Analyzing...',
                 'competition': 'Researching...',

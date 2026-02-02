@@ -10,7 +10,7 @@ Implements the hierarchical organization structure with:
 from typing import Any, Dict, List, Optional, Tuple
 import logging
 import asyncio
-from datetime import datetime
+from datetime import timezone, datetime
 
 from .messages import (
     AgentRole, OrchestrationState, TaskStatus, ExecutionPlan,
@@ -92,7 +92,7 @@ class AIOfficeOrchestrator:
             # Success!
             self.current_state.status = TaskStatus.COMPLETED
             self.current_state.current_step = "completed"
-            self.current_state.updated_at = datetime.utcnow()
+            self.current_state.updated_at = datetime.now(timezone.utc)
             
             logger.info(f"Successfully generated app: {plan.plan_id}")
             return code, self.current_state

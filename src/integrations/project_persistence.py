@@ -2,7 +2,7 @@ import os
 import json
 import hashlib
 from typing import Dict, List, Optional
-from datetime import datetime
+from datetime import timezone, datetime
 import httpx
 
 class ProjectPersistenceService:
@@ -29,8 +29,8 @@ class ProjectPersistenceService:
                 'files': project_data.get('files', {}),
                 'settings': project_data.get('settings', {}),
                 'version': project_data.get('version', 1),
-                'created_at': project_data.get('created_at', datetime.utcnow().isoformat()),
-                'updated_at': datetime.utcnow().isoformat(),
+                'created_at': project_data.get('created_at', datetime.now(timezone.utc).isoformat()),
+                'updated_at': datetime.now(timezone.utc).isoformat(),
                 'status': project_data.get('status', 'draft')
             }
             
@@ -87,14 +87,14 @@ class ProjectPersistenceService:
                 'version': new_version,
                 'files': files,
                 'message': message,
-                'created_at': datetime.utcnow().isoformat(),
+                'created_at': datetime.now(timezone.utc).isoformat(),
                 'file_hash': self._hash_files(files)
             }
             
             # Update project
             project['version'] = new_version
             project['files'] = files
-            project['updated_at'] = datetime.utcnow().isoformat()
+            project['updated_at'] = datetime.now(timezone.utc).isoformat()
             
             if 'versions' not in project:
                 project['versions'] = []
@@ -124,7 +124,7 @@ class ProjectPersistenceService:
                 return {'success': False, 'error': 'Version not found'}
             
             project['files'] = target_version['files']
-            project['updated_at'] = datetime.utcnow().isoformat()
+            project['updated_at'] = datetime.now(timezone.utc).isoformat()
             
             await self._save_to_local(project_id, project)
             

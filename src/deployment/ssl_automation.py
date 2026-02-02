@@ -6,7 +6,7 @@ Automatic SSL certificate generation and renewal using Let's Encrypt.
 
 import subprocess
 import os
-from datetime import datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from typing import Optional, Dict, List, Tuple
 from dataclasses import dataclass
 from pathlib import Path
@@ -28,12 +28,12 @@ class SSLCertificate:
     @property
     def days_remaining(self) -> int:
         """Days until certificate expires."""
-        return (self.valid_until - datetime.utcnow()).days
+        return (self.valid_until - datetime.now(timezone.utc)).days
     
     @property
     def is_valid(self) -> bool:
         """Check if certificate is currently valid."""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         return self.valid_from <= now <= self.valid_until
     
     @property

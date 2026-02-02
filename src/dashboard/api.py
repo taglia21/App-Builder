@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException, Depends, Query, Body
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
-from datetime import datetime
+from datetime import timezone, datetime
 from enum import Enum
 import logging
 
@@ -220,8 +220,8 @@ class APIRoutes:
             features=project.features or [],
             tech_stack=project.tech_stack or {},
             urls={},
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
         )
     
     @staticmethod
@@ -240,7 +240,7 @@ class APIRoutes:
             tech_stack={},
             urls={},
             created_at=datetime(2024, 1, 15),
-            updated_at=datetime.utcnow(),
+            updated_at=datetime.now(timezone.utc),
         )
     
     @staticmethod
@@ -294,7 +294,7 @@ class APIRoutes:
             deployment_id="dpl_123",
             status="in_progress",
             urls={},
-            started_at=datetime.utcnow(),
+            started_at=datetime.now(timezone.utc),
         )
     
     @staticmethod
@@ -375,7 +375,7 @@ class APIRoutes:
             name=request.name,
             key=key,
             scopes=request.scopes,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )
     
     @staticmethod

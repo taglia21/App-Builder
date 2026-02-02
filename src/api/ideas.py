@@ -3,7 +3,7 @@ Idea Analysis API - Handles idea submission, vetting, and project creation.
 """
 import uuid
 import json
-from datetime import datetime
+from datetime import timezone, datetime
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Route
@@ -32,7 +32,7 @@ async def analyze_idea(request: Request) -> JSONResponse:
             'id': project_id,
             'idea': idea,
             'status': 'analyzing',
-            'created_at': datetime.utcnow().isoformat(),
+            'created_at': datetime.now(timezone.utc).isoformat(),
             'analysis': {
                 'market_size': 'Analyzing...',
                 'competition': 'Researching...',

@@ -4,7 +4,7 @@ Main orchestration pipeline for the Startup Generator.
 
 import asyncio
 import json
-from datetime import datetime
+from datetime import timezone, datetime
 from pathlib import Path
 from typing import Optional
 
@@ -179,7 +179,7 @@ class StartupGenerationPipeline:
 
             # Complete
             self.metadata.status = PipelineStatus.COMPLETED
-            self.metadata.completed_at = datetime.utcnow()
+            self.metadata.completed_at = datetime.now(timezone.utc)
 
             logger.info("\n" + "=" * 80)
             logger.info("PIPELINE COMPLETED SUCCESSFULLY")
@@ -201,7 +201,7 @@ class StartupGenerationPipeline:
             logger.error(f"Pipeline failed: {e}", exc_info=True)
             self.metadata.status = PipelineStatus.FAILED
             self.metadata.error_message = str(e)
-            self.metadata.completed_at = datetime.utcnow()
+            self.metadata.completed_at = datetime.now(timezone.utc)
             raise
 
     async def run_from_idea(self, idea: StartupIdea, theme: str = "Modern", output_dir: str = "./generated_project") -> PipelineOutput:
@@ -299,7 +299,7 @@ class StartupGenerationPipeline:
             output.generated_codebase = codebase
 
             self.metadata.status = PipelineStatus.COMPLETED
-            self.metadata.completed_at = datetime.utcnow()
+            self.metadata.completed_at = datetime.now(timezone.utc)
 
             logger.info("Pipeline completed successfully")
 

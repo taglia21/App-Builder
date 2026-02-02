@@ -3,7 +3,7 @@ Main Intelligence-Gathering Engine.
 """
 
 import asyncio
-from datetime import datetime
+from datetime import timezone, datetime
 from typing import Any, Dict, List
 
 from loguru import logger
@@ -124,7 +124,7 @@ class IntelligenceGatheringEngine:
         competitor_analysis = []
 
         intelligence = IntelligenceData(
-            extraction_timestamp=datetime.utcnow(),
+            extraction_timestamp=datetime.now(timezone.utc),
             pain_points=pain_points,
             emerging_industries=emerging_industries,
             opportunity_categories=opportunity_categories,
@@ -178,7 +178,7 @@ class IntelligenceGatheringEngine:
         logger.info(f"Loaded demo data: {len(pain_points)} pain points, {len(industries)} industries")
         
         return IntelligenceData(
-            extraction_timestamp=datetime.utcnow(),
+            extraction_timestamp=datetime.now(timezone.utc),
             pain_points=pain_points,
             emerging_industries=industries,
             opportunity_categories=opportunities,

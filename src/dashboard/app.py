@@ -116,12 +116,12 @@ def create_app() -> FastAPI:
     @app.get("/health")
     async def health_check():
         """Health check endpoint."""
-        from datetime import datetime
+        from datetime import timezone, datetime
         return {
             "status": "ok",
             "service": "nexusai-dashboard",
             "version": "1.0.0",
-            "timestamp": datetime.utcnow().isoformat() + "Z"
+            "timestamp": datetime.now(timezone.utc).isoformat() + "Z"
         }
     
     # Setup rate limiting

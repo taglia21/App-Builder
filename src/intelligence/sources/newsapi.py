@@ -2,7 +2,7 @@
 News API source for gathering market intelligence.
 """
 
-from datetime import datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from typing import Any, Dict, List
 
 from loguru import logger
@@ -47,7 +47,7 @@ class NewsAPISource(DataSource):
             return []
 
         all_data = []
-        from_date = (datetime.utcnow() - timedelta(days=30)).strftime("%Y-%m-%d")
+        from_date = (datetime.now(timezone.utc) - timedelta(days=30)).strftime("%Y-%m-%d")
 
         # Gather by categories
         for category in self.categories:

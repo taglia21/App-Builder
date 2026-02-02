@@ -174,7 +174,7 @@ import asyncio
 import logging
 import uuid
 from typing import AsyncGenerator, Dict, Any
-from datetime import datetime
+from datetime import timezone, datetime
 
 from .models import (
     GenerationRequest, GeneratedApp, GenerationProgress,
@@ -267,7 +267,7 @@ class AppGeneratorService:
                 requirements=[],
                 env_template=next((f.content for f in files if f.path == ".env.example"), ""),
                 dockerfile=next((f.content for f in files if f.path == "Dockerfile"), None),
-                created_at=datetime.utcnow()
+                created_at=datetime.now(timezone.utc)
             )
             
             # Store the generated app

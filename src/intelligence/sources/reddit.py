@@ -2,7 +2,7 @@
 Reddit data source for gathering market intelligence.
 """
 
-from datetime import datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from typing import Any, Dict, List
 
 try:
@@ -94,7 +94,7 @@ class RedditSource(DataSource):
             return []
 
         all_data = []
-        cutoff_date = datetime.utcnow() - timedelta(days=self.max_age_days)
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=self.max_age_days)
 
         for subreddit_name in self.subreddits:
             try:
@@ -198,7 +198,7 @@ class RedditSource(DataSource):
                                 "comments": [], # Tavily doesn't return comments usually
                                 "score": 100, # Mock score
                                 "num_comments": 0,
-                                "created_at": datetime.utcnow().isoformat(),
+                                "created_at": datetime.now(timezone.utc).isoformat(),
                                 "subreddit": "unknown",
                                 "is_pain_point": True, # Assume search result is relevant
                             }

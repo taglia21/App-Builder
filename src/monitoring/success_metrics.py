@@ -4,7 +4,7 @@ Success Metrics Tracking
 Track and analyze user success metrics for LaunchForge.
 """
 
-from datetime import datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
 from enum import Enum
@@ -375,7 +375,7 @@ class SuccessMetrics:
     
     def get_summary(self) -> Dict[str, Any]:
         """Get summary of all key metrics."""
-        last_30_days = datetime.utcnow() - timedelta(days=30)
+        last_30_days = datetime.now(timezone.utc) - timedelta(days=30)
         events = self.collector.get_events(last_30_days)
         
         return {

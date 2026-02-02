@@ -5,7 +5,7 @@ Supports Twitter/X, LinkedIn, and mock provider for testing.
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import timezone, datetime
 from enum import Enum
 from typing import Any
 import uuid
@@ -386,7 +386,7 @@ class MockSocialProvider(SocialProvider):
             "content": content,
             "media": media,
             "platform": self.platform,
-            "created_at": datetime.utcnow(),
+            "created_at": datetime.now(timezone.utc),
         })
         
         return PostResult(
@@ -460,7 +460,7 @@ class SocialScheduler:
         
         if result.success:
             post.status = PostStatus.PUBLISHED
-            post.published_at = datetime.utcnow()
+            post.published_at = datetime.now(timezone.utc)
             post.url = result.url
             self.published_posts.append(post)
         else:
@@ -471,7 +471,7 @@ class SocialScheduler:
     
     async def publish_scheduled(self) -> list[SocialPost]:
         """Publish all posts that are due."""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         published = []
         
         for post in list(self.scheduled_posts):
@@ -486,7 +486,7 @@ class SocialScheduler:
                 
                 if result.success:
                     post.status = PostStatus.PUBLISHED
-                    post.published_at = datetime.utcnow()
+                    post.published_at = datetime.now(timezone.utc)
                     post.url = result.url
                     self.scheduled_posts.remove(post)
                     self.published_posts.append(post)
