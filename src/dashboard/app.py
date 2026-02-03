@@ -17,6 +17,12 @@ from ..billing.routes import create_billing_router
 from .api import create_api_router
 from .routes import create_dashboard_router
 
+# Import analytics router
+try:
+    from src.analytics.routes import router as analytics_router
+except ImportError:
+    analytics_router = None
+
 # Import integrations router
 try:
     from src.api.integrations_router import router as integrations_router
@@ -138,6 +144,11 @@ def create_app() -> FastAPI:
     app.include_router(create_billing_router(templates), prefix="/billing")
 
     app.include_router(create_api_router(), prefix="/api")
+    
+    # Include analytics router
+    if analytics_router:
+        app.include_router(analytics_router, prefix="/api/v1/analytics")
+    
     # Include integrations router
     if integrations_router:
         app.include_router(integrations_router)
