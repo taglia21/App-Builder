@@ -1,4 +1,70 @@
 """FastAPI project templates."""
+from typing import Any, Dict, List
+
+
+class FastAPITemplateManager:
+    """Template manager for FastAPI projects."""
+
+    def generate_main(self, app_name: str) -> str:
+        """Generate main.py for FastAPI app."""
+        return get_fastapi_main(app_name, has_auth=False, has_db=False, has_payments=False)
+
+    def generate_models(self, models: List[Dict[str, Any]]) -> str:
+        """Generate models.py with SQLAlchemy models."""
+        if not models:
+            return get_fastapi_models(has_auth=False, has_payments=False)
+
+        # Generate basic models from architecture
+        base = '''"""Database models."""
+from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy.sql import func
+from sqlalchemy.ext.declarative import declarative_base
+
+Base = declarative_base()
+
+'''
+        model_code = []
+        for model in models:
+            name = model.get("name", "Item")
+            fields = model.get("fields", ["id", "name"])
+
+            model_str = f'''class {name}(Base):
+    __tablename__ = "{name.lower()}s"
+
+    id = Column(Integer, primary_key=True, index=True)
+'''
+            for field in fields:
+                if field not in ["id", "created_at"]:
+                    model_str += f'    {field} = Column(String)\n'
+
+            model_str += '    created_at = Column(DateTime(timezone=True), server_default=func.now())\n'
+            model_code.append(model_str)
+
+        return base + "\n".join(model_code)
+
+    def generate_routes(self, endpoints: List[str]) -> str:
+        """Generate routes.py for API endpoints."""
+        return '''"""API routes."""
+from fastapi import APIRouter, HTTPException
+from typing import Dict, List
+
+router = APIRouter()
+
+@router.get("/items")
+async def list_items() -> List[Dict]:
+    """List all items."""
+    return []
+
+@router.get("/items/{item_id}")
+async def get_item(item_id: int) -> Dict:
+    """Get a single item."""
+    return {"id": item_id, "name": "Sample Item"}
+
+@router.post("/items")
+async def create_item(name: str) -> Dict:
+    """Create a new item."""
+    return {"id": 1, "name": name, "created": True}
+'''
 
 
 def get_fastapi_main(project_name: str, has_auth: bool, has_db: bool, has_payments: bool) -> str:

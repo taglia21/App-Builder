@@ -190,3 +190,54 @@ venv/
 .vscode/
 .idea/
 """
+
+    def generate_flask_app(self, app_name: str) -> str:
+        """Generate Flask application code."""
+        return f'''from flask import Flask, jsonify
+
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return jsonify({{'message': 'Welcome to {app_name}'}})
+
+@app.route('/health')
+def health():
+    return jsonify({{'status': 'healthy'}})
+
+if __name__ == '__main__':
+    app.run(debug=True)
+'''
+
+    def generate_models(self, models: List) -> str:
+        """Generate models code for Flask/Django."""
+        if not models:
+            return '''"""Database models."""
+from datetime import datetime
+
+class Item:
+    """Sample model."""
+    def __init__(self, id, name):
+        self.id = id
+        self.name = name
+        self.created_at = datetime.now()
+'''
+
+        # Generate basic models
+        code = '''"""Database models."""
+from datetime import datetime
+
+'''
+        for model in models:
+            name = model.get("name", "Item")
+            fields = model.get("fields", ["id", "name"])
+
+            code += f'''class {name}:
+    """Model for {name}."""
+    def __init__(self, {", ".join(fields)}):
+'''
+            for field in fields:
+                code += f'        self.{field} = {field}\n'
+            code += '        self.created_at = datetime.now()\n\n'
+
+        return code
