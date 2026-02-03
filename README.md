@@ -30,6 +30,19 @@ LaunchForge is a **no-code AI startup builder** that transforms your ideas into 
 | ⚡ **Production-Ready Code** | Full-stack applications with backend, frontend, auth, and tests |
 | 🚀 **One-Click Deploy** | Deploy to Vercel (frontend), Render (backend), or your preferred cloud |
 
+### Production Features
+
+LaunchForge includes enterprise-grade infrastructure:
+
+| Feature | Description |
+|---------|-------------|
+| 🏥 **Health Monitoring** | Kubernetes-ready health checks (`/api/health`, `/api/health/ready`, `/api/health/live`) |
+| 📚 **API Documentation** | Auto-generated OpenAPI docs at `/docs` and `/redoc` |
+| ⚙️ **Type-Safe Config** | Pydantic-based configuration with environment variables |
+| 🛡️ **Error Handling** | Comprehensive exception handling with structured logging |
+| 🔄 **CI/CD Pipeline** | GitHub Actions for automated testing, linting, and deployment |
+| 📊 **Request Tracking** | Automatic request ID generation for debugging |
+
 ---
 
 ## 🚀 Quick Start (2 Minutes)

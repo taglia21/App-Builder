@@ -95,20 +95,95 @@ Use `.env.railway.template` as reference for required variables.
 
 ## Health Check
 
-The application exposes a health endpoint:
+The application exposes comprehensive health endpoints for monitoring and orchestration:
 
-```
-GET /health
+### Basic Health Check
+
+```bash
+GET /api/health
 ```
 
 Returns:
 ```json
 {
-  "status": "ok",
-  "service": "nexusai-dashboard",
+  "status": "healthy",
   "version": "1.0.0",
-  "timestamp": "2026-02-02T11:00:00Z"
+  "timestamp": "2026-02-02T11:00:00.123456Z",
+  "checks": {
+    "llm_providers": {
+      "openai": true,
+      "anthropic": true
+    },
+    "demo_mode": false,
+    "environment": "production"
+  }
 }
+```
+
+### Kubernetes Readiness Probe
+
+```bash
+GET /api/health/ready
+```
+
+Returns `ready` if at least one LLM provider is configured or demo mode is enabled.
+
+```json
+{
+  "status": "ready",
+  "checks": {
+    "llm_providers": {"openai": true},
+    "has_providers": true,
+    "demo_mode": false
+  },
+  "timestamp": "2026-02-02T11:00:00.123456Z"
+}
+```
+
+### Kubernetes Liveness Probe
+
+```bash
+GET /api/health/live
+```
+
+Returns `alive` if the application process is running:
+
+```json
+{
+  "status": "alive",
+  "timestamp": "2026-02-02T11:00:00.123456Z"
+}
+```
+
+### Kubernetes Configuration
+
+Example Kubernetes deployment with health checks:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: launchforge
+spec:
+  template:
+    spec:
+      containers:
+      - name: app
+        image: launchforge:latest
+        ports:
+        - containerPort: 8000
+        livenessProbe:
+          httpGet:
+            path: /api/health/live
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/health/ready
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
 ```
 
 ## Monitoring
