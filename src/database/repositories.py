@@ -127,7 +127,7 @@ class UserRepository(BaseRepository[User]):
         return self.session.query(User).filter(
             and_(
                 User.email == email.lower(),
-                not User.is_deleted
+                User.is_deleted == False
             )
         ).first()
 
@@ -185,7 +185,7 @@ class UserRepository(BaseRepository[User]):
         return self.session.query(User).filter(
             and_(
                 User.subscription_tier == tier,
-                not User.is_deleted
+                User.is_deleted == False
             )
         ).all()
 
@@ -207,7 +207,7 @@ class ProjectRepository(BaseRepository[Project]):
         query = self.session.query(Project).filter(
             and_(
                 Project.user_id == user_id,
-                not Project.is_deleted
+                Project.is_deleted == False
             )
         )
 
@@ -261,7 +261,7 @@ class ProjectRepository(BaseRepository[Project]):
         return self.session.query(Project).filter(
             and_(
                 Project.user_id == user_id,
-                not Project.is_deleted,
+                Project.is_deleted == False,
                 or_(
                     Project.name.ilike(search_term),
                     Project.description.ilike(search_term)

@@ -235,7 +235,7 @@ class AuthService:
         # Find user by verification token
         user = self.session.query(User).filter(
             User.verification_token == token,
-            not User.is_deleted,
+            User.is_deleted == False,
         ).first()
 
         if not user:
@@ -309,7 +309,7 @@ class AuthService:
         # Find user by reset token
         user = self.session.query(User).filter(
             User.reset_token == token,
-            not User.is_deleted,
+            User.is_deleted == False,
         ).first()
 
         if not user:

@@ -14,7 +14,11 @@ def get_settings() -> Settings:
 # Backward compatibility - import old config classes from parent module
 try:
     import sys
-    sys.path.insert(0, str(__file__.rsplit('/', 2)[0]))  # Add src to path
+    from pathlib import Path
+    # Add src directory to path
+    src_dir = Path(__file__).parent.parent
+    if str(src_dir) not in sys.path:
+        sys.path.insert(0, str(src_dir))
     
     from config import (
         load_config,
@@ -25,15 +29,21 @@ try:
         PromptEngineeringConfig,
         ExportConfig
     )
-except (ImportError, AttributeError, Exception):
+except (ImportError, AttributeError, Exception) as e:
     # Fallback if config.py doesn't have the classes
+    import warnings
+    warnings.warn(f"Could not import legacy config classes: {e}")
+    
     def load_config(config_path=None):
         """Fallback load_config function."""
         return {}
     
-    # Provide dummy classes for backward compatibility
+    # Provide minimal classes for backward compatibility
     class PipelineConfig:
-        pass
+        """Fallback PipelineConfig."""
+        def get_data_sources(self):
+            return []
+        
     class IntelligenceConfig:
         pass
     class IdeaGenerationConfig:
@@ -45,8 +55,24 @@ except (ImportError, AttributeError, Exception):
     class ExportConfig:
         pass
 
+
+# Additional compatibility classes for tests
+class DatabaseConfig:
+    """Database configuration class for backward compatibility."""
+    def __init__(self, url: str = None, **kwargs):
+        self.url = url or settings.DATABASE_URL
+
+
+class LLMConfig:
+    """LLM configuration class for backward compatibility."""
+    def __init__(self, **kwargs):
+        self.openai_api_key = settings.OPENAI_API_KEY
+        self.anthropic_api_key = settings.ANTHROPIC_API_KEY
+        self.google_api_key = settings.GOOGLE_API_KEY
+
 __all__ = [
     "Settings", "settings", "get_settings", "load_config",
     "PipelineConfig", "IntelligenceConfig", "IdeaGenerationConfig",
-    "ScoringConfig", "PromptEngineeringConfig", "ExportConfig"
+    "ScoringConfig", "PromptEngineeringConfig", "ExportConfig",
+    "DatabaseConfig", "LLMConfig"
 ]
