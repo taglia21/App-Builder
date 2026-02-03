@@ -4,12 +4,11 @@ Dashboard Routes
 HTML routes for the LaunchForge dashboard using HTMX.
 """
 
-from fastapi import APIRouter, Request, Depends, Form, HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
-from typing import Optional
 import logging
-from fastapi.responses import JSONResponse
+
+from fastapi import APIRouter, Form, HTTPException, Request
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
 
 logger = logging.getLogger(__name__)
 
@@ -17,19 +16,19 @@ logger = logging.getLogger(__name__)
 class DashboardRoutes:
     """
     Dashboard HTML routes.
-    
+
     Uses HTMX for dynamic updates without full page reloads.
     """
-    
+
     def __init__(self, templates: Jinja2Templates):
         """
         Initialize dashboard routes.
-        
+
         Args:
             templates: Jinja2 templates instance
         """
         self.templates = templates
-    
+
     def render(
         self,
         request: Request,
@@ -45,15 +44,16 @@ class DashboardRoutes:
         }
         if context:
             ctx.update(context)
-        
+
         return self.templates.TemplateResponse(
+            request,
             template,
             ctx,
             status_code=status_code,
         )
-    
+
     # ==================== Page Routes ====================
-    
+
     async def home(self, request: Request) -> HTMLResponse:
         """Landing page."""
         return self.render(request, "pages/landing.html", {"active": "home"})
@@ -76,7 +76,7 @@ class DashboardRoutes:
                 "created_at": "2024-01-20",
             },
         ]
-        
+
         return self.render(request, "pages/dashboard.html", {
             "projects": projects,
             "stats": {
@@ -85,7 +85,7 @@ class DashboardRoutes:
                 "apps_remaining": 3,
             },
         })
-    
+
     async def new_project(self, request: Request) -> HTMLResponse:
         """New project wizard."""
         return self.render(request, "pages/new_project.html", {
@@ -108,7 +108,7 @@ class DashboardRoutes:
             "projects": projects,
         })
 
-    
+
     async def project_detail(
         self,
         request: Request,
@@ -130,21 +130,21 @@ class DashboardRoutes:
             "created_at": "2024-01-15",
             "deployed_at": "2024-01-16",
         }
-        
+
         return self.render(request, "pages/project_detail.html", {
             "project": project,
         })
-    
+
     async def settings(self, request: Request) -> HTMLResponse:
         """Settings page."""
         return self.render(request, "pages/settings.html", {
             "sections": ["Profile", "API Keys", "Billing", "Notifications"],
         })
-    
+
     async def compare(self, request: Request) -> HTMLResponse:
         """Competitive comparison page."""
         return self.render(request, "pages/compare.html", {})
-    
+
     async def health_dashboard(self, request: Request) -> HTMLResponse:
         """Deployment health dashboard."""
         # Mock deployment data
@@ -161,24 +161,24 @@ class DashboardRoutes:
                 "ssl_days_remaining": 45,
             },
         ]
-        
+
         stats = {
             "total_deployments": len(deployments),
             "healthy": len([d for d in deployments if d["status"] == "healthy"]),
             "degraded": len([d for d in deployments if d["status"] == "degraded"]),
             "down": len([d for d in deployments if d["status"] == "down"]),
         }
-        
+
         return self.render(request, "pages/health.html", {
             "deployments": deployments,
             "stats": stats,
             "incidents": [],
         })
-    
+
     async def contact(self, request: Request) -> HTMLResponse:
         """Contact page."""
         return self.render(request, "pages/contact.html", {})
-    
+
     async def billing(self, request: Request) -> HTMLResponse:
         """Billing and subscription page."""
         return self.render(request, "pages/billing.html", {
@@ -215,20 +215,20 @@ class DashboardRoutes:
     async def new_project_page(self, request: Request) -> HTMLResponse:
         """Create new project page."""
         return self.render(request, "pages/new_project.html", {"active": "projects"})
-    
+
     # ==================== HTMX Partial Routes ====================
-    
+
     async def htmx_project_list(self, request: Request) -> HTMLResponse:
         """HTMX partial: Project list."""
         projects = [
             {"id": "proj_1", "name": "My SaaS App", "status": "deployed"},
             {"id": "proj_2", "name": "Portfolio Site", "status": "building"},
         ]
-        
+
         return self.render(request, "partials/project_list.html", {
             "projects": projects,
         })
-    
+
     async def htmx_project_card(
         self,
         request: Request,
@@ -241,11 +241,11 @@ class DashboardRoutes:
             "status": "deployed",
             "url": "https://my-saas.vercel.app",
         }
-        
+
         return self.render(request, "partials/project_card.html", {
             "project": project,
         })
-    
+
     async def htmx_deployment_status(
         self,
         request: Request,
@@ -256,13 +256,13 @@ class DashboardRoutes:
         import random
         statuses = ["building", "deploying", "deployed"]
         status = random.choice(statuses)
-        
+
         return self.render(request, "partials/deployment_status.html", {
             "project_id": project_id,
             "status": status,
             "progress": 75 if status == "deploying" else 100 if status == "deployed" else 25,
         })
-    
+
     async def htmx_generate_progress(
         self,
         request: Request,
@@ -279,9 +279,9 @@ class DashboardRoutes:
                 {"name": "Deploying", "status": "pending"},
             ],
         })
-    
+
     # ==================== Form Handlers ====================
-    
+
     async def create_project(
         self,
         request: Request,
@@ -292,19 +292,19 @@ class DashboardRoutes:
         """Handle new project creation form."""
         # Create project (mock)
         project_id = "proj_new"
-        
+
         # Redirect to project page or return HTMX partial
         if request.headers.get("HX-Request"):
             return self.render(request, "partials/generation_started.html", {
                 "project_id": project_id,
                 "message": "Generation started!",
             })
-        
+
         return RedirectResponse(
             url=f"/projects/{project_id}",
             status_code=303,
         )
-    
+
     async def update_settings(
         self,
         request: Request,
@@ -313,25 +313,25 @@ class DashboardRoutes:
     ) -> HTMLResponse:
         """Handle settings update form."""
         # Update settings (mock)
-        
+
         if request.headers.get("HX-Request"):
             return self.render(request, "partials/settings_saved.html", {
                 "message": "Settings saved successfully!",
             })
-        
+
         return RedirectResponse(url="/settings", status_code=303)
 
 
 class AdminRoutes:
     """
     Admin dashboard routes.
-    
+
     Provides admin-only access to manage feedback, contacts, and system settings.
     """
-    
+
     def __init__(self, templates: Jinja2Templates):
         self.templates = templates
-    
+
     def render(
         self,
         request: Request,
@@ -347,13 +347,13 @@ class AdminRoutes:
         }
         if context:
             ctx.update(context)
-        
+
         return self.templates.TemplateResponse(
             template,
             ctx,
             status_code=status_code,
         )
-    
+
     @staticmethod
     def check_admin(request: Request) -> bool:
         """Check if current user is an admin."""
@@ -369,20 +369,20 @@ class AdminRoutes:
         admin_list = [e.strip().lower() for e in admin_emails.split(",") if e.strip()]
         user_email = getattr(user, 'email', '').lower()
         return user_email in admin_list
-    
+
     async def admin_dashboard(self, request: Request) -> HTMLResponse:
         """Admin dashboard with feedback and contacts."""
         if not self.check_admin(request):
             raise HTTPException(status_code=403, detail="Admin access required")
-        
+
         # Get query params
         page = int(request.query_params.get("page", 1))
-        status_filter = request.query_params.get("status", "")
-        category_filter = request.query_params.get("category", "")
-        date_filter = request.query_params.get("date", "")
+        request.query_params.get("status", "")
+        request.query_params.get("category", "")
+        request.query_params.get("date", "")
         per_page = 20
         offset = (page - 1) * per_page
-        
+
         # Mock data - replace with actual database queries
         feedback_items = [
             {
@@ -406,7 +406,7 @@ class AdminRoutes:
                 "created_at": type('obj', (object,), {'strftime': lambda self, f: '2026-01-24 15:45'})(),
             },
         ]
-        
+
         contact_items = [
             {
                 "id": "ct_1",
@@ -418,7 +418,7 @@ class AdminRoutes:
                 "created_at": type('obj', (object,), {'strftime': lambda self, f: '2026-01-25 09:00'})(),
             },
         ]
-        
+
         stats = {
             "total_feedback": 42,
             "pending_feedback": 15,
@@ -429,7 +429,7 @@ class AdminRoutes:
             "onboarding_complete": 45,
             "onboarding_complete_pct": 35,
         }
-        
+
         return self.render(request, "pages/admin.html", {
             "feedback_items": feedback_items,
             "contact_items": contact_items,
@@ -440,21 +440,21 @@ class AdminRoutes:
             "total_items": len(feedback_items),
             "has_next": len(feedback_items) >= per_page,
         })
-    
+
     async def admin_feedback(self, request: Request) -> HTMLResponse:
         """View all feedback submissions."""
         if not self.check_admin(request):
             raise HTTPException(status_code=403, detail="Admin access required")
-        
+
         return await self.admin_dashboard(request)
-    
+
     async def admin_contacts(self, request: Request) -> HTMLResponse:
         """View all contact submissions."""
         if not self.check_admin(request):
             raise HTTPException(status_code=403, detail="Admin access required")
-        
+
         return await self.admin_dashboard(request)
-    
+
     async def resolve_feedback(
         self,
         request: Request,
@@ -463,12 +463,12 @@ class AdminRoutes:
         """Mark feedback as resolved."""
         if not self.check_admin(request):
             raise HTTPException(status_code=403, detail="Admin access required")
-        
+
         # Update feedback status in database
         # feedback = db.query(Feedback).filter(Feedback.id == feedback_id).first()
         # feedback.status = "resolved"
         # db.commit()
-        
+
         # Return updated row for HTMX swap
         return HTMLResponse(
             content=f'''
@@ -480,7 +480,7 @@ class AdminRoutes:
             ''',
             status_code=200
         )
-    
+
     async def reply_to_contact(
         self,
         request: Request,
@@ -489,23 +489,23 @@ class AdminRoutes:
         """Reply to a contact submission."""
         if not self.check_admin(request):
             raise HTTPException(status_code=403, detail="Admin access required")
-        
+
         from fastapi.responses import JSONResponse
-        
+
         try:
             body = await request.json()
             message = body.get("message", "")
-            subject = body.get("subject", "")
-            
+            body.get("subject", "")
+
             if not message:
                 return JSONResponse(
                     {"error": "Message is required"},
                     status_code=400
                 )
-            
+
             # Get contact from database
             # contact = db.query(ContactSubmission).filter(ContactSubmission.id == contact_id).first()
-            
+
             # Send reply email
             # from src.emails import get_email_client
             # client = get_email_client()
@@ -514,15 +514,15 @@ class AdminRoutes:
             #     subject=subject,
             #     text=message
             # )
-            
+
             # Update contact status
             # contact.status = "replied"
             # contact.replied_at = datetime.now(timezone.utc)
             # contact.reply_message = message
             # db.commit()
-            
+
             return JSONResponse({"success": True})
-            
+
         except (ValueError, KeyError) as e:
             logger.warning(f"Invalid data for contact reply {contact_id}: {e}")
             return JSONResponse(
@@ -535,29 +535,29 @@ class AdminRoutes:
                 {"error": "Failed to send reply - network error"},
                 status_code=503
             )
-    
+
     async def email_templates(self, request: Request) -> HTMLResponse:
         """Email template preview page."""
         if not self.check_admin(request):
             raise HTTPException(status_code=403, detail="Admin access required")
-        
+
         return self.render(request, "pages/email_preview.html", {})
 
 
 def create_dashboard_router(templates: Jinja2Templates) -> APIRouter:
     """
     Create dashboard router with all routes.
-    
+
     Args:
         templates: Jinja2 templates instance
-        
+
     Returns:
         Configured APIRouter
     """
     router = APIRouter()
     routes = DashboardRoutes(templates)
     admin_routes = AdminRoutes(templates)
-    
+
     # Page routes
     router.add_api_route("/", routes.home, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/dashboard", routes.dashboard, methods=["GET"], response_class=HTMLResponse)
@@ -575,7 +575,7 @@ def create_dashboard_router(templates: Jinja2Templates) -> APIRouter:
     router.add_api_route("/business-formation", routes.business_formation_page, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/new-project", routes.new_project_page, methods=["GET"], response_class=HTMLResponse)
 
-    
+
     # Admin routes
     router.add_api_route("/admin", admin_routes.admin_dashboard, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/admin/feedback", admin_routes.admin_feedback, methods=["GET"], response_class=HTMLResponse)
@@ -583,13 +583,13 @@ def create_dashboard_router(templates: Jinja2Templates) -> APIRouter:
     router.add_api_route("/admin/feedback/{feedback_id}/resolve", admin_routes.resolve_feedback, methods=["POST"])
     router.add_api_route("/admin/contacts/{contact_id}/reply", admin_routes.reply_to_contact, methods=["POST"])
     router.add_api_route("/admin/email-templates", admin_routes.email_templates, methods=["GET"], response_class=HTMLResponse)
-    
+
     # HTMX partial routes
     router.add_api_route("/htmx/projects", routes.htmx_project_list, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/htmx/projects/{project_id}", routes.htmx_project_card, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/htmx/projects/{project_id}/status", routes.htmx_deployment_status, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/htmx/projects/{project_id}/progress", routes.htmx_generate_progress, methods=["GET"], response_class=HTMLResponse)
-    
+
     # Form handlers
     router.add_api_route("/projects", routes.projects_list, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/projects", routes.create_project, methods=["POST"])
@@ -605,7 +605,7 @@ def create_dashboard_router(templates: Jinja2Templates) -> APIRouter:
     router.add_api_route("/api/ideas/analyze", analyze_idea_api, methods=["POST"])
     router.add_api_route("/api/projects/{project_id}", get_project_api, methods=["GET"])
     return router
-    
+
 
 
 
@@ -624,8 +624,9 @@ def create_dashboard_router(templates: Jinja2Templates) -> APIRouter:
 
 async def pricing_page(request: Request) -> HTMLResponse:
     """Pricing page with subscription plans."""
-    from jinja2 import Environment, FileSystemLoader
     from pathlib import Path
+
+    from jinja2 import Environment, FileSystemLoader
     template_dir = Path(__file__).parent / "templates"
     env = Environment(loader=FileSystemLoader(str(template_dir)))
     template = env.get_template("pages/pricing.html")
@@ -635,14 +636,15 @@ async def pricing_page(request: Request) -> HTMLResponse:
 async def business_formation(request: Request) -> HTMLResponse:
     """Business formation page for LLC registration."""
     project_id = request.path_params.get('project_id')
-    
+
     project = _projects_store.get(project_id)
     if not project:
         from starlette.responses import RedirectResponse
         return RedirectResponse(url="/dashboard", status_code=302)
-    
-    from jinja2 import Environment, FileSystemLoader
+
     from pathlib import Path
+
+    from jinja2 import Environment, FileSystemLoader
     template_dir = Path(__file__).parent / "templates"
     env = Environment(loader=FileSystemLoader(str(template_dir)))
     template = env.get_template("pages/business_formation.html")
@@ -652,14 +654,15 @@ async def business_formation(request: Request) -> HTMLResponse:
 async def deploy_page(request: Request) -> HTMLResponse:
     """Deploy page for one-click deployment."""
     project_id = request.path_params.get('project_id')
-    
+
     project = _projects_store.get(project_id)
     if not project:
         from starlette.responses import RedirectResponse
         return RedirectResponse(url="/dashboard", status_code=302)
-    
-    from jinja2 import Environment, FileSystemLoader
+
     from pathlib import Path
+
+    from jinja2 import Environment, FileSystemLoader
     template_dir = Path(__file__).parent / "templates"
     env = Environment(loader=FileSystemLoader(str(template_dir)))
     template = env.get_template("pages/deploy.html")
@@ -669,14 +672,15 @@ async def deploy_page(request: Request) -> HTMLResponse:
 async def agent_workspace(request: Request) -> HTMLResponse:
     """Agent workspace for customizing generated apps."""
     project_id = request.path_params.get('project_id')
-    
+
     project = _projects_store.get(project_id)
     if not project:
         from starlette.responses import RedirectResponse
         return RedirectResponse(url="/dashboard", status_code=302)
-    
-    from jinja2 import Environment, FileSystemLoader
+
     from pathlib import Path
+
+    from jinja2 import Environment, FileSystemLoader
     template_dir = Path(__file__).parent / "templates"
     env = Environment(loader=FileSystemLoader(str(template_dir)))
     template = env.get_template("pages/agent_workspace.html")
@@ -686,14 +690,15 @@ async def agent_workspace(request: Request) -> HTMLResponse:
 async def project_generated(request: Request) -> HTMLResponse:
     """Project generated page showing download and next steps."""
     project_id = request.path_params.get('project_id')
-    
+
     project = _projects_store.get(project_id)
     if not project:
         from starlette.responses import RedirectResponse
         return RedirectResponse(url="/dashboard", status_code=302)
-    
-    from jinja2 import Environment, FileSystemLoader
+
     from pathlib import Path
+
+    from jinja2 import Environment, FileSystemLoader
     template_dir = Path(__file__).parent / "templates"
     env = Environment(loader=FileSystemLoader(str(template_dir)))
     template = env.get_template("pages/project_generated.html")
@@ -703,16 +708,17 @@ async def project_generated(request: Request) -> HTMLResponse:
 async def project_review(request: Request) -> HTMLResponse:
     """Project review page showing idea analysis."""
     project_id = request.path_params.get('project_id')
-    
+
     # Get project from store
     project = _projects_store.get(project_id)
     if not project:
         # Return 404 or redirect
         from starlette.responses import RedirectResponse
         return RedirectResponse(url="/dashboard", status_code=302)
-    
-    from jinja2 import Environment, FileSystemLoader
+
     from pathlib import Path
+
+    from jinja2 import Environment, FileSystemLoader
     template_dir = Path(__file__).parent / "templates"
     env = Environment(loader=FileSystemLoader(str(template_dir)))
     template = env.get_template("pages/project_review.html")
@@ -726,19 +732,18 @@ async def generate_app_api(request: Request) -> JSONResponse:
     try:
         body = await request.json()
         project_id = body.get('project_id')
-        
+
         if project_id not in _projects_store:
             return JSONResponse({'error': 'Project not found'}, status_code=404)
-        
+
         project = _projects_store[project_id]
-        idea = project['idea']
-        
+        project['idea']
+
         # Update status to generating
         project['status'] = 'generating'
-        
+
         # For now, simulate generation with a mock response
         # In production, this would call the EnhancedCodeGenerator
-        import time
         project['status'] = 'generated'
         project['generated_at'] = datetime.now(timezone.utc).isoformat()
         project['download_ready'] = True
@@ -754,7 +759,7 @@ async def generate_app_api(request: Request) -> JSONResponse:
             {'name': 'Dockerfile', 'type': 'docker', 'lines': 20},
             {'name': '.env.example', 'type': 'env', 'lines': 10},
         ]
-        
+
         return JSONResponse({
             'success': True,
             'project_id': project_id,
@@ -763,14 +768,14 @@ async def generate_app_api(request: Request) -> JSONResponse:
             'files_count': len(project['files']),
             'download_url': f'/api/projects/{project_id}/download'
         })
-        
+
     except Exception as e:
         return JSONResponse({'error': str(e)}, status_code=500)
 
 # Idea Analysis API Endpoints
 # ============================================
 import uuid
-from datetime import timezone, datetime
+from datetime import datetime, timezone
 
 # In-memory project store (will be migrated to database)
 _projects_store = {}
@@ -780,12 +785,12 @@ async def analyze_idea_api(request: Request) -> JSONResponse:
     try:
         body = await request.json()
         idea = body.get('idea', '').strip()
-        
+
         if not idea:
             return JSONResponse({'error': 'Please provide your business idea'}, status_code=400)
-        
+
         project_id = str(uuid.uuid4())[:8]
-        
+
         project = {
             'id': project_id,
             'idea': idea,
@@ -798,9 +803,9 @@ async def analyze_idea_api(request: Request) -> JSONResponse:
                 'recommended_features': []
             }
         }
-        
+
         _projects_store[project_id] = project
-        
+
         return JSONResponse({
             'success': True,
             'project_id': project_id,

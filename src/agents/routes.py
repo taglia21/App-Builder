@@ -7,17 +7,13 @@ Provides endpoints for:
 - Health checks for the agent system
 """
 
-from typing import Optional, List
 import logging
+from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from .api_integration import (
-    MultiAgentService, 
-    AppGenerationRequest,
-    AppGenerationResponse
-)
+from .api_integration import AppGenerationRequest, AppGenerationResponse, MultiAgentService
 
 logger = logging.getLogger(__name__)
 
@@ -39,24 +35,24 @@ class GenerateRequest(BaseModel):
 async def generate_app_v2(request: GenerateRequest):
     """
     Generate an app using the multi-agent orchestrator.
-    
+
     This endpoint uses the "Team of Rivals" architecture with:
     - PlannerAgent: Creates execution plans with acceptance criteria
     - CodeWriterAgent: Generates application code
     - CodeCritic: Validates syntax, security, best practices
     - OutputCritic: Validates against acceptance criteria
-    
+
     The code goes through multiple validation rounds before being
     returned to ensure quality.
     """
     service = MultiAgentService.get_instance()
-    
+
     gen_request = AppGenerationRequest(
         description=request.description,
         tech_stack=request.tech_stack,
         features=request.features
     )
-    
+
     return await service.generate_app(gen_request)
 
 
@@ -64,7 +60,7 @@ async def generate_app_v2(request: GenerateRequest):
 async def get_orchestrator_stats():
     """
     Get statistics from the last orchestration run.
-    
+
     Returns:
     - session_id: Unique ID for the generation session
     - status: Current status (pending/in_progress/completed/failed/vetoed)
@@ -75,10 +71,10 @@ async def get_orchestrator_stats():
     """
     service = MultiAgentService.get_instance()
     stats = service.orchestrator.get_stats()
-    
+
     if not stats:
         return {"message": "No generation has been run yet"}
-    
+
     return stats
 
 
@@ -86,12 +82,12 @@ async def get_orchestrator_stats():
 async def health_check():
     """
     Health check for the multi-agent system.
-    
+
     Verifies that all components are properly initialized.
     """
     try:
         service = MultiAgentService.get_instance()
-        
+
         return {
             "status": "healthy",
             "components": {
@@ -116,7 +112,7 @@ async def health_check():
 async def system_info():
     """
     Get information about the multi-agent system.
-    
+
     Returns documentation about the architecture and capabilities.
     """
     return {

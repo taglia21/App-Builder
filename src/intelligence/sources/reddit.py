@@ -2,7 +2,7 @@
 Reddit data source for gathering market intelligence.
 """
 
-from datetime import timezone, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
 
 try:
@@ -10,14 +10,16 @@ try:
 except ImportError:
     praw = None
 
-from loguru import logger
-
-from ...models import SourceType, PainPoint
-from ..base import DataSource, register_source
-from uuid import uuid4
 import asyncio
 import os
+from uuid import uuid4
+
 import httpx
+from loguru import logger
+
+from ...models import PainPoint, SourceType
+from ..base import DataSource, register_source
+
 
 @register_source("reddit")
 class RedditSource(DataSource):
@@ -57,7 +59,7 @@ class RedditSource(DataSource):
         self.min_score = config.get("min_score", 50)
         self.min_comments = config.get("min_comments", 20)
         self.max_age_days = config.get("max_age_days", 90)
-        
+
         self.use_tavily = False
         self.tavily_key = os.getenv("TAVILY_API_KEY")
 
@@ -88,7 +90,7 @@ class RedditSource(DataSource):
         """Gather data from Reddit."""
         if self.use_tavily:
             return await self._gather_via_tavily()
-            
+
         if not self.reddit:
             logger.warning("Reddit client not initialized")
             return []
@@ -164,29 +166,29 @@ class RedditSource(DataSource):
         """Gather Reddit data via Tavily Search."""
         if not self.tavily_key:
             return []
-            
+
         logger.info("Searching Reddit via Tavily...")
         all_data = []
-        
+
         queries = [
-            f"site:reddit.com/r/{sr} biggest pain points problems complaints" 
-            for sr in self.subreddits[:3] 
+            f"site:reddit.com/r/{sr} biggest pain points problems complaints"
+            for sr in self.subreddits[:3]
         ]
-        
+
         async with httpx.AsyncClient() as client:
             for query in queries:
                 try:
                     response = await client.post(
                         'https://api.tavily.com/search',
                         json={
-                            'api_key': self.tavily_key, 
-                            'query': query, 
+                            'api_key': self.tavily_key,
+                            'query': query,
                             'max_results': 5,
                             'include_domains': ['reddit.com']
                         },
                         timeout=30
                     )
-                    
+
                     if response.status_code == 200:
                         results = response.json().get('results', [])
                         for res in results:
@@ -205,6 +207,6 @@ class RedditSource(DataSource):
                             all_data.append(data_point)
                 except Exception as e:
                     logger.error(f"Tavily search error: {e}")
-        
+
         logger.info(f"Collected {len(all_data)} Reddit posts via Tavily")
         return all_data

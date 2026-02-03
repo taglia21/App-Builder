@@ -1,14 +1,12 @@
 """LLM-powered idea generation engine."""
 
-import os
+import asyncio
 import json
 import logging
-import asyncio
-from typing import List, Dict, Any, Optional
-from datetime import datetime
+from typing import Any, Dict, List
 
-from src.models import StartupIdea, IntelligenceData, IdeaCatalog
 from src.llm import get_llm_client
+from src.models import IdeaCatalog, IntelligenceData, StartupIdea
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +15,7 @@ try:
     from src.idea_generation.prompts import (
         IDEA_GENERATION_SYSTEM_PROMPT,
         IDEA_GENERATION_USER_PROMPT,
-        PAIN_POINT_SUMMARY_TEMPLATE
+        PAIN_POINT_SUMMARY_TEMPLATE,
     )
 except ImportError:
     IDEA_GENERATION_SYSTEM_PROMPT = "You are a startup ideation expert."
@@ -27,17 +25,17 @@ except ImportError:
 
 class LLMIdeaGenerationEngine:
     """Generates startup ideas using LLM with enhanced prompts."""
-    
+
     def __init__(self, config, llm_provider: str = 'groq'):
         self.config = config
         self.llm = get_llm_client(llm_provider)
         self.num_ideas = getattr(config.idea_generation, 'min_ideas', 10) if hasattr(config, 'idea_generation') else 10
         self.max_retries = 3
-        
+
         # Import fallback engine (template-based)
         from src.idea_generation.engine import IdeaGenerationEngine
         self.fallback_engine = IdeaGenerationEngine(config)
-    
+
     def _summarize_pain_points(self, pain_points: List[Any], max_points: int = 20) -> str:
         """Create a summary of pain points for the prompt."""
         summaries = []
@@ -55,7 +53,7 @@ class LLMIdeaGenerationEngine:
                 summary = f"### Pain Point {i}\n- {str(pp)[:200]}"
             summaries.append(summary)
         return '\n'.join(summaries)
-    
+
     def _parse_llm_response(self, response: str) -> List[Dict]:
         """Parse LLM response into idea dictionaries."""
         # Try to extract JSON from response
@@ -68,7 +66,7 @@ class LLMIdeaGenerationEngine:
                 return json.loads(json_str)
         except json.JSONDecodeError:
             pass
-        
+
         # Try to find JSON objects
         try:
             start = response.find('{')
@@ -79,18 +77,19 @@ class LLMIdeaGenerationEngine:
                 return json.loads(json_str)
         except json.JSONDecodeError:
             pass
-        
+
         logger.warning("Could not parse LLM response as JSON, using fallback")
         return []
-    
+
     def _dict_to_startup_idea(self, data: Dict, index: int) -> StartupIdea:
         """Convert dictionary to StartupIdea model."""
         from uuid import uuid4
+
         from src.models import BuyerPersona, PricingHypothesis, RevenueModel
-        
+
         # Extract target customer string and parse it
         target_customer_str = data.get('target_customer', data.get('Target Customer', ''))
-        
+
         # Create BuyerPersona from string or dict
         if isinstance(target_customer_str, dict):
             buyer_persona = BuyerPersona(**target_customer_str)
@@ -102,7 +101,7 @@ class LLMIdeaGenerationEngine:
                 budget_authority=True,
                 pain_intensity=0.7
             )
-        
+
         # Parse revenue model
         revenue_str = data.get('revenue_model', data.get('Revenue Model', 'subscription')).lower()
         if 'subscription' in revenue_str:
@@ -113,13 +112,13 @@ class LLMIdeaGenerationEngine:
             revenue_model = RevenueModel.TRANSACTION
         else:
             revenue_model = RevenueModel.HYBRID
-        
+
         # Create pricing hypothesis
         pricing = PricingHypothesis(
             tiers=['Basic', 'Pro', 'Enterprise'],
             price_range='$29-$299/month'
         )
-        
+
         return StartupIdea(
             id=uuid4(),
             name=data.get('name', data.get('Name', f'Idea {index}'))[:100],
@@ -138,21 +137,21 @@ class LLMIdeaGenerationEngine:
             automation_opportunities=[],
             technical_requirements_summary=data.get('tech_stack', 'Modern web stack')[:200]
         )
-    
+
     async def generate_async(self, intelligence: IntelligenceData) -> IdeaCatalog:
         """Generate ideas using LLM (async version)."""
         logger.info(f"Generating {self.num_ideas} ideas using LLM...")
-        
+
         # Prepare the prompt
         pain_points_summary = self._summarize_pain_points(intelligence.pain_points)
-        
+
         user_prompt = IDEA_GENERATION_USER_PROMPT.format(
             pain_points_summary=pain_points_summary,
             num_ideas=self.num_ideas
         )
-        
+
         ideas = []
-        
+
         for attempt in range(self.max_retries):
             try:
                 # Call LLM (synchronous method in async context)
@@ -163,10 +162,10 @@ class LLMIdeaGenerationEngine:
                     temperature=0.8,
                     json_mode=False
                 )
-                
+
                 # Parse response - response is LLMResponse object with .content
                 idea_dicts = self._parse_llm_response(response.content)
-                
+
                 if idea_dicts:
                     for i, idea_dict in enumerate(idea_dicts):
                         try:
@@ -174,23 +173,23 @@ class LLMIdeaGenerationEngine:
                             ideas.append(idea)
                         except Exception as e:
                             logger.warning(f"Failed to parse idea {i}: {e}")
-                    
+
                     logger.info(f"Generated {len(ideas)} ideas from LLM")
                     break
                 else:
                     logger.warning(f"No ideas parsed on attempt {attempt + 1}")
-                    
+
             except Exception as e:
                 logger.error(f"LLM generation failed on attempt {attempt + 1}: {e}")
                 await asyncio.sleep(2)
-        
+
         # If LLM failed, fall back to template generation
         if not ideas:
             logger.warning("LLM generation failed, falling back to template engine")
             return await self.fallback_engine.generate(intelligence)
-        
+
         return IdeaCatalog(ideas=ideas)
-    
+
     def generate(self, intelligence: IntelligenceData) -> IdeaCatalog:
         """Generate ideas (sync wrapper)."""
         return asyncio.run(self.generate_async(intelligence))

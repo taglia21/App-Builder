@@ -1,12 +1,12 @@
 """Stripe billing service for subscription management."""
-import os
-import stripe
-from typing import Optional, Dict, Any
-from datetime import datetime
 import logging
+import os
+from datetime import datetime
+from typing import Any, Dict
 
-from sqlalchemy.ext.asyncio import AsyncSession
+import stripe
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
@@ -30,10 +30,10 @@ TIER_LIMITS = {
 
 class BillingService:
     """Service for handling Stripe billing operations."""
-    
+
     def __init__(self, db_session: AsyncSession):
         self.db = db_session
-    
+
     async def create_customer(self, user_id: int, email: str, name: str = None) -> str:
         """Create a Stripe customer for a user."""
         try:
@@ -46,7 +46,7 @@ class BillingService:
         except stripe.error.StripeError as e:
             logger.error(f"Failed to create Stripe customer: {e}")
             raise
-    
+
     async def create_checkout_session(
         self,
         user_id: int,
@@ -58,7 +58,7 @@ class BillingService:
         """Create a Stripe checkout session for subscription."""
         if tier not in PRICE_IDS:
             raise ValueError(f"Invalid tier: {tier}")
-        
+
         try:
             session_params = {
                 "mode": "subscription",
@@ -74,10 +74,10 @@ class BillingService:
                     "tier": tier
                 },
             }
-            
+
             if customer_id:
                 session_params["customer"] = customer_id
-            
+
             session = stripe.checkout.Session.create(**session_params)
             return {
                 "session_id": session.id,
@@ -86,7 +86,7 @@ class BillingService:
         except stripe.error.StripeError as e:
             logger.error(f"Failed to create checkout session: {e}")
             raise
-    
+
     async def create_portal_session(
         self,
         customer_id: str,
@@ -102,11 +102,11 @@ class BillingService:
         except stripe.error.StripeError as e:
             logger.error(f"Failed to create portal session: {e}")
             raise
-    
+
     async def handle_webhook(self, payload: bytes, sig_header: str) -> Dict[str, Any]:
         """Handle Stripe webhook events."""
         webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
-        
+
         try:
             event = stripe.Webhook.construct_event(
                 payload, sig_header, webhook_secret
@@ -117,7 +117,7 @@ class BillingService:
         except stripe.error.SignatureVerificationError as e:
             logger.error(f"Invalid webhook signature: {e}")
             raise
-        
+
         # Handle specific events
         if event["type"] == "checkout.session.completed":
             session = event["data"]["object"]
@@ -131,25 +131,25 @@ class BillingService:
         elif event["type"] == "invoice.payment_failed":
             invoice = event["data"]["object"]
             await self._handle_payment_failed(invoice)
-        
+
         return {"status": "success", "event_type": event["type"]}
-    
+
     async def _handle_checkout_completed(self, session: Dict):
         """Handle successful checkout."""
         user_id = int(session["metadata"]["user_id"])
         tier = session["metadata"]["tier"]
         customer_id = session["customer"]
         subscription_id = session["subscription"]
-        
+
         # Update user's subscription in database
-        from src.database.models import Subscription, SubscriptionTier, SubscriptionStatus
-        
+        from src.database.models import Subscription, SubscriptionStatus, SubscriptionTier
+
         # Get or create subscription record
         result = await self.db.execute(
             select(Subscription).where(Subscription.user_id == user_id)
         )
         subscription = result.scalar_one_or_none()
-        
+
         if subscription:
             subscription.stripe_customer_id = customer_id
             subscription.stripe_subscription_id = subscription_id
@@ -168,14 +168,14 @@ class BillingService:
                 app_generations_used=0
             )
             self.db.add(subscription)
-        
+
         await self.db.commit()
         logger.info(f"Subscription activated for user {user_id}: {tier}")
-    
+
     async def _handle_subscription_updated(self, subscription: Dict):
         """Handle subscription updates."""
         from src.database.models import Subscription, SubscriptionStatus
-        
+
         stripe_sub_id = subscription["id"]
         result = await self.db.execute(
             select(Subscription).where(
@@ -183,7 +183,7 @@ class BillingService:
             )
         )
         sub = result.scalar_one_or_none()
-        
+
         if sub:
             status_map = {
                 "active": SubscriptionStatus.ACTIVE,
@@ -194,7 +194,7 @@ class BillingService:
             }
             sub.status = status_map.get(subscription["status"], SubscriptionStatus.ACTIVE)
             sub.cancel_at_period_end = subscription.get("cancel_at_period_end", False)
-            
+
             if subscription.get("current_period_start"):
                 sub.current_period_start = datetime.fromtimestamp(
                     subscription["current_period_start"]
@@ -203,13 +203,13 @@ class BillingService:
                 sub.current_period_end = datetime.fromtimestamp(
                     subscription["current_period_end"]
                 )
-            
+
             await self.db.commit()
-    
+
     async def _handle_subscription_deleted(self, subscription: Dict):
         """Handle subscription cancellation."""
-        from src.database.models import Subscription, SubscriptionTier, SubscriptionStatus
-        
+        from src.database.models import Subscription, SubscriptionStatus, SubscriptionTier
+
         stripe_sub_id = subscription["id"]
         result = await self.db.execute(
             select(Subscription).where(
@@ -217,17 +217,17 @@ class BillingService:
             )
         )
         sub = result.scalar_one_or_none()
-        
+
         if sub:
             sub.status = SubscriptionStatus.CANCELED
             sub.tier = SubscriptionTier.FREE
             sub.app_generations_limit = 0
             await self.db.commit()
-    
+
     async def _handle_payment_failed(self, invoice: Dict):
         """Handle failed payment."""
         from src.database.models import Subscription, SubscriptionStatus
-        
+
         customer_id = invoice["customer"]
         result = await self.db.execute(
             select(Subscription).where(
@@ -235,7 +235,7 @@ class BillingService:
             )
         )
         sub = result.scalar_one_or_none()
-        
+
         if sub:
             sub.status = SubscriptionStatus.PAST_DUE
             await self.db.commit()

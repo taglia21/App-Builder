@@ -13,7 +13,6 @@ except ImportError:
 
 from loguru import logger
 
-from ...models import PainPoint
 from ..base import DataSource
 
 

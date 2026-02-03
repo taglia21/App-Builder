@@ -5,15 +5,13 @@ Part of the Organizational Intelligence framework implementing checks and balanc
 through specialized rival agents that compete to identify different types of issues.
 """
 
-from typing import Any, Dict, List, Optional
-import logging
 import json
+import logging
 import re
+from typing import Any, Dict, List
 
 from ..base import LLMProvider
-from ..messages import (
-    AgentRole, CriticDecision, CriticReview, GeneratedCode
-)
+from ..messages import AgentRole, CriticDecision, CriticReview, GeneratedCode
 
 logger = logging.getLogger(__name__)
 
@@ -21,21 +19,21 @@ logger = logging.getLogger(__name__)
 class SecurityCritic:
     """
     Security-focused critic agent that reviews code for vulnerabilities.
-    
+
     This critic represents the "security auditor" perspective in the
     organizational intelligence framework, specifically looking for:
     - SQL injection vulnerabilities
-    - XSS vulnerabilities  
+    - XSS vulnerabilities
     - Authentication/authorization issues
     - Sensitive data exposure
     - Insecure dependencies
     - Input validation gaps
     - CSRF vulnerabilities
     """
-    
+
     role = AgentRole.CRITIC
     specialty = "security"
-    
+
     SECURITY_REVIEW_PROMPT = '''You are a Security Critic Agent - a specialized security auditor.
 
 Your role is to review generated code EXCLUSIVELY for security vulnerabilities.
@@ -89,7 +87,7 @@ RECOMMEND revision for medium severity. APPROVE if only low severity or none fou
     def __init__(self, llm_provider: LLMProvider):
         self.llm = llm_provider
         self._known_patterns = self._load_security_patterns()
-    
+
     def _load_security_patterns(self) -> Dict[str, List[re.Pattern]]:
         """Load regex patterns for common security vulnerabilities."""
         return {
@@ -118,12 +116,12 @@ RECOMMEND revision for medium severity. APPROVE if only low severity or none fou
                 re.compile(r'os\.path\.join\s*\(.*request', re.IGNORECASE),
             ]
         }
-    
+
     def _static_security_scan(self, code: str) -> List[Dict[str, Any]]:
         """Perform static analysis for known vulnerability patterns."""
         vulnerabilities = []
         lines = code.split('\n')
-        
+
         for vuln_type, patterns in self._known_patterns.items():
             for pattern in patterns:
                 for i, line in enumerate(lines, 1):
@@ -135,9 +133,9 @@ RECOMMEND revision for medium severity. APPROVE if only low severity or none fou
                             "location": f"line:{i}",
                             "recommendation": self._get_recommendation(vuln_type)
                         })
-        
+
         return vulnerabilities
-    
+
     def _get_recommendation(self, vuln_type: str) -> str:
         """Get remediation recommendation for vulnerability type."""
         recommendations = {
@@ -148,28 +146,28 @@ RECOMMEND revision for medium severity. APPROVE if only low severity or none fou
             "path_traversal": "Validate and sanitize file paths, use os.path.basename() or pathlib"
         }
         return recommendations.get(vuln_type, "Review and remediate the security concern")
-    
+
     async def review(self, code: GeneratedCode, requirements: str) -> CriticReview:
         """Review generated code for security vulnerabilities."""
         logger.info(f"Security critic reviewing code for: {requirements[:50]}...")
-        
+
         # Combine all code files for review
         all_code = "\n\n".join([
-            f"# File: {f.filename}\n{f.content}" 
+            f"# File: {f.filename}\n{f.content}"
             for f in code.files
         ])
-        
+
         # First, run static analysis
         static_vulns = self._static_security_scan(all_code)
-        
+
         # Then get LLM-based deep analysis
         prompt = self.SECURITY_REVIEW_PROMPT.format(
             code=all_code,
             requirements=requirements
         )
-        
+
         response = await self.llm.generate(prompt)
-        
+
         try:
             review_data = json.loads(response)
         except json.JSONDecodeError:
@@ -180,10 +178,10 @@ RECOMMEND revision for medium severity. APPROVE if only low severity or none fou
                 "vulnerabilities": static_vulns,
                 "reasoning": "Unable to complete full security analysis"
             }
-        
+
         # Merge static analysis findings with LLM findings
         all_vulns = static_vulns + review_data.get("vulnerabilities", [])
-        
+
         # Deduplicate vulnerabilities
         seen = set()
         unique_vulns = []
@@ -192,18 +190,18 @@ RECOMMEND revision for medium severity. APPROVE if only low severity or none fou
             if key not in seen:
                 seen.add(key)
                 unique_vulns.append(v)
-        
+
         # Determine decision based on vulnerability severities
         decision_map = {
             "approve": CriticDecision.APPROVE,
             "reject": CriticDecision.REJECT,
             "needs_revision": CriticDecision.NEEDS_REVISION
         }
-        
+
         # Override decision if critical/high vulns found
         has_critical = any(v.get("severity") == "critical" for v in unique_vulns)
         has_high = any(v.get("severity") == "high" for v in unique_vulns)
-        
+
         if has_critical:
             decision = CriticDecision.REJECT
         elif has_high:
@@ -213,7 +211,7 @@ RECOMMEND revision for medium severity. APPROVE if only low severity or none fou
                 review_data.get("decision", "needs_revision").lower(),
                 CriticDecision.NEEDS_REVISION
             )
-        
+
         return CriticReview(
             critic_role=self.role,
             specialty=self.specialty,

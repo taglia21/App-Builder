@@ -1,62 +1,59 @@
 """Enhanced code generation engine for production-ready applications."""
 
-import os
+import ast
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union, Tuple
 from string import Template
-from datetime import datetime
-import ast
-from pydantic import BaseModel, Field, ValidationError, field_validator
-from src.llm.client import get_llm_client
+from typing import Any, Dict, List, Optional, Union
 
-from src.models import GeneratedCodebase, GoldStandardPrompt, ProductPrompt
+from pydantic import BaseModel, Field, ValidationError, field_validator
+
 from src.code_generation.file_templates import (
-    BACKEND_MAIN_PY,
-    BACKEND_CONFIG_PY,
-    BACKEND_MODELS_USER_PY,
-    BACKEND_MODELS_CORE_PY,
-    BACKEND_SCHEMAS_USER_PY,
-    BACKEND_SCHEMAS_CORE_PY,
-    BACKEND_CRUD_BASE_PY,
-    BACKEND_AUTH_PY,
+    BACKEND_AI_SERVICE_PY,
     BACKEND_API_AUTH_PY,
     BACKEND_API_CRUD_PY,
-    BACKEND_DB_SESSION_PY,
+    BACKEND_AUTH_PY,
+    BACKEND_CONFIG_PY,
+    BACKEND_CRUD_BASE_PY,
     BACKEND_DB_BASE_PY,
+    BACKEND_DB_SESSION_PY,
+    BACKEND_EMAIL_SERVICE_PY,
+    BACKEND_MAIN_PY,
+    BACKEND_MODELS_CORE_PY,
+    BACKEND_MODELS_USER_PY,
+    BACKEND_SCHEMAS_CORE_PY,
+    BACKEND_SCHEMAS_USER_PY,
     BACKEND_TEST_AUTH_PY,
     BACKEND_TEST_CRUD_PY,
-    GITHUB_WORKFLOW_CI,
     BACKEND_WORKER_PY,
-    BACKEND_AI_SERVICE_PY,
-    BACKEND_EMAIL_SERVICE_PY,
-    BACKEND_EMAIL_SERVICE_PY,
-    ROOT_DOCKER_COMPOSE
+    GITHUB_WORKFLOW_CI,
+    ROOT_DOCKER_COMPOSE,
 )
-from src.deployment.providers import VercelProvider, RenderProvider
+from src.code_generation.frontend_templates import (
+    FRONTEND_COMPONENTS_DATA_TABLE,
+    FRONTEND_COMPONENTS_NAVBAR,
+    FRONTEND_COMPONENTS_SIDEBAR,
+    FRONTEND_DASHBOARD_LAYOUT,
+    FRONTEND_DASHBOARD_PAGE,
+    FRONTEND_ENTITY_LIST_PAGE,
+    FRONTEND_LIB_UTILS,
+    FRONTEND_LOGIN_PAGE,
+    FRONTEND_POSTCSS_CONFIG,
+    FRONTEND_REGISTER_PAGE,
+    FRONTEND_UI_ALERT,
+    FRONTEND_UI_BUTTON,
+    FRONTEND_UI_CARD,
+    FRONTEND_UI_INPUT,
+    FRONTEND_UI_STATS_CARD,
+    FRONTEND_UI_TABLE,
+)
 from src.deployment.infrastructure.ci_cd_generator import CICDGenerator
 from src.deployment.infrastructure.terraform import TerraformGenerator
 from src.deployment.models import DeploymentConfig, DeploymentProviderType
-from src.code_generation.frontend_templates import (
-    FRONTEND_UI_BUTTON,
-    FRONTEND_UI_INPUT,
-    FRONTEND_UI_CARD,
-    FRONTEND_LIB_UTILS,
-    FRONTEND_LOGIN_PAGE,
-    FRONTEND_REGISTER_PAGE,
-    FRONTEND_DASHBOARD_LAYOUT,
-    FRONTEND_DASHBOARD_PAGE,
-    FRONTEND_UI_TABLE,
-    FRONTEND_UI_STATS_CARD,
-    FRONTEND_COMPONENTS_SIDEBAR,
-    FRONTEND_COMPONENTS_NAVBAR,
-    FRONTEND_COMPONENTS_DATA_TABLE,
-    FRONTEND_COMPONENTS_DATA_TABLE,
-    FRONTEND_ENTITY_LIST_PAGE,
-    FRONTEND_POSTCSS_CONFIG,
-    FRONTEND_UI_ALERT
-)
+from src.deployment.providers import RenderProvider, VercelProvider
+from src.llm.client import get_llm_client
+from src.models import GeneratedCodebase, GoldStandardPrompt, ProductPrompt
 
 logger = logging.getLogger(__name__)
 
@@ -107,7 +104,7 @@ class EntityField(BaseModel):
     sql_type: str
     python_type: str
     required: bool = True
-    
+
     @field_validator('sql_type')
     @classmethod
     def validate_sql_type(cls, v: str) -> str:
@@ -139,16 +136,16 @@ class EntityField(BaseModel):
                     return v
                 return val
         return v
-    
+
     @field_validator('python_type')
-    @classmethod  
+    @classmethod
     def validate_python_type(cls, v: str) -> str:
         """Normalize Python type hints."""
         v = v.strip()
         # Map to valid Python types
         type_mapping = {
             'string': 'str',
-            'integer': 'int', 
+            'integer': 'int',
             'float': 'float',
             'boolean': 'bool',
             'dict': 'Dict[str, Any]',
@@ -168,7 +165,7 @@ class EntityDefinition(BaseModel):
     lower: str = ''
     table: str = ''
     fields: List[EntityField] = Field(default_factory=list)
-    
+
     def model_post_init(self, __context) -> None:
         """Auto-fill missing fields based on name."""
         if not self.class_name:
@@ -190,10 +187,10 @@ class EntityDefinition(BaseModel):
                 self.table = lower + 'es'
             else:
                 self.table = lower + 's'
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary format expected by code generator.
-        
+
         Returns fields as dicts for consistency with fallback heuristics.
         """
         return {
@@ -254,14 +251,14 @@ def clean_llm_json(content: str) -> str:
 
 class EnhancedCodeGenerator:
     """Generates complete, production-ready full-stack applications."""
-    
+
     def __init__(self, config: Optional[Any] = None, llm_client: Optional[Any] = None):
         """Initialize with config (backward compatibility)."""
         # Config might be a PipelineConfig object or None
         output_dir = "./generated_app_v2"
         if config and hasattr(config, "code_generation") and config.code_generation:
              output_dir = config.code_generation.output_directory
-        
+
         self.output_dir = Path(output_dir)
         self.files_created = []
         self.metrics = {
@@ -272,34 +269,34 @@ class EnhancedCodeGenerator:
             'test_files': 0,
             'config_files': 0
         }
-    
+
     def generate(self, prompt: Union[ProductPrompt, GoldStandardPrompt], output_dir: Optional[str] = None, theme: str = "Modern") -> GeneratedCodebase:
         """Generate complete application from startup idea.
-        
+
         Args:
             prompt: ProductPrompt or GoldStandardPrompt containing idea details
             output_dir: Optional output directory path
             theme: UI theme - one of "Modern", "Minimalist", "Cyberpunk", "Corporate"
         """
-        
+
         # Validate theme
         valid_themes = ["Modern", "Minimalist", "Cyberpunk", "Corporate"]
         if theme not in valid_themes:
             logger.warning(f"Invalid theme '{theme}', defaulting to 'Modern'")
             theme = "Modern"
-        
+
         # Determine output directory
         if output_dir:
             self.output_dir = Path(output_dir)
-            
+
         # Extract idea details from Prompt object
         if isinstance(prompt, GoldStandardPrompt):
             product_prompt = prompt.product_prompt
         else:
             product_prompt = prompt
-            
+
         idea_name = product_prompt.idea_name
-        
+
         # Parse prompt content to get description/features
         try:
             content = json.loads(product_prompt.prompt_content)
@@ -308,7 +305,7 @@ class EnhancedCodeGenerator:
                  description = str(description)
         except (json.JSONDecodeError, KeyError):
              description = product_prompt.idea_name
-             
+
         # Mock Idea Dict for internal methods
         # Most internal methods use 'app_name' string directly, but _determine_core_entity uses 'idea' dict
         # We construct a synthetic idea dict
@@ -320,25 +317,25 @@ class EnhancedCodeGenerator:
 
         logger.info(f"Generating enhanced application for: {idea_name}")
         logger.info(f"Using theme: {theme}")
-        
+
         app_name = idea_name.replace(' ', '')
-        
+
         # Determine core entity from idea
         entity = self._determine_core_entity(idea_dict)
-        
+
         # CRITICAL: Ensure entity['lower'] is a valid Python identifier
         # This prevents filenames like "ai-powered_crm.py" which are invalid
         entity['lower'] = sanitize_python_identifier(entity.get('lower', entity.get('name', 'item')))
         entity['table'] = sanitize_python_identifier(entity.get('table', entity['lower'] + 's'))
-        
+
         # Create directory structure
         self._create_directories()
-        
+
         # transform idea to features
         # If technical_requirements are in prompt content, we should use them
         # For now, we rely on the description detection or pass specific flags if they exist
         features = self._detect_features(description)
-        
+
         # Generate all files
         self._generate_backend(app_name, description, entity, features)
         self._generate_frontend(app_name, description, entity, theme=theme)
@@ -346,12 +343,12 @@ class EnhancedCodeGenerator:
         self._generate_docs(app_name, description, entity)
         self._generate_deployment_files(app_name, description)
         self._generate_run_script(app_name)
-        
+
         # Calculate metrics
         self._calculate_metrics()
-        
+
         logger.info(f"✓ Generated {self.metrics['total_files']} files ({self.metrics['total_lines']} lines)")
-        
+
         return GeneratedCodebase(
             idea_id=product_prompt.idea_id,
             idea_name=idea_name,
@@ -363,7 +360,7 @@ class EnhancedCodeGenerator:
             lines_of_code=self.metrics['total_lines']
         )
 
-    
+
     def _detect_features(self, description: str) -> Dict[str, bool]:
         """Use LLM to detect necessary technical features with validated response."""
         # Default fallback based on keyword detection
@@ -373,7 +370,7 @@ class EnhancedCodeGenerator:
             needs_ai_integration="ai" in description.lower() or "llm" in description.lower() or "gpt" in description.lower(),
             needs_email="notify" in description.lower() or "email" in description.lower() or "newsletter" in description.lower()
         )
-        
+
         try:
             client = get_llm_client("auto")
             prompt = f"""Analyze this app description and detect technical requirements.
@@ -390,12 +387,12 @@ Return JSON boolean flags:
             response = client.complete(prompt, json_mode=True)
             raw_content = clean_llm_json(response.content)
             data = json.loads(raw_content)
-            
+
             # Validate with Pydantic model
             features = FeatureFlags(**data)
             logger.info(f"Feature detection: payments={features.needs_payments}, jobs={features.needs_background_jobs}, ai={features.needs_ai_integration}, email={features.needs_email}")
             return features.model_dump()
-            
+
         except ValidationError as e:
             logger.warning(f"Feature detection response validation failed: {e}")
             return fallback.model_dump()
@@ -410,7 +407,7 @@ Return JSON boolean flags:
         """Determine the core entity for the app using LLM with validated response."""
         name = idea.get('name', 'Item')
         description = idea.get('solution_description', '')
-        
+
         try:
             client = get_llm_client("auto")
             prompt = f"""Design the core database entity for this startup idea.
@@ -442,16 +439,16 @@ Rules:
             response = client.complete(prompt, json_mode=True)
             raw_content = clean_llm_json(response.content)
             data = json.loads(raw_content)
-            
+
             # Parse and validate fields
             raw_fields = data.get('fields', [])
             validated_fields = parse_entity_fields(raw_fields)
-            
+
             # If no valid fields, fall back to heuristics
             if not validated_fields:
                 logger.warning("LLM returned no valid fields. Falling back to heuristics.")
                 raise ValueError("No valid fields in LLM response")
-            
+
             # Create validated entity
             entity = EntityDefinition(
                 name=data.get('name', name),
@@ -460,11 +457,11 @@ Rules:
                 table=data.get('table', ''),
                 fields=validated_fields
             )
-            
+
             result = entity.to_dict()
             logger.info(f"Entity determined: {result['class']} with {len(result['fields'])} fields")
             return result
-            
+
         except ValidationError as e:
             logger.warning(f"Entity validation failed: {e}. Falling back to heuristics.")
         except json.JSONDecodeError as e:
@@ -474,7 +471,7 @@ Rules:
 
         # Fallback to heuristics if LLM fails
         combined_text = f"{name} {description}".lower()
-        
+
         # Common entity patterns - using dict format for consistency with LLM responses
         if any(w in combined_text for w in ['workflow', 'automation', 'flow', 'process']):
             return {
@@ -529,7 +526,7 @@ Rules:
                     {'name': 'data', 'sql_type': 'JSON', 'python_type': 'Optional[Dict]', 'required': False},
                 ]
             }
-    
+
     def _create_directories(self):
         """Create the directory structure."""
         dirs = [
@@ -551,34 +548,34 @@ Rules:
             '.github/workflows',
             'docs',
         ]
-        
+
         # Add entity directory to list
-        # We can't access entity['lower'] here easily without passing it, 
+        # We can't access entity['lower'] here easily without passing it,
         # but _generate_frontend handles the file creation which makes dirs implicitly if using write_file
         # so this list is just for initial structure.
 
-        
+
         for d in dirs:
             (self.output_dir / d).mkdir(parents=True, exist_ok=True)
-    
+
     def _write_file(self, path: str, content: str, category: str = 'config'):
         """Write a file and track it."""
         full_path = self.output_dir / path
         full_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         with open(full_path, 'w', encoding='utf-8') as f:
             # Self-healing check for Python files
             if path.endswith('.py'):
                 content = self._verify_and_fix(path, content)
             f.write(content)
-        
+
         lines = len(content.split('\n'))
         self.files_created.append({
             'path': path,
             'lines': lines,
             'category': category
         })
-        
+
         if category == 'backend':
             self.metrics['backend_files'] += 1
         elif category == 'frontend':
@@ -592,7 +589,7 @@ Rules:
         """Verify Python syntax and fix with LLM if broken."""
         if not path.endswith('.py'):
             return content
-            
+
         for attempt in range(3):
             try:
                 ast.parse(content)
@@ -603,13 +600,13 @@ Rules:
                     content = self._fix_code_with_llm(content, str(e))
                 except Exception as llm_error:
                     logger.error(f"LLM fix failed: {llm_error}")
-        
+
         # Final check
         try:
             ast.parse(content)
         except SyntaxError as e:
             logger.error(f"Failed to fix {path} after 3 attempts: {e}")
-            
+
         return content
 
     def _fix_code_with_llm(self, code: str, error: str) -> str:
@@ -630,35 +627,35 @@ Return ONLY the fixed code. No explanations.
         fixed = response.content.replace('```python', '').replace('```', '').strip()
         return fixed
 
-    
+
     def _generate_backend(self, app_name: str, description: str, entity: Dict, features: Dict[str, bool] = None):
         """Generate all backend files."""
         features = features or {}
         db_name = app_name.lower().replace('-', '_')
-        
+
         # Main app
         content = Template(BACKEND_MAIN_PY).safe_substitute(
             app_name=app_name,
             description=description
         )
         self._write_file('backend/app/main.py', content, 'backend')
-        
+
         # Config
         content = Template(BACKEND_CONFIG_PY).safe_substitute(
             app_name=app_name,
             db_name=db_name
         )
         self._write_file('backend/app/core/config.py', content, 'backend')
-        
+
         # Auth
         self._write_file('backend/app/core/auth.py', BACKEND_AUTH_PY, 'backend')
         self._write_file('backend/app/core/__init__.py', '', 'backend')
-        
+
         # Database
         self._write_file('backend/app/db/session.py', BACKEND_DB_SESSION_PY, 'backend')
         self._write_file('backend/app/db/base_class.py', BACKEND_DB_BASE_PY, 'backend')
-        self._write_file('backend/app/db/__init__.py', f'from app.db.base_class import Base  # noqa', 'backend')
-        
+        self._write_file('backend/app/db/__init__.py', 'from app.db.base_class import Base  # noqa', 'backend')
+
         # Dynamic Modules (Smart Templates)
         if features.get('needs_payments'):
             logger.info("Injecting Payment Module (Stripe)...")
@@ -670,13 +667,13 @@ Return ONLY the fixed code. No explanations.
                 self._write_file('backend/app/core/payment.py', payment_code, 'backend')
             except Exception as e:
                 logger.error(f"Failed to generate payment module: {e}")
-        
+
         # Models
         user_model = Template(BACKEND_MODELS_USER_PY).safe_substitute(
             relationships=f'{entity["table"]} = relationship("{entity["class"]}", back_populates="owner")'
         )
         self._write_file('backend/app/models/user.py', user_model, 'backend')
-        
+
         # Helper to extract field data (handles both dict and tuple formats)
         def get_field_data(field):
             if isinstance(field, dict):
@@ -695,14 +692,14 @@ Return ONLY the fixed code. No explanations.
                 )
             else:
                 return ('field', 'String(255)', 'str', True)
-        
+
         # Generate columns for entity model
         columns = []
         for field in entity['fields']:
             field_name, sql_type, py_type, required = get_field_data(field)
             nullable = 'False' if required else 'True'
             columns.append(f'{field_name} = Column({sql_type}, nullable={nullable})')
-        
+
         entity_model = Template(BACKEND_MODELS_CORE_PY).safe_substitute(
             entity_name=entity['name'],
             entity_class=entity['class'],
@@ -710,13 +707,13 @@ Return ONLY the fixed code. No explanations.
             columns='\n    '.join(columns)
         )
         self._write_file(f'backend/app/models/{entity["lower"]}.py', entity_model, 'backend')
-        self._write_file('backend/app/models/__init__.py', 
-                        f'from app.models.user import User  # noqa\nfrom app.models.{entity["lower"]} import {entity["class"]}  # noqa', 
+        self._write_file('backend/app/models/__init__.py',
+                        f'from app.models.user import User  # noqa\nfrom app.models.{entity["lower"]} import {entity["class"]}  # noqa',
                         'backend')
-        
+
         # Schemas
         self._write_file('backend/app/schemas/user.py', BACKEND_SCHEMAS_USER_PY, 'backend')
-        
+
         # Generate schema fields
         schema_fields = []
         update_fields = []
@@ -727,7 +724,7 @@ Return ONLY the fixed code. No explanations.
             else:
                 schema_fields.append(f'{field_name}: {py_type} = None')
             update_fields.append(f'{field_name}: {py_type} = None')
-        
+
         entity_schema = Template(BACKEND_SCHEMAS_CORE_PY).safe_substitute(
             entity_name=entity['name'],
             entity_class=entity['class'],
@@ -736,7 +733,7 @@ Return ONLY the fixed code. No explanations.
         )
         self._write_file(f'backend/app/schemas/{entity["lower"]}.py', entity_schema, 'backend')
         self._write_file('backend/app/schemas/__init__.py', '', 'backend')
-        
+
         # CRUD
         self._write_file('backend/app/crud/base.py', BACKEND_CRUD_BASE_PY, 'backend')
         entity_crud = f'''"""CRUD operations for {entity['class']}."""
@@ -752,10 +749,10 @@ crud_{entity['lower']} = CRUD{entity['class']}({entity['class']})
 '''
         self._write_file(f'backend/app/crud/{entity["lower"]}.py', entity_crud, 'backend')
         self._write_file('backend/app/crud/__init__.py', '', 'backend')
-        
+
         # API endpoints
         self._write_file('backend/app/api/endpoints/auth.py', BACKEND_API_AUTH_PY, 'backend')
-        
+
         entity_api = Template(BACKEND_API_CRUD_PY).safe_substitute(
             entity_name=entity['name'],
             entity_class=entity['class'],
@@ -763,7 +760,7 @@ crud_{entity['lower']} = CRUD{entity['class']}({entity['class']})
         )
         self._write_file(f'backend/app/api/endpoints/{entity["lower"]}s.py', entity_api, 'backend')
         self._write_file('backend/app/api/endpoints/__init__.py', '', 'backend')
-        
+
         # API router
         api_router = f'''"""API router."""
 
@@ -776,7 +773,7 @@ api_router.include_router({entity['lower']}s.router, prefix="/{entity['lower']}s
 '''
         self._write_file('backend/app/api/__init__.py', api_router, 'backend')
         self._write_file('backend/app/__init__.py', '', 'backend')
-        
+
         # Requirements
         requirements = '''fastapi==0.109.0
 uvicorn[standard]==0.27.0
@@ -802,9 +799,9 @@ email-validator==2.1.0.post1
             requirements += "openai==1.10.0\nanthropic==0.10.0\n"
         if features.get('needs_email'):
             requirements += "fastapi-mail==1.4.1\n"
-            
+
         self._write_file('backend/requirements.txt', requirements, 'backend')
-        
+
         # Dockerfile
         dockerfile = '''FROM python:3.11-slim
 
@@ -824,10 +821,10 @@ COPY . .
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 '''
         self._write_file('backend/Dockerfile', dockerfile, 'backend')
-        
+
         # Tests
         self._write_file('backend/tests/api/test_auth.py', BACKEND_TEST_AUTH_PY, 'test')
-        
+
         # Use get_field_data to handle both dict and tuple field formats
         test_fields = []
         for field in entity['fields'][:2]:
@@ -840,7 +837,7 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload
             test_create_json=', '.join(test_fields) if test_fields else '"name": "test"'
         )
         self._write_file(f'backend/tests/api/test_{entity["lower"]}s.py', crud_tests, 'test')
-        
+
         conftest = '''"""Pytest configuration."""
 import pytest
 
@@ -858,10 +855,10 @@ def event_loop():
         # Additional Features
         if features.get('needs_background_jobs'):
             self._generate_background_jobs(app_name)
-            
+
         if features.get('needs_ai_integration'):
             self._generate_ai_service(app_name)
-            
+
         if features.get('needs_email'):
             self._generate_email_service(app_name)
 
@@ -885,7 +882,7 @@ def event_loop():
     def _generate_deployment_files(self, app_name: str, description: str):
         """Generate all deployment configuration files."""
         logger.info("Generating deployment configurations...")
-        
+
         # 1. Vercel Config (Frontend)
         # We instantiate provider to use its config generation logic
         vercel = VercelProvider()
@@ -893,7 +890,7 @@ def event_loop():
         v_config = DeploymentConfig(provider=DeploymentProviderType.VERCEL, region="iad1")
         vercel._generate_vercel_config(self.output_dir / "frontend", v_config)
         self.files_created.append({'path': 'frontend/vercel.json', 'lines': 10, 'category': 'config'})
-        
+
         # 2. Render Config (Backend)
         render = RenderProvider()
         r_config = DeploymentConfig(provider=DeploymentProviderType.RENDER)
@@ -904,17 +901,17 @@ def event_loop():
         # Let's put it in root for now as 'render.yaml' often defines services for subdirs.
         render._generate_render_yaml(self.output_dir, r_config)
         self.files_created.append({'path': 'render.yaml', 'lines': 20, 'category': 'config'})
-        
+
         # 3. CI/CD Pipeline
         cicd = CICDGenerator()
         cicd.generate_github_actions(self.output_dir)
         self.files_created.append({'path': '.github/workflows/deploy.yml', 'lines': 30, 'category': 'config'})
-        
+
         # 4. Terraform Templates
         tf = TerraformGenerator()
         tf.generate_templates(self.output_dir)
         self.files_created.append({'path': 'terraform/main.tf', 'lines': 20, 'category': 'config'})
-        
+
         # 5. Deployment Guide
         guide = f"""# Deployment Guide for {app_name}
 
@@ -946,7 +943,7 @@ Templates are available in `terraform/` directory for AWS provisioning.
     def _generate_run_script(self, app_name: str):
         """Generate convenience scripts for running the app."""
         logger.info("Generating start scripts...")
-        
+
         # Bash Script (Linux/Mac)
         bash_script = """#!/bin/bash
 echo "🚀 Starting ${app_name}..."
@@ -962,10 +959,10 @@ docker-compose up --build
 """
         bash_script = Template(bash_script).safe_substitute(app_name=app_name)
         self._write_file('start_dev.sh', bash_script, 'config')
-        
+
         # Make executable (not strictly possible via file write but good for content)
         # On windows this essentially just writes the file
-        
+
         # Windows Batch Script
         bat_script = """@echo off
 echo 🚀 Starting ${app_name}...
@@ -982,8 +979,8 @@ docker-compose up --build
 """
         bat_script = Template(bat_script).safe_substitute(app_name=app_name)
         self._write_file('start_dev.bat', bat_script, 'config')
-    
-    
+
+
     def _get_theme_config(self, theme: str = "Modern") -> Dict[str, str]:
         """Get CSS variables and config for selected theme."""
         themes = {
@@ -1092,10 +1089,10 @@ docker-compose up --build
         Ensures Contract-First reliability.
         """
         logger.info("Generating TypeScript schema (Contract-First)...")
-        
+
         name = entity.get('name', 'Entity')
         fields = entity.get('fields', [])
-        
+
         # Type mapping
         type_map = {
             'String': 'string',
@@ -1106,29 +1103,29 @@ docker-compose up --build
             'DateTime': 'string',
             'Date': 'string'
         }
-        
+
         lines = []
         lines.append("// This file is auto-generated by the App-Builder Contract System")
         lines.append("// It must match the backend Pydantic models.")
         lines.append("")
-        
+
         lines.append(f"export interface {name} {{")
         lines.append("  id: string;") # UUID default
-        
+
         for field in fields:
             # Handle List/Tuple format from _determine_core_entity
             # [name, sql_type, python_type, is_required]
             if isinstance(field, (list, tuple)) and len(field) >= 2:
                 f_name = field[0]
                 sql_type = field[1]
-                # is_required is index 3 if exists, default True? 
+                # is_required is index 3 if exists, default True?
                 # looking at fallback: ('status', 'String', 'str', False) -> False means not required?
                 # No, standard is usually (name, type, pytype, required).
                 # Fallback 'description' is Optional[str] and False. So False = Not Required (Nullable).
                 # Fallback 'name' is str and True. So True = Required (Not Nullable).
                 is_required = field[3] if len(field) > 3 else False
                 is_nullable = not is_required
-                
+
                 # Normalize SQL Type to TS Type
                 ts_type = 'any'
                 st_lower = sql_type.lower()
@@ -1141,7 +1138,7 @@ docker-compose up --build
                 else:
                     # String, Text, Date, etc
                     ts_type = 'string'
-                
+
                 suffix = "?" if is_nullable else ""
                 lines.append(f"  {f_name}{suffix}: {ts_type};")
 
@@ -1153,17 +1150,17 @@ docker-compose up --build
                 ts_type = type_map.get(f_type, 'string') # Usage dependent
                 suffix = "?" if is_nullable else ""
                 lines.append(f"  {f_name}{suffix}: {ts_type};")
-            
+
         lines.append("  created_at?: string;")
         lines.append("}")
-        
+
         # Write file
         content = "\n".join(lines)
         self._write_file("frontend/src/types/schema.ts", content, "frontend")
 
     def _generate_frontend(self, app_name: str, description: str, entity: Dict, theme: str = "Modern"):
         """Generate minimal but functional frontend."""
-        
+
         # Generate Types (Contract-First)
         self._generate_frontend_types(entity)
 
@@ -1213,7 +1210,7 @@ docker-compose up --build
 
         # PostCSS Config
         self._write_file('frontend/postcss.config.js', FRONTEND_POSTCSS_CONFIG, 'frontend')
-        
+
         # Next.js Config
         next_config = '''/** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -1223,7 +1220,7 @@ const nextConfig = {
 export default nextConfig;
 '''
         self._write_file('frontend/next.config.mjs', next_config, 'frontend')
-        
+
         # Globals CSS
         globals_css = f'''@tailwind base;
 @tailwind components;
@@ -1247,7 +1244,7 @@ export default nextConfig;
 }}
 '''
         self._write_file('frontend/src/app/globals.css', globals_css, 'frontend')
-        
+
         # Tailwind Config
         tailwind_config = '''import type { Config } from "tailwindcss";
 
@@ -1335,7 +1332,7 @@ export default config;
 }}
 '''
         self._write_file('frontend/src/app/page.tsx', home_page, 'frontend')
-        
+
         # Layout
         safe_description = description.replace('"', '\\"').replace('\n', ' ')
         layout = f'''import type {{ Metadata }} from "next";
@@ -1355,7 +1352,7 @@ export default function RootLayout({{ children }}: {{ children: React.ReactNode 
 }}
 '''
         self._write_file('frontend/src/app/layout.tsx', layout, 'frontend')
-        
+
         # Dockerfile
         frontend_dockerfile = '''FROM node:20-alpine
 WORKDIR /app
@@ -1365,7 +1362,7 @@ COPY . .
 CMD ["npm", "run", "dev"]
 '''
         self._write_file('frontend/Dockerfile', frontend_dockerfile, 'frontend')
-        
+
         # tsconfig
         tsconfig = '''{
   "compilerOptions": {
@@ -1390,15 +1387,15 @@ CMD ["npm", "run", "dev"]
 }
 '''
         self._write_file('frontend/tsconfig.json', tsconfig, 'frontend')
-        
+
         # Theme config file for AI agent customization
         theme_config_ts = f'''/**
  * Theme Configuration
- * 
+ *
  * This file contains all design tokens for the "{theme}" theme.
  * AI agents can safely modify colors, fonts, spacing, and other visual properties here
  * without affecting business logic in components.
- * 
+ *
  * To change the theme:
  * 1. Modify the values in this file
  * 2. Update globals.css :root variables to match
@@ -1408,7 +1405,7 @@ CMD ["npm", "run", "dev"]
 export const themeConfig = {{
   /** Theme identifier */
   name: "{theme}",
-  
+
   /** Color palette - HSL values matching CSS variables in globals.css */
   colors: {{
     primary: "hsl(var(--primary))",
@@ -1429,21 +1426,21 @@ export const themeConfig = {{
     input: "hsl(var(--input))",
     ring: "hsl(var(--ring))",
   }},
-  
+
   /** Typography settings */
   fonts: {{
     heading: "{theme_config['font']}",
     body: "{theme_config['font']}",
     mono: "monospace",
   }},
-  
+
   /** Spacing and sizing */
   spacing: {{
     radius: "{theme_config['radius']}",
     containerMaxWidth: "1400px",
     containerPadding: "2rem",
   }},
-  
+
   /** Visual effects */
   effects: {{
     /** Border style preference: "solid" | "none" | "gradient" */
@@ -1466,15 +1463,15 @@ export function getColor(name: keyof typeof themeConfig.colors): string {{
 }}
 '''
         self._write_file('frontend/src/config/theme.config.ts', theme_config_ts, 'frontend')
-        
+
         # Navigation Configuration - AI Agent Safe Edit Zone
         navigation_config = f'''/**
  * Navigation Configuration
- * 
+ *
  * SAFE TO MODIFY: This file is intentionally separated from business logic
  * for AI-assisted customization. Modify navigation items here without
  * touching component code.
- * 
+ *
  * @ai-safe-edit
  */
 
@@ -1535,14 +1532,14 @@ export const navigationConfig = {{
 export type NavigationConfig = typeof navigationConfig;
 '''
         self._write_file('frontend/src/config/navigation.config.ts', navigation_config, 'frontend')
-        
+
         # Copy/Content Configuration - AI Agent Safe Edit Zone
         copy_config = f'''/**
  * Copy/Content Configuration
- * 
+ *
  * SAFE TO MODIFY: This file contains all user-facing text strings.
  * AI agents can safely edit these without affecting application logic.
- * 
+ *
  * @ai-safe-edit
  */
 
@@ -1633,14 +1630,14 @@ export function getCopy(path: string): string {{
 }}
 '''
         self._write_file('frontend/src/config/copy.config.ts', copy_config, 'frontend')
-        
+
         # Features Configuration - AI Agent Safe Edit Zone
         features_config = f'''/**
  * Feature Flags Configuration
- * 
+ *
  * SAFE TO MODIFY: Toggle features on/off without changing code.
  * AI agents can safely enable/disable functionality here.
- * 
+ *
  * @ai-safe-edit
  */
 
@@ -1718,7 +1715,7 @@ export function isFeatureEnabled(path: string): boolean {{
 }}
 '''
         self._write_file('frontend/src/config/features.config.ts', features_config, 'frontend')
-    
+
         # Components
         self._write_file('frontend/src/components/ui/button.tsx', FRONTEND_UI_BUTTON, 'frontend')
         self._write_file('frontend/src/components/ui/input.tsx', FRONTEND_UI_INPUT, 'frontend')
@@ -1757,7 +1754,7 @@ export { Label }
         self._write_file('frontend/src/components/navbar.tsx', FRONTEND_COMPONENTS_NAVBAR, 'frontend')
         self._write_file('frontend/src/components/ui/alert.tsx', FRONTEND_UI_ALERT, 'frontend')
         self._write_file('frontend/src/lib/utils.ts', FRONTEND_LIB_UTILS, 'frontend')
-        
+
         # Icons
         icons_comp = '''import { Loader2 } from "lucide-react";
 
@@ -1775,38 +1772,37 @@ export const Icons = {
         # Dashboard
         dashboard_layout = FRONTEND_DASHBOARD_LAYOUT # It handles its own imports now via components
         self._write_file('frontend/src/app/(dashboard)/layout.tsx', dashboard_layout, 'frontend')
-        
+
         dashboard_page = Template(FRONTEND_DASHBOARD_PAGE).safe_substitute(
             entity_name=entity['name'],
             entity_lower=entity['lower']
         )
         self._write_file('frontend/src/app/(dashboard)/dashboard/page.tsx', dashboard_page, 'frontend')
         self._write_file('frontend/src/app/(dashboard)/dashboard/settings/page.tsx', 'export default function Settings() { return <div>Settings</div> }', 'frontend')
-        
+
         # Entity Pages
         entity_list_page = Template(FRONTEND_ENTITY_LIST_PAGE).safe_substitute(
             entity_name=entity['name'],
             entity_lower=entity['lower']
         )
         self._write_file(f'frontend/src/app/(dashboard)/dashboard/{entity["lower"]}s/page.tsx', entity_list_page, 'frontend')
-    
+
     def _generate_configs(self, app_name: str, description: str):
         """Generate configuration files."""
         # Docker Compose
         db_name = app_name.lower().replace(' ', '_').replace('-', '_')
-        
+
         # Determine worker service
-        worker_service = ""
         # We can't easily access features here without passing them, but we can check requirements
-        # Or better, we should pass features to this method. 
+        # Or better, we should pass features to this method.
         # For now, let's assume we want the worker if celery is in requirements (which we can't see here easily)
         # However, the ROOT_DOCKER_COMPOSE template expects ${worker_service}.
-        
+
         # Let's fix the imports first.
         # It seems features are not passed to _generate_configs.
         # Refactor: Pass features or use empty string for worker if unsure.
         # But wait, we can infer it or just leave it empty if not needed.
-        
+
         # Safe defaults
         worker_block = ""
         # Check if we generated worker.py (a bit hacky but works in this class context if we tracked it)
@@ -1814,19 +1810,19 @@ export const Icons = {
         # For this refactor, I will leave worker_service empty unless I can confirm it's needed.
         # But the hardcoded version didn't have a worker at all!
         # The template has ${worker_service}.
-        
+
         docker_compose = Template(ROOT_DOCKER_COMPOSE).safe_substitute(
             db_name=db_name,
             openai_key="${OPENAI_API_KEY}", # Keep as env var reference for Docker
             worker_service=worker_block
         )
-        
+
         self._write_file('docker-compose.yml', docker_compose, 'config')
 
         # Generate cryptographically secure SECRET_KEY
         import secrets
         secret_key = secrets.token_urlsafe(32)
-        
+
         # .env with actual secure values (for immediate use)
         env_file = f'''# {db_name} Environment Configuration
 # Generated with secure defaults - modify as needed
@@ -1861,8 +1857,8 @@ OPENAI_API_KEY=
 DEBUG=false
 '''
         self._write_file('.env', env_file, 'config')
-        logger.info(f"Generated .env with secure SECRET_KEY")
-        
+        logger.info("Generated .env with secure SECRET_KEY")
+
         # .env.example (for documentation/version control)
         env_example = f'''# {db_name} Environment Configuration
 # Copy this file to .env and update values as needed
@@ -1902,7 +1898,7 @@ GITHUB_CLIENT_SECRET=
 DEBUG=false
 '''
         self._write_file('.env.example', env_example, 'config')
-        
+
         # .gitignore
         gitignore = '''node_modules/
 __pycache__/
@@ -1914,14 +1910,14 @@ dist/
 .DS_Store
 '''
         self._write_file('.gitignore', gitignore, 'config')
-        
+
         # CI/CD
         self._write_file('.github/workflows/ci.yml', GITHUB_WORKFLOW_CI, 'config')
-    
+
     def _generate_docs(self, app_name: str, description: str, entity: Dict):
         """Generate documentation and environment files."""
         db_name = app_name.lower().replace('-', '_').replace(' ', '_')
-        
+
         # Generate .env.example
         env_example = f'''# {app_name} Environment Configuration
 # Copy this file to .env and update values as needed
@@ -1963,7 +1959,7 @@ FRONTEND_PORT=3000
 DB_PORT=5432
 '''
         self._write_file('.env.example', env_example, 'config')
-        
+
         # Generate comprehensive README
         readme = f'''# {app_name}
 
@@ -2115,7 +2111,7 @@ Generated by AI Startup Generator
         self._write_file('README.md', readme, 'config')
 
 
-    
+
     def _calculate_metrics(self):
         """Calculate generation metrics."""
         self.metrics['total_files'] = len(self.files_created)

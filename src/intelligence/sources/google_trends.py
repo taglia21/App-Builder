@@ -3,7 +3,7 @@ Google Trends data source for market intelligence (NO API KEY REQUIRED).
 Uses pytrends to discover trending searches and rising topics.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any, Dict, List
 
 try:
@@ -13,7 +13,6 @@ except ImportError:
 
 from loguru import logger
 
-from ...models import PainPoint
 from ..base import DataSource
 
 
@@ -82,13 +81,13 @@ class GoogleTrendsSource(DataSource):
             for keyword in self.keywords:
                 try:
                     self.pytrends.build_payload([keyword], timeframe=self.timeframe)
-                    
+
                     # Interest over time
                     interest = self.pytrends.interest_over_time()
                     if not interest.empty and keyword in interest.columns:
                         avg_interest = interest[keyword].mean()
                         trend_direction = "rising" if interest[keyword].iloc[-1] > interest[keyword].iloc[0] else "falling"
-                        
+
                         results.append({
                             "source": "google_trends",
                             "type": "keyword_interest",
@@ -98,7 +97,7 @@ class GoogleTrendsSource(DataSource):
                             "current_interest": float(interest[keyword].iloc[-1]),
                             "timestamp": datetime.now().isoformat(),
                         })
-                    
+
                     # Related queries
                     related = self.pytrends.related_queries()
                     if keyword in related and related[keyword]['rising'] is not None:
@@ -113,7 +112,7 @@ class GoogleTrendsSource(DataSource):
                                     "value": int(query['value']) if 'value' in query else 0,
                                     "timestamp": datetime.now().isoformat(),
                                 })
-                
+
                 except Exception as e:
                     logger.warning(f"Failed to fetch interest data for '{keyword}': {e}")
 

@@ -3,18 +3,15 @@ Code Generation Engine
 Generates complete, production-ready codebases from product specifications.
 """
 
-import os
 import json
 import logging
 from pathlib import Path
-from datetime import datetime
-from typing import Dict, Any, List, Optional
-from uuid import UUID
+from typing import Optional
 
-from src.models import ProductPrompt, GeneratedCodebase, GoldStandardPrompt
 from src.config import PipelineConfig
 from src.llm import get_llm_client
 from src.llm.client import BaseLLMClient
+from src.models import GeneratedCodebase, ProductPrompt
 
 logger = logging.getLogger(__name__)
 
@@ -22,18 +19,18 @@ logger = logging.getLogger(__name__)
 class CodeGenerationEngine:
     """
     Generates complete codebases from product specifications.
-    
+
     Outputs:
     - Backend (FastAPI)
     - Frontend (Next.js)
     - Docker configuration
     - Documentation
     """
-    
+
     def __init__(self, config: PipelineConfig, llm_client: Optional[BaseLLMClient] = None):
         self.config = config
         self.llm_client = llm_client or get_llm_client()
-    
+
     def generate(
         self,
         prompt: ProductPrompt,
@@ -41,29 +38,29 @@ class CodeGenerationEngine:
     ) -> GeneratedCodebase:
         """
         Generate a complete codebase from a product prompt.
-        
+
         Args:
             prompt: The product specification
             output_dir: Directory to write generated files
-            
+
         Returns:
             GeneratedCodebase with metadata about generated files
         """
         logger.info(f"Generating codebase for: {prompt.idea_name}")
-        
+
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
-        
+
         files_generated = 0
         lines_of_code = 0
-        
+
         # Generate project structure
         logger.info("Generating project files...")
         files_generated += self._generate_readme(prompt, output_path)
         files_generated += self._generate_docker_compose(prompt, output_path)
         files_generated += self._generate_gitignore(output_path)
         files_generated += self._generate_env_example(prompt, output_path)
-        
+
         # Generate backend
         logger.info("Generating backend structure...")
         backend_path = output_path / "backend"
@@ -71,22 +68,22 @@ class CodeGenerationEngine:
         files_generated += self._generate_backend_requirements(backend_path)
         files_generated += self._generate_backend_dockerfile(backend_path)
         files_generated += self._generate_backend_main(prompt, backend_path)
-        
+
         # Generate frontend
         logger.info("Generating frontend structure...")
         frontend_path = output_path / "frontend"
         frontend_path.mkdir(exist_ok=True)
         files_generated += self._generate_frontend_package_json(prompt, frontend_path)
         files_generated += self._generate_frontend_dockerfile(frontend_path)
-        
+
         # Generate documentation
         logger.info("Generating documentation...")
         docs_path = output_path / "docs"
         docs_path.mkdir(exist_ok=True)
         files_generated += self._generate_architecture_doc(prompt, docs_path)
-        
+
         logger.info(f"Generated {files_generated} files")
-        
+
         return GeneratedCodebase(
             idea_id=prompt.idea_id,
             idea_name=prompt.idea_name,
@@ -97,19 +94,19 @@ class CodeGenerationEngine:
             files_generated=files_generated,
             lines_of_code=lines_of_code
         )
-    
+
     def _generate_readme(self, prompt: ProductPrompt, output_path: Path) -> int:
         """Generate README.md"""
-        project_name = prompt.idea_name.lower().replace(" ", "_")
-        
+        prompt.idea_name.lower().replace(" ", "_")
+
         # Parse prompt_content
         try:
             content_dict = json.loads(prompt.prompt_content)
         except json.JSONDecodeError:
             content_dict = {}
-        
+
         tagline = content_dict.get('product_summary', {}).get('tagline', 'A modern SaaS application')
-        
+
         content = f"""# {prompt.idea_name}
 
 {tagline}
@@ -145,11 +142,11 @@ MIT License
 """
         (output_path / "README.md").write_text(content)
         return 1
-    
+
     def _generate_docker_compose(self, prompt: ProductPrompt, output_path: Path) -> int:
         """Generate docker-compose.yml"""
         project_name = prompt.idea_name.lower().replace(" ", "_").replace("-", "_")
-        
+
         content = f"""version: '3.9'
 
 services:
@@ -206,7 +203,7 @@ volumes:
 """
         (output_path / "docker-compose.yml").write_text(content)
         return 1
-    
+
     def _generate_gitignore(self, output_path: Path) -> int:
         """Generate .gitignore"""
         content = """# Python
@@ -236,11 +233,11 @@ build/
 """
         (output_path / ".gitignore").write_text(content)
         return 1
-    
+
     def _generate_env_example(self, prompt: ProductPrompt, output_path: Path) -> int:
         """Generate .env.example"""
         project_name = prompt.idea_name.lower().replace(" ", "_").replace("-", "_")
-        
+
         content = f"""# Application
 ENVIRONMENT=development
 SECRET_KEY=your-secret-key-here
@@ -263,7 +260,7 @@ OPENAI_API_KEY=
 """
         (output_path / ".env.example").write_text(content)
         return 1
-    
+
     def _generate_backend_requirements(self, backend_path: Path) -> int:
         """Generate backend/requirements.txt"""
         content = """# Core
@@ -293,7 +290,7 @@ httpx>=0.26.0
 """
         (backend_path / "requirements.txt").write_text(content)
         return 1
-    
+
     def _generate_backend_dockerfile(self, backend_path: Path) -> int:
         """Generate backend/Dockerfile"""
         content = """FROM python:3.11-slim
@@ -320,12 +317,12 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 """
         (backend_path / "Dockerfile").write_text(content)
         return 1
-    
+
     def _generate_backend_main(self, prompt: ProductPrompt, backend_path: Path) -> int:
         """Generate backend/app/main.py"""
         app_path = backend_path / "app"
         app_path.mkdir(exist_ok=True)
-        
+
         content = f'''"""
 Main FastAPI Application for {prompt.idea_name}
 """
@@ -360,24 +357,24 @@ async def health_check():
         (app_path / "main.py").write_text(content)
         (app_path / "__init__.py").write_text("")
         return 2
-    
+
     def _generate_frontend_package_json(self, prompt: ProductPrompt, frontend_path: Path) -> int:
         """Generate frontend/package.json"""
-        content = f'''{{"name": "frontend",
+        content = '''{"name": "frontend",
   "version": "1.0.0",
   "private": true,
-  "scripts": {{
+  "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
-  }},
-  "dependencies": {{
+  },
+  "dependencies": {
     "next": "^14.1.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
-  }},
-  "devDependencies": {{
+  },
+  "devDependencies": {
     "typescript": "^5.3.0",
     "@types/node": "^20.11.0",
     "@types/react": "^18.2.0",
@@ -387,11 +384,11 @@ async def health_check():
     "autoprefixer": "^10.4.0",
     "eslint": "^8.56.0",
     "eslint-config-next": "^14.1.0"
-  }}
-}}'''
+  }
+}'''
         (frontend_path / "package.json").write_text(content)
         return 1
-    
+
     def _generate_frontend_dockerfile(self, frontend_path: Path) -> int:
         """Generate frontend/Dockerfile"""
         content = """FROM node:20-alpine
@@ -409,20 +406,20 @@ CMD ["npm", "run", "dev"]
 """
         (frontend_path / "Dockerfile").write_text(content)
         return 1
-    
+
     def _generate_architecture_doc(self, prompt: ProductPrompt, docs_path: Path) -> int:
         """Generate docs/ARCHITECTURE.md"""
-        
+
         # Parse prompt_content
         try:
             content_dict = json.loads(prompt.prompt_content)
         except json.JSONDecodeError:
             content_dict = {}
-        
+
         arch_desc = content_dict.get('system_architecture', {}).get('architecture_diagram_description', 'Modern SaaS architecture')
         auth_info = json.dumps(content_dict.get('system_architecture', {}).get('authentication', {}), indent=2)
         infra_info = json.dumps(content_dict.get('deployment', {}).get('infrastructure', {}), indent=2)
-        
+
         content = f"""# Architecture - {prompt.idea_name}
 
 ## Overview

@@ -135,13 +135,13 @@ class PipelineConfig(BaseSettings):
     notification_email: Optional[str] = None
     environment: str = "development"
     debug: bool = False
-    
+
     # Analytics configuration
     plausible_domain: Optional[str] = None
     plausible_enabled: bool = False
     google_analytics_id: Optional[str] = None
     google_analytics_api_secret: Optional[str] = None
-    
+
     # Email configuration
     resend_api_key: Optional[str] = None
     from_email: str = "noreply@nexusai.app"
@@ -225,7 +225,7 @@ _settings: Optional[PipelineConfig] = None
 
 def get_settings() -> PipelineConfig:
     """Get the application settings singleton.
-    
+
     Returns a cached PipelineConfig instance. Uses environment variables
     for configuration with optional YAML file loading.
     """

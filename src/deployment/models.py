@@ -1,7 +1,9 @@
-from datetime import datetime
-from typing import Dict, List, Optional, Any
+from datetime import datetime, timezone
 from enum import Enum
+from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel, Field
+
 
 class DeploymentProviderType(str, Enum):
     VERCEL = "vercel"
@@ -23,15 +25,15 @@ class DeploymentConfig(BaseModel):
     provider: DeploymentProviderType
     environment: DeploymentEnvironment = DeploymentEnvironment.PRODUCTION
     region: str = "us-east-1"
-    
+
     # Feature Flags
     auto_deploy_on_git_push: bool = True
     health_check_enabled: bool = True
     monitoring_enabled: bool = True
-    
+
     # Constraints
     cost_limit_monthly: Optional[float] = None
-    
+
     # Provider-specific settings (passed through)
     extra_settings: Dict[str, Any] = Field(default_factory=dict)
 
@@ -39,22 +41,22 @@ class DeploymentResult(BaseModel):
     """Result of a deployment attempt."""
     success: bool
     deployment_id: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     provider: DeploymentProviderType
     environment: DeploymentEnvironment
-    
+
     # URLs
     frontend_url: Optional[str] = None
     backend_url: Optional[str] = None
     database_url: Optional[str] = None # Often masked or internal
-    
+
     # Metrics
     duration_seconds: float = 0.0
-    
+
     # Logs/Feedback
     logs: List[str] = Field(default_factory=list)
     error_message: Optional[str] = None
-    
+
     # Recovery
     rollback_id: Optional[str] = None
 
@@ -69,7 +71,7 @@ class VerificationReport(BaseModel):
     """Comprehensive health check report."""
     all_pass: bool
     checks: List[VerificationCheck] = Field(default_factory=list)
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class CostEstimate(BaseModel):
     """Monthly cost estimation."""

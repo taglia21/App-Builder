@@ -1,14 +1,13 @@
 
+from contextlib import contextmanager
+from typing import List
+
 from rich.console import Console
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.prompt import Confirm, Prompt
 from rich.table import Table
-from rich.prompt import Prompt, Confirm
 from rich.theme import Theme
-from rich import print as rprint
-import time
-from typing import List, Dict, Any, Optional
-from contextlib import contextmanager
 
 # Custom theme
 custom_theme = Theme({
@@ -26,7 +25,7 @@ class UI:
     """
     Centralized UI handler for the CLI using Rich.
     """
-    
+
     @staticmethod
     def header(title: str, subtitle: str = ""):
         console.print()
@@ -40,15 +39,15 @@ class UI:
     @staticmethod
     def error(message: str):
         console.print(f"[error]✗ {message}[/]")
-    
+
     @staticmethod
     def info(message: str):
         console.print(f"[info]ℹ {message}[/]")
-        
+
     @staticmethod
     def warning(message: str):
         console.print(f"[warning]⚠ {message}[/]")
-        
+
     @staticmethod
     def step(message: str):
         console.print(f"\n[step]➤ {message}[/]")

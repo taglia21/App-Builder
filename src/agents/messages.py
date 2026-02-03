@@ -5,11 +5,13 @@ Pydantic-validated message types for inter-agent communication.
 Based on the "Team of Rivals" paper architecture.
 """
 
+import uuid
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
-from datetime import timezone, datetime
+
 from pydantic import BaseModel, Field
-import uuid
 
 
 class AgentRole(str, Enum):
@@ -22,11 +24,13 @@ class AgentRole(str, Enum):
     DEPLOYMENT_WRITER = "deployment_writer"
     DEPLOYMENT_CRITIC = "deployment_critic"
     ORCHESTRATOR = "orchestrator"
+    CRITIC = "critic"
 
 
 class CriticDecision(str, Enum):
     """Decisions a critic can make - key to the veto authority system."""
     APPROVE = "approve"
+    APPROVED = "approve"  # Alias for compatibility
     REJECT = "reject"
     REQUEST_CHANGES = "request_changes"
 
@@ -43,7 +47,7 @@ class TaskStatus(str, Enum):
 class AgentMessage(BaseModel):
     """Base message type for inter-agent communication."""
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     sender_role: AgentRole
     sender_id: str
     content: Dict[str, Any]
@@ -120,8 +124,8 @@ class OrchestrationState(BaseModel):
     retry_count: int = 0
     max_retries: int = 3
     error_log: List[str] = Field(default_factory=list)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     def add_error(self, error: str):
         """Add error to log and update timestamp."""
@@ -143,16 +147,16 @@ class PlanStep:
     step_id: int
     name: str
     description: str
-    dependencies: List[int] = Field(default_factory=list)
-    validation_criteria: List[str] = Field(default_factory=list)
+    dependencies: List[int] = field(default_factory=list)
+    validation_criteria: List[str] = field(default_factory=list)
     estimated_effort: str = "medium"  # low, medium, high
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
 
 class ExtendedExecutionPlan(BaseModel):
     """
     Extended execution plan with support for rival planner synthesis.
-    
+
     Extends the basic ExecutionPlan with fields needed for the
     Organizational Intelligence framework.
     """
@@ -172,7 +176,7 @@ class ExtendedExecutionPlan(BaseModel):
 class ExtendedCriticReview(BaseModel):
     """
     Extended critic review with specialty field for rival critics.
-    
+
     Extends the basic CriticReview to support the multi-critic
     judicial review system.
     """
@@ -189,7 +193,7 @@ class ExtendedCriticReview(BaseModel):
 class GovernanceState(BaseModel):
     """
     State tracking for the governance model.
-    
+
     Tracks the state across all three branches of the
     organizational intelligence governance model.
     """
@@ -197,18 +201,18 @@ class GovernanceState(BaseModel):
     current_session_id: Optional[str] = None
     proposals_received: int = 0
     synthesis_complete: bool = False
-    
+
     # Judicial state
     review_id: Optional[str] = None
     critics_completed: int = 0
     approval_status: Optional[str] = None  # approved, rejected, needs_revision
-    
+
     # Executive state
     execution_id: Optional[str] = None
     current_step: int = 0
     total_steps: int = 0
     execution_status: str = "pending"  # pending, in_progress, completed, failed, vetoed
-    
+
     # Overall
     phase: str = "planning"  # planning, review, execution, complete
     error_log: List[str] = Field(default_factory=list)

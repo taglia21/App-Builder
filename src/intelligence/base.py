@@ -3,12 +3,11 @@ Intelligence-Gathering Engine for collecting market data from multiple sources.
 """
 
 from abc import ABC, abstractmethod
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from loguru import logger
 
-from ..models import IntelligenceData, PainPoint, SourceType
+from ..models import SourceType
 
 
 class DataSource(ABC):

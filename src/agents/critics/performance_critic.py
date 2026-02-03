@@ -5,15 +5,13 @@ Part of the Organizational Intelligence framework implementing checks and balanc
 through specialized rival agents that compete to identify different types of issues.
 """
 
-from typing import Any, Dict, List, Optional
-import logging
 import json
+import logging
 import re
+from typing import Any, Dict, List
 
 from ..base import LLMProvider
-from ..messages import (
-    AgentRole, CriticDecision, CriticReview, GeneratedCode
-)
+from ..messages import AgentRole, CriticDecision, CriticReview, GeneratedCode
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +19,7 @@ logger = logging.getLogger(__name__)
 class PerformanceCritic:
     """
     Performance-focused critic agent that reviews code for efficiency issues.
-    
+
     This critic represents the "performance engineer" perspective in the
     organizational intelligence framework, specifically looking for:
     - Algorithm complexity issues (O(n²) when O(n) is possible)
@@ -32,10 +30,10 @@ class PerformanceCritic:
     - Resource leaks
     - Unnecessary computations
     """
-    
+
     role = AgentRole.CRITIC
     specialty = "performance"
-    
+
     PERFORMANCE_REVIEW_PROMPT = '''You are a Performance Critic Agent - a specialized performance engineer.
 
 Your role is to review generated code EXCLUSIVELY for performance and efficiency issues.
@@ -91,7 +89,7 @@ production problems. RECOMMEND revision for significant inefficiencies.'''
     def __init__(self, llm_provider: LLMProvider):
         self.llm = llm_provider
         self._antipatterns = self._load_performance_antipatterns()
-    
+
     def _load_performance_antipatterns(self) -> Dict[str, List[re.Pattern]]:
         """Load regex patterns for common performance anti-patterns."""
         return {
@@ -118,11 +116,11 @@ production problems. RECOMMEND revision for significant inefficiencies.'''
                 re.compile(r'for\s+.*:\s*\n.*len\(\w+\)', re.MULTILINE),
             ]
         }
-    
+
     def _static_performance_scan(self, code: str) -> List[Dict[str, Any]]:
         """Perform static analysis for known performance anti-patterns."""
         issues = []
-        
+
         for issue_type, patterns in self._antipatterns.items():
             for pattern in patterns:
                 matches = pattern.findall(code)
@@ -134,9 +132,9 @@ production problems. RECOMMEND revision for significant inefficiencies.'''
                         "location": "multiple locations" if len(matches) > 1 else "detected",
                         "recommendation": self._get_recommendation(issue_type)
                     })
-        
+
         return issues
-    
+
     def _get_severity(self, issue_type: str) -> str:
         """Get severity level for issue type."""
         severity_map = {
@@ -148,7 +146,7 @@ production problems. RECOMMEND revision for significant inefficiencies.'''
             "repeated_computation": "low"
         }
         return severity_map.get(issue_type, "medium")
-    
+
     def _get_description(self, issue_type: str) -> str:
         """Get description for issue type."""
         descriptions = {
@@ -160,7 +158,7 @@ production problems. RECOMMEND revision for significant inefficiencies.'''
             "repeated_computation": "Repeated computation inside loop that could be cached"
         }
         return descriptions.get(issue_type, "Performance issue detected")
-    
+
     def _get_recommendation(self, issue_type: str) -> str:
         """Get optimization recommendation for issue type."""
         recommendations = {
@@ -172,28 +170,28 @@ production problems. RECOMMEND revision for significant inefficiencies.'''
             "repeated_computation": "Cache the result before the loop"
         }
         return recommendations.get(issue_type, "Review and optimize")
-    
+
     async def review(self, code: GeneratedCode, requirements: str) -> CriticReview:
         """Review generated code for performance issues."""
         logger.info(f"Performance critic reviewing code for: {requirements[:50]}...")
-        
+
         # Combine all code files for review
         all_code = "\n\n".join([
-            f"# File: {f.filename}\n{f.content}" 
+            f"# File: {f.filename}\n{f.content}"
             for f in code.files
         ])
-        
+
         # First, run static analysis
         static_issues = self._static_performance_scan(all_code)
-        
+
         # Then get LLM-based deep analysis
         prompt = self.PERFORMANCE_REVIEW_PROMPT.format(
             code=all_code,
             requirements=requirements
         )
-        
+
         response = await self.llm.generate(prompt)
-        
+
         try:
             review_data = json.loads(response)
         except json.JSONDecodeError:
@@ -205,10 +203,10 @@ production problems. RECOMMEND revision for significant inefficiencies.'''
                 "optimization_opportunities": [],
                 "reasoning": "Unable to complete full performance analysis"
             }
-        
+
         # Merge static analysis findings with LLM findings
         all_issues = static_issues + review_data.get("issues", [])
-        
+
         # Deduplicate issues
         seen = set()
         unique_issues = []
@@ -217,18 +215,18 @@ production problems. RECOMMEND revision for significant inefficiencies.'''
             if key not in seen:
                 seen.add(key)
                 unique_issues.append(issue)
-        
+
         # Determine decision based on issue severities
         decision_map = {
             "approve": CriticDecision.APPROVE,
             "reject": CriticDecision.REJECT,
             "needs_revision": CriticDecision.NEEDS_REVISION
         }
-        
+
         # Override decision if critical issues found
         has_critical = any(i.get("severity") == "critical" for i in unique_issues)
         high_count = sum(1 for i in unique_issues if i.get("severity") == "high")
-        
+
         if has_critical or high_count >= 3:
             decision = CriticDecision.REJECT
         elif high_count >= 1:
@@ -238,11 +236,11 @@ production problems. RECOMMEND revision for significant inefficiencies.'''
                 review_data.get("decision", "approve").lower(),
                 CriticDecision.APPROVE
             )
-        
+
         # Compile suggestions from issues and optimization opportunities
         suggestions = [i.get("recommendation", "") for i in unique_issues if i.get("recommendation")]
         suggestions.extend(review_data.get("optimization_opportunities", []))
-        
+
         return CriticReview(
             critic_role=self.role,
             specialty=self.specialty,

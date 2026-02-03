@@ -1,15 +1,15 @@
 """LaunchForge Integrations Module - All Real Service Integrations"""
 
-from .github_integration import GitHubIntegration
-from .deployment_service import DeploymentService
 from .business_formation import BusinessFormationService
+from .deployment_service import DeploymentService
 from .domain_service import DomainService
+from .github_integration import GitHubIntegration
 from .live_preview import LivePreviewService
 from .project_persistence import ProjectPersistenceService
 
 __all__ = [
     'GitHubIntegration',
-    'DeploymentService', 
+    'DeploymentService',
     'BusinessFormationService',
     'DomainService',
     'LivePreviewService',

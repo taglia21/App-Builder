@@ -7,10 +7,10 @@ real-time market research for comprehensive market intelligence.
 
 from .engine import IntelligenceGatheringEngine
 from .perplexity_research import (
-    PerplexityMarketResearch,
-    MarketTrend,
     CompetitorInsight,
     DiscoveredPainPoint,
+    MarketTrend,
+    PerplexityMarketResearch,
     get_perplexity_research,
 )
 

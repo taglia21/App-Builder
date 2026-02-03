@@ -9,13 +9,14 @@ Provides transactional email functionality for:
 - App generation notifications
 """
 
-from typing import Optional, List, Dict, Any
-from dataclasses import dataclass
-from pathlib import Path
-import httpx
 import logging
 import time
-from jinja2 import Environment, FileSystemLoader, select_autoescape, TemplateNotFound
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import httpx
+from jinja2 import Environment, FileSystemLoader, TemplateNotFound, select_autoescape
 
 from src.config import get_settings
 
@@ -73,7 +74,7 @@ class EmailResult:
 class EmailClient:
     """
     Email client using Resend.com API.
-    
+
     Features:
     - Template-based emails with Jinja2
     - HTML and plain text support
@@ -82,11 +83,11 @@ class EmailClient:
     - Comprehensive error handling
     - Metrics tracking
     """
-    
+
     RESEND_API_URL = "https://api.resend.com/emails"
     MAX_RETRIES = 3
     RETRY_DELAY = 1.0  # seconds
-    
+
     def __init__(
         self,
         api_key: Optional[str] = None,
@@ -95,12 +96,12 @@ class EmailClient:
     ):
         """
         Initialize email client.
-        
+
         Args:
             api_key: Resend API key (or from settings)
             from_email: Default sender email
             from_name: Default sender name
-        
+
         Raises:
             EmailConfigurationError: If required settings are missing
         """
@@ -108,26 +109,26 @@ class EmailClient:
         self.api_key = api_key or getattr(settings, 'resend_api_key', None)
         self.from_email = from_email or getattr(settings, 'email_from', 'noreply@nexusai.dev')
         self.from_name = from_name
-        
+
         # Set up Jinja2 template environment
         template_dir = Path(__file__).parent / "templates"
         template_dir.mkdir(exist_ok=True)
-        
+
         self.jinja_env = Environment(
             loader=FileSystemLoader(str(template_dir)),
             autoescape=select_autoescape(['html', 'xml']),
             enable_async=False
         )
-        
+
     @property
     def is_configured(self) -> bool:
         """Check if email is properly configured."""
         return bool(self.api_key)
-    
+
     def validate_configuration(self) -> None:
         """
         Validate email configuration.
-        
+
         Raises:
             EmailConfigurationError: If configuration is invalid
         """
@@ -141,14 +142,14 @@ class EmailClient:
                 "FROM_EMAIL not configured. "
                 "Please set FROM_EMAIL environment variable."
             )
-    
+
     def _get_headers(self) -> Dict[str, str]:
         """Get API request headers."""
         return {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
-    
+
     async def send_email(
         self,
         to: str | List[str],
@@ -164,7 +165,7 @@ class EmailClient:
     ) -> EmailResult:
         """
         Send an email via Resend API.
-        
+
         Args:
             to: Recipient email(s)
             subject: Email subject
@@ -176,49 +177,49 @@ class EmailClient:
             attachments: File attachments
             tags: Custom tags for tracking
             raise_on_error: Whether to raise exceptions on failure
-            
+
         Returns:
             EmailResult with success status and message ID
-            
+
         Raises:
             EmailConfigurationError: If email not configured (when raise_on_error=True)
             EmailSendError: If sending fails (when raise_on_error=True)
             EmailRateLimitError: If rate limited (when raise_on_error=True)
         """
         start_time = time.time()
-        
+
         # Import metrics for tracking
         try:
             from src.monitoring.metrics import track_email_send
         except ImportError:
             track_email_send = None
-        
+
         template_name = tags.get("type", "unknown") if tags else "unknown"
-        
+
         if not self.is_configured:
             error_msg = "Email not configured - RESEND_API_KEY missing"
             logger.warning(error_msg)
             if raise_on_error:
                 raise EmailConfigurationError(error_msg)
             return EmailResult(success=False, error=error_msg, error_code="NOT_CONFIGURED")
-        
+
         # Build recipient list
         recipients = [to] if isinstance(to, str) else to
-        
+
         # Validate recipients
         if not recipients:
             error_msg = "No recipients specified"
             if raise_on_error:
                 raise EmailSendError(error_msg)
             return EmailResult(success=False, error=error_msg, error_code="NO_RECIPIENTS")
-        
+
         # Build payload
         payload: Dict[str, Any] = {
             "from": f"{self.from_name} <{self.from_email}>",
             "to": recipients,
             "subject": subject,
         }
-        
+
         if html:
             payload["html"] = html
         if text:
@@ -231,7 +232,7 @@ class EmailClient:
             payload["bcc"] = bcc
         if tags:
             payload["tags"] = [{"name": k, "value": v} for k, v in tags.items()]
-        
+
         # Handle attachments
         if attachments:
             import base64
@@ -243,7 +244,7 @@ class EmailClient:
                 }
                 for att in attachments
             ]
-        
+
         # Send request with retry logic
         last_error = None
         for attempt in range(self.MAX_RETRIES):
@@ -255,131 +256,131 @@ class EmailClient:
                         json=payload,
                         timeout=30.0
                     )
-                    
+
                     duration_ms = (time.time() - start_time) * 1000
-                    
+
                     if response.status_code == 200:
                         data = response.json()
                         logger.info(f"Email sent successfully to {recipients}: {data.get('id')}")
-                        
+
                         # Track success
                         if track_email_send:
                             track_email_send(template_name, True, duration_ms / 1000)
-                        
+
                         return EmailResult(
-                            success=True, 
+                            success=True,
                             message_id=data.get("id"),
                             duration_ms=duration_ms
                         )
-                    
+
                     elif response.status_code == 429:
                         # Rate limited
                         retry_after = int(response.headers.get("Retry-After", 60))
                         error_msg = f"Rate limited by Resend. Retry after {retry_after}s"
                         logger.warning(f"{error_msg} (attempt {attempt + 1}/{self.MAX_RETRIES})")
-                        
+
                         if attempt < self.MAX_RETRIES - 1:
                             await self._async_sleep(min(retry_after, 5))
                             continue
-                        
+
                         if raise_on_error:
                             raise EmailRateLimitError(error_msg, retry_after=retry_after)
                         return EmailResult(
-                            success=False, 
-                            error=error_msg, 
+                            success=False,
+                            error=error_msg,
                             error_code="RATE_LIMITED",
                             duration_ms=duration_ms
                         )
-                    
+
                     elif response.status_code >= 500:
                         # Server error - retry
                         error_msg = f"Resend server error: {response.status_code}"
                         logger.warning(f"{error_msg} (attempt {attempt + 1}/{self.MAX_RETRIES})")
                         last_error = error_msg
-                        
+
                         if attempt < self.MAX_RETRIES - 1:
                             await self._async_sleep(self.RETRY_DELAY * (attempt + 1))
                             continue
-                    
+
                     else:
                         # Client error - don't retry
                         try:
                             error_data = response.json()
                             error_msg = error_data.get("message", response.text)
-                        except (ConnectionError, TimeoutError, Exception) as e:
+                        except (ConnectionError, TimeoutError, Exception):
                             error_msg = response.text
-                        
+
                         logger.error(f"Failed to send email: {response.status_code} - {error_msg}")
-                        
+
                         # Track failure
                         if track_email_send:
                             track_email_send(template_name, False, duration_ms / 1000)
-                        
+
                         if raise_on_error:
                             raise EmailSendError(
-                                error_msg, 
+                                error_msg,
                                 status_code=response.status_code,
                                 response_body=response.text
                             )
                         return EmailResult(
-                            success=False, 
+                            success=False,
                             error=error_msg,
                             error_code=f"HTTP_{response.status_code}",
                             duration_ms=duration_ms
                         )
-                        
-            except httpx.TimeoutException as e:
+
+            except httpx.TimeoutException:
                 duration_ms = (time.time() - start_time) * 1000
-                error_msg = f"Email send timed out after 30s"
+                error_msg = "Email send timed out after 30s"
                 logger.warning(f"{error_msg} (attempt {attempt + 1}/{self.MAX_RETRIES})")
                 last_error = error_msg
-                
+
                 if attempt < self.MAX_RETRIES - 1:
                     await self._async_sleep(self.RETRY_DELAY * (attempt + 1))
                     continue
-                    
+
             except httpx.ConnectError as e:
                 duration_ms = (time.time() - start_time) * 1000
                 error_msg = f"Failed to connect to Resend API: {str(e)}"
                 logger.warning(f"{error_msg} (attempt {attempt + 1}/{self.MAX_RETRIES})")
                 last_error = error_msg
-                
+
                 if attempt < self.MAX_RETRIES - 1:
                     await self._async_sleep(self.RETRY_DELAY * (attempt + 1))
                     continue
-                    
+
             except Exception as e:
                 duration_ms = (time.time() - start_time) * 1000
                 error_msg = f"Email send error: {str(e)}"
                 logger.exception(error_msg)
                 last_error = error_msg
-                
+
                 if attempt < self.MAX_RETRIES - 1:
                     await self._async_sleep(self.RETRY_DELAY * (attempt + 1))
                     continue
-        
+
         # All retries exhausted
         duration_ms = (time.time() - start_time) * 1000
-        
+
         # Track failure
         if track_email_send:
             track_email_send(template_name, False, duration_ms / 1000)
-        
+
         if raise_on_error:
             raise EmailSendError(last_error or "Email send failed after retries")
-        
+
         return EmailResult(
-            success=False, 
+            success=False,
             error=last_error or "Email send failed after retries",
             error_code="RETRIES_EXHAUSTED",
             duration_ms=duration_ms
         )
-    
+
     async def _async_sleep(self, seconds: float):
         """Async sleep helper."""
         import asyncio
         await asyncio.sleep(seconds)
-    
+
     def render_template(
         self,
         template_name: str,
@@ -387,14 +388,14 @@ class EmailClient:
     ) -> str:
         """
         Render an email template.
-        
+
         Args:
             template_name: Template filename
             **context: Template variables
-            
+
         Returns:
             Rendered HTML string
-            
+
         Raises:
             EmailTemplateError: If template rendering fails
         """
@@ -409,7 +410,7 @@ class EmailClient:
             error_msg = f"Template render error for {template_name}: {e}"
             logger.error(error_msg)
             raise EmailTemplateError(error_msg)
-    
+
     async def send_template_email(
         self,
         to: str | List[str],
@@ -420,14 +421,14 @@ class EmailClient:
     ) -> EmailResult:
         """
         Send an email using a template.
-        
+
         Args:
             to: Recipient email(s)
             subject: Email subject
             template_name: Template filename
             context: Template variables
             **kwargs: Additional send_email arguments
-            
+
         Returns:
             EmailResult
         """
@@ -445,14 +446,14 @@ async def send_verification_email(
 ) -> EmailResult:
     """Send email verification link."""
     client = EmailClient()
-    
+
     html = client.render_template(
         "verification.html",
         name=name or "there",
         verification_url=verification_url,
         year=2026
     )
-    
+
     return await client.send_email(
         to=email,
         subject="Verify your LaunchForge email",
@@ -467,14 +468,14 @@ async def send_welcome_email(
 ) -> EmailResult:
     """Send welcome email after verification."""
     client = EmailClient()
-    
+
     html = client.render_template(
         "welcome.html",
         name=name or "there",
         dashboard_url="https://nexusai.dev/dashboard",
         year=2026
     )
-    
+
     return await client.send_email(
         to=email,
         subject="Welcome to LaunchForge! 🚀",
@@ -490,14 +491,14 @@ async def send_password_reset_email(
 ) -> EmailResult:
     """Send password reset link."""
     client = EmailClient()
-    
+
     html = client.render_template(
         "password_reset.html",
         name=name or "there",
         reset_url=reset_url,
         year=2026
     )
-    
+
     return await client.send_email(
         to=email,
         subject="Reset your LaunchForge password",
@@ -515,7 +516,7 @@ async def send_payment_confirmation_email(
 ) -> EmailResult:
     """Send payment confirmation."""
     client = EmailClient()
-    
+
     html = client.render_template(
         "payment_confirmation.html",
         name=name or "there",
@@ -524,7 +525,7 @@ async def send_payment_confirmation_email(
         receipt_url=receipt_url,
         year=2026
     )
-    
+
     return await client.send_email(
         to=email,
         subject=f"Payment confirmed - {plan_name}",
@@ -541,7 +542,7 @@ async def send_app_generation_complete_email(
 ) -> EmailResult:
     """Send notification when app generation completes."""
     client = EmailClient()
-    
+
     html = client.render_template(
         "app_complete.html",
         name=name or "there",
@@ -549,7 +550,7 @@ async def send_app_generation_complete_email(
         project_url=project_url,
         year=2026
     )
-    
+
     return await client.send_email(
         to=email,
         subject=f"Your app '{app_name}' is ready! 🎉",

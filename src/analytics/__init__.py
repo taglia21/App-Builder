@@ -5,9 +5,9 @@ Privacy-friendly analytics using Plausible.io.
 """
 
 from src.analytics.plausible import (
+    Events,
     PlausibleClient,
     PlausibleEvent,
-    Events,
     get_plausible_client,
     get_plausible_script_tag,
     track,
@@ -15,7 +15,7 @@ from src.analytics.plausible import (
 
 __all__ = [
     "PlausibleClient",
-    "PlausibleEvent", 
+    "PlausibleEvent",
     "Events",
     "get_plausible_client",
     "get_plausible_script_tag",

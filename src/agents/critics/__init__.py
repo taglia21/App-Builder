@@ -17,8 +17,8 @@ through constructive tension.
 
 from .code_critic import CodeCritic
 from .output_critic import OutputCritic
-from .security_critic import SecurityCritic
 from .performance_critic import PerformanceCritic
+from .security_critic import SecurityCritic
 from .ux_critic import UXCritic
 
 __all__ = [

@@ -8,12 +8,12 @@ Uses database-agnostic types for cross-platform compatibility.
 
 import enum
 from datetime import datetime, timezone
-from typing import List, Optional, Any
+from typing import List, Optional
 from uuid import uuid4
 
 from sqlalchemy import (
+    JSON,
     Boolean,
-    Column,
     DateTime,
     Enum,
     ForeignKey,
@@ -21,10 +21,9 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    TypeDecorator,
     func,
     text,
-    JSON,
-    TypeDecorator,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -34,7 +33,7 @@ class JSONType(TypeDecorator):
     """Database-agnostic JSON type. Uses JSONB on PostgreSQL, JSON elsewhere."""
     impl = JSON
     cache_ok = True
-    
+
     def load_dialect_impl(self, dialect):
         if dialect.name == 'postgresql':
             from sqlalchemy.dialects.postgresql import JSONB
@@ -120,7 +119,7 @@ class SoftDeleteMixin:
 class User(Base, TimestampMixin, SoftDeleteMixin):
     """
     User model for LaunchForge accounts.
-    
+
     Attributes:
         id: Unique user identifier (UUID)
         email: User email address (unique)
@@ -166,7 +165,7 @@ class User(Base, TimestampMixin, SoftDeleteMixin):
         DateTime(timezone=True),
         nullable=True
     )
-    
+
     # Authentication fields
     name: Mapped[Optional[str]] = mapped_column(
         String(255),
@@ -184,7 +183,7 @@ class User(Base, TimestampMixin, SoftDeleteMixin):
         DateTime(timezone=True),
         nullable=True
     )
-    
+
     # OAuth fields
     oauth_provider: Mapped[Optional[str]] = mapped_column(
         String(50),
@@ -202,7 +201,7 @@ class User(Base, TimestampMixin, SoftDeleteMixin):
         cascade="all, delete-orphan",
         lazy="dynamic"
     )
-    
+
     # Subscription relationship
     subscription: Mapped[Optional["Subscription"]] = relationship(
         "Subscription",
@@ -210,7 +209,7 @@ class User(Base, TimestampMixin, SoftDeleteMixin):
         uselist=False,
         lazy="joined"
     )
-    
+
     # API Keys relationship
     api_keys: Mapped[List["APIKey"]] = relationship(
         "APIKey",
@@ -218,7 +217,7 @@ class User(Base, TimestampMixin, SoftDeleteMixin):
         cascade="all, delete-orphan",
         lazy="dynamic"
     )
-    
+
     # Business Formations relationship
     business_formations: Mapped[List["BusinessFormation"]] = relationship(
         "BusinessFormation",
@@ -252,7 +251,7 @@ class User(Base, TimestampMixin, SoftDeleteMixin):
 class Project(Base, TimestampMixin, SoftDeleteMixin):
     """
     Project model for user-created applications.
-    
+
     Attributes:
         id: Unique project identifier (UUID)
         user_id: Owner user ID
@@ -343,10 +342,10 @@ class Project(Base, TimestampMixin, SoftDeleteMixin):
 class Generation(Base, TimestampMixin):
     """
     Generation model for AI-generated content.
-    
-    Tracks each generation request including prompts, 
+
+    Tracks each generation request including prompts,
     market intelligence, and generated code.
-    
+
     Attributes:
         id: Unique generation identifier (UUID)
         project_id: Parent project ID
@@ -419,10 +418,10 @@ class Generation(Base, TimestampMixin):
 class Deployment(Base, TimestampMixin):
     """
     Deployment model for project deployments.
-    
+
     Tracks deployment attempts to various providers
     (Vercel, Netlify, Railway, etc.)
-    
+
     Attributes:
         id: Unique deployment identifier (UUID)
         project_id: Parent project ID
@@ -529,7 +528,7 @@ class FeedbackType(enum.Enum):
 class Feedback(Base, TimestampMixin):
     """
     User feedback model.
-    
+
     Stores feedback, bug reports, and feature requests from users.
     """
     __tablename__ = "feedback"
@@ -589,7 +588,7 @@ class Feedback(Base, TimestampMixin):
 class ContactSubmission(Base, TimestampMixin):
     """
     Contact form submissions.
-    
+
     Stores messages from the public contact form.
     """
     __tablename__ = "contact_submissions"
@@ -638,7 +637,7 @@ class ContactSubmission(Base, TimestampMixin):
 class OnboardingStatus(Base, TimestampMixin):
     """
     User onboarding progress tracking.
-    
+
     Tracks which onboarding steps a user has completed.
     """
     __tablename__ = "onboarding_status"
@@ -721,12 +720,12 @@ class Subscription(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
-    
+
     # Stripe fields
     stripe_customer_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     stripe_subscription_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     stripe_price_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    
+
     # Subscription details
     tier: Mapped[SubscriptionTier] = mapped_column(
         Enum(SubscriptionTier),
@@ -736,11 +735,11 @@ class Subscription(Base, TimestampMixin):
         Enum(SubscriptionStatus),
         default=SubscriptionStatus.ACTIVE
     )
-    
+
     # Usage limits
     app_generations_limit: Mapped[int] = mapped_column(default=1)
     app_generations_used: Mapped[int] = mapped_column(default=0)
-    
+
     # Billing period
     current_period_start: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True),
@@ -751,7 +750,7 @@ class Subscription(Base, TimestampMixin):
         nullable=True
     )
     cancel_at_period_end: Mapped[bool] = mapped_column(default=False)
-    
+
     # Relationship
     user: Mapped["User"] = relationship(back_populates="subscription")
 
@@ -762,22 +761,22 @@ class APIKey(Base, TimestampMixin, SoftDeleteMixin):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
-    
+
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     key_hash: Mapped[str] = mapped_column(String(255), nullable=False)  # Hashed API key
     key_prefix: Mapped[str] = mapped_column(String(10), nullable=False)  # First few chars for identification
-    
+
     # Permissions and limits
     is_active: Mapped[bool] = mapped_column(default=True)
     rate_limit: Mapped[int] = mapped_column(default=1000)  # Requests per hour
-    
+
     # Usage tracking
     last_used_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True),
         nullable=True
     )
     total_requests: Mapped[int] = mapped_column(default=0)
-    
+
     # Relationship
     user: Mapped["User"] = relationship(back_populates="api_keys")
 
@@ -789,12 +788,12 @@ class BusinessFormation(Base, TimestampMixin):
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False)
-    
+
     # Business details
     business_name: Mapped[str] = mapped_column(String(255), nullable=False)
     business_type: Mapped[str] = mapped_column(String(50), default="LLC")  # LLC, Corporation, etc.
     state: Mapped[str] = mapped_column(String(2), nullable=False)  # US state code
-    
+
     # Registration status
     status: Mapped[str] = mapped_column(String(50), default="pending")  # pending, processing, completed, failed
     ein_number: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
@@ -802,10 +801,10 @@ class BusinessFormation(Base, TimestampMixin):
         DateTime(timezone=True),
         nullable=True
     )
-    
+
     # External references
     external_order_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    
+
     # Relationships
     user: Mapped["User"] = relationship(back_populates="business_formations")
     project: Mapped["Project"] = relationship(back_populates="business_formation")

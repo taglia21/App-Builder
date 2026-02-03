@@ -5,14 +5,11 @@ Responsible for producing code artifacts that will be
 validated by critic agents before being shown to users.
 """
 
-from typing import Any, Dict, List, Optional
-import json
 import logging
+from typing import Any, Dict, Optional
 
-from ..base import WriterAgent, LLMProvider
-from ..messages import (
-    AgentRole, ExecutionPlan, CodeGenerationRequest, GeneratedCode
-)
+from ..base import LLMProvider, WriterAgent
+from ..messages import AgentRole, CodeGenerationRequest, ExecutionPlan, GeneratedCode
 
 logger = logging.getLogger(__name__)
 
@@ -20,11 +17,11 @@ logger = logging.getLogger(__name__)
 class CodeWriterAgent(WriterAgent):
     """
     Generates application code based on execution plans.
-    
+
     Key principle: Writers produce artifacts for validation,
     not for immediate execution.
     """
-    
+
     def __init__(
         self,
         agent_id: Optional[str] = None,
@@ -36,7 +33,7 @@ class CodeWriterAgent(WriterAgent):
             llm_provider=llm_provider
         )
         self.tech_stack_templates = self._load_templates()
-    
+
     def _load_templates(self) -> Dict[str, Dict]:
         """Load tech stack templates."""
         return {
@@ -76,33 +73,37 @@ class CodeWriterAgent(WriterAgent):
                 "app_init": ""
             }
         }
-    
+
     def get_system_prompt(self) -> str:
         return """You are a Code Writer Agent for an AI-powered app builder.
 
 Your role is to generate high-quality, production-ready code based on execution plans.
 
 RULES:
-1. Generate COMPLETE, WORKING code - no placeholders or TODOs
-2. Follow best practices for the specified tech stack
-3. Include proper error handling
-4. Add helpful comments explaining the code
-5. Ensure all imports are included
-6. Generate requirements.txt or package.json as needed
+- Generate COMPLETE, WORKING code - no placeholders or TODOs
+- Follow best practices for the specified tech stack
+- Include proper error handling
+- Add helpful comments explaining the code
+- Ensure all imports are included
+- Write clean, maintainable code that follows coding standards
 
-If you receive feedback from a critic, incorporate their suggestions.
+When generating code for an application:
+1. Analyze the execution plan carefully
+2. Generate all required files with complete implementations
+3. Include proper file structure and organization
+4. Add necessary configuration files (package.json, requirements.txt, etc.)
+5. Ensure code is secure and follows security best practices
+6. Include basic tests if appropriate
 
-Respond with JSON containing all generated files:
+IMPORTANT: Always respond with valid JSON in this format:
 {
     "files": {
         "filename.py": "file content",
         "another_file.py": "content"
-    },
-    "dependencies": ["package1", "package2"],
-    "execution_instructions": "How to run the app"
+    }
 }
 
-Generate complete, working code that meets all acceptance criteria."""
+The JSON must be properly formatted and all code content must be properly escaped."""
 
     async def write(self, request: Any) -> GeneratedCode:
         """Generate code from a request."""
@@ -117,20 +118,20 @@ Generate complete, working code that meets all acceptance criteria."""
             return await self._generate_from_description(request)
         else:
             raise ValueError(f"Unsupported request type: {type(request)}")
-    
+
     async def _generate_from_request(self, request: CodeGenerationRequest) -> GeneratedCode:
         """Generate code from a formal request with plan."""
         plan = request.plan
-        
+
         # Build the user message
         user_message = self._build_generation_prompt(plan, request)
-        
+
         # Get code from LLM
         response = await self._call_llm(user_message, temperature=0.3)
-        
+
         # Parse the response
         code_data = self._parse_json_response(response)
-        
+
         return GeneratedCode(
             files=code_data.get("files", {}),
             tech_stack=plan.tech_stack,
@@ -141,12 +142,12 @@ Generate complete, working code that meets all acceptance criteria."""
                 "retry_count": request.retry_count
             }
         )
-    
+
     async def _generate_from_description(self, request: Dict) -> GeneratedCode:
         """Generate code directly from a description (simpler flow)."""
         description = request.get("description", "")
         tech_stack = request.get("tech_stack", "fastapi")
-        
+
         user_message = f"""Generate a complete {tech_stack} application:
 
 Description: {description}
@@ -154,17 +155,17 @@ Description: {description}
 Generate all necessary files with complete, working code.
 
 Respond in JSON format with files, dependencies, and execution_instructions."""
-        
+
         response = await self._call_llm(user_message, temperature=0.3)
         code_data = self._parse_json_response(response)
-        
+
         return GeneratedCode(
             files=code_data.get("files", {}),
             tech_stack=tech_stack,
             dependencies=code_data.get("dependencies", []),
             execution_instructions=code_data.get("execution_instructions")
         )
-    
+
     def _build_generation_prompt(self, plan: ExecutionPlan, request: CodeGenerationRequest) -> str:
         """Build the prompt for code generation."""
         prompt = f"""Generate code for this application:
@@ -178,13 +179,13 @@ Acceptance Criteria (YOUR CODE MUST SATISFY ALL OF THESE):
 
 Required Files: {', '.join(plan.metadata.get('required_files', []))}
 """
-        
+
         # Add feedback if this is a retry
         if request.previous_feedback:
             prompt += f"""\n\nPREVIOUS ATTEMPT FEEDBACK (FIX THESE ISSUES):
 {request.previous_feedback}
 """
-        
+
         prompt += """\n\nGenerate complete, working code in JSON format."""
-        
+
         return prompt

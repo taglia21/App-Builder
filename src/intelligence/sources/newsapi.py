@@ -2,7 +2,7 @@
 News API source for gathering market intelligence.
 """
 
-from datetime import timezone, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
 
 from loguru import logger

@@ -1,12 +1,12 @@
 
-from typing import Dict
-from ..models import DeploymentConfig, CostEstimate
+from ..models import CostEstimate, DeploymentConfig
+
 
 class CostEstimator:
     """
     Estimates monthly costs for deployment configurations.
     """
-    
+
     def estimate(self, config: DeploymentConfig) -> CostEstimate:
         """
         Provide a rough estimate based on provider and resource sizing.
@@ -19,7 +19,7 @@ class CostEstimator:
                 breakdown={"pro_plan": 20.0},
                 currency="USD"
             )
-            
+
         elif config.provider == "render":
              # Render: Web ($7) + Worker ($7) + DB ($7) + Redis ($3)
              return CostEstimate(
@@ -33,10 +33,10 @@ class CostEstimator:
                 },
                 currency="USD"
             )
-            
+
         return CostEstimate(
             provider=config.provider,
             total_monthly=0.0,
-            breakdown={}, 
+            breakdown={},
             currency="USD"
         )

@@ -8,14 +8,12 @@ The planner is responsible for:
 4. Identifying required agents
 """
 
-from typing import Any, Dict, List, Optional
 import json
 import logging
+from typing import Any, Dict, List, Optional
 
 from ..base import BaseAgent, LLMProvider
-from ..messages import (
-    AgentRole, ExecutionPlan, PlanningRequest
-)
+from ..messages import AgentRole, ExecutionPlan, PlanningRequest
 
 logger = logging.getLogger(__name__)
 
@@ -23,11 +21,11 @@ logger = logging.getLogger(__name__)
 class PlannerAgent(BaseAgent):
     """
     Creates execution plans with pre-declared acceptance criteria.
-    
+
     Key principle from paper: Define success criteria BEFORE execution
     to prevent post-hoc rationalization of failures.
     """
-    
+
     def __init__(
         self,
         agent_id: Optional[str] = None,
@@ -38,7 +36,7 @@ class PlannerAgent(BaseAgent):
             agent_id=agent_id,
             llm_provider=llm_provider
         )
-    
+
     def get_system_prompt(self) -> str:
         return """You are a Planning Agent for an AI-powered app builder.
 
@@ -80,13 +78,13 @@ Be thorough but practical. Focus on what can be realistically generated."""
             request = PlanningRequest(**input_data)
         else:
             request = PlanningRequest(app_description=str(input_data))
-        
+
         return await self.create_plan(request)
-    
+
     async def create_plan(self, request: PlanningRequest) -> ExecutionPlan:
         """
         Create an execution plan from a planning request.
-        
+
         This is the main entry point for planning.
         """
         # Build the user message
@@ -103,16 +101,16 @@ Constraints:
 {json.dumps(request.constraints, indent=2) if request.constraints else 'None'}
 
 Provide a complete execution plan in JSON format."""
-        
+
         # Get plan from LLM
         response = await self._call_llm(user_message, temperature=0.5)
-        
+
         # Parse the response
         plan_data = self._parse_json_response(response)
-        
+
         # Determine required agents based on steps
         required_agents = self._determine_required_agents(plan_data)
-        
+
         # Create the execution plan
         plan = ExecutionPlan(
             app_description=plan_data.get("app_description", request.app_description),
@@ -126,19 +124,19 @@ Provide a complete execution plan in JSON format."""
                 "required_files": plan_data.get("required_files", [])
             }
         )
-        
+
         # Log the plan
         logger.info(f"Created plan {plan.plan_id} with {len(plan.acceptance_criteria)} criteria")
-        
+
         return plan
-    
+
     def _determine_required_agents(self, plan_data: Dict) -> List[AgentRole]:
         """Determine which agents are needed based on the plan."""
         agents = set()
         agents.add(AgentRole.CODE_WRITER)  # Always need code writer
         agents.add(AgentRole.CODE_CRITIC)  # Always need code critic
         agents.add(AgentRole.OUTPUT_CRITIC)  # Always need output critic
-        
+
         # Check execution steps for additional agents
         for step in plan_data.get("execution_steps", []):
             agent_name = step.get("agent", "").lower()
@@ -147,5 +145,5 @@ Provide a complete execution plan in JSON format."""
             if "deployment" in agent_name:
                 agents.add(AgentRole.DEPLOYMENT_WRITER)
                 agents.add(AgentRole.DEPLOYMENT_CRITIC)
-        
+
         return list(agents)

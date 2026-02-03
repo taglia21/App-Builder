@@ -3,14 +3,15 @@ Quality Assurance Engine.
 Runs post-generation checks, validation, and formatting on the codebase.
 """
 
-import os
 import ast
-import subprocess
-import shutil
 import logging
+import os
 import re
+import shutil
+import subprocess
 from pathlib import Path
-from typing import Dict, List, Any, Tuple, Optional
+from typing import List, Optional, Tuple
+
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
@@ -40,21 +41,21 @@ class QualityAssuranceEngine:
     Ensures generated code meets quality standards.
     Validates syntax, runs formatters (Black, Isort, Prettier), and static analysis.
     """
-    
+
     def __init__(self):
         self.black_path = shutil.which("black")
         self.isort_path = shutil.which("isort")
         self.tsc_path = shutil.which("tsc")
         # We assume npx is available in path if node is installed
-        self.npx_path = shutil.which("npx") or "npx" 
+        self.npx_path = shutil.which("npx") or "npx"
 
     def run_checks(self, codebase_path: str) -> QAReport:
         """
         Run all QA checks on the generated codebase.
-        
+
         Args:
             codebase_path: Absolute path to the generated project root.
-            
+
         Returns:
             QAReport with status of checks.
         """
@@ -62,28 +63,28 @@ class QualityAssuranceEngine:
         if not path.exists():
             logger.error(f"Codebase path does not exist: {path}")
             return QAReport(issues=["Codebase path not found"])
-            
+
         logger.info(f"Starting Quality Assurance on: {path}")
         report = QAReport()
-        
+
         # 0. Validate code syntax FIRST before formatting
         backend_path = path / "backend"
         frontend_path = path / "frontend"
-        
+
         if backend_path.exists():
             python_valid, py_issues = self._validate_python(backend_path)
             report.python_syntax_valid = python_valid
             report.validation_issues.extend(py_issues)
             if not python_valid:
                 report.issues.append(f"Python syntax errors found: {len(py_issues)} issues")
-        
+
         if frontend_path.exists():
             ts_valid, ts_issues = self._validate_typescript(frontend_path)
             report.typescript_valid = ts_valid
             report.validation_issues.extend(ts_issues)
             if not ts_valid and ts_issues:
                 report.issues.append(f"TypeScript issues found: {len(ts_issues)} issues")
-        
+
         # 1. Backend Formatting (only if syntax is valid)
         if backend_path.exists():
             if report.python_syntax_valid:
@@ -93,17 +94,17 @@ class QualityAssuranceEngine:
                 report.backend_formatted = False
         else:
             logger.warning("No backend directory found to format.")
-            
+
         # 2. Frontend Formatting
         if frontend_path.exists():
             report.frontend_formatted = self._format_frontend(frontend_path)
         else:
             logger.warning("No frontend directory found to format.")
-        
+
         # Update summary counts
         error_files = set(issue.file for issue in report.validation_issues if issue.severity == "error")
         report.files_with_errors = len(error_files)
-            
+
         return report
 
     def _validate_python(self, backend_path: Path) -> Tuple[bool, List[ValidationIssue]]:
@@ -114,17 +115,17 @@ class QualityAssuranceEngine:
         issues = []
         all_valid = True
         files_checked = 0
-        
+
         for py_file in backend_path.rglob("*.py"):
             files_checked += 1
             try:
                 content = py_file.read_text(encoding="utf-8")
                 ast.parse(content, filename=str(py_file))
-                
+
                 # Also check for common import issues
                 import_issues = self._check_python_imports(content, py_file)
                 issues.extend(import_issues)
-                
+
             except SyntaxError as e:
                 all_valid = False
                 issues.append(ValidationIssue(
@@ -141,7 +142,7 @@ class QualityAssuranceEngine:
                     message=f"Parse error: {str(e)}",
                     severity="error"
                 ))
-        
+
         logger.info(f"Validated {files_checked} Python files, {len(issues)} issues found")
         return all_valid, issues
 
@@ -149,7 +150,7 @@ class QualityAssuranceEngine:
         """Check for common import issues in Python code."""
         issues = []
         lines = content.split('\n')
-        
+
         # Check for undefined imports in model files (common LLM mistake)
         for i, line in enumerate(lines, 1):
             # Check for Column usage without importing
@@ -163,7 +164,7 @@ class QualityAssuranceEngine:
                         severity="warning"
                     ))
                     break
-            
+
             # Check for common SQLAlchemy types used without import
             sql_types = ['String', 'Integer', 'Float', 'Boolean', 'Text', 'DateTime', 'JSON']
             for sql_type in sql_types:
@@ -182,7 +183,7 @@ class QualityAssuranceEngine:
                                 severity="warning"
                             ))
                             break
-        
+
         return issues
 
     def _validate_typescript(self, frontend_path: Path) -> Tuple[bool, List[ValidationIssue]]:
@@ -191,13 +192,13 @@ class QualityAssuranceEngine:
         Falls back to basic syntax check if tsc not available.
         """
         issues = []
-        
+
         # Check if tsconfig.json exists
         tsconfig = frontend_path / "tsconfig.json"
         if not tsconfig.exists():
             logger.warning("No tsconfig.json found, skipping TypeScript validation")
             return True, []
-        
+
         # Try using tsc if available
         if self.tsc_path:
             try:
@@ -208,7 +209,7 @@ class QualityAssuranceEngine:
                     text=True,
                     timeout=120
                 )
-                
+
                 if result.returncode != 0:
                     # Parse tsc output for errors
                     for line in result.stdout.split('\n'):
@@ -222,13 +223,13 @@ class QualityAssuranceEngine:
                                     message=match.group(4),
                                     severity="error" if match.group(3) == "error" else "warning"
                                 ))
-                    
+
                     logger.warning(f"TypeScript validation found {len(issues)} issues")
                     return False, issues
-                
+
                 logger.info("✓ TypeScript syntax valid")
                 return True, []
-                
+
             except subprocess.TimeoutExpired:
                 logger.warning("TypeScript validation timed out")
                 return True, []  # Don't fail on timeout
@@ -261,20 +262,20 @@ class QualityAssuranceEngine:
                         message=f"Could not read file: {e}",
                         severity="error"
                     ))
-            
+
             return len([i for i in issues if i.severity == "error"]) == 0, issues
 
     def _format_backend(self, backend_path: Path) -> bool:
         """Run Black and Isort on backend code."""
         success = True
-        
+
         # Run isort
         if self.isort_path:
             try:
                 subprocess.run(
-                    [self.isort_path, ".", "--profile", "black"], 
-                    cwd=str(backend_path), 
-                    check=True, 
+                    [self.isort_path, ".", "--profile", "black"],
+                    cwd=str(backend_path),
+                    check=True,
                     capture_output=True
                 )
                 logger.info("✓ Backend: Imports sorted (isort)")
@@ -291,9 +292,9 @@ class QualityAssuranceEngine:
         if self.black_path:
             try:
                 subprocess.run(
-                    [self.black_path, "."], 
-                    cwd=str(backend_path), 
-                    check=True, 
+                    [self.black_path, "."],
+                    cwd=str(backend_path),
+                    check=True,
                     capture_output=True,
                     timeout=60  # Prevent hanging
                 )
@@ -309,7 +310,7 @@ class QualityAssuranceEngine:
                 success = False
         else:
              logger.warning("black not found in path")
-             
+
         return success
 
     def _format_frontend(self, frontend_path: Path) -> bool:
@@ -318,7 +319,7 @@ class QualityAssuranceEngine:
         try:
             # We use shell=True on Windows for npx sometimes, but try without first
             subprocess.run(["npx", "--version"], capture_output=True, shell=True)
-        except (RuntimeError, ValueError, Exception) as e:
+        except (RuntimeError, ValueError, Exception):
             logger.warning("npx not available, skipping frontend formatting")
             return False
 
@@ -326,15 +327,15 @@ class QualityAssuranceEngine:
             # Running prettier via npx
             # "npx prettier --write ."
             logger.info("Running Prettier on frontend (this may take a moment)...")
-            
+
             # Set CI=true to prevent interactive prompts
             env = os.environ.copy()
             env["CI"] = "true"
-            
+
             subprocess.run(
-                ["npx", "--yes", "prettier", "--write", "."], 
-                cwd=str(frontend_path), 
-                check=True, 
+                ["npx", "--yes", "prettier", "--write", "."],
+                cwd=str(frontend_path),
+                check=True,
                 shell=True, # Often needed for npx on Windows
                 capture_output=True,
                 timeout=120, # Prettier can be slow on first run

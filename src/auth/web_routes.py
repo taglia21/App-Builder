@@ -1,15 +1,16 @@
 """Web authentication routes for LaunchForge dashboard."""
 
-from fastapi import APIRouter, Request, Form, Depends
+import logging
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
-from pathlib import Path
 
+from src.auth.password import hash_password, verify_password
 from src.database.db import get_db
 from src.database.models import User
-from src.auth.password import hash_password, verify_password
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -41,13 +42,13 @@ async def login(
     try:
         # Find user
         user = db.query(User).filter(User.email == email.lower()).first()
-        
+
         if not user or not verify_password(password, user.password_hash):
             return templates.TemplateResponse(
                 "pages/login.html",
                 {"request": request, "error": "Invalid email or password"}
             )
-        
+
         # Create session (we'll implement proper session management later)
         response = RedirectResponse(url="/dashboard", status_code=303)
         response.set_cookie(
@@ -56,10 +57,10 @@ async def login(
             httponly=True,
             max_age=2592000 if remember else 3600  # 30 days or 1 hour
         )
-        
+
         logger.info(f"User {email} logged in successfully")
         return response
-        
+
     except Exception as e:
         logger.error(f"Login error: {e}")
         return templates.TemplateResponse(
@@ -94,13 +95,13 @@ async def register(
                 "pages/register.html",
                 {"request": request, "error": "You must agree to the terms"}
             )
-        
+
         if len(password) < 8:
             return templates.TemplateResponse(
                 "pages/register.html",
                 {"request": request, "error": "Password must be at least 8 characters"}
             )
-        
+
         # Check if user exists
         existing_user = db.query(User).filter(User.email == email.lower()).first()
         if existing_user:
@@ -108,7 +109,7 @@ async def register(
                 "pages/register.html",
                 {"request": request, "error": "Email already registered"}
             )
-        
+
         # Create user
         new_user = User(
             email=email.lower(),
@@ -117,13 +118,13 @@ async def register(
             credits_remaining=5,  # Free tier gets 5 apps
             email_verified=False
         )
-        
+
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
-        
+
         logger.info(f"New user registered: {email}")
-        
+
         # Auto-login after registration
         response = RedirectResponse(url="/dashboard", status_code=303)
         response.set_cookie(
@@ -133,7 +134,7 @@ async def register(
             max_age=3600
         )
         return response
-        
+
     except Exception as e:
         logger.error(f"Registration error: {e}")
         db.rollback()

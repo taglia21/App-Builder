@@ -5,19 +5,18 @@ Coordinates the full deployment pipeline: GitHub repo creation,
 frontend deployment to Vercel, backend deployment to Render.
 """
 
-import os
-import asyncio
 import logging
-from typing import Optional, Dict, Any, List
+import os
 from dataclasses import dataclass, field
-from datetime import timezone, datetime
-from pathlib import Path
+from datetime import datetime, timezone
 from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
-from src.deployment.github import GitHubClient, GitHubRepo, GitHubError
-from src.deployment.providers.vercel import VercelProvider
+from src.deployment.github import GitHubClient, GitHubError
+from src.deployment.models import DeploymentConfig
 from src.deployment.providers.render import RenderProvider
-from src.deployment.models import DeploymentConfig, DeploymentResult
+from src.deployment.providers.vercel import VercelProvider
 
 logger = logging.getLogger(__name__)
 
@@ -58,24 +57,24 @@ class DeploymentPlan:
     project_id: str
     project_name: str
     environment: str  # production, staging, development
-    
+
     # Source code locations
     frontend_path: Optional[Path] = None
     backend_path: Optional[Path] = None
-    
+
     # Deployment targets
     deploy_frontend: bool = True
     deploy_backend: bool = True
     create_github_repo: bool = True
-    
+
     # Configuration
     github_private: bool = True
     vercel_team: Optional[str] = None
     render_team: Optional[str] = None
-    
+
     # Secrets to configure
     environment_variables: Dict[str, str] = field(default_factory=dict)
-    
+
     # Custom domain
     custom_domain: Optional[str] = None
 
@@ -88,20 +87,20 @@ class DeploymentSummary:
     status: DeploymentStatus
     started_at: datetime
     completed_at: Optional[datetime] = None
-    
+
     # URLs
     github_url: Optional[str] = None
     frontend_url: Optional[str] = None
     backend_url: Optional[str] = None
-    
+
     # Stage results
     stages: List[StageResult] = field(default_factory=list)
-    
+
     # Identifiers for rollback
     github_repo: Optional[str] = None
     vercel_deployment_id: Optional[str] = None
     render_deployment_id: Optional[str] = None
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
         return {
@@ -130,7 +129,7 @@ class DeploymentSummary:
 class DeploymentOrchestrator:
     """
     Orchestrates the complete deployment pipeline.
-    
+
     Pipeline stages:
     1. Create GitHub repository
     2. Push code to repository
@@ -139,7 +138,7 @@ class DeploymentOrchestrator:
     5. Configure environment variables
     6. Verify deployment
     """
-    
+
     def __init__(
         self,
         github_token: Optional[str] = None,
@@ -148,7 +147,7 @@ class DeploymentOrchestrator:
     ):
         """
         Initialize orchestrator.
-        
+
         Args:
             github_token: GitHub personal access token
             vercel_token: Vercel API token
@@ -157,22 +156,22 @@ class DeploymentOrchestrator:
         self.github_token = github_token or os.getenv("GITHUB_TOKEN")
         self.vercel_token = vercel_token or os.getenv("VERCEL_TOKEN")
         self.render_token = render_token or os.getenv("RENDER_TOKEN")
-        
+
         # Initialize providers
         self._github: Optional[GitHubClient] = None
         self._vercel = VercelProvider()
         self._render = RenderProvider()
-        
+
         # Deployment tracking
         self._deployments: Dict[str, DeploymentSummary] = {}
-    
+
     @property
     def github(self) -> GitHubClient:
         """Get GitHub client (lazy initialization)."""
         if self._github is None:
             self._github = GitHubClient(self.github_token)
         return self._github
-    
+
     async def deploy(
         self,
         plan: DeploymentPlan,
@@ -180,11 +179,11 @@ class DeploymentOrchestrator:
     ) -> DeploymentSummary:
         """
         Execute a full deployment.
-        
+
         Args:
             plan: Deployment plan
             on_stage_complete: Callback for stage completion
-            
+
         Returns:
             DeploymentSummary with results
         """
@@ -194,77 +193,77 @@ class DeploymentOrchestrator:
             status=DeploymentStatus.IN_PROGRESS,
             started_at=datetime.now(timezone.utc),
         )
-        
+
         self._deployments[plan.project_id] = summary
-        
+
         try:
             # Stage 1: Create GitHub repository
             if plan.create_github_repo:
                 result = await self._create_github_repo(plan)
                 summary.stages.append(result)
-                
+
                 if result.status == DeploymentStatus.SUCCESS:
                     summary.github_url = result.data.get("html_url")
                     summary.github_repo = result.data.get("full_name")
-                    
+
                     if on_stage_complete:
                         on_stage_complete(result)
                 else:
                     raise Exception(result.error)
-            
+
             # Stage 2: Deploy frontend
             if plan.deploy_frontend and plan.frontend_path:
                 result = await self._deploy_frontend(plan, summary.github_repo)
                 summary.stages.append(result)
-                
+
                 if result.status == DeploymentStatus.SUCCESS:
                     summary.frontend_url = result.data.get("url")
                     summary.vercel_deployment_id = result.data.get("deployment_id")
-                    
+
                     if on_stage_complete:
                         on_stage_complete(result)
                 else:
                     raise Exception(result.error)
-            
+
             # Stage 3: Deploy backend
             if plan.deploy_backend and plan.backend_path:
                 result = await self._deploy_backend(plan, summary.github_repo)
                 summary.stages.append(result)
-                
+
                 if result.status == DeploymentStatus.SUCCESS:
                     summary.backend_url = result.data.get("url")
                     summary.render_deployment_id = result.data.get("deployment_id")
-                    
+
                     if on_stage_complete:
                         on_stage_complete(result)
                 else:
                     raise Exception(result.error)
-            
+
             # Stage 4: Configure environment
             result = await self._configure_environment(plan, summary)
             summary.stages.append(result)
-            
+
             if on_stage_complete:
                 on_stage_complete(result)
-            
+
             # Stage 5: Verify deployment
             result = await self._verify_deployment(summary)
             summary.stages.append(result)
-            
+
             if on_stage_complete:
                 on_stage_complete(result)
-            
+
             # All stages complete
             summary.status = DeploymentStatus.SUCCESS
             summary.completed_at = datetime.now(timezone.utc)
-            
+
             logger.info(f"Deployment completed for {plan.project_name}")
-            
+
         except Exception as e:
             logger.error(f"Deployment failed: {e}")
             summary.status = DeploymentStatus.FAILED
             summary.completed_at = datetime.now(timezone.utc)
-            
+
             # Add failure stage if not already added
             if not summary.stages or summary.stages[-1].status != DeploymentStatus.FAILED:
                 summary.stages.append(StageResult(
@@ -274,13 +273,13 @@ class DeploymentOrchestrator:
                     completed_at=datetime.now(timezone.utc),
                     error=str(e),
                 ))
-        
+
         return summary
-    
+
     async def _create_github_repo(self, plan: DeploymentPlan) -> StageResult:
         """Create GitHub repository and push code."""
         started_at = datetime.now(timezone.utc)
-        
+
         try:
             # Create repository
             repo = self.github.create_repository(
@@ -290,7 +289,7 @@ class DeploymentOrchestrator:
                 auto_init=True,
                 gitignore_template="Node",
             )
-            
+
             # Upload code if paths provided
             if plan.frontend_path:
                 self.github.upload_directory(
@@ -299,7 +298,7 @@ class DeploymentOrchestrator:
                     remote_path="frontend",
                     message="Add frontend code",
                 )
-            
+
             if plan.backend_path:
                 self.github.upload_directory(
                     repo_name=repo.full_name,
@@ -307,10 +306,10 @@ class DeploymentOrchestrator:
                     remote_path="backend",
                     message="Add backend code",
                 )
-            
+
             # Add GitHub Actions workflow
             await self._add_ci_workflow(repo.full_name)
-            
+
             return StageResult(
                 stage=DeploymentStage.GITHUB_REPO,
                 status=DeploymentStatus.SUCCESS,
@@ -323,7 +322,7 @@ class DeploymentOrchestrator:
                     "clone_url": repo.clone_url,
                 },
             )
-            
+
         except GitHubError as e:
             return StageResult(
                 stage=DeploymentStage.GITHUB_REPO,
@@ -332,7 +331,7 @@ class DeploymentOrchestrator:
                 completed_at=datetime.now(timezone.utc),
                 error=str(e),
             )
-    
+
     async def _deploy_frontend(
         self,
         plan: DeploymentPlan,
@@ -340,7 +339,7 @@ class DeploymentOrchestrator:
     ) -> StageResult:
         """Deploy frontend to Vercel."""
         started_at = datetime.now(timezone.utc)
-        
+
         try:
             config = DeploymentConfig(
                 provider="vercel",
@@ -348,18 +347,18 @@ class DeploymentOrchestrator:
                 region="iad1",  # US East
                 framework="nextjs",
             )
-            
+
             secrets = {
                 "VERCEL_TOKEN": self.vercel_token or "",
                 **plan.environment_variables,
             }
-            
+
             result = await self._vercel.deploy(
                 codebase_path=plan.frontend_path,
                 config=config,
                 secrets=secrets,
             )
-            
+
             return StageResult(
                 stage=DeploymentStage.FRONTEND_DEPLOY,
                 status=DeploymentStatus.SUCCESS if result.success else DeploymentStatus.FAILED,
@@ -373,7 +372,7 @@ class DeploymentOrchestrator:
                 },
                 error=None if result.success else "Vercel deployment failed",
             )
-            
+
         except Exception as e:
             return StageResult(
                 stage=DeploymentStage.FRONTEND_DEPLOY,
@@ -382,7 +381,7 @@ class DeploymentOrchestrator:
                 completed_at=datetime.now(timezone.utc),
                 error=str(e),
             )
-    
+
     async def _deploy_backend(
         self,
         plan: DeploymentPlan,
@@ -390,7 +389,7 @@ class DeploymentOrchestrator:
     ) -> StageResult:
         """Deploy backend to Render."""
         started_at = datetime.now(timezone.utc)
-        
+
         try:
             config = DeploymentConfig(
                 provider="render",
@@ -398,18 +397,18 @@ class DeploymentOrchestrator:
                 region="oregon",
                 framework="python",
             )
-            
+
             secrets = {
                 "RENDER_TOKEN": self.render_token or "",
                 **plan.environment_variables,
             }
-            
+
             result = await self._render.deploy(
                 codebase_path=plan.backend_path,
                 config=config,
                 secrets=secrets,
             )
-            
+
             return StageResult(
                 stage=DeploymentStage.BACKEND_DEPLOY,
                 status=DeploymentStatus.SUCCESS if result.success else DeploymentStatus.FAILED,
@@ -423,7 +422,7 @@ class DeploymentOrchestrator:
                 },
                 error=None if result.success else "Render deployment failed",
             )
-            
+
         except Exception as e:
             return StageResult(
                 stage=DeploymentStage.BACKEND_DEPLOY,
@@ -432,7 +431,7 @@ class DeploymentOrchestrator:
                 completed_at=datetime.now(timezone.utc),
                 error=str(e),
             )
-    
+
     async def _configure_environment(
         self,
         plan: DeploymentPlan,
@@ -440,10 +439,10 @@ class DeploymentOrchestrator:
     ) -> StageResult:
         """Configure environment variables across services."""
         started_at = datetime.now(timezone.utc)
-        
+
         try:
             configured = []
-            
+
             # Set GitHub secrets if repo exists
             if summary.github_repo and plan.environment_variables:
                 results = self.github.set_repository_secrets(
@@ -451,13 +450,13 @@ class DeploymentOrchestrator:
                     secrets=plan.environment_variables,
                 )
                 configured.append(f"GitHub: {sum(results.values())}/{len(results)} secrets")
-            
+
             # Cross-link frontend and backend URLs
             if summary.frontend_url and summary.backend_url:
                 # Frontend needs to know backend URL
                 # Backend needs to know frontend URL for CORS
                 configured.append("Cross-linked frontend/backend URLs")
-            
+
             return StageResult(
                 stage=DeploymentStage.ENVIRONMENT_CONFIG,
                 status=DeploymentStatus.SUCCESS,
@@ -466,7 +465,7 @@ class DeploymentOrchestrator:
                 message=f"Configured: {', '.join(configured)}",
                 data={"configured": configured},
             )
-            
+
         except Exception as e:
             return StageResult(
                 stage=DeploymentStage.ENVIRONMENT_CONFIG,
@@ -475,14 +474,14 @@ class DeploymentOrchestrator:
                 completed_at=datetime.now(timezone.utc),
                 error=str(e),
             )
-    
+
     async def _verify_deployment(self, summary: DeploymentSummary) -> StageResult:
         """Verify all deployments are healthy."""
         started_at = datetime.now(timezone.utc)
-        
+
         checks = []
         all_pass = True
-        
+
         try:
             # Verify frontend
             if summary.frontend_url:
@@ -499,7 +498,7 @@ class DeploymentOrchestrator:
                 })
                 if not verification.all_pass:
                     all_pass = False
-            
+
             # Verify backend
             if summary.backend_url:
                 verification = await self._render.verify_deployment(
@@ -515,7 +514,7 @@ class DeploymentOrchestrator:
                 })
                 if not verification.all_pass:
                     all_pass = False
-            
+
             return StageResult(
                 stage=DeploymentStage.VERIFICATION,
                 status=DeploymentStatus.SUCCESS if all_pass else DeploymentStatus.FAILED,
@@ -525,7 +524,7 @@ class DeploymentOrchestrator:
                 data={"checks": checks},
                 error=None if all_pass else "Verification failed",
             )
-            
+
         except Exception as e:
             return StageResult(
                 stage=DeploymentStage.VERIFICATION,
@@ -534,7 +533,7 @@ class DeploymentOrchestrator:
                 completed_at=datetime.now(timezone.utc),
                 error=str(e),
             )
-    
+
     async def _add_ci_workflow(self, repo_name: str) -> None:
         """Add GitHub Actions CI/CD workflow."""
         workflow_content = """name: CI/CD
@@ -550,22 +549,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
-      
+
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm ci
-      
+
       - name: Run frontend tests
         working-directory: frontend
         run: npm test -- --passWithNoTests
-      
+
       - name: Build frontend
         working-directory: frontend
         run: npm run build
@@ -576,7 +575,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Deploy to Vercel
         uses: amondnet/vercel-action@v20
         with:
@@ -585,7 +584,7 @@ jobs:
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           working-directory: frontend
 """
-        
+
         try:
             self.github.upload_file(
                 repo_name=repo_name,
@@ -595,7 +594,7 @@ jobs:
             )
         except GitHubError as e:
             logger.warning(f"Failed to add CI workflow: {e}")
-    
+
     async def rollback(
         self,
         project_id: str,
@@ -603,21 +602,21 @@ jobs:
     ) -> DeploymentSummary:
         """
         Rollback a deployment.
-        
+
         Args:
             project_id: Project ID to rollback
             to_version: Specific version to rollback to
-            
+
         Returns:
             Updated DeploymentSummary
         """
         summary = self._deployments.get(project_id)
-        
+
         if not summary:
             raise ValueError(f"No deployment found for project: {project_id}")
-        
+
         logger.info(f"Rolling back deployment for {project_id}")
-        
+
         try:
             # Rollback Vercel
             if summary.vercel_deployment_id:
@@ -625,27 +624,27 @@ jobs:
                     summary.vercel_deployment_id,
                     to_version or "previous",
                 )
-            
+
             # Rollback Render
             if summary.render_deployment_id:
                 await self._render.rollback(
                     summary.render_deployment_id,
                     to_version or "previous",
                 )
-            
+
             summary.status = DeploymentStatus.ROLLED_BACK
             logger.info(f"Rollback completed for {project_id}")
-            
+
         except Exception as e:
             logger.error(f"Rollback failed: {e}")
             raise
-        
+
         return summary
-    
+
     def get_deployment_status(self, project_id: str) -> Optional[DeploymentSummary]:
         """Get current deployment status for a project."""
         return self._deployments.get(project_id)
-    
+
     def list_deployments(self) -> List[DeploymentSummary]:
         """List all deployments."""
         return list(self._deployments.values())
@@ -661,19 +660,19 @@ async def quick_deploy(
 ) -> DeploymentSummary:
     """
     Quick deployment helper function.
-    
+
     Args:
         project_name: Project name
         frontend_path: Path to frontend code
         backend_path: Path to backend code
         environment: Deployment environment
         env_vars: Environment variables
-        
+
     Returns:
         DeploymentSummary
     """
     import uuid
-    
+
     plan = DeploymentPlan(
         project_id=str(uuid.uuid4()),
         project_name=project_name,
@@ -684,6 +683,6 @@ async def quick_deploy(
         deploy_backend=backend_path is not None,
         environment_variables=env_vars or {},
     )
-    
+
     orchestrator = DeploymentOrchestrator()
     return await orchestrator.deploy(plan)

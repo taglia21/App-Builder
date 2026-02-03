@@ -11,7 +11,7 @@ except ImportError:
     LLMIdeaGenerationEngine = None
 
 __all__ = [
-    "IdeaGenerationEngine", 
+    "IdeaGenerationEngine",
     "LLMIdeaGenerationEngine",
     "EnhancedIdeaGenerator",
     "MarketResearch",

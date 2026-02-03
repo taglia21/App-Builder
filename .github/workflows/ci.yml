@@ -5,6 +5,11 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main]
+  workflow_dispatch:  # Allow manual trigger
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   PYTHON_VERSION: '3.12'
@@ -16,27 +21,56 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          
+
       - name: Install dependencies
         run: |
           pip install ruff black isort
-          
+
       - name: Run Ruff linter
         run: ruff check src/ --output-format=github
         continue-on-error: true
-        
+
       - name: Check Black formatting
-        run: black --check src/
+        run: black --check --line-length=100 src/
         continue-on-error: true
-        
+
       - name: Check import sorting
-        run: isort --check-only src/
+        run: isort --check-only --profile=black --line-length=100 src/
         continue-on-error: true
+
+  # Job 2: Type Checking
+  type-check:
+    name: Type Check (mypy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-mypy-${{ hashFiles('requirements.txt') }}
+          restore-keys: ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install mypy types-PyYAML types-requests types-redis
+
+      - name: Run mypy
+        run: mypy src/ --config-file=mypy.ini
+        continue-on-error: true  # Type checking advisory for now
 
   # Job 2: Security Scanning
   security:

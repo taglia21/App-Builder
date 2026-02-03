@@ -2,8 +2,7 @@
 Idea Generation Engine for creating startup ideas from intelligence data.
 """
 
-import random
-from typing import Any, Dict, List
+from typing import List
 from uuid import uuid4
 
 from loguru import logger
@@ -67,7 +66,7 @@ class IdeaGenerationEngine:
                 ideas.extend(extra_ideas)
                 ideas = self._apply_filters(ideas)
             retry_count += 1
-        
+
         # Accept partial results if we couldn't reach target
         if len(ideas) < self.min_ideas:
             logger.info(f"Accepting {len(ideas)} ideas (target was {self.min_ideas})")
@@ -254,7 +253,7 @@ class IdeaGenerationEngine:
                     problem_statement=pain_point.description,
                     solution_description=solution,
                     target_buyer_persona=persona,
-                    value_proposition=f"Save 10+ hours per week with AI automation",
+                    value_proposition="Save 10+ hours per week with AI automation",
                     revenue_model=RevenueModel.USAGE,
                     pricing_hypothesis=PricingHypothesis(
                         tiers=["Pay-as-you-go", "Pro", "Enterprise"],

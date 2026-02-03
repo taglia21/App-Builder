@@ -1,8 +1,5 @@
-from datetime import timezone
 """File templates for code generation."""
 
-from typing import Dict, Any
-from string import Template
 
 # =============================================================================
 # BACKEND TEMPLATES
@@ -34,7 +31,7 @@ async def lifespan(app: FastAPI):
     logger.info("=" * 60)
     logger.info("Starting ${app_name}...")
     logger.info("=" * 60)
-    
+
     # Wait for database to be ready (handles container startup race)
     logger.info("Waiting for database connection...")
     try:
@@ -42,18 +39,18 @@ async def lifespan(app: FastAPI):
     except RuntimeError as e:
         logger.error(f"FATAL: {e}")
         raise
-    
+
     # Create tables on startup (idempotent)
     logger.info("Ensuring database tables exist...")
     Base.metadata.create_all(bind=engine)
     logger.info("✓ Database tables ready.")
-    
+
     logger.info("=" * 60)
     logger.info("${app_name} is ready to serve requests!")
     logger.info("=" * 60)
-    
+
     yield
-    
+
     logger.info("Shutting down ${app_name}...")
 
 app = FastAPI(
@@ -86,12 +83,12 @@ async def health_check():
 async def readiness_check():
     """
     Readiness check - app is ready to serve traffic.
-    
+
     Checks database connectivity. Use this for Kubernetes readiness probes
     or load balancer health checks.
     """
     db_status = check_db_connection()
-    
+
     if db_status["status"] == "connected":
         return {
             "status": "ready",
@@ -115,7 +112,7 @@ async def readiness_check():
 async def liveness_check():
     """
     Liveness check - app process is alive.
-    
+
     Use this for Kubernetes liveness probes. If this fails,
     the container should be restarted.
     """
@@ -157,45 +154,45 @@ class Settings(BaseSettings):
     # App
     APP_NAME: str = "${app_name}"
     DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"
-    
+
     # Database
     DATABASE_URL: str = os.getenv(
-        "DATABASE_URL", 
+        "DATABASE_URL",
         "postgresql://postgres:postgres@db:5432/${db_name}"
     )
-    
+
     # Redis
     REDIS_URL: str = os.getenv("REDIS_URL", "redis://redis:6379/0")
-    
+
     # Auth
     SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
-    
+
     # Password requirements
     MIN_PASSWORD_LENGTH: int = 8
-    
+
     # OAuth
     GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "")
     GOOGLE_CLIENT_SECRET: str = os.getenv("GOOGLE_CLIENT_SECRET", "")
     GITHUB_CLIENT_ID: str = os.getenv("GITHUB_CLIENT_ID", "")
     GITHUB_CLIENT_SECRET: str = os.getenv("GITHUB_CLIENT_SECRET", "")
-    
+
     # CORS - configurable via environment
     # Set CORS_ORIGINS as comma-separated URLs, e.g., "http://localhost:3000,https://myapp.com"
     CORS_ORIGINS: List[str] = _parse_cors_origins()
-    
+
     class Config:
         env_file = ".env"
-    
+
     @field_validator("SECRET_KEY")
     @classmethod
     def validate_secret_key(cls, v: str) -> str:
         """Warn if SECRET_KEY appears to be a weak default."""
         is_weak = any(pattern.lower() in v.lower() for pattern in WEAK_SECRET_PATTERNS)
         is_short = len(v) < 32
-        
+
         if is_weak or is_short:
             warnings.warn(
                 "\\n" + "=" * 60 + "\\n"
@@ -234,7 +231,7 @@ class UserRole(str, enum.Enum):
 
 class User(Base):
     __tablename__ = "users"
-    
+
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email = Column(String(255), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=True)  # Nullable for OAuth users
@@ -242,20 +239,20 @@ class User(Base):
     role = Column(Enum(UserRole), default=UserRole.USER)
     is_active = Column(Boolean, default=True)
     is_verified = Column(Boolean, default=False)
-    
+
     # OAuth fields
     oauth_provider = Column(String(50), nullable=True)
     oauth_id = Column(String(255), nullable=True)
     avatar_url = Column(String(500), nullable=True)
-    
+
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_login = Column(DateTime, nullable=True)
-    
+
     # Relationships
     ${relationships}
-    
+
     def __repr__(self):
         return f"<User {self.email}>"
 '''
@@ -272,20 +269,20 @@ from app.db.base_class import Base
 
 class ${entity_class}(Base):
     __tablename__ = "${table_name}"
-    
+
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     ${columns}
-    
+
     # Foreign keys
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    
+
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     # Relationships
     owner = relationship("User", back_populates="${table_name}")
-    
+
     def __repr__(self):
         return f"<${entity_class} {self.id}>"
 '''
@@ -321,7 +318,7 @@ class UserInDB(UserBase):
     avatar_url: Optional[str] = None
     created_at: datetime
     updated_at: datetime
-    
+
     class Config:
         from_attributes = True
 
@@ -363,7 +360,7 @@ class ${entity_class}InDB(${entity_class}Base):
     user_id: UUID
     created_at: datetime
     updated_at: datetime
-    
+
     class Config:
         from_attributes = True
 
@@ -395,21 +392,21 @@ UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
 class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     def __init__(self, model: Type[ModelType]):
         self.model = model
-    
+
     def get(self, db: Session, id: UUID) -> Optional[ModelType]:
         return db.query(self.model).filter(self.model.id == id).first()
-    
+
     def get_by_user(self, db: Session, id: UUID, user_id: UUID) -> Optional[ModelType]:
         return db.query(self.model).filter(
             self.model.id == id,
             self.model.user_id == user_id
         ).first()
-    
+
     def get_multi(
-        self, 
-        db: Session, 
-        *, 
-        skip: int = 0, 
+        self,
+        db: Session,
+        *,
+        skip: int = 0,
         limit: int = 100,
         user_id: Optional[UUID] = None
     ) -> List[ModelType]:
@@ -417,13 +414,13 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         if user_id:
             query = query.filter(self.model.user_id == user_id)
         return query.offset(skip).limit(limit).all()
-    
+
     def count(self, db: Session, user_id: Optional[UUID] = None) -> int:
         query = db.query(func.count(self.model.id))
         if user_id:
             query = query.filter(self.model.user_id == user_id)
         return query.scalar()
-    
+
     def create(self, db: Session, *, obj_in: CreateSchemaType, user_id: UUID) -> ModelType:
         obj_in_data = jsonable_encoder(obj_in)
         db_obj = self.model(**obj_in_data, user_id=user_id)
@@ -431,7 +428,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         db.commit()
         db.refresh(db_obj)
         return db_obj
-    
+
     def update(
         self,
         db: Session,
@@ -451,7 +448,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         db.commit()
         db.refresh(db_obj)
         return db_obj
-    
+
     def delete(self, db: Session, *, id: UUID) -> ModelType:
         obj = db.query(self.model).get(id)
         db.delete(obj)
@@ -487,7 +484,7 @@ def create_access_token(subject: str, expires_delta: Optional[timedelta] = None)
         expire = datetime.now(timezone.utc) + expires_delta
     else:
         expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    
+
     to_encode = {"sub": subject, "exp": expire, "type": "access"}
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
@@ -509,34 +506,34 @@ async def get_current_user(
 ) -> User:
     token = credentials.credentials
     payload = decode_token(token)
-    
+
     if payload is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     user_id = payload.get("sub")
     if user_id is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token payload"
         )
-    
+
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
         )
-    
+
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Inactive user"
         )
-    
+
     return user
 
 async def get_current_active_admin(
@@ -560,8 +557,8 @@ from app.db.session import get_db
 from app.models.user import User
 from app.schemas.user import UserCreate, UserResponse, UserLogin, Token
 from app.core.auth import (
-    get_password_hash, 
-    verify_password, 
+    get_password_hash,
+    verify_password,
     create_access_token,
     create_refresh_token,
     decode_token,
@@ -580,7 +577,7 @@ async def register(user_in: UserCreate, db: Session = Depends(get_db)):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered"
         )
-    
+
     # Create user
     user = User(
         email=user_in.email,
@@ -590,30 +587,30 @@ async def register(user_in: UserCreate, db: Session = Depends(get_db)):
     db.add(user)
     db.commit()
     db.refresh(user)
-    
+
     return user
 
 @router.post("/login", response_model=Token)
 async def login(user_in: UserLogin, db: Session = Depends(get_db)):
     """Login and get access token."""
     user = db.query(User).filter(User.email == user_in.email).first()
-    
+
     if not user or not verify_password(user_in.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password"
         )
-    
+
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Inactive user"
         )
-    
+
     # Update last login
     user.last_login = datetime.now(timezone.utc)
     db.commit()
-    
+
     return Token(
         access_token=create_access_token(str(user.id)),
         refresh_token=create_refresh_token(str(user.id))
@@ -623,22 +620,22 @@ async def login(user_in: UserLogin, db: Session = Depends(get_db)):
 async def refresh_token(refresh_token: str, db: Session = Depends(get_db)):
     """Refresh access token."""
     payload = decode_token(refresh_token)
-    
+
     if not payload or payload.get("type") != "refresh":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid refresh token"
         )
-    
+
     user_id = payload.get("sub")
     user = db.query(User).filter(User.id == user_id).first()
-    
+
     if not user or not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found or inactive"
         )
-    
+
     return Token(
         access_token=create_access_token(str(user.id)),
         refresh_token=create_refresh_token(str(user.id))
@@ -661,8 +658,8 @@ from app.db.session import get_db
 from app.models.user import User
 from app.models.${entity_lower} import ${entity_class}
 from app.schemas.${entity_lower} import (
-    ${entity_class}Create, 
-    ${entity_class}Update, 
+    ${entity_class}Create,
+    ${entity_class}Update,
     ${entity_class}Response,
     ${entity_class}List
 )
@@ -682,7 +679,7 @@ async def list_${entity_lower}s(
     skip = (page - 1) * per_page
     items = crud_${entity_lower}.get_multi(db, skip=skip, limit=per_page, user_id=current_user.id)
     total = crud_${entity_lower}.count(db, user_id=current_user.id)
-    
+
     return ${entity_class}List(
         items=items,
         total=total,
@@ -764,14 +761,14 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 def wait_for_db(max_retries: int = 30, initial_interval: float = 1.0) -> bool:
     """
     Wait for database to be ready with exponential backoff.
-    
+
     Args:
         max_retries: Maximum number of connection attempts
         initial_interval: Initial wait time between retries (doubles each attempt, max 30s)
-    
+
     Returns:
         True if connection successful
-    
+
     Raises:
         RuntimeError if database is not available after max_retries
     """
@@ -792,7 +789,7 @@ def wait_for_db(max_retries: int = 30, initial_interval: float = 1.0) -> bool:
         except Exception as e:
             logger.error(f"Unexpected database error: {e}")
             raise
-    
+
     raise RuntimeError(
         f"Could not connect to database after {max_retries} attempts. "
         f"Check DATABASE_URL and ensure PostgreSQL is running."
@@ -802,7 +799,7 @@ def wait_for_db(max_retries: int = 30, initial_interval: float = 1.0) -> bool:
 def check_db_connection() -> dict:
     """
     Check database connectivity for health endpoints.
-    
+
     Returns:
         Dict with status and optional error message
     """
@@ -913,7 +910,7 @@ async def test_login():
             "email": "login@example.com",
             "password": "testpassword123"
         })
-        
+
         # Then login
         response = await client.post("/api/v1/auth/login", json={
             "email": "login@example.com",
@@ -992,7 +989,7 @@ on:
 jobs:
   backend-test:
     runs-on: ubuntu-latest
-    
+
     services:
       postgres:
         image: postgres:15
@@ -1007,21 +1004,21 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      
+
       - name: Install dependencies
         run: |
           cd backend
           pip install -r requirements.txt
           pip install pytest pytest-asyncio httpx
-      
+
       - name: Run tests
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
@@ -1032,27 +1029,27 @@ jobs:
 
   frontend-test:
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
-      
+
       - name: Install dependencies
         run: |
           cd frontend
           npm ci
-      
+
       - name: Run linter
         run: |
           cd frontend
           npm run lint
-      
+
       - name: Run tests
         run: |
           cd frontend
@@ -1061,10 +1058,10 @@ jobs:
   build:
     needs: [backend-test, frontend-test]
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Build Docker images
         run: |
           docker-compose build
@@ -1200,7 +1197,7 @@ class EmailService:
             body=body,
             subtype=MessageType.html
         )
-        
+
         # await self.fastmail.send_message(message)
         print(f"Mock sending email to {recipients}: {subject}")
 
@@ -1209,7 +1206,7 @@ email_service = EmailService()
 
 ROOT_DOCKER_COMPOSE = '''services:
   backend:
-    build: 
+    build:
       context: ./backend
       dockerfile: Dockerfile
     volumes:

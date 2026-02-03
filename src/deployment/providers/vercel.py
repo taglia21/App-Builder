@@ -1,21 +1,21 @@
 
+import asyncio
 import json
 import logging
-import asyncio
-from typing import Dict, Tuple
 from pathlib import Path
+from typing import Dict, Tuple
 
 from ..base import BaseDeploymentProvider
-from ..models import DeploymentConfig, DeploymentResult, VerificationReport, VerificationCheck
+from ..models import DeploymentConfig, DeploymentResult, VerificationCheck, VerificationReport
 
 logger = logging.getLogger(__name__)
 
 class VercelProvider(BaseDeploymentProvider):
     """
-    Deploys to Vercel. 
+    Deploys to Vercel.
     Focuses on Next.js 14 frontend deployment.
     """
-    
+
     async def check_prerequisites(self) -> Dict[str, bool]:
         # In a real app, we might check if `vercel` CLI is in path
         # or if PERMANENT_AUTH_TOKEN is valid.
@@ -31,20 +31,20 @@ class VercelProvider(BaseDeploymentProvider):
 
     async def deploy(self, codebase_path: Path, config: DeploymentConfig, secrets: Dict[str, str]) -> DeploymentResult:
         logger.info("Initializing Vercel deployment...")
-        
+
         # 1. Generate vercel.json
         self._generate_vercel_config(codebase_path, config)
-        
+
         # 2. Sync Secrets (Mocked)
         await self._sync_secrets(secrets)
-        
+
         # 3. Trigger Deployment (Mock command)
         # cmd = f"vercel deploy --prod --token {secrets.get('VERCEL_TOKEN')}"
         logger.info("Executing Vercel CLI...")
         await asyncio.sleep(2) # Simulate deployment time
-        
+
         deployment_id = f"dpl_vercel_{int(asyncio.get_running_loop().time())}"
-        
+
         return DeploymentResult(
             success=True,
             deployment_id=deployment_id,
@@ -76,7 +76,7 @@ class VercelProvider(BaseDeploymentProvider):
             "framework": "nextjs",
             "regions": [config.region]
         }
-        
+
         # Write to file
         config_path = codebase_path / "vercel.json"
         with open(config_path, "w") as f:

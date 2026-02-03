@@ -1,20 +1,19 @@
-import os
-import httpx
-from typing import Dict, Any, Optional
 import logging
+import os
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
 class BusinessFormationService:
     """Business formation service for LLC and EIN registration.
-    
+
     Note: This integrates with Stripe Atlas or similar services.
     For MVP, we provide guidance and connect to formation services.
     """
-    
+
     def __init__(self):
         self.stripe_atlas_enabled = os.getenv('STRIPE_ATLAS_ENABLED', 'false').lower() == 'true'
-    
+
     async def start_llc_formation(
         self,
         business_name: str,
@@ -44,7 +43,7 @@ class BusinessFormationService:
                 '4. Obtain EIN from IRS'
             ]
         }
-    
+
     async def get_ein(
         self,
         business_name: str,
@@ -70,7 +69,7 @@ class BusinessFormationService:
                 '5. Receive EIN immediately'
             ]
         }
-    
+
     async def get_formation_status(self, formation_id: str) -> Dict[str, Any]:
         """Check status of a formation request."""
         # In production, this would check actual formation service API
@@ -81,7 +80,7 @@ class BusinessFormationService:
             'steps_completed': ['name_verification', 'documents_prepared'],
             'steps_pending': ['state_filing', 'ein_application']
         }
-    
+
     async def get_pricing(self) -> Dict[str, Any]:
         """Get business formation pricing."""
         return {

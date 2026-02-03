@@ -5,7 +5,7 @@ Repository pattern implementation for database operations.
 Provides type-safe, reusable CRUD operations for all models.
 """
 
-from datetime import timezone, datetime
+from datetime import datetime, timezone
 from typing import Generic, List, Optional, Type, TypeVar
 from uuid import uuid4
 
@@ -14,13 +14,13 @@ from sqlalchemy.orm import Session
 
 from src.database.models import (
     Base,
-    User,
-    Project,
-    Generation,
     Deployment,
-    SubscriptionTier,
-    ProjectStatus,
     DeploymentStatus,
+    Generation,
+    Project,
+    ProjectStatus,
+    SubscriptionTier,
+    User,
 )
 
 # Type variable for generic repository
@@ -30,28 +30,28 @@ ModelType = TypeVar("ModelType", bound=Base)
 class BaseRepository(Generic[ModelType]):
     """
     Base repository with common CRUD operations.
-    
+
     Provides generic database operations that can be
     inherited by model-specific repositories.
     """
-    
+
     def __init__(self, session: Session, model: Type[ModelType]):
         """
         Initialize repository.
-        
+
         Args:
             session: SQLAlchemy session
             model: Model class to operate on
         """
         self.session = session
         self.model = model
-    
+
     def get(self, id: str) -> Optional[ModelType]:
         """Get a record by ID."""
         return self.session.query(self.model).filter(
             self.model.id == id
         ).first()
-    
+
     def get_all(
         self,
         skip: int = 0,
@@ -60,23 +60,23 @@ class BaseRepository(Generic[ModelType]):
     ) -> List[ModelType]:
         """Get all records with pagination."""
         query = self.session.query(self.model)
-        
+
         # Filter soft-deleted records if model supports it
         if hasattr(self.model, 'is_deleted') and not include_deleted:
-            query = query.filter(self.model.is_deleted == False)
-        
+            query = query.filter(not self.model.is_deleted)
+
         return query.offset(skip).limit(limit).all()
-    
+
     def create(self, **kwargs) -> ModelType:
         """Create a new record."""
         if 'id' not in kwargs:
             kwargs['id'] = str(uuid4())
-        
+
         instance = self.model(**kwargs)
         self.session.add(instance)
         self.session.flush()
         return instance
-    
+
     def update(self, id: str, **kwargs) -> Optional[ModelType]:
         """Update a record by ID."""
         instance = self.get(id)
@@ -86,15 +86,15 @@ class BaseRepository(Generic[ModelType]):
                     setattr(instance, key, value)
             self.session.flush()
         return instance
-    
+
     def delete(self, id: str, soft: bool = True) -> bool:
         """
         Delete a record by ID.
-        
+
         Args:
             id: Record ID
             soft: If True, soft delete. If False, hard delete.
-        
+
         Returns:
             bool: True if deleted, False if not found
         """
@@ -107,30 +107,30 @@ class BaseRepository(Generic[ModelType]):
             self.session.flush()
             return True
         return False
-    
+
     def count(self, include_deleted: bool = False) -> int:
         """Get total count of records."""
         query = self.session.query(self.model)
         if hasattr(self.model, 'is_deleted') and not include_deleted:
-            query = query.filter(self.model.is_deleted == False)
+            query = query.filter(not self.model.is_deleted)
         return query.count()
 
 
 class UserRepository(BaseRepository[User]):
     """Repository for User model operations."""
-    
+
     def __init__(self, session: Session):
         super().__init__(session, User)
-    
+
     def get_by_email(self, email: str) -> Optional[User]:
         """Get user by email address."""
         return self.session.query(User).filter(
             and_(
                 User.email == email.lower(),
-                User.is_deleted == False
+                not User.is_deleted
             )
         ).first()
-    
+
     def create_user(
         self,
         email: str,
@@ -144,7 +144,7 @@ class UserRepository(BaseRepository[User]):
             subscription_tier=subscription_tier,
             credits_remaining=self._get_initial_credits(subscription_tier)
         )
-    
+
     def _get_initial_credits(self, tier: SubscriptionTier) -> int:
         """Get initial credits for subscription tier."""
         credits_map = {
@@ -154,11 +154,11 @@ class UserRepository(BaseRepository[User]):
             SubscriptionTier.ENTERPRISE: 100000,
         }
         return credits_map.get(tier, 100)
-    
+
     def update_login(self, user_id: str) -> Optional[User]:
         """Update user's last login timestamp."""
         return self.update(user_id, last_login_at=datetime.now(timezone.utc))
-    
+
     def add_credits(self, user_id: str, amount: int) -> Optional[User]:
         """Add credits to user account."""
         user = self.get(user_id)
@@ -166,11 +166,11 @@ class UserRepository(BaseRepository[User]):
             user.credits_remaining += amount
             self.session.flush()
         return user
-    
+
     def use_credits(self, user_id: str, amount: int) -> bool:
         """
         Use credits from user account.
-        
+
         Returns:
             bool: True if successful, False if insufficient credits
         """
@@ -179,23 +179,23 @@ class UserRepository(BaseRepository[User]):
             self.session.flush()
             return True
         return False
-    
+
     def get_by_tier(self, tier: SubscriptionTier) -> List[User]:
         """Get all users with a specific subscription tier."""
         return self.session.query(User).filter(
             and_(
                 User.subscription_tier == tier,
-                User.is_deleted == False
+                not User.is_deleted
             )
         ).all()
 
 
 class ProjectRepository(BaseRepository[Project]):
     """Repository for Project model operations."""
-    
+
     def __init__(self, session: Session):
         super().__init__(session, Project)
-    
+
     def get_user_projects(
         self,
         user_id: str,
@@ -207,15 +207,15 @@ class ProjectRepository(BaseRepository[Project]):
         query = self.session.query(Project).filter(
             and_(
                 Project.user_id == user_id,
-                Project.is_deleted == False
+                not Project.is_deleted
             )
         )
-        
+
         if status:
             query = query.filter(Project.status == status)
-        
+
         return query.order_by(Project.created_at.desc()).offset(skip).limit(limit).all()
-    
+
     def create_project(
         self,
         user_id: str,
@@ -230,7 +230,7 @@ class ProjectRepository(BaseRepository[Project]):
             description=description,
             config=config or {}
         )
-    
+
     def update_status(
         self,
         project_id: str,
@@ -238,7 +238,7 @@ class ProjectRepository(BaseRepository[Project]):
     ) -> Optional[Project]:
         """Update project status."""
         return self.update(project_id, status=status)
-    
+
     def set_deployment_url(
         self,
         project_id: str,
@@ -250,7 +250,7 @@ class ProjectRepository(BaseRepository[Project]):
             deployment_url=deployment_url,
             status=ProjectStatus.DEPLOYED
         )
-    
+
     def search_projects(
         self,
         user_id: str,
@@ -261,7 +261,7 @@ class ProjectRepository(BaseRepository[Project]):
         return self.session.query(Project).filter(
             and_(
                 Project.user_id == user_id,
-                Project.is_deleted == False,
+                not Project.is_deleted,
                 or_(
                     Project.name.ilike(search_term),
                     Project.description.ilike(search_term)
@@ -272,10 +272,10 @@ class ProjectRepository(BaseRepository[Project]):
 
 class GenerationRepository(BaseRepository[Generation]):
     """Repository for Generation model operations."""
-    
+
     def __init__(self, session: Session):
         super().__init__(session, Generation)
-    
+
     def get_project_generations(
         self,
         project_id: str,
@@ -286,7 +286,7 @@ class GenerationRepository(BaseRepository[Generation]):
         return self.session.query(Generation).filter(
             Generation.project_id == project_id
         ).order_by(Generation.created_at.desc()).offset(skip).limit(limit).all()
-    
+
     def create_generation(
         self,
         project_id: str,
@@ -299,7 +299,7 @@ class GenerationRepository(BaseRepository[Generation]):
             prompt=prompt,
             model_used=model_used
         )
-    
+
     def complete_generation(
         self,
         generation_id: str,
@@ -316,7 +316,7 @@ class GenerationRepository(BaseRepository[Generation]):
             tokens_used=tokens_used,
             generation_time_ms=generation_time_ms
         )
-    
+
     def fail_generation(
         self,
         generation_id: str,
@@ -327,7 +327,7 @@ class GenerationRepository(BaseRepository[Generation]):
             generation_id,
             error_message=error_message
         )
-    
+
     def get_total_tokens(self, project_id: str) -> int:
         """Get total tokens used for a project."""
         from sqlalchemy import func
@@ -341,10 +341,10 @@ class GenerationRepository(BaseRepository[Generation]):
 
 class DeploymentRepository(BaseRepository[Deployment]):
     """Repository for Deployment model operations."""
-    
+
     def __init__(self, session: Session):
         super().__init__(session, Deployment)
-    
+
     def get_project_deployments(
         self,
         project_id: str,
@@ -355,7 +355,7 @@ class DeploymentRepository(BaseRepository[Deployment]):
         return self.session.query(Deployment).filter(
             Deployment.project_id == project_id
         ).order_by(Deployment.created_at.desc()).offset(skip).limit(limit).all()
-    
+
     def create_deployment(
         self,
         project_id: str,
@@ -369,7 +369,7 @@ class DeploymentRepository(BaseRepository[Deployment]):
             config=config or {},
             status=DeploymentStatus.PENDING
         )
-    
+
     def start_deployment(self, deployment_id: str) -> Optional[Deployment]:
         """Mark deployment as in progress."""
         deployment = self.get(deployment_id)
@@ -378,7 +378,7 @@ class DeploymentRepository(BaseRepository[Deployment]):
             deployment.add_log("Deployment started")
             self.session.flush()
         return deployment
-    
+
     def complete_deployment(
         self,
         deployment_id: str,
@@ -393,7 +393,7 @@ class DeploymentRepository(BaseRepository[Deployment]):
             deployment.add_log(f"Deployment successful: {url}")
             self.session.flush()
         return deployment
-    
+
     def fail_deployment(
         self,
         deployment_id: str,
@@ -406,7 +406,7 @@ class DeploymentRepository(BaseRepository[Deployment]):
             deployment.add_log(f"Deployment failed: {error_message}")
             self.session.flush()
         return deployment
-    
+
     def get_latest_successful(
         self,
         project_id: str
@@ -418,7 +418,7 @@ class DeploymentRepository(BaseRepository[Deployment]):
                 Deployment.status == DeploymentStatus.SUCCESS
             )
         ).order_by(Deployment.deployed_at.desc()).first()
-    
+
     def add_deployment_log(
         self,
         deployment_id: str,

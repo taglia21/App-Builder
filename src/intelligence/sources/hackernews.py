@@ -13,7 +13,6 @@ except ImportError:
 
 from loguru import logger
 
-from ...models import PainPoint
 from ..base import DataSource
 
 
@@ -45,7 +44,7 @@ class HackerNewsSource(DataSource):
             return []
 
         results = []
-        logger.info(f"Collecting Hacker News stories and discussions...")
+        logger.info("Collecting Hacker News stories and discussions...")
 
         try:
             # Collect stories from different categories
@@ -55,29 +54,29 @@ class HackerNewsSource(DataSource):
                     response = requests.get(f"{self.base_url}/{story_type}stories.json", timeout=10)
                     response.raise_for_status()
                     story_ids = response.json()[:self.max_stories]
-                    
+
                     for story_id in story_ids[:50]:  # Process top 50 per type
                         try:
                             # Get story details
                             story_response = requests.get(f"{self.base_url}/item/{story_id}.json", timeout=10)
                             story_response.raise_for_status()
                             story = story_response.json()
-                            
+
                             if not story or story.get('dead') or story.get('deleted'):
                                 continue
-                            
+
                             score = story.get('score', 0)
                             if score < self.min_score:
                                 continue
-                            
+
                             title = story.get('title', '')
                             text = story.get('text', '')
                             url = story.get('url', '')
-                            
+
                             # Check relevance
                             content = f"{title} {text}".lower()
                             relevance = sum(1 for keyword in self.keywords if keyword in content)
-                            
+
                             if relevance > 0 or score > 200:  # High score stories are always interesting
                                 results.append({
                                     "source": "hackernews",
@@ -95,24 +94,24 @@ class HackerNewsSource(DataSource):
                                     "hn_url": f"https://news.ycombinator.com/item?id={story_id}",
                                     "timestamp": datetime.now().isoformat(),
                                 })
-                            
+
                             # Get top comments if highly relevant or high engagement
                             if (relevance >= 2 or score > 300) and story.get('kids'):
                                 comment_ids = story['kids'][:10]  # Top 10 comments
                                 for comment_id in comment_ids:
                                     try:
                                         comment_response = requests.get(
-                                            f"{self.base_url}/item/{comment_id}.json", 
+                                            f"{self.base_url}/item/{comment_id}.json",
                                             timeout=5
                                         )
                                         comment_response.raise_for_status()
                                         comment = comment_response.json()
-                                        
+
                                         if comment and not comment.get('dead') and not comment.get('deleted'):
                                             comment_text = comment.get('text', '')
                                             comment_content = comment_text.lower()
                                             comment_relevance = sum(1 for kw in self.keywords if kw in comment_content)
-                                            
+
                                             if comment_relevance > 0:
                                                 results.append({
                                                     "source": "hackernews",
@@ -129,10 +128,10 @@ class HackerNewsSource(DataSource):
                                                 })
                                     except Exception as e:
                                         logger.debug(f"Failed to fetch comment {comment_id}: {e}")
-                                        
+
                         except Exception as e:
                             logger.debug(f"Failed to fetch story {story_id}: {e}")
-                            
+
                 except Exception as e:
                     logger.warning(f"Failed to fetch {story_type} stories: {e}")
 

@@ -9,9 +9,9 @@ Generates more innovative, market-viable SaaS ideas with:
 """
 
 import random
+from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 from uuid import uuid4
-from dataclasses import dataclass
 
 from loguru import logger
 
@@ -55,7 +55,7 @@ TRENDING_CATEGORIES = [
 # High-growth verticals
 HOT_VERTICALS = [
     "FinTech",
-    "HealthTech", 
+    "HealthTech",
     "EdTech",
     "PropTech",
     "LegalTech",
@@ -103,55 +103,55 @@ COMPETITOR_GAPS = [
 class EnhancedIdeaGenerator:
     """
     Enhanced idea generation with market research and positioning.
-    
+
     Generates ideas that are:
     - Aligned with market trends
     - Differentiated from competitors
     - Positioned for specific buyer personas
     - Optimized for revenue potential
     """
-    
+
     def __init__(self, config: PipelineConfig, llm_client=None):
         self.config = config
         self.llm_client = llm_client
         self.min_ideas = config.idea_generation.min_ideas if config.idea_generation else 25
-        
+
     def generate_ideas(
-        self, 
+        self,
         intelligence: IntelligenceData,
         market_research: Optional[MarketResearch] = None
     ) -> List[StartupIdea]:
         """Generate enhanced startup ideas with market context."""
-        
+
         if market_research is None:
             market_research = self._create_default_market_research()
-        
+
         ideas = []
-        
+
         # Strategy 1: Trend-aligned automation
         ideas.extend(self._generate_trend_aligned_ideas(intelligence, market_research))
-        
+
         # Strategy 2: Vertical SaaS opportunities
         ideas.extend(self._generate_vertical_saas_ideas(intelligence, market_research))
-        
+
         # Strategy 3: Competitor gap exploitation
         ideas.extend(self._generate_competitive_gap_ideas(intelligence, market_research))
-        
+
         # Strategy 4: AI-first solutions
         ideas.extend(self._generate_ai_first_ideas(intelligence))
-        
+
         # Strategy 5: Integration/workflow plays
         ideas.extend(self._generate_integration_ideas(intelligence))
-        
+
         # Deduplicate and rank
         ideas = self._deduplicate_ideas(ideas)
-        
+
         # Enhance ideas with better positioning
         ideas = [self._enhance_positioning(idea, market_research) for idea in ideas]
-        
+
         logger.info(f"Generated {len(ideas)} enhanced startup ideas")
         return ideas
-    
+
     def _create_default_market_research(self) -> MarketResearch:
         """Create default market research context."""
         return MarketResearch(
@@ -172,37 +172,37 @@ class EnhancedIdeaGenerator:
             },
             competitive_gaps=COMPETITOR_GAPS,
         )
-    
+
     def _generate_trend_aligned_ideas(
-        self, 
+        self,
         intelligence: IntelligenceData,
         market_research: MarketResearch
     ) -> List[StartupIdea]:
         """Generate ideas aligned with current market trends."""
         ideas = []
-        
+
         # Match pain points to trending categories
         for pain_point in intelligence.pain_points[:15]:
             best_trend = self._match_pain_to_trend(pain_point, market_research)
             if not best_trend:
                 continue
-            
+
             # Create trendy product name
             name = self._generate_product_name(pain_point, best_trend)
-            
+
             # Create compelling one-liner
             one_liner = self._generate_one_liner(pain_point, best_trend)
-            
+
             # Identify specific buyer
             persona = self._create_detailed_persona(pain_point)
-            
+
             # Calculate realistic TAM/SAM/SOM
             tam, sam, som = self._calculate_market_size(pain_point, best_trend)
-            
+
             # Identify competitors and differentiation
             competitors = self._identify_competitors(pain_point, best_trend)
             differentiators = self._generate_differentiators(competitors)
-            
+
             idea = StartupIdea(
                 id=uuid4(),
                 name=name,
@@ -223,9 +223,9 @@ class EnhancedIdeaGenerator:
                 source_pain_point_ids=[pain_point.id],
             )
             ideas.append(idea)
-        
+
         return ideas
-    
+
     def _generate_vertical_saas_ideas(
         self,
         intelligence: IntelligenceData,
@@ -233,7 +233,7 @@ class EnhancedIdeaGenerator:
     ) -> List[StartupIdea]:
         """Generate vertical SaaS ideas for specific industries."""
         ideas = []
-        
+
         # Group pain points by industry
         industry_pains: Dict[str, List[PainPoint]] = {}
         for pp in intelligence.pain_points:
@@ -241,7 +241,7 @@ class EnhancedIdeaGenerator:
                 if industry not in industry_pains:
                     industry_pains[industry] = []
                 industry_pains[industry].append(pp)
-        
+
         # Focus on hot verticals
         for vertical in market_research.hot_verticals[:5]:
             # Find matching industry
@@ -250,7 +250,7 @@ class EnhancedIdeaGenerator:
                 if vertical.lower().replace("tech", "") in industry.lower():
                     matching_industry = industry
                     break
-            
+
             if not matching_industry:
                 # Create synthetic opportunity
                 name = f"{vertical} Operations Hub"
@@ -262,7 +262,7 @@ class EnhancedIdeaGenerator:
                 name = f"{vertical} Command Center"
                 problem = combined_problem
                 solution = f"Purpose-built platform solving {len(pains)} critical {vertical} challenges"
-            
+
             persona = BuyerPersona(
                 title=f"{vertical} Operations Director",
                 company_size="50-500 employees",
@@ -270,7 +270,7 @@ class EnhancedIdeaGenerator:
                 budget_authority=True,
                 pain_intensity=0.85,
             )
-            
+
             idea = StartupIdea(
                 id=uuid4(),
                 name=name,
@@ -303,9 +303,9 @@ class EnhancedIdeaGenerator:
                 source_pain_point_ids=[],
             )
             ideas.append(idea)
-        
+
         return ideas
-    
+
     def _generate_competitive_gap_ideas(
         self,
         intelligence: IntelligenceData,
@@ -313,7 +313,7 @@ class EnhancedIdeaGenerator:
     ) -> List[StartupIdea]:
         """Generate ideas that exploit competitor weaknesses."""
         ideas = []
-        
+
         gap_opportunity_pairs = [
             ("Complex pricing", "Simple, transparent pricing", "Clear Pricing SaaS"),
             ("Poor onboarding", "5-minute setup", "Instant Setup Platform"),
@@ -322,22 +322,22 @@ class EnhancedIdeaGenerator:
             ("Legacy UI/UX", "Modern, intuitive interface", "Modern Workspace"),
             ("Missing AI features", "AI-first design", "AI-Powered Tools"),
         ]
-        
+
         for gap, solution, name_suffix in gap_opportunity_pairs[:3]:
             # Find pain points related to this gap
             related_pains = [
                 pp for pp in intelligence.pain_points
                 if any(word in pp.description.lower() for word in gap.lower().split())
             ]
-            
+
             if related_pains:
                 pain = related_pains[0]
                 base_name = pain.keywords[0].title() if pain.keywords else "Workflow"
             else:
                 base_name = random.choice(["Task", "Project", "Team", "Data"])
-            
+
             name = f"{base_name} {name_suffix}"
-            
+
             idea = StartupIdea(
                 id=uuid4(),
                 name=name,
@@ -372,13 +372,13 @@ class EnhancedIdeaGenerator:
                 source_pain_point_ids=[],
             )
             ideas.append(idea)
-        
+
         return ideas
-    
+
     def _generate_ai_first_ideas(self, intelligence: IntelligenceData) -> List[StartupIdea]:
         """Generate AI-first solution ideas."""
         ideas = []
-        
+
         ai_opportunity_patterns = [
             ("data entry", "AI Data Entry Agent", "automates data entry with 99% accuracy"),
             ("reporting", "AI Report Generator", "creates reports automatically from your data"),
@@ -389,17 +389,17 @@ class EnhancedIdeaGenerator:
             ("email", "AI Email Assistant", "drafts, summarizes, and prioritizes emails"),
             ("code", "AI Code Assistant", "reviews, suggests, and generates code"),
         ]
-        
+
         for keyword, name, benefit in ai_opportunity_patterns:
             # Find matching pain points
             matching = [pp for pp in intelligence.pain_points if keyword in pp.description.lower()]
-            
+
             if matching:
                 pain = matching[0]
                 problem = pain.description
             else:
                 problem = f"Manual {keyword} tasks are time-consuming and error-prone"
-            
+
             idea = StartupIdea(
                 id=uuid4(),
                 name=name,
@@ -438,13 +438,13 @@ class EnhancedIdeaGenerator:
                 source_pain_point_ids=[pain.id for pain in matching[:3]],
             )
             ideas.append(idea)
-        
+
         return ideas[:5]  # Limit to top 5
-    
+
     def _generate_integration_ideas(self, intelligence: IntelligenceData) -> List[StartupIdea]:
         """Generate integration and workflow ideas."""
         ideas = []
-        
+
         # Popular integration pairs
         integration_pairs = [
             ("Slack", "Salesforce", "CRM notifications"),
@@ -453,10 +453,10 @@ class EnhancedIdeaGenerator:
             ("GitHub", "Jira", "Dev workflow"),
             ("Zapier", "AI", "Smart automation"),
         ]
-        
+
         for tool_a, tool_b, use_case in integration_pairs[:3]:
             name = f"{tool_a} + {tool_b} Connector"
-            
+
             idea = StartupIdea(
                 id=uuid4(),
                 name=name,
@@ -491,14 +491,14 @@ class EnhancedIdeaGenerator:
                 source_pain_point_ids=[],
             )
             ideas.append(idea)
-        
+
         return ideas
-    
+
     # Helper methods
     def _match_pain_to_trend(self, pain_point: PainPoint, research: MarketResearch) -> Optional[str]:
         """Match a pain point to the best trending category."""
         pain_text = pain_point.description.lower()
-        
+
         trend_keywords = {
             "AI/ML Automation": ["automat", "manual", "repetitive", "ai", "ml"],
             "Developer Tools": ["developer", "code", "debug", "deploy", "api"],
@@ -507,30 +507,30 @@ class EnhancedIdeaGenerator:
             "Customer Success": ["customer", "churn", "retention", "support"],
             "Workflow Automation": ["workflow", "process", "efficiency", "task"],
         }
-        
+
         best_match = None
         best_score = 0
-        
+
         for trend, keywords in trend_keywords.items():
             score = sum(1 for kw in keywords if kw in pain_text)
             if score > best_score:
                 best_score = score
                 best_match = trend
-        
+
         return best_match if best_score > 0 else random.choice(research.trending_technologies)
-    
+
     def _generate_product_name(self, pain_point: PainPoint, trend: str) -> str:
         """Generate a memorable product name."""
         prefixes = ["Hyper", "Ultra", "Auto", "Smart", "Next", "Meta", "Flow", "Sync"]
         suffixes = ["AI", "Hub", "Stack", "Cloud", "Labs", "io", "ly", "ify"]
-        
+
         if pain_point.keywords:
             base = pain_point.keywords[0].title()
         else:
             base = trend.split()[0]
-        
+
         return f"{random.choice(prefixes)}{base}{random.choice(suffixes)}"
-    
+
     def _generate_one_liner(self, pain_point: PainPoint, trend: str) -> str:
         """Generate a compelling one-liner."""
         templates = [
@@ -539,14 +539,14 @@ class EnhancedIdeaGenerator:
             f"Turn {pain_point.description[:30].lower()} into a solved problem",
         ]
         return random.choice(templates)
-    
+
     def _create_detailed_persona(self, pain_point: PainPoint) -> BuyerPersona:
         """Create a detailed buyer persona."""
         titles = [
             "VP of Operations", "Director of Engineering", "Head of Product",
             "Chief Revenue Officer", "IT Director", "Operations Manager"
         ]
-        
+
         return BuyerPersona(
             title=random.choice(titles),
             company_size="50-500 employees",
@@ -554,19 +554,19 @@ class EnhancedIdeaGenerator:
             budget_authority=True,
             pain_intensity=min(pain_point.urgency_score, 1.0),
         )
-    
+
     def _calculate_market_size(self, pain_point: PainPoint, trend: str) -> Tuple[str, str, str]:
         """Calculate realistic TAM/SAM/SOM."""
         base_tam = random.randint(5, 50)
         sam_ratio = random.uniform(0.1, 0.3)
         som_ratio = random.uniform(0.01, 0.05)
-        
+
         return (
             f"${base_tam}B",
             f"${int(base_tam * sam_ratio * 1000)}M",
             f"${int(base_tam * som_ratio * 1000)}M"
         )
-    
+
     def _identify_competitors(self, pain_point: PainPoint, trend: str) -> List[str]:
         """Identify likely competitors."""
         generic_competitors = [
@@ -576,7 +576,7 @@ class EnhancedIdeaGenerator:
             "In-house tools",
         ]
         return generic_competitors[:3]
-    
+
     def _generate_differentiators(self, competitors: List[str]) -> List[str]:
         """Generate differentiation factors."""
         return [
@@ -586,7 +586,7 @@ class EnhancedIdeaGenerator:
             "Usage-based pricing",
             "Best-in-class integrations",
         ][:4]
-    
+
     def _enhance_problem_statement(self, pain_point: PainPoint) -> str:
         """Enhance the problem statement for impact."""
         quantifiers = [
@@ -595,14 +595,14 @@ class EnhancedIdeaGenerator:
             "leads to 30% efficiency loss",
         ]
         return f"{pain_point.description} - this {random.choice(quantifiers)}"
-    
+
     def _generate_solution(self, pain_point: PainPoint, trend: str) -> str:
         """Generate a compelling solution description."""
         return (
             f"AI-powered platform that eliminates {pain_point.description[:50].lower()} "
             f"through intelligent automation and {trend.lower()} capabilities"
         )
-    
+
     def _generate_uvp(self, pain_point: PainPoint) -> str:
         """Generate unique value proposition."""
         templates = [
@@ -611,7 +611,7 @@ class EnhancedIdeaGenerator:
             "Get insights in minutes, not days",
         ]
         return random.choice(templates)
-    
+
     def _optimize_revenue_model(self, pain_point: PainPoint, persona: BuyerPersona) -> RevenueModel:
         """Choose optimal revenue model."""
         if persona.company_size and "1000" in persona.company_size:
@@ -619,7 +619,7 @@ class EnhancedIdeaGenerator:
         if pain_point.urgency_score > 0.8:
             return RevenueModel.SUBSCRIPTION
         return RevenueModel.FREEMIUM
-    
+
     def _create_pricing_hypothesis(self, persona: BuyerPersona) -> PricingHypothesis:
         """Create pricing hypothesis based on persona."""
         if "enterprise" in persona.company_size.lower() if persona.company_size else False:
@@ -631,7 +631,7 @@ class EnhancedIdeaGenerator:
             tiers=["Free", "Pro", "Team"],
             price_range="$0-$49/user/month"
         )
-    
+
     def _find_automation_opportunities(self, pain_point: PainPoint) -> List[str]:
         """Find automation opportunities."""
         return [
@@ -640,35 +640,35 @@ class EnhancedIdeaGenerator:
             "Self-healing processes",
             "Smart notifications",
         ][:3]
-    
+
     def _generate_tech_requirements(self, trend: str) -> str:
         """Generate tech requirements summary."""
         return f"Modern cloud-native SaaS with {trend.split()[0]} capabilities"
-    
+
     def _deduplicate_ideas(self, ideas: List[StartupIdea]) -> List[StartupIdea]:
         """Remove duplicate ideas based on name similarity."""
         seen_names = set()
         unique_ideas = []
-        
+
         for idea in ideas:
             name_key = idea.name.lower().replace(" ", "")[:20]
             if name_key not in seen_names:
                 seen_names.add(name_key)
                 unique_ideas.append(idea)
-        
+
         return unique_ideas
-    
+
     def _enhance_positioning(self, idea: StartupIdea, research: MarketResearch) -> StartupIdea:
         """Enhance idea positioning for market fit."""
         # Add trending technology if not present
         if not any(tech in idea.technical_requirements_summary for tech in ["AI", "ML", "automation"]):
             idea.technical_requirements_summary += " with AI/ML capabilities"
-        
+
         # Ensure differentiators are unique
         if len(idea.differentiation_factors) < 3:
             idea.differentiation_factors.extend([
                 "Modern, intuitive UX",
                 "Fast implementation",
             ])
-        
+
         return idea

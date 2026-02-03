@@ -3,8 +3,7 @@ Realistic demo data for testing the pipeline without API calls.
 This data simulates what would be gathered from real intelligence sources.
 """
 
-from datetime import datetime, timedelta
-import random
+from datetime import datetime
 
 # ============================================================================
 # PAIN POINTS - Extracted from Reddit, Twitter, Forums
@@ -29,7 +28,7 @@ DEMO_PAIN_POINTS = [
         ]
     },
     {
-        "id": "pp-002", 
+        "id": "pp-002",
         "description": "Engineering managers lack visibility into actual developer productivity. JIRA tickets don't reflect real output, and they need metrics without micromanaging.",
         "source_type": "twitter",
         "source_url": "https://twitter.com/example/status/123",
@@ -319,7 +318,7 @@ DEMO_COMPETITORS = [
         "pricing_model": "$30-200/month based on features",
         "feature_list": [
             "Invoicing",
-            "Expense tracking", 
+            "Expense tracking",
             "Bank connections",
             "Basic reporting",
             "Payroll (add-on)",
@@ -474,7 +473,7 @@ DEMO_OPPORTUNITY_CATEGORIES = [
         "automation_potential": 0.89
     },
     {
-        "category_name": "Revenue Intelligence", 
+        "category_name": "Revenue Intelligence",
         "subcategories": ["Sales analytics", "Churn prediction", "Pipeline forecasting", "Attribution"],
         "pain_point_ids": ["pp-005", "pp-006"],
         "market_size_estimate": "$8B by 2026",
@@ -510,7 +509,6 @@ DEMO_OPPORTUNITY_CATEGORIES = [
 
 def get_demo_intelligence_data():
     """Return complete demo intelligence data as dictionaries."""
-    from datetime import datetime
     return {
         "extraction_timestamp": datetime.now().isoformat(),
         "pain_points": DEMO_PAIN_POINTS,

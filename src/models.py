@@ -2,13 +2,12 @@
 Data models for the Startup Generator pipeline.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
-
 
 # ============================================================================
 # Intelligence Models
@@ -88,7 +87,7 @@ class CompetitorAnalysis(BaseModel):
 class IntelligenceData(BaseModel):
     """Complete intelligence gathering output."""
 
-    extraction_timestamp: datetime = Field(default_factory=datetime.utcnow)
+    extraction_timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     pain_points: List[PainPoint] = Field(default_factory=list)
     emerging_industries: List[EmergingIndustry] = Field(default_factory=list)
     opportunity_categories: List[OpportunityCategory] = Field(default_factory=list)
@@ -151,7 +150,7 @@ class StartupIdea(BaseModel):
 class IdeaCatalog(BaseModel):
     """Catalog of generated ideas."""
 
-    generation_timestamp: datetime = Field(default_factory=datetime.utcnow)
+    generation_timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     ideas: List[StartupIdea] = Field(default_factory=list)
 
 
@@ -193,7 +192,7 @@ class EvaluatedIdea(BaseModel):
 class EvaluationReport(BaseModel):
     """Complete evaluation report."""
 
-    evaluation_timestamp: datetime = Field(default_factory=datetime.utcnow)
+    evaluation_timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     evaluated_ideas: List[EvaluatedIdea] = Field(default_factory=list)
     selected_idea_id: UUID
     selection_reasoning: str
@@ -211,7 +210,7 @@ class ProductPrompt(BaseModel):
     idea_name: str
     prompt_content: str
     metadata: Dict[str, Any] = Field(default_factory=dict)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class RefinementCheck(BaseModel):
@@ -229,7 +228,7 @@ class RefinementIteration(BaseModel):
     iteration_number: int
     checks: List[RefinementCheck] = Field(default_factory=list)
     changes_made: List[str] = Field(default_factory=list)
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class CertificationStatus(str, Enum):
@@ -245,7 +244,7 @@ class PromptCertification(BaseModel):
     """Certification of a product prompt."""
 
     status: CertificationStatus
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     iterations_required: int = 0
     checks_passed: List[str] = Field(default_factory=list)
     final_hash: str = ""
@@ -273,7 +272,7 @@ class GeneratedCodebase(BaseModel):
     backend_framework: str
     frontend_framework: str
     infrastructure_provider: str
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     files_generated: int = 0
     lines_of_code: int = 0
 
@@ -307,7 +306,7 @@ class PipelineMetadata(BaseModel):
     """Metadata about pipeline execution."""
 
     execution_id: UUID = Field(default_factory=uuid4)
-    started_at: datetime = Field(default_factory=datetime.utcnow)
+    started_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     completed_at: Optional[datetime] = None
     status: PipelineStatus = PipelineStatus.PENDING
     current_stage: Optional[PipelineStage] = None

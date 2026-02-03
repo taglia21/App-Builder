@@ -5,15 +5,13 @@ Part of the Organizational Intelligence framework implementing checks and balanc
 through specialized rival agents that compete to identify different types of issues.
 """
 
-from typing import Any, Dict, List, Optional
-import logging
 import json
+import logging
 import re
+from typing import Any, Dict, List
 
 from ..base import LLMProvider
-from ..messages import (
-    AgentRole, CriticDecision, CriticReview, GeneratedCode
-)
+from ..messages import AgentRole, CriticDecision, CriticReview, GeneratedCode
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +19,7 @@ logger = logging.getLogger(__name__)
 class UXCritic:
     """
     UX-focused critic agent that reviews code for user experience issues.
-    
+
     This critic represents the "UX designer/advocate" perspective in the
     organizational intelligence framework, specifically looking for:
     - Error handling and user-friendly error messages
@@ -32,10 +30,10 @@ class UXCritic:
     - Navigation and information architecture
     - Consistency in UI patterns
     """
-    
+
     role = AgentRole.CRITIC
     specialty = "ux"
-    
+
     UX_REVIEW_PROMPT = '''You are a UX Critic Agent - a specialized user experience advocate.
 
 Your role is to review generated code EXCLUSIVELY for user experience and usability issues.
@@ -91,7 +89,7 @@ make the app unusable. RECOMMEND revision for significant usability issues.'''
     def __init__(self, llm_provider: LLMProvider):
         self.llm = llm_provider
         self._ux_patterns = self._load_ux_patterns()
-    
+
     def _load_ux_patterns(self) -> Dict[str, Dict[str, Any]]:
         """Load patterns for UX analysis."""
         return {
@@ -126,11 +124,11 @@ make the app unusable. RECOMMEND revision for significant usability issues.'''
                 "severity": "low"
             }
         }
-    
+
     def _static_ux_scan(self, code: str) -> List[Dict[str, Any]]:
         """Perform static analysis for UX patterns."""
         issues = []
-        
+
         for issue_type, config in self._ux_patterns.items():
             # Check for negative patterns (things that shouldn't be there)
             if "negative" in config:
@@ -144,7 +142,7 @@ make the app unusable. RECOMMEND revision for significant usability issues.'''
                             "user_impact": self._get_user_impact(issue_type),
                             "recommendation": self._get_recommendation(issue_type)
                         })
-            
+
             # Check for positive patterns (things that should be there)
             if "positive" in config:
                 found = any(pattern.search(code) for pattern in config["positive"])
@@ -157,9 +155,9 @@ make the app unusable. RECOMMEND revision for significant usability issues.'''
                         "user_impact": self._get_user_impact(issue_type),
                         "recommendation": self._get_recommendation(issue_type)
                     })
-        
+
         return issues
-    
+
     def _should_have_pattern(self, issue_type: str, code: str) -> bool:
         """Determine if code should have certain UX patterns."""
         # Check if code has async operations (should have loading states)
@@ -175,7 +173,7 @@ make the app unusable. RECOMMEND revision for significant usability issues.'''
         if issue_type == "missing_aria":
             return bool(re.search(r'<button|onClick|<a\s|href=', code, re.IGNORECASE))
         return False
-    
+
     def _get_user_impact(self, issue_type: str) -> str:
         """Get user impact description for issue type."""
         impacts = {
@@ -187,7 +185,7 @@ make the app unusable. RECOMMEND revision for significant usability issues.'''
             "missing_empty_state": "Users see a blank screen and don\'t know if it\'s loading, broken, or just empty"
         }
         return impacts.get(issue_type, "Negatively affects user experience")
-    
+
     def _get_recommendation(self, issue_type: str) -> str:
         """Get UX recommendation for issue type."""
         recommendations = {
@@ -199,28 +197,28 @@ make the app unusable. RECOMMEND revision for significant usability issues.'''
             "missing_empty_state": "Design empty states with helpful messages and calls-to-action"
         }
         return recommendations.get(issue_type, "Improve user experience")
-    
+
     async def review(self, code: GeneratedCode, requirements: str) -> CriticReview:
         """Review generated code for UX issues."""
         logger.info(f"UX critic reviewing code for: {requirements[:50]}...")
-        
+
         # Combine all code files for review
         all_code = "\n\n".join([
-            f"# File: {f.filename}\n{f.content}" 
+            f"# File: {f.filename}\n{f.content}"
             for f in code.files
         ])
-        
+
         # First, run static analysis
         static_issues = self._static_ux_scan(all_code)
-        
+
         # Then get LLM-based deep analysis
         prompt = self.UX_REVIEW_PROMPT.format(
             code=all_code,
             requirements=requirements
         )
-        
+
         response = await self.llm.generate(prompt)
-        
+
         try:
             review_data = json.loads(response)
         except json.JSONDecodeError:
@@ -233,10 +231,10 @@ make the app unusable. RECOMMEND revision for significant usability issues.'''
                 "ux_improvements": [],
                 "reasoning": "Unable to complete full UX analysis"
             }
-        
+
         # Merge static analysis findings with LLM findings
         all_issues = static_issues + review_data.get("issues", [])
-        
+
         # Deduplicate issues
         seen = set()
         unique_issues = []
@@ -245,19 +243,19 @@ make the app unusable. RECOMMEND revision for significant usability issues.'''
             if key not in seen:
                 seen.add(key)
                 unique_issues.append(issue)
-        
+
         # Determine decision based on issue severities
         decision_map = {
             "approve": CriticDecision.APPROVE,
             "reject": CriticDecision.REJECT,
             "needs_revision": CriticDecision.NEEDS_REVISION
         }
-        
+
         # Override decision if critical issues found
         has_critical = any(i.get("severity") == "critical" for i in unique_issues)
         high_count = sum(1 for i in unique_issues if i.get("severity") == "high")
         a11y_issues = len(review_data.get("accessibility_concerns", []))
-        
+
         if has_critical:
             decision = CriticDecision.REJECT
         elif high_count >= 2 or a11y_issues >= 3:
@@ -267,12 +265,12 @@ make the app unusable. RECOMMEND revision for significant usability issues.'''
                 review_data.get("decision", "approve").lower(),
                 CriticDecision.APPROVE
             )
-        
+
         # Compile suggestions from issues and improvements
         suggestions = [i.get("recommendation", "") for i in unique_issues if i.get("recommendation")]
         suggestions.extend(review_data.get("ux_improvements", []))
         suggestions.extend([f"A11y: {c}" for c in review_data.get("accessibility_concerns", [])])
-        
+
         return CriticReview(
             critic_role=self.role,
             specialty=self.specialty,

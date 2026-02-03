@@ -1,9 +1,10 @@
 """Billing routes for subscription management with Stripe Checkout."""
+import json
 import os
+
 import stripe
-from fastapi import APIRouter, Request, HTTPException, Depends
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
-from typing import Optional
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 # Stripe configuration
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
@@ -25,7 +26,7 @@ PLAN_DETAILS = {
 def create_billing_router(templates):
     """Create billing router with templates."""
     router = APIRouter(tags=["billing"])
-    
+
     @router.get("/plans", response_class=HTMLResponse)
     async def pricing_page(request: Request):
         """Display the pricing page."""
@@ -42,7 +43,7 @@ def create_billing_router(templates):
             "pages/pricing.html",
             {"request": request, "plans": plans}
         )
-    
+
     @router.post("/create-checkout-session")
     async def create_checkout_session(request: Request):
         """Create a Stripe Checkout session for subscription."""
@@ -50,12 +51,12 @@ def create_billing_router(templates):
             data = await request.json()
             plan = data.get("plan", "starter")
             price_id = PRICE_IDS.get(plan)
-            
+
             if not price_id:
                 raise HTTPException(status_code=400, detail="Invalid plan")
-            
+
             base_url = str(request.base_url).rstrip("/")
-            
+
             checkout_session = stripe.checkout.Session.create(
                 payment_method_types=["card"],
                 line_items=[{"price": price_id, "quantity": 1}],
@@ -67,7 +68,7 @@ def create_billing_router(templates):
             return JSONResponse({"url": checkout_session.url})
         except stripe.error.StripeError as e:
             raise HTTPException(status_code=400, detail=str(e))
-    
+
     @router.get("/success", response_class=HTMLResponse)
     async def checkout_success(request: Request, session_id: str = None):
         """Handle successful checkout."""
@@ -75,7 +76,7 @@ def create_billing_router(templates):
             "pages/billing_success.html",
             {"request": request, "session_id": session_id}
         )
-    
+
     @router.get("/portal")
     async def customer_portal(request: Request):
         """Redirect to Stripe Customer Portal for subscription management."""
@@ -83,7 +84,7 @@ def create_billing_router(templates):
         customer_id = request.query_params.get("customer_id")
         if not customer_id:
             return RedirectResponse("/billing/plans")
-        
+
         try:
             base_url = str(request.base_url).rstrip("/")
             session = stripe.billing_portal.Session.create(
@@ -93,13 +94,13 @@ def create_billing_router(templates):
             return RedirectResponse(session.url)
         except stripe.error.StripeError:
             return RedirectResponse("/billing/plans")
-    
+
     @router.post("/webhook")
     async def stripe_webhook(request: Request):
         """Handle Stripe webhook events."""
         payload = await request.body()
         sig_header = request.headers.get("stripe-signature", "")
-        
+
         try:
             if STRIPE_WEBHOOK_SECRET:
                 event = stripe.Webhook.construct_event(
@@ -107,25 +108,25 @@ def create_billing_router(templates):
                 )
             else:
                 event = stripe.Event.construct_from(
-                    eval(payload.decode()), stripe.api_key
+                    json.loads(payload.decode()), stripe.api_key
                 )
         except (ValueError, stripe.error.SignatureVerificationError):
             raise HTTPException(status_code=400, detail="Invalid signature")
-        
+
         # Handle events
         if event["type"] == "checkout.session.completed":
             session = event["data"]["object"]
             # Provision subscription for user
             import logging
             logger = logging.getLogger(__name__)
-            
+
             # Extract session details
             customer_id = session.get('customer')
             subscription_id = session.get('subscription')
-            customer_email = session.get('customer_email') or session.get('customer_details', {}).get('email')
-            
+            session.get('customer_email') or session.get('customer_details', {}).get('email')
+
             logger.info(f"Provisioning subscription {subscription_id} for customer {customer_id}")
-            
+
             # In production, create/update subscription record:
             # await billing_service.provision_subscription(
             #     customer_id=customer_id,
@@ -133,7 +134,7 @@ def create_billing_router(templates):
             #     plan=session.get('metadata', {}).get('plan', 'pro'),
             #     email=customer_email
             # )
-            
+
             print(f"Checkout completed: {session['id']} - Subscription provisioned")
         elif event["type"] == "customer.subscription.updated":
             subscription = event["data"]["object"]
@@ -141,6 +142,6 @@ def create_billing_router(templates):
         elif event["type"] == "customer.subscription.deleted":
             subscription = event["data"]["object"]
             print(f"Subscription cancelled: {subscription['id']}")
-        
+
         return JSONResponse({"status": "received"})
     return router

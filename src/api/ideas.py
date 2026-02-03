@@ -2,8 +2,8 @@
 Idea Analysis API - Handles idea submission, vetting, and project creation.
 """
 import uuid
-import json
-from datetime import timezone, datetime
+from datetime import datetime, timezone
+
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Route
@@ -19,15 +19,15 @@ async def analyze_idea(request: Request) -> JSONResponse:
     try:
         body = await request.json()
         idea = body.get('idea', '').strip()
-        
+
         if not idea:
             return JSONResponse(
                 {'error': 'Please provide your business idea'},
                 status_code=400
             )
-        
+
         project_id = str(uuid.uuid4())[:8]
-        
+
         project = {
             'id': project_id,
             'idea': idea,
@@ -41,15 +41,15 @@ async def analyze_idea(request: Request) -> JSONResponse:
             },
             'generated_app': None
         }
-        
+
         projects_store[project_id] = project
-        
+
         return JSONResponse({
             'success': True,
             'project_id': project_id,
             'message': 'Project created successfully'
         })
-        
+
     except Exception as e:
         return JSONResponse(
             {'error': str(e)},

@@ -1,6 +1,5 @@
 """Frontend file templates for code generation."""
 
-from string import Template
 
 # =============================================================================
 # COMPONENTS
@@ -156,7 +155,7 @@ export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent }
 
 FRONTEND_LIB_UTILS = '''import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
- 
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
@@ -473,9 +472,9 @@ export default function LoginPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
-      
+
       const data = await res.json();
-      
+
       if (res.ok) {
         localStorage.setItem("token", data.access_token);
         router.push("/dashboard");
@@ -510,24 +509,24 @@ export default function LoginPage() {
                 )}
                 <div className="flex flex-col space-y-1.5">
                   <Label htmlFor="email" className="text-foreground">Email</Label>
-                  <Input 
-                      id="email" 
-                      placeholder="name@example.com" 
-                      value={email} 
-                      onChange={(e) => setEmail(e.target.value)} 
-                      required 
+                  <Input
+                      id="email"
+                      placeholder="name@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
                       autoComplete="email"
                       className="bg-input border-border"
                   />
                 </div>
                 <div className="flex flex-col space-y-1.5">
                   <Label htmlFor="password" className="text-foreground">Password</Label>
-                  <Input 
-                      id="password" 
-                      type="password" 
-                      value={password} 
-                      onChange={(e) => setPassword(e.target.value)} 
-                      required 
+                  <Input
+                      id="password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
                       autoComplete="current-password"
                       className="bg-input border-border"
                   />
@@ -585,7 +584,7 @@ export default function RegisterPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData)
       });
-      
+
       if (res.ok) {
         router.push("/login?registered=true");
       } else {
@@ -620,34 +619,34 @@ export default function RegisterPage() {
                 )}
                 <div className="flex flex-col space-y-1.5">
                   <Label htmlFor="full_name" className="text-foreground">Full Name</Label>
-                  <Input 
-                      id="full_name" 
+                  <Input
+                      id="full_name"
                       placeholder="John Doe"
-                      value={formData.full_name} 
-                      onChange={(e) => setFormData({...formData, full_name: e.target.value})} 
-                      required 
+                      value={formData.full_name}
+                      onChange={(e) => setFormData({...formData, full_name: e.target.value})}
+                      required
                       className="bg-input border-border"
                   />
                 </div>
                 <div className="flex flex-col space-y-1.5">
                   <Label htmlFor="email" className="text-foreground">Email</Label>
-                  <Input 
-                      id="email" 
+                  <Input
+                      id="email"
                       placeholder="name@example.com"
-                      value={formData.email} 
-                      onChange={(e) => setFormData({...formData, email: e.target.value})} 
-                      required 
+                      value={formData.email}
+                      onChange={(e) => setFormData({...formData, email: e.target.value})}
+                      required
                       className="bg-input border-border"
                   />
                 </div>
                 <div className="flex flex-col space-y-1.5">
                   <Label htmlFor="password" className="text-foreground">Password</Label>
-                  <Input 
-                      id="password" 
+                  <Input
+                      id="password"
                       type="password"
-                      value={formData.password} 
-                      onChange={(e) => setFormData({...formData, password: e.target.value})} 
-                      required 
+                      value={formData.password}
+                      onChange={(e) => setFormData({...formData, password: e.target.value})}
+                      required
                       className="bg-input border-border"
                   />
                 </div>
@@ -716,7 +715,7 @@ export function Sidebar({ className }: { className?: string }) {
                     ${app_name}
                 </div>
             </div>
-            
+
             <nav className="flex-1 space-y-1 px-4">
                 {routes.map((route) => (
                     <Link
@@ -724,8 +723,8 @@ export function Sidebar({ className }: { className?: string }) {
                         href={route.href}
                         className={cn(
                             "flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors",
-                            route.active 
-                                ? "bg-white/10 text-white font-medium" 
+                            route.active
+                                ? "bg-white/10 text-white font-medium"
                                 : "text-gray-400 hover:text-white hover:bg-white/5"
                         )}
                     >
@@ -734,9 +733,9 @@ export function Sidebar({ className }: { className?: string }) {
                     </Link>
                 ))}
             </nav>
-            
+
             <div className="p-4 border-t border-slate-800">
-                <button 
+                <button
                     onClick={() => {
                         localStorage.removeItem("token");
                         window.location.href = "/login";
@@ -748,7 +747,7 @@ export function Sidebar({ className }: { className?: string }) {
                 </button>
             </div>
         </div>
-        
+
         {/* Mobile Header */}
         <div className="lg:hidden flex items-center justify-between p-4 bg-slate-900 text-white sticky top-0 z-50">
              <div className="text-xl font-bold">${app_name}</div>
@@ -775,7 +774,7 @@ export function Sidebar({ className }: { className?: string }) {
                             <span>{route.label}</span>
                         </Link>
                     ))}
-                    <button 
+                    <button
                          onClick={() => {
                             localStorage.removeItem("token");
                             window.location.href = "/login";
@@ -803,27 +802,27 @@ import { Input } from "@/components/ui/input"
 export function Navbar() {
   const pathname = usePathname()
   const pageName = pathname.split("/").pop() || "Dashboard"
-  
+
   return (
     <header className="h-16 bg-white border-b flex items-center justify-between px-8 sticky top-0 z-30">
         <h2 className="text-lg font-semibold capitalize hidden md:block">
             {pageName.replace(/-/g, " ")}
         </h2>
-        
+
         <div className="flex items-center space-x-4 ml-auto">
             <div className="relative w-64 hidden md:block">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-                <Input 
-                    type="search" 
-                    placeholder="Search..." 
+                <Input
+                    type="search"
+                    placeholder="Search..."
                     className="pl-9 h-9 bg-gray-50 border-gray-200 focus-visible:ring-1"
                 />
             </div>
-            
+
             <Button variant="ghost" size="icon" className="text-gray-500">
                 <Bell size={20} />
             </Button>
-            
+
             <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500" />
         </div>
     </header>
@@ -911,7 +910,7 @@ export default function DashboardPage() {
                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
                         <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
                         <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
-                        <Tooltip 
+                        <Tooltip
                             contentStyle={{ background: '#fff', border: '1px solid #ccc', borderRadius: '4px' }}
                             cursor={{ fill: 'transparent' }}
                         />
@@ -921,7 +920,7 @@ export default function DashboardPage() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card className="col-span-3">
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>
@@ -950,7 +949,7 @@ export default function DashboardPage() {
 '''
 
 FRONTEND_ENTITY_LIST_PAGE = '''"use client"
- 
+
 import { useState, useEffect } from "react"
 import { DataTable } from "@/components/ui/data-table"
 import { ColumnDef } from "@tanstack/react-table"
@@ -1017,7 +1016,7 @@ export default function ${entity_name}sPage() {
                 </Button>
             </Link>
         </div>
-        
+
         <DataTable columns={columns} data={data} searchKey="name" />
     </div>
   )

@@ -1,18 +1,16 @@
-import os
-import tempfile
-import subprocess
-import asyncio
-from typing import Dict, Optional
+from typing import Dict
+
 import httpx
+
 
 class LivePreviewService:
     """Live preview service for generated applications."""
-    
+
     def __init__(self):
         self.preview_port_start = 8100
         self.active_previews = {}
         self.codesandbox_api = 'https://codesandbox.io/api/v1'
-    
+
     async def create_sandbox_preview(self, files: Dict[str, str], framework: str = 'python') -> Dict:
         """Create a CodeSandbox preview for the application."""
         try:
@@ -20,21 +18,21 @@ class LivePreviewService:
             sandbox_files = {}
             for path, content in files.items():
                 sandbox_files[path] = {'content': content}
-            
+
             # Add package.json for web apps
             if framework in ['react', 'vue', 'nextjs']:
                 if 'package.json' not in sandbox_files:
                     sandbox_files['package.json'] = {
                         'content': self._generate_package_json(framework)
                     }
-            
+
             async with httpx.AsyncClient() as client:
                 response = await client.post(
                     f'{self.codesandbox_api}/sandboxes/define',
                     json={'files': sandbox_files},
                     params={'json': 1}
                 )
-                
+
                 if response.status_code == 200:
                     data = response.json()
                     sandbox_id = data.get('sandbox_id')
@@ -47,7 +45,7 @@ class LivePreviewService:
                 return {'success': False, 'error': 'Failed to create sandbox'}
         except Exception as e:
             return {'success': False, 'error': str(e)}
-    
+
     def _generate_package_json(self, framework: str) -> str:
         """Generate package.json based on framework."""
         templates = {
@@ -89,7 +87,7 @@ class LivePreviewService:
 }'''
         }
         return templates.get(framework, templates['react'])
-    
+
     async def create_replit_preview(self, files: Dict[str, str], language: str = 'python3') -> Dict:
         """Create a Replit preview (generates shareable link)."""
         # Replit requires OAuth, so we generate a replit.nix config
@@ -102,16 +100,16 @@ channel = "stable-23_05"
 [deployment]
 run = ["sh", "-c", "python main.py"]
 '''
-        
+
         files['replit.nix'] = replit_config
-        
+
         return {
             'success': True,
             'files': files,
             'instructions': 'Import these files to Replit to preview',
             'replit_url': 'https://replit.com/new/python3'
         }
-    
+
     async def generate_html_preview(self, files: Dict[str, str]) -> Dict:
         """Generate a static HTML preview that can be viewed in browser."""
         html_content = '''<!DOCTYPE html>
@@ -145,10 +143,10 @@ run = ["sh", "-c", "python main.py"]
         <div class="file-tree">
             <h3>📁 Project Files</h3>
 '''
-        
+
         for filename in files.keys():
             html_content += f'            <div class="file" onclick="showCode(\'{filename}\')">{filename}</div>\n'
-        
+
         html_content += '''        </div>
         <div class="code-preview">
             <h3>📄 Code Preview</h3>
@@ -163,13 +161,13 @@ run = ["sh", "-c", "python main.py"]
     </script>
 </body>
 </html>'''
-        
+
         return {
             'success': True,
             'html': html_content,
             'type': 'static_preview'
         }
-    
+
     async def stop_preview(self, preview_id: str) -> Dict:
         """Stop an active preview."""
         if preview_id in self.active_previews:

@@ -5,14 +5,12 @@ Part of the Organizational Intelligence framework implementing rival
 planning agents that propose competing strategies for synthesis.
 """
 
-from typing import Any, Dict, List, Optional
-import logging
 import json
+import logging
+from typing import Any, Dict, Optional
 
 from ..base import LLMProvider
-from ..messages import (
-    AgentRole, ExecutionPlan, PlanStep, CodeGenerationRequest
-)
+from ..messages import AgentRole, CodeGenerationRequest, ExecutionPlan, PlanStep
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +18,7 @@ logger = logging.getLogger(__name__)
 class InnovativePlanner:
     """
     Innovative planning agent that prioritizes cutting-edge solutions.
-    
+
     This planner represents the "visionary CTO" perspective,
     favoring:
     - Modern, cutting-edge technologies
@@ -30,10 +28,10 @@ class InnovativePlanner:
     - Clean architecture patterns
     - Automation and efficiency
     """
-    
+
     role = AgentRole.PLANNER
     personality = "innovative"
-    
+
     PLANNING_PROMPT = '''You are an Innovative Planner Agent - pushing boundaries with modern solutions.
 
 Your role is to create an INNOVATIVE, FORWARD-THINKING execution plan.
@@ -100,24 +98,24 @@ Be bold and visionary. Push the boundaries while remaining practical.'''
 
     def __init__(self, llm_provider: LLMProvider):
         self.llm = llm_provider
-    
+
     async def create_plan(self, request: CodeGenerationRequest, context: Optional[Dict[str, Any]] = None) -> ExecutionPlan:
         """Create an innovative execution plan."""
         logger.info(f"Innovative planner creating plan for: {request.requirements[:50]}...")
-        
+
         prompt = self.PLANNING_PROMPT.format(
             requirements=request.requirements,
             context=json.dumps(context or {}, indent=2)
         )
-        
+
         response = await self.llm.generate(prompt)
-        
+
         try:
             plan_data = json.loads(response)
         except json.JSONDecodeError:
             logger.warning("Failed to parse innovative planner response as JSON")
             plan_data = self._create_fallback_plan(request)
-        
+
         # Convert to ExecutionPlan
         steps = [
             PlanStep(
@@ -134,7 +132,7 @@ Be bold and visionary. Push the boundaries while remaining practical.'''
             )
             for i, s in enumerate(plan_data.get("steps", []), 1)
         ]
-        
+
         return ExecutionPlan(
             plan_id=plan_data.get("plan_id", "innovative_plan"),
             planner_type=self.personality,
@@ -152,7 +150,7 @@ Be bold and visionary. Push the boundaries while remaining practical.'''
                 "automation_opportunities": plan_data.get("automation_opportunities", [])
             }
         )
-    
+
     def _create_fallback_plan(self, request: CodeGenerationRequest) -> Dict[str, Any]:
         """Create a basic fallback plan if LLM fails."""
         return {

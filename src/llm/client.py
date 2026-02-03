@@ -13,19 +13,19 @@ Features:
 - Unified interface across all providers
 """
 
-import os
 import json
 import logging
+import os
 import time
 from abc import ABC, abstractmethod
-from typing import Optional, Dict, Any, List
 from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional
 
 from .retry_cache import (
-    LLMCache,
-    SmartRetry,
-    RetryConfig,
     CacheConfig,
+    LLMCache,
+    RetryConfig,
+    SmartRetry,
     get_default_cache,
     get_default_retry,
 )
@@ -43,7 +43,7 @@ class LLMResponse:
     latency_ms: float = 0
     raw_response: Any = None
     cached: bool = False
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for caching."""
         return {
@@ -54,7 +54,7 @@ class LLMResponse:
             'latency_ms': self.latency_ms,
             'cached': True,
         }
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'LLMResponse':
         """Create from cached dictionary."""
@@ -70,9 +70,9 @@ class LLMResponse:
 
 class BaseLLMClient(ABC):
     """Abstract base class for LLM clients with retry and caching support."""
-    
+
     provider_name: str = "base"
-    
+
     def __init__(
         self,
         retry_config: Optional[RetryConfig] = None,
@@ -83,7 +83,7 @@ class BaseLLMClient(ABC):
         """Initialize base client with optional retry and cache configuration."""
         self._use_cache = use_cache
         self._use_retry = use_retry
-        
+
         # Set up caching
         if use_cache:
             if cache_config:
@@ -92,7 +92,7 @@ class BaseLLMClient(ABC):
                 self._cache = get_default_cache()
         else:
             self._cache = None
-        
+
         # Set up retry logic
         if use_retry:
             if retry_config:
@@ -101,7 +101,7 @@ class BaseLLMClient(ABC):
                 self._retry = get_default_retry()
         else:
             self._retry = None
-    
+
     @abstractmethod
     def _complete_impl(
         self,
@@ -113,13 +113,13 @@ class BaseLLMClient(ABC):
     ) -> LLMResponse:
         """Internal completion implementation. Override in subclasses."""
         pass
-    
+
     @property
     @abstractmethod
     def model(self) -> str:
         """Get the current model name."""
         pass
-    
+
     def complete(
         self,
         prompt: str,
@@ -130,14 +130,14 @@ class BaseLLMClient(ABC):
     ) -> LLMResponse:
         """
         Generate a completion from the LLM with caching and retry support.
-        
+
         Args:
             prompt: The user prompt
             system_prompt: Optional system prompt
             max_tokens: Maximum tokens in response
             temperature: Sampling temperature (0-2)
             json_mode: Request JSON output format
-            
+
         Returns:
             LLMResponse with the completion
         """
@@ -155,7 +155,7 @@ class BaseLLMClient(ABC):
             if cached:
                 logger.debug(f"Using cached response for {self.provider_name}")
                 return LLMResponse.from_dict(cached)
-        
+
         # Make the actual call (with or without retry)
         if self._retry is not None:
             response = self._retry(self._complete_impl)(
@@ -165,7 +165,7 @@ class BaseLLMClient(ABC):
             response = self._complete_impl(
                 prompt, system_prompt, max_tokens, temperature, json_mode
             )
-        
+
         # Cache the response
         if self._cache is not None and response:
             self._cache.set(
@@ -178,9 +178,9 @@ class BaseLLMClient(ABC):
                 provider=self.provider_name,
                 response=response.to_dict(),
             )
-        
+
         return response
-    
+
     def complete_with_retry(
         self,
         prompt: str,
@@ -193,18 +193,18 @@ class BaseLLMClient(ABC):
     ) -> LLMResponse:
         """Legacy method for backward compatibility. Now just calls complete()."""
         return self.complete(prompt, system_prompt, max_tokens, temperature, json_mode)
-    
+
     def clear_cache(self):
         """Clear the response cache."""
         if self._cache:
             self._cache.clear()
-    
+
     def get_cache_stats(self) -> Dict[str, Any]:
         """Get cache statistics."""
         if self._cache:
             return self._cache.stats()
         return {"enabled": False}
-    
+
     def get_retry_stats(self) -> Dict[str, int]:
         """Get retry statistics."""
         if self._retry:
@@ -215,28 +215,28 @@ class BaseLLMClient(ABC):
 class PerplexityClient(BaseLLMClient):
     """
     Perplexity AI client with real-time web search built into responses.
-    
+
     This is the PRIMARY provider because Perplexity has REAL-TIME web search
     capabilities integrated into the model's responses - perfect for:
     - Market intelligence and trend discovery
     - Competitor analysis
     - Pain point research
     - Idea validation with current data
-    
+
     Available models:
     - sonar-pro: Flagship model, best for general use
     - sonar-deep-research: For comprehensive research tasks
     - sonar-reasoning: For complex analysis and reasoning
     """
-    
+
     provider_name = "perplexity"
-    
+
     MODELS = {
         "sonar-pro": "Flagship model - balanced performance",
         "sonar-deep-research": "Deep research - comprehensive analysis",
         "sonar-reasoning": "Reasoning model - complex analysis",
     }
-    
+
     def __init__(
         self,
         api_key: Optional[str] = None,
@@ -245,17 +245,17 @@ class PerplexityClient(BaseLLMClient):
         use_retry: bool = True,
     ):
         super().__init__(use_cache=use_cache, use_retry=use_retry)
-        
+
         self.api_key = api_key or os.getenv("PERPLEXITY_API_KEY")
         if not self.api_key:
             raise ValueError(
                 "Perplexity API key not found. Set PERPLEXITY_API_KEY environment variable.\n"
                 "Get your API key at: https://www.perplexity.ai/settings/api"
             )
-        
+
         self._model = model
         self.base_url = "https://api.perplexity.ai"
-        
+
         try:
             from openai import OpenAI
             self.client = OpenAI(
@@ -265,11 +265,11 @@ class PerplexityClient(BaseLLMClient):
             logger.info(f"Initialized Perplexity client with model {model}")
         except ImportError:
             raise ImportError("openai package not installed. Run: pip install openai")
-    
+
     @property
     def model(self) -> str:
         return self._model
-    
+
     def _complete_impl(
         self,
         prompt: str,
@@ -279,33 +279,33 @@ class PerplexityClient(BaseLLMClient):
         json_mode: bool = False
     ) -> LLMResponse:
         start_time = time.time()
-        
+
         messages = []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
-        
+
         user_content = prompt
         if json_mode:
             user_content += "\n\nRespond with valid JSON only. No other text or markdown."
-        
+
         messages.append({"role": "user", "content": user_content})
-        
+
         kwargs = {
             "model": self.model,
             "messages": messages,
             "max_tokens": max_tokens,
             "temperature": temperature,
         }
-        
+
         response = self.client.chat.completions.create(**kwargs)
-        
+
         latency_ms = (time.time() - start_time) * 1000
-        
+
         content = response.choices[0].message.content
-        
+
         if json_mode:
             content = self._clean_json_response(content)
-        
+
         return LLMResponse(
             content=content,
             model=response.model,
@@ -317,7 +317,7 @@ class PerplexityClient(BaseLLMClient):
             latency_ms=latency_ms,
             raw_response=response
         )
-    
+
     def _clean_json_response(self, content: str) -> str:
         """Clean markdown code blocks from JSON response."""
         content = content.strip()
@@ -328,11 +328,11 @@ class PerplexityClient(BaseLLMClient):
         if content.endswith("```"):
             content = content[:-3]
         return content.strip()
-    
+
     def research(self, query: str, max_tokens: int = 4096) -> LLMResponse:
         """
         Perform deep research on a topic using Perplexity's web search.
-        
+
         Uses the deep-research model for comprehensive market intelligence.
         """
         original_model = self._model
@@ -347,11 +347,11 @@ class PerplexityClient(BaseLLMClient):
         finally:
             self._model = original_model
         return response
-    
+
     def analyze(self, data: str, question: str, max_tokens: int = 4096) -> LLMResponse:
         """
         Analyze data using Perplexity's reasoning model.
-        
+
         Uses the reasoning model for complex analysis tasks.
         """
         original_model = self._model
@@ -371,21 +371,21 @@ class PerplexityClient(BaseLLMClient):
 class GroqClient(BaseLLMClient):
     """
     Groq Cloud client - ultra-fast inference.
-    
+
     This is the BACKUP provider offering:
     - Extremely fast inference speeds
     - Free tier available
     - Good for rapid iteration and testing
     """
-    
+
     provider_name = "groq"
-    
+
     MODELS = {
         "llama-3.3-70b-versatile": "Llama 3.3 70B - best quality",
         "llama-3.1-8b-instant": "Llama 3.1 8B - fastest",
         "mixtral-8x7b-32768": "Mixtral 8x7B - good balance",
     }
-    
+
     def __init__(
         self,
         api_key: Optional[str] = None,
@@ -394,27 +394,27 @@ class GroqClient(BaseLLMClient):
         use_retry: bool = True,
     ):
         super().__init__(use_cache=use_cache, use_retry=use_retry)
-        
+
         self.api_key = api_key or os.getenv("GROQ_API_KEY")
         if not self.api_key:
             raise ValueError(
                 "Groq API key not found. Set GROQ_API_KEY environment variable.\n"
                 "Get your free API key at: https://console.groq.com/keys"
             )
-        
+
         self._model = model
-        
+
         try:
             from groq import Groq
             self.client = Groq(api_key=self.api_key)
             logger.info(f"Initialized Groq client with model {model}")
         except ImportError:
             raise ImportError("groq package not installed. Run: pip install groq")
-    
+
     @property
     def model(self) -> str:
         return self._model
-    
+
     def _complete_impl(
         self,
         prompt: str,
@@ -424,31 +424,31 @@ class GroqClient(BaseLLMClient):
         json_mode: bool = False
     ) -> LLMResponse:
         start_time = time.time()
-        
+
         messages = []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
-        
+
         user_content = prompt
         if json_mode:
             user_content += "\n\nRespond with valid JSON only. No other text."
-        
+
         messages.append({"role": "user", "content": user_content})
-        
+
         kwargs = {
             "model": self.model,
             "messages": messages,
             "max_tokens": max_tokens,
             "temperature": temperature,
         }
-        
+
         if json_mode:
             kwargs["response_format"] = {"type": "json_object"}
-        
+
         response = self.client.chat.completions.create(**kwargs)
-        
+
         latency_ms = (time.time() - start_time) * 1000
-        
+
         return LLMResponse(
             content=response.choices[0].message.content,
             model=response.model,
@@ -465,18 +465,18 @@ class GroqClient(BaseLLMClient):
 
 class MockLLMClient(BaseLLMClient):
     """Mock LLM client for testing without API calls."""
-    
+
     provider_name = "mock"
-    
+
     def __init__(self, use_cache: bool = False, use_retry: bool = False):
         super().__init__(use_cache=False, use_retry=False)
         self._model = "mock-model"
         logger.info("Initialized Mock LLM client (no API calls)")
-    
+
     @property
     def model(self) -> str:
         return self._model
-    
+
     def _complete_impl(
         self,
         prompt: str,
@@ -489,7 +489,7 @@ class MockLLMClient(BaseLLMClient):
             content = self._generate_mock_json(prompt)
         else:
             content = f"[MOCK RESPONSE] Processed prompt of {len(prompt)} characters."
-        
+
         return LLMResponse(
             content=content,
             model="mock-model",
@@ -497,11 +497,11 @@ class MockLLMClient(BaseLLMClient):
             usage={"prompt_tokens": len(prompt) // 4, "completion_tokens": len(content) // 4},
             latency_ms=10
         )
-    
+
     def _generate_mock_json(self, prompt: str) -> str:
         """Generate contextual mock JSON based on prompt content."""
         prompt_lower = prompt.lower()
-        
+
         if "product summary" in prompt_lower:
             return json.dumps({
                 "product_name": "Mock Product",
@@ -520,7 +520,7 @@ class MockLLMClient(BaseLLMClient):
                 "target_buyer": {"title": "Manager", "company_size": "50-500"},
                 "unique_value_proposition": "Mock value proposition"
             })
-        
+
         elif "feature" in prompt_lower:
             return json.dumps({
                 "core_features": [
@@ -533,7 +533,7 @@ class MockLLMClient(BaseLLMClient):
                     {"id": "AI-001", "name": "Mock AI Module", "automation_type": "Generation"}
                 ]
             })
-        
+
         elif "architecture" in prompt_lower:
             return json.dumps({
                 "backend": {"framework": "FastAPI", "runtime": "Python 3.11+"},
@@ -542,7 +542,7 @@ class MockLLMClient(BaseLLMClient):
                 "authentication": {"method": "JWT"},
                 "infrastructure": {"hosting": "AWS"}
             })
-        
+
         elif "database" in prompt_lower or "schema" in prompt_lower:
             return json.dumps({
                 "entities": [
@@ -550,7 +550,7 @@ class MockLLMClient(BaseLLMClient):
                     {"name": "organizations", "fields": [{"name": "id", "type": "UUID"}, {"name": "name", "type": "VARCHAR(255)"}]}
                 ]
             })
-        
+
         elif "api" in prompt_lower or "endpoint" in prompt_lower:
             return json.dumps({
                 "base_url": "/api/v1",
@@ -561,7 +561,7 @@ class MockLLMClient(BaseLLMClient):
                     {"path": "/users/me", "method": "GET"}
                 ]
             })
-        
+
         elif "ui" in prompt_lower or "ux" in prompt_lower:
             return json.dumps({
                 "screens": [
@@ -571,7 +571,7 @@ class MockLLMClient(BaseLLMClient):
                 "user_flows": [{"id": "UF-001", "name": "Login Flow"}],
                 "components": [{"id": "CMP-001", "name": "Button"}]
             })
-        
+
         elif "monetization" in prompt_lower or "pricing" in prompt_lower:
             return json.dumps({
                 "pricing_model": "subscription",
@@ -582,21 +582,21 @@ class MockLLMClient(BaseLLMClient):
                 ],
                 "billing_provider": "Stripe"
             })
-        
+
         elif "deployment" in prompt_lower:
             return json.dumps({
                 "ci_cd": {"provider": "GitHub Actions"},
                 "infrastructure": {"provider": "AWS", "iac_tool": "Terraform"},
                 "monitoring": {"logging": "CloudWatch"}
             })
-        
+
         elif "consistency" in prompt_lower or "check" in prompt_lower:
             return json.dumps({
                 "passed": True,
                 "issues": [],
                 "severity": "none"
             })
-        
+
         elif "feasibility" in prompt_lower:
             return json.dumps({
                 "passed": True,
@@ -604,7 +604,7 @@ class MockLLMClient(BaseLLMClient):
                 "severity": "none",
                 "estimated_mvp_weeks": 8
             })
-        
+
         elif "entity" in prompt_lower or "database entity" in prompt_lower:
             return json.dumps({
                 "name": "Item",
@@ -619,7 +619,7 @@ class MockLLMClient(BaseLLMClient):
                     {"name": "is_active", "sql_type": "Boolean", "python_type": "bool", "required": True}
                 ]
             })
-        
+
         elif "feature" in prompt_lower and "detect" in prompt_lower:
             return json.dumps({
                 "needs_payments": False,
@@ -627,20 +627,20 @@ class MockLLMClient(BaseLLMClient):
                 "needs_ai_integration": True,
                 "needs_email": False
             })
-        
+
         else:
             return json.dumps({"mock": True, "message": "Mock response generated"})
 
 
 class MultiProviderClient(BaseLLMClient):
     """Client that fails over between Perplexity and Groq."""
-    
+
     provider_name = "multi"
-    
+
     def __init__(self, providers: Optional[List[BaseLLMClient]] = None):
         """
         Initialize with providers. If none provided, auto-detects available.
-        
+
         Priority order:
         1. Perplexity (real-time web search)
         2. Groq (fast inference)
@@ -649,31 +649,31 @@ class MultiProviderClient(BaseLLMClient):
             self.providers = providers
         else:
             self.providers = []
-            
+
             # Try Perplexity first (primary - has web search)
             if os.getenv("PERPLEXITY_API_KEY"):
                 try:
                     self.providers.append(PerplexityClient())
                 except (ValueError, ImportError) as e:
                     logger.debug(f"Skipping Perplexity: {e}")
-            
+
             # Then Groq (backup - fast inference)
             if os.getenv("GROQ_API_KEY"):
                 try:
                     self.providers.append(GroqClient())
                 except (ValueError, ImportError) as e:
                     logger.debug(f"Skipping Groq: {e}")
-            
+
             if not self.providers:
                 logger.warning("No providers available, adding mock")
                 self.providers.append(MockLLMClient())
-        
+
         logger.info(f"Initialized MultiProvider with {len(self.providers)} providers: {[p.provider_name for p in self.providers]}")
-    
+
     @property
     def model(self) -> str:
         return self.providers[0].model if self.providers else "none"
-    
+
     def _complete_impl(
         self,
         prompt: str,
@@ -684,7 +684,7 @@ class MultiProviderClient(BaseLLMClient):
     ) -> LLMResponse:
         # This won't be called directly since we override complete()
         pass
-    
+
     def complete(
         self,
         prompt: str,
@@ -694,7 +694,7 @@ class MultiProviderClient(BaseLLMClient):
         json_mode: bool = False
     ) -> LLMResponse:
         last_error = None
-        
+
         for provider in self.providers:
             try:
                 logger.info(f"Trying provider: {provider.provider_name}")
@@ -705,7 +705,7 @@ class MultiProviderClient(BaseLLMClient):
                 logger.warning(f"Provider {provider.provider_name} failed: {e}")
                 last_error = e
                 continue
-        
+
         raise Exception(f"All providers failed. Last error: {last_error}")
 
 
@@ -716,43 +716,43 @@ def get_llm_client(
 ) -> BaseLLMClient:
     """
     Factory function to get an LLM client.
-    
+
     Available providers:
     - perplexity: Primary provider with real-time web search (recommended)
     - groq: Fast inference backup provider
     - mock: Testing without API calls
     - multi: Automatic failover between providers
     - auto: Auto-detect best available provider
-    
+
     Args:
         provider: Provider name or 'auto'
         api_key: Optional API key override
         model: Optional model override
-        
+
     Returns:
         Configured LLM client
     """
     if provider == "auto":
         provider = os.getenv("DEFAULT_LLM_PROVIDER", "auto")
-    
+
     if provider == "mock":
         return MockLLMClient()
-    
+
     if provider == "perplexity":
         return PerplexityClient(
             api_key=api_key,
             model=model or os.getenv("PERPLEXITY_MODEL", "sonar-pro")
         )
-    
+
     if provider == "groq":
         return GroqClient(
             api_key=api_key,
             model=model or os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
         )
-    
+
     if provider == "multi":
         return MultiProviderClient()
-    
+
     if provider == "auto":
         # Try providers in order of preference
         if os.getenv("PERPLEXITY_API_KEY"):
@@ -760,16 +760,16 @@ def get_llm_client(
                 return PerplexityClient()
             except Exception as e:
                 logger.warning(f"Could not initialize Perplexity: {e}")
-        
+
         if os.getenv("GROQ_API_KEY"):
             try:
                 return GroqClient()
             except Exception as e:
                 logger.warning(f"Could not initialize Groq: {e}")
-        
+
         logger.warning("No API keys found, using mock client")
         return MockLLMClient()
-    
+
     raise ValueError(
         f"Unknown provider: {provider}\n"
         f"Available: perplexity, groq, mock, multi, auto"

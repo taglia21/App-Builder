@@ -5,23 +5,22 @@ OAuth2 integration for third-party authentication providers.
 Currently supports Google OAuth2.
 """
 
+import logging
 import os
 import secrets
-from typing import Optional, Tuple, Dict, Any
+from typing import Any, Dict, Optional, Tuple
 from urllib.parse import urlencode
-import logging
 
 import httpx
 
-from src.auth.schemas import GoogleUserInfo, OAuthState
-
+from src.auth.schemas import GoogleUserInfo
 
 logger = logging.getLogger(__name__)
 
 
 class OAuthError(Exception):
     """Exception for OAuth-related errors."""
-    
+
     def __init__(self, message: str, provider: str = "unknown"):
         super().__init__(message)
         self.provider = provider
@@ -29,7 +28,7 @@ class OAuthError(Exception):
 
 class OAuthConfig:
     """OAuth configuration container."""
-    
+
     def __init__(
         self,
         client_id: str,
@@ -52,10 +51,10 @@ class OAuthConfig:
 def get_google_oauth_config() -> OAuthConfig:
     """
     Get Google OAuth configuration from environment.
-    
+
     Returns:
         OAuthConfig: Google OAuth settings
-        
+
     Raises:
         OAuthError: If required environment variables are missing
     """
@@ -65,13 +64,13 @@ def get_google_oauth_config() -> OAuthConfig:
         "GOOGLE_REDIRECT_URI",
         "http://localhost:8000/api/auth/oauth/google/callback"
     )
-    
+
     if not client_id or not client_secret:
         raise OAuthError(
             "Google OAuth not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET",
             provider="google"
         )
-    
+
     return OAuthConfig(
         client_id=client_id,
         client_secret=client_secret,
@@ -91,26 +90,26 @@ def generate_oauth_state() -> str:
 class GoogleOAuth:
     """
     Google OAuth2 handler.
-    
+
     Implements the OAuth2 authorization code flow for Google.
     """
-    
+
     def __init__(self, config: Optional[OAuthConfig] = None):
         """
         Initialize Google OAuth handler.
-        
+
         Args:
             config: OAuth configuration (will fetch from env if not provided)
         """
         self._config = config
-    
+
     @property
     def config(self) -> OAuthConfig:
         """Get OAuth config, lazily initialized."""
         if self._config is None:
             self._config = get_google_oauth_config()
         return self._config
-    
+
     def get_authorization_url(
         self,
         state: Optional[str] = None,
@@ -118,17 +117,17 @@ class GoogleOAuth:
     ) -> Tuple[str, str]:
         """
         Generate the Google OAuth authorization URL.
-        
+
         Args:
             state: Custom state parameter (generated if not provided)
             redirect_uri: Custom redirect URI (uses config default if not provided)
-            
+
         Returns:
             Tuple[str, str]: (authorization_url, state)
         """
         if state is None:
             state = generate_oauth_state()
-        
+
         params = {
             "client_id": self.config.client_id,
             "redirect_uri": redirect_uri or self.config.redirect_uri,
@@ -138,10 +137,10 @@ class GoogleOAuth:
             "access_type": "offline",  # Request refresh token
             "prompt": "consent",  # Force consent to get refresh token
         }
-        
+
         auth_url = f"{self.config.authorize_url}?{urlencode(params)}"
         return auth_url, state
-    
+
     async def exchange_code(
         self,
         code: str,
@@ -149,14 +148,14 @@ class GoogleOAuth:
     ) -> Dict[str, Any]:
         """
         Exchange authorization code for tokens.
-        
+
         Args:
             code: Authorization code from callback
             redirect_uri: Redirect URI (must match the one used in authorization)
-            
+
         Returns:
             Dict containing access_token, refresh_token, etc.
-            
+
         Raises:
             OAuthError: If token exchange fails
         """
@@ -167,7 +166,7 @@ class GoogleOAuth:
             "grant_type": "authorization_code",
             "redirect_uri": redirect_uri or self.config.redirect_uri,
         }
-        
+
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.post(
@@ -189,17 +188,17 @@ class GoogleOAuth:
                     "Failed to connect to Google OAuth server",
                     provider="google"
                 )
-    
+
     async def get_user_info(self, access_token: str) -> GoogleUserInfo:
         """
         Get user information from Google.
-        
+
         Args:
             access_token: OAuth access token
-            
+
         Returns:
             GoogleUserInfo: User profile data
-            
+
         Raises:
             OAuthError: If user info request fails
         """
@@ -224,7 +223,7 @@ class GoogleOAuth:
                     "Failed to connect to Google API",
                     provider="google"
                 )
-    
+
     async def authenticate(
         self,
         code: str,
@@ -232,24 +231,24 @@ class GoogleOAuth:
     ) -> Tuple[GoogleUserInfo, Dict[str, Any]]:
         """
         Complete OAuth flow: exchange code and get user info.
-        
+
         Args:
             code: Authorization code from callback
             redirect_uri: Redirect URI
-            
+
         Returns:
             Tuple[GoogleUserInfo, Dict]: (user_info, token_data)
         """
         # Exchange code for tokens
         token_data = await self.exchange_code(code, redirect_uri)
         access_token = token_data.get("access_token")
-        
+
         if not access_token:
             raise OAuthError("No access token in response", provider="google")
-        
+
         # Get user info
         user_info = await self.get_user_info(access_token)
-        
+
         return user_info, token_data
 
 
@@ -257,16 +256,16 @@ class GoogleOAuth:
 
 class GoogleOAuthSync:
     """Synchronous Google OAuth2 handler."""
-    
+
     def __init__(self, config: Optional[OAuthConfig] = None):
         self._config = config
-    
+
     @property
     def config(self) -> OAuthConfig:
         if self._config is None:
             self._config = get_google_oauth_config()
         return self._config
-    
+
     def get_authorization_url(
         self,
         state: Optional[str] = None,
@@ -275,7 +274,7 @@ class GoogleOAuthSync:
         """Generate Google OAuth authorization URL."""
         if state is None:
             state = generate_oauth_state()
-        
+
         params = {
             "client_id": self.config.client_id,
             "redirect_uri": redirect_uri or self.config.redirect_uri,
@@ -285,10 +284,10 @@ class GoogleOAuthSync:
             "access_type": "offline",
             "prompt": "consent",
         }
-        
+
         auth_url = f"{self.config.authorize_url}?{urlencode(params)}"
         return auth_url, state
-    
+
     def exchange_code(
         self,
         code: str,
@@ -302,7 +301,7 @@ class GoogleOAuthSync:
             "grant_type": "authorization_code",
             "redirect_uri": redirect_uri or self.config.redirect_uri,
         }
-        
+
         with httpx.Client() as client:
             try:
                 response = client.post(
@@ -317,7 +316,7 @@ class GoogleOAuthSync:
                     f"Failed to exchange code: {e.response.status_code}",
                     provider="google"
                 )
-    
+
     def get_user_info(self, access_token: str) -> GoogleUserInfo:
         """Get user information from Google."""
         with httpx.Client() as client:

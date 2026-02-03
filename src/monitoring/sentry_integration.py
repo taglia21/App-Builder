@@ -1,6 +1,6 @@
 """Sentry error monitoring integration."""
-import os
 import logging
+import os
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -8,24 +8,24 @@ logger = logging.getLogger(__name__)
 
 def init_sentry(app=None) -> bool:
     """Initialize Sentry error tracking.
-    
+
     Args:
         app: Flask application instance (optional)
-        
+
     Returns:
         bool: True if Sentry was initialized, False otherwise
     """
     sentry_dsn = os.getenv('SENTRY_DSN')
-    
+
     if not sentry_dsn:
         logger.info("SENTRY_DSN not configured, skipping Sentry initialization")
         return False
-    
+
     try:
         import sentry_sdk
         from sentry_sdk.integrations.flask import FlaskIntegration
         from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
-        
+
         sentry_sdk.init(
             dsn=sentry_dsn,
             integrations=[
@@ -37,10 +37,10 @@ def init_sentry(app=None) -> bool:
             environment=os.getenv('ENVIRONMENT', 'development'),
             release=os.getenv('APP_VERSION', '1.0.0'),
         )
-        
+
         logger.info("Sentry initialized successfully")
         return True
-        
+
     except ImportError:
         logger.warning("sentry-sdk not installed, skipping Sentry initialization")
         return False
@@ -51,11 +51,11 @@ def init_sentry(app=None) -> bool:
 
 def capture_exception(exception: Exception, **kwargs) -> Optional[str]:
     """Capture an exception to Sentry.
-    
+
     Args:
         exception: The exception to capture
         **kwargs: Additional context to attach
-        
+
     Returns:
         Event ID if captured, None otherwise
     """
@@ -72,12 +72,12 @@ def capture_exception(exception: Exception, **kwargs) -> Optional[str]:
 
 def capture_message(message: str, level: str = 'info', **kwargs) -> Optional[str]:
     """Capture a message to Sentry.
-    
+
     Args:
         message: The message to capture
         level: Log level (debug, info, warning, error, fatal)
         **kwargs: Additional context
-        
+
     Returns:
         Event ID if captured, None otherwise
     """

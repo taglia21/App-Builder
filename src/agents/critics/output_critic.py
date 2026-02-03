@@ -5,13 +5,11 @@ Validates that generated code meets the pre-declared
 acceptance criteria from the planning phase.
 """
 
-from typing import Any, Dict, List, Optional
 import logging
+from typing import Any, Dict, Optional
 
 from ..base import CriticAgent, LLMProvider
-from ..messages import (
-    AgentRole, CriticDecision, CriticReview, GeneratedCode, ExecutionPlan
-)
+from ..messages import AgentRole, CriticDecision, CriticReview, ExecutionPlan, GeneratedCode
 
 logger = logging.getLogger(__name__)
 
@@ -19,11 +17,11 @@ logger = logging.getLogger(__name__)
 class OutputCritic(CriticAgent):
     """
     Validates that output meets acceptance criteria.
-    
+
     This is the final quality gate before user sees the code.
     Implements the "pre-declared acceptance criteria" concept.
     """
-    
+
     def __init__(
         self,
         agent_id: Optional[str] = None,
@@ -36,7 +34,7 @@ class OutputCritic(CriticAgent):
             llm_provider=llm_provider,
             veto_threshold=veto_threshold
         )
-    
+
     def get_system_prompt(self) -> str:
         return """You are an Output Critic Agent with VETO AUTHORITY.
 
@@ -77,11 +75,11 @@ ALL criteria must be MET for APPROVE. Any NOT MET = REJECT."""
             code = GeneratedCode(**artifact) if "files" in artifact else None
         else:
             code = None
-        
+
         plan = context.get("plan")
         if isinstance(plan, dict):
             plan = ExecutionPlan(**plan)
-        
+
         if not code or not plan:
             return CriticReview(
                 critic_role=self.role,
@@ -90,10 +88,10 @@ ALL criteria must be MET for APPROVE. Any NOT MET = REJECT."""
                 score=0.0,
                 veto_reason="Cannot validate without code and plan"
             )
-        
+
         # Get LLM evaluation against criteria
         return await self._evaluate_against_criteria(code, plan)
-    
+
     async def _evaluate_against_criteria(self, code: GeneratedCode, plan: ExecutionPlan) -> CriticReview:
         """Evaluate code against acceptance criteria."""
         # Build file summary
@@ -101,11 +99,11 @@ ALL criteria must be MET for APPROVE. Any NOT MET = REJECT."""
             f"=== {name} ===\n{content[:3000]}{'...(truncated)' if len(content) > 3000 else ''}"
             for name, content in code.files.items()
         )
-        
+
         criteria_list = "\n".join(
             f"{i+1}. {c}" for i, c in enumerate(plan.acceptance_criteria)
         )
-        
+
         user_message = f"""Evaluate this code against the acceptance criteria:
 
 ORIGINAL DESCRIPTION:
@@ -120,10 +118,10 @@ GENERATED CODE:
 Dependencies: {', '.join(code.dependencies)}
 
 Evaluate EACH criterion and provide your decision in JSON format."""
-        
+
         response = await self._call_llm(user_message, temperature=0.3)
         review_data = self._parse_json_response(response)
-        
+
         # Calculate score based on criteria met
         criteria_eval = review_data.get("criteria_evaluation", [])
         if criteria_eval:
@@ -131,10 +129,10 @@ Evaluate EACH criterion and provide your decision in JSON format."""
             score = met_count / len(criteria_eval)
         else:
             score = review_data.get("score", 0.5)
-        
+
         # Determine decision
         decision_str = review_data.get("decision", "reject").lower()
-        
+
         # If any criterion is not met, override to reject
         not_met = [c for c in criteria_eval if c.get("status") == "not_met"]
         if not_met:
@@ -148,7 +146,7 @@ Evaluate EACH criterion and provide your decision in JSON format."""
             }
             decision = decision_map.get(decision_str, CriticDecision.REJECT)
             veto_reason = review_data.get("reasoning") if decision == CriticDecision.REJECT else None
-        
+
         # Build issues from unmet criteria
         issues = []
         for c in criteria_eval:
@@ -157,10 +155,10 @@ Evaluate EACH criterion and provide your decision in JSON format."""
                     "severity": "high" if c.get("status") == "not_met" else "medium",
                     "description": f"Criterion '{c.get('criterion')}': {c.get('evidence', 'Not met')}"
                 })
-        
+
         # Add any additional issues from LLM
         issues.extend(review_data.get("issues", []))
-        
+
         return CriticReview(
             critic_role=self.role,
             decision=decision,

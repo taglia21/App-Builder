@@ -4,9 +4,8 @@ Main orchestration pipeline for the Startup Generator.
 
 import asyncio
 import json
-from datetime import timezone, datetime
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
 
 from loguru import logger
 
@@ -23,9 +22,9 @@ from .models import (
     StartupIdea,
 )
 from .prompt_engineering import PromptEngineeringEngine
+from .quality_assurance import QualityAssuranceEngine
 from .refinement import RefinementEngine
 from .scoring import ScoringEngine
-from .quality_assurance import QualityAssuranceEngine
 
 
 class StartupGenerationPipeline:
@@ -44,7 +43,7 @@ class StartupGenerationPipeline:
         self.idea_engine = IdeaGenerationEngine(config)
         self.scoring_engine = ScoringEngine(config)
         self.qa_engine = QualityAssuranceEngine()
-        
+
         # LLM-powered engines (initialized lazily)
         self._prompt_engine = None
         self._refinement_engine = None
@@ -52,28 +51,28 @@ class StartupGenerationPipeline:
 
         # Pipeline metadata
         self.metadata = PipelineMetadata()
-    
+
     @property
     def llm_client(self):
         """Lazy initialization of LLM client."""
         if self._llm_client is None:
             self._llm_client = get_llm_client(self.llm_provider)
         return self._llm_client
-    
+
     @property
     def prompt_engine(self):
         """Lazy initialization of prompt engineering engine."""
         if self._prompt_engine is None:
             self._prompt_engine = PromptEngineeringEngine(self.config, self.llm_client)
         return self._prompt_engine
-    
+
     @property
     def refinement_engine(self):
         """Lazy initialization of refinement engine."""
         if self._refinement_engine is None:
             self._refinement_engine = RefinementEngine(self.config, self.llm_client)
         return self._refinement_engine
-    
+
     @property
     def code_generator(self):
         """Lazy initialization of code generation engine."""
@@ -83,7 +82,7 @@ class StartupGenerationPipeline:
 
     async def run(self, demo_mode: bool = False, skip_refinement: bool = False, skip_code_gen: bool = False, output_dir: str = "./generated_project", theme: str = "Modern") -> PipelineOutput:
         """Run the complete pipeline.
-        
+
         Args:
             demo_mode: Use sample data instead of real API calls
             skip_refinement: Skip prompt refinement step
@@ -148,7 +147,7 @@ class StartupGenerationPipeline:
             # Step 5: Refine Prompt to Gold Standard (optional)
             # Track the final prompt to use for code generation
             final_prompt = product_prompt
-            
+
             if not skip_refinement:
                 logger.info("\n[STEP 5/6] Refining Prompt to Gold Standard")
                 self.metadata.current_stage = PipelineStage.REFINEMENT
@@ -167,11 +166,11 @@ class StartupGenerationPipeline:
                 self.metadata.current_stage = PipelineStage.CODE_GENERATION
                 # Use final_prompt which is either refined or original based on skip_refinement flag
                 codebase = self.code_generator.generate(final_prompt, output_dir, theme=self.theme)
-                
+
                 # Run Quality Assurance
                 logger.info("Running Quality Assurance...")
                 self.qa_engine.run_checks(codebase.output_path)
-                
+
                 output.generated_codebase = codebase
                 self._save_intermediate(codebase, "codebase")
             else:
@@ -206,7 +205,7 @@ class StartupGenerationPipeline:
 
     async def run_from_idea(self, idea: StartupIdea, theme: str = "Modern", output_dir: str = "./generated_project") -> PipelineOutput:
         """Run pipeline starting from an existing idea (skip intelligence and idea generation).
-        
+
         Args:
             idea: StartupIdea to build
             theme: UI theme - one of "Modern", "Minimalist", "Cyberpunk", "Corporate"
@@ -291,11 +290,11 @@ class StartupGenerationPipeline:
             self.metadata.current_stage = PipelineStage.CODE_GENERATION
             # Use the refined prompt's product_prompt for code generation
             codebase = self.code_generator.generate(gold_standard_prompt.product_prompt, output_dir=self.output_dir, theme=self.theme)
-            
+
             # Run Quality Assurance
             logger.info("Running Quality Assurance...")
             self.qa_engine.run_checks(codebase.output_path)
-            
+
             output.generated_codebase = codebase
 
             self.metadata.status = PipelineStatus.COMPLETED
@@ -355,8 +354,9 @@ class StartupGenerationPipeline:
 
 def run_on_schedule(config: PipelineConfig, cron_expression: str) -> None:
     """Run pipeline on a schedule."""
-    import schedule
     import time
+
+    import schedule
 
     def job():
         pipeline = StartupGenerationPipeline(config)

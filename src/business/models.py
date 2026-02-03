@@ -4,10 +4,10 @@ Business Formation Models
 Pydantic models and enums for business formation services.
 """
 
+from datetime import datetime, timezone
 from enum import Enum
-from dataclasses import dataclass, field
-from typing import Optional, Dict, Any, List
-from datetime import datetime
+from typing import List, Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -57,28 +57,28 @@ class FormationRequest(BaseModel):
     business_name: str = Field(..., min_length=1, max_length=200)
     business_type: BusinessType = BusinessType.LLC
     state: FormationState = FormationState.DELAWARE
-    
+
     # Contact info
     owner_name: str = Field(..., min_length=1)
     owner_email: str
     owner_phone: Optional[str] = None
-    
+
     # Address
     street_address: str
     city: str
     state_address: str
     zip_code: str
     country: str = "US"
-    
+
     # Business details
     description: str = ""
     purpose: str = "Any lawful purpose"
-    
+
     # Options
     registered_agent: bool = True
     operating_agreement: bool = True
     expedited: bool = False
-    
+
     # Metadata
     user_id: str
     project_id: Optional[str] = None
@@ -88,29 +88,29 @@ class FormationResult(BaseModel):
     """Result of LLC/business formation."""
     request_id: str
     status: FormationStatus
-    
+
     # Business info
     business_name: str
     business_type: BusinessType
     state: FormationState
-    
+
     # Formation details
     ein: Optional[str] = None
     formation_date: Optional[datetime] = None
     certificate_url: Optional[str] = None
     operating_agreement_url: Optional[str] = None
-    
+
     # Provider info
     provider: str
     provider_reference: Optional[str] = None
-    
+
     # Status info
     message: Optional[str] = None
     estimated_completion: Optional[datetime] = None
-    
+
     # Timestamps
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class EINStatus(str, Enum):
@@ -127,23 +127,23 @@ class EINRequest(BaseModel):
     business_name: str
     business_type: BusinessType
     state: FormationState
-    
+
     # Responsible party
     responsible_party_name: str
     responsible_party_ssn: Optional[str] = None  # Encrypted in practice
     responsible_party_itin: Optional[str] = None
-    
+
     # Business address
     street_address: str
     city: str
     state_address: str
     zip_code: str
-    
+
     # Business details
     principal_activity: str = "Software development"
     date_started: Optional[datetime] = None
     expected_employees: int = 0
-    
+
     # Metadata
     user_id: str
     formation_id: Optional[str] = None
@@ -153,22 +153,22 @@ class EINResult(BaseModel):
     """Result of EIN application."""
     request_id: str
     status: EINStatus
-    
+
     # EIN info
     ein: Optional[str] = None
     business_name: str
-    
+
     # Status
     message: Optional[str] = None
     confirmation_letter_url: Optional[str] = None
-    
+
     # Provider
     provider: str
     provider_reference: Optional[str] = None
-    
+
     # Timestamps
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class BankingStatus(str, Enum):
@@ -193,27 +193,27 @@ class BankingRequest(BaseModel):
     """Request for business bank account."""
     business_name: str
     ein: str
-    
+
     # Business info
     business_type: BusinessType
     state: FormationState
     formation_date: datetime
-    
+
     # Contact
     owner_name: str
     owner_email: str
     owner_phone: str
-    
+
     # Address
     street_address: str
     city: str
     state_address: str
     zip_code: str
-    
+
     # Account preferences
     account_type: BankAccountType = BankAccountType.CHECKING
     estimated_monthly_revenue: Optional[int] = None
-    
+
     # Metadata
     user_id: str
     formation_id: Optional[str] = None
@@ -223,27 +223,27 @@ class BankingResult(BaseModel):
     """Result of bank account setup."""
     request_id: str
     status: BankingStatus
-    
+
     # Account info
     bank_name: str
     account_type: BankAccountType
     account_number: Optional[str] = None  # Masked
     routing_number: Optional[str] = None
-    
+
     # Access
     dashboard_url: Optional[str] = None
-    
+
     # Status
     message: Optional[str] = None
     verification_steps: List[str] = Field(default_factory=list)
-    
+
     # Provider
     provider: str
     provider_reference: Optional[str] = None
-    
+
     # Timestamps
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class DomainStatus(str, Enum):
@@ -260,27 +260,27 @@ class DomainStatus(str, Enum):
 class DomainRequest(BaseModel):
     """Request for domain registration."""
     domain_name: str = Field(..., min_length=1, max_length=253)
-    
+
     # Registrant info
     registrant_name: str
     registrant_email: str
     registrant_phone: Optional[str] = None
-    
+
     # Address
     street_address: str
     city: str
     state: str
     zip_code: str
     country: str = "US"
-    
+
     # Options
     privacy_protection: bool = True
     auto_renew: bool = True
     years: int = Field(default=1, ge=1, le=10)
-    
+
     # DNS
     nameservers: List[str] = Field(default_factory=list)
-    
+
     # Metadata
     user_id: str
     project_id: Optional[str] = None
@@ -290,35 +290,35 @@ class DomainResult(BaseModel):
     """Result of domain registration."""
     request_id: str
     status: DomainStatus
-    
+
     # Domain info
     domain_name: str
     registrar: str
-    
+
     # Registration details
     registered_date: Optional[datetime] = None
     expiry_date: Optional[datetime] = None
     auto_renew: bool = True
     privacy_protection: bool = True
-    
+
     # DNS
     nameservers: List[str] = Field(default_factory=list)
-    
+
     # Status
     message: Optional[str] = None
     management_url: Optional[str] = None
-    
+
     # Provider
     provider: str
     provider_reference: Optional[str] = None
-    
+
     # Pricing
     price_paid: Optional[int] = None  # in cents
     renewal_price: Optional[int] = None  # in cents
-    
+
     # Timestamps
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 # Pricing constants

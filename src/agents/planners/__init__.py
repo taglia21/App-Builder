@@ -15,11 +15,11 @@ best strategy from their unique perspective. The synthesizer then
 merges these into a coherent execution plan.
 """
 
-from .planner_agent import PlannerAgent
 from .conservative_planner import ConservativePlanner
 from .innovative_planner import InnovativePlanner
+from .plan_synthesizer import PlanComparison, PlanSynthesizer, SynthesisResult
+from .planner_agent import PlannerAgent
 from .pragmatic_planner import PragmaticPlanner
-from .plan_synthesizer import PlanSynthesizer, SynthesisResult, PlanComparison
 
 __all__ = [
     "PlannerAgent",

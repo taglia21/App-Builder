@@ -2,9 +2,7 @@
 Scoring and Evaluation Engine for ranking startup ideas.
 """
 
-from datetime import timezone, datetime
-from typing import Dict, List
-from uuid import UUID
+from datetime import datetime, timezone
 
 from loguru import logger
 

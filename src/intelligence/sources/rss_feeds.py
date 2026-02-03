@@ -13,7 +13,6 @@ except ImportError:
 
 from loguru import logger
 
-from ...models import PainPoint
 from ..base import DataSource
 
 
@@ -23,7 +22,7 @@ class RSSFeedSource(DataSource):
     def __init__(self, config: Dict[str, Any]):
         """Initialize RSS feed source."""
         super().__init__(config)
-        
+
         # Default high-quality RSS feeds for startup/tech/business intelligence
         self.feeds = config.get("feeds", [
             # Tech & Startup News
@@ -31,26 +30,26 @@ class RSSFeedSource(DataSource):
             "https://www.theverge.com/rss/index.xml",
             "https://news.ycombinator.com/rss",
             "http://feeds.feedburner.com/TechCrunch/startups",
-            
+
             # Business & SaaS
             "https://www.saastr.com/feed/",
             "https://www.forbes.com/innovation/feed/",
             "https://hbr.org/feed",
-            
+
             # Developer & Tech
             "https://stackoverflow.blog/feed/",
             "https://github.blog/feed/",
             "https://dev.to/feed",
-            
+
             # Product & Design
             "https://www.producthunt.com/feed",
             "https://uxdesign.cc/feed",
-            
+
             # Industry specific
             "https://www.indiehackers.com/feed.xml",
             "https://news.ycombinator.com/rss",
         ])
-        
+
         self.max_entries_per_feed = config.get("max_entries_per_feed", 20)
         self.keywords = config.get("keywords", [
             "startup", "SaaS", "automation", "API", "integration",
@@ -74,21 +73,21 @@ class RSSFeedSource(DataSource):
         for feed_url in self.feeds:
             try:
                 feed = feedparser.parse(feed_url)
-                
+
                 if not feed.entries:
                     logger.warning(f"No entries found in feed: {feed_url}")
                     continue
-                
+
                 feed_title = feed.feed.get('title', feed_url)
-                
+
                 for entry in feed.entries[:self.max_entries_per_feed]:
                     title = entry.get('title', '')
                     description = entry.get('summary', entry.get('description', ''))
-                    
+
                     # Check if article is relevant based on keywords
                     text = f"{title} {description}".lower()
                     relevance_score = sum(1 for keyword in self.keywords if keyword.lower() in text)
-                    
+
                     if relevance_score > 0:  # At least one keyword match
                         results.append({
                             "source": "rss_feed",
@@ -103,7 +102,7 @@ class RSSFeedSource(DataSource):
                             "relevance_score": relevance_score,
                             "timestamp": datetime.now().isoformat(),
                         })
-                        
+
             except Exception as e:
                 logger.warning(f"Failed to parse feed {feed_url}: {e}")
 

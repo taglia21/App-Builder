@@ -4,14 +4,14 @@ Metrics Collection
 Provides metrics collection and reporting infrastructure.
 """
 
-import time
 import logging
 import threading
-from typing import Optional, Dict, Any, List, Callable
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
+import time
 from collections import defaultdict
 from contextlib import contextmanager
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ class MetricValue:
     value: float
     timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     labels: Dict[str, str] = field(default_factory=dict)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
         return {
@@ -35,10 +35,10 @@ class MetricValue:
 class Counter:
     """
     A monotonically increasing counter.
-    
+
     Use for counting events, requests, errors, etc.
     """
-    
+
     def __init__(
         self,
         name: str,
@@ -50,51 +50,51 @@ class Counter:
         self.label_names = labels or []
         self._values: Dict[tuple, float] = defaultdict(float)
         self._lock = threading.Lock()
-    
+
     def _get_key(self, labels: Dict[str, str]) -> tuple:
         """Get key for labels."""
         return tuple(labels.get(l, "") for l in self.label_names)
-    
+
     def inc(self, value: float = 1.0, labels: Optional[Dict[str, str]] = None) -> None:
         """
         Increment counter.
-        
+
         Args:
             value: Amount to increment (must be positive).
             labels: Label values.
         """
         if value < 0:
             raise ValueError("Counter can only be incremented")
-        
+
         labels = labels or {}
         key = self._get_key(labels)
-        
+
         with self._lock:
             self._values[key] += value
-    
+
     def get(self, labels: Optional[Dict[str, str]] = None) -> float:
         """
         Get counter value.
-        
+
         Args:
             labels: Label values.
-        
+
         Returns:
             Current counter value.
         """
         labels = labels or {}
         key = self._get_key(labels)
-        
+
         with self._lock:
             return self._values[key]
-    
+
     def values(self) -> List[MetricValue]:
         """Get all metric values."""
         with self._lock:
             return [
                 MetricValue(
                     value=v,
-                    labels=dict(zip(self.label_names, k)),
+                    labels=dict(zip(self.label_names, k, strict=False)),
                 )
                 for k, v in self._values.items()
             ]
@@ -103,10 +103,10 @@ class Counter:
 class Gauge:
     """
     A value that can go up and down.
-    
+
     Use for things like queue size, temperature, etc.
     """
-    
+
     def __init__(
         self,
         name: str,
@@ -118,56 +118,56 @@ class Gauge:
         self.label_names = labels or []
         self._values: Dict[tuple, float] = defaultdict(float)
         self._lock = threading.Lock()
-    
+
     def _get_key(self, labels: Dict[str, str]) -> tuple:
         """Get key for labels."""
         return tuple(labels.get(l, "") for l in self.label_names)
-    
+
     def set(self, value: float, labels: Optional[Dict[str, str]] = None) -> None:
         """
         Set gauge value.
-        
+
         Args:
             value: New value.
             labels: Label values.
         """
         labels = labels or {}
         key = self._get_key(labels)
-        
+
         with self._lock:
             self._values[key] = value
-    
+
     def inc(self, value: float = 1.0, labels: Optional[Dict[str, str]] = None) -> None:
         """Increment gauge."""
         labels = labels or {}
         key = self._get_key(labels)
-        
+
         with self._lock:
             self._values[key] += value
-    
+
     def dec(self, value: float = 1.0, labels: Optional[Dict[str, str]] = None) -> None:
         """Decrement gauge."""
         labels = labels or {}
         key = self._get_key(labels)
-        
+
         with self._lock:
             self._values[key] -= value
-    
+
     def get(self, labels: Optional[Dict[str, str]] = None) -> float:
         """Get gauge value."""
         labels = labels or {}
         key = self._get_key(labels)
-        
+
         with self._lock:
             return self._values[key]
-    
+
     def values(self) -> List[MetricValue]:
         """Get all metric values."""
         with self._lock:
             return [
                 MetricValue(
                     value=v,
-                    labels=dict(zip(self.label_names, k)),
+                    labels=dict(zip(self.label_names, k, strict=False)),
                 )
                 for k, v in self._values.items()
             ]
@@ -176,14 +176,14 @@ class Gauge:
 class Histogram:
     """
     A distribution of values.
-    
+
     Use for request latencies, response sizes, etc.
     """
-    
+
     DEFAULT_BUCKETS = (
         0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, float("inf")
     )
-    
+
     def __init__(
         self,
         name: str,
@@ -195,52 +195,52 @@ class Histogram:
         self.description = description
         self.label_names = labels or []
         self.buckets = buckets or self.DEFAULT_BUCKETS
-        
+
         self._counts: Dict[tuple, Dict[float, int]] = defaultdict(
             lambda: {b: 0 for b in self.buckets}
         )
         self._sums: Dict[tuple, float] = defaultdict(float)
         self._totals: Dict[tuple, int] = defaultdict(int)
         self._lock = threading.Lock()
-    
+
     def _get_key(self, labels: Dict[str, str]) -> tuple:
         """Get key for labels."""
         return tuple(labels.get(l, "") for l in self.label_names)
-    
+
     def observe(self, value: float, labels: Optional[Dict[str, str]] = None) -> None:
         """
         Observe a value.
-        
+
         Args:
             value: Observed value.
             labels: Label values.
         """
         labels = labels or {}
         key = self._get_key(labels)
-        
+
         with self._lock:
             self._sums[key] += value
             self._totals[key] += 1
-            
+
             for bucket in self.buckets:
                 if value <= bucket:
                     self._counts[key][bucket] += 1
-    
+
     def get_stats(
         self, labels: Optional[Dict[str, str]] = None
     ) -> Dict[str, Any]:
         """
         Get histogram statistics.
-        
+
         Args:
             labels: Label values.
-        
+
         Returns:
             Dictionary with count, sum, and buckets.
         """
         labels = labels or {}
         key = self._get_key(labels)
-        
+
         with self._lock:
             total = self._totals[key]
             return {
@@ -249,15 +249,15 @@ class Histogram:
                 "mean": self._sums[key] / total if total > 0 else 0,
                 "buckets": dict(self._counts[key]),
             }
-    
+
     @contextmanager
     def time(self, labels: Optional[Dict[str, str]] = None):
         """
         Context manager to time a block of code.
-        
+
         Args:
             labels: Label values.
-        
+
         Yields:
             None.
         """
@@ -271,10 +271,10 @@ class Histogram:
 class Timer:
     """
     Convenience class for timing operations.
-    
+
     Wraps a Histogram for easier usage.
     """
-    
+
     def __init__(
         self,
         name: str,
@@ -287,21 +287,21 @@ class Timer:
             labels=labels,
             buckets=(0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 5.0, 10.0, 30.0, 60.0, float("inf")),
         )
-    
+
     @property
     def name(self) -> str:
         return self.histogram.name
-    
+
     def record(self, duration: float, labels: Optional[Dict[str, str]] = None) -> None:
         """Record a duration in seconds."""
         self.histogram.observe(duration, labels)
-    
+
     @contextmanager
     def time(self, labels: Optional[Dict[str, str]] = None):
         """Time a block of code."""
         with self.histogram.time(labels):
             yield
-    
+
     def get_stats(self, labels: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
         """Get timing statistics."""
         return self.histogram.get_stats(labels)
@@ -310,16 +310,16 @@ class Timer:
 class MetricsCollector:
     """
     Central registry for metrics.
-    
+
     Collects and exports metrics from the application.
     """
-    
+
     def __init__(self):
         self._counters: Dict[str, Counter] = {}
         self._gauges: Dict[str, Gauge] = {}
         self._histograms: Dict[str, Histogram] = {}
         self._lock = threading.Lock()
-    
+
     def counter(
         self,
         name: str,
@@ -328,12 +328,12 @@ class MetricsCollector:
     ) -> Counter:
         """
         Get or create a counter.
-        
+
         Args:
             name: Counter name.
             description: Counter description.
             labels: Label names.
-        
+
         Returns:
             Counter instance.
         """
@@ -341,7 +341,7 @@ class MetricsCollector:
             if name not in self._counters:
                 self._counters[name] = Counter(name, description, labels)
             return self._counters[name]
-    
+
     def gauge(
         self,
         name: str,
@@ -350,12 +350,12 @@ class MetricsCollector:
     ) -> Gauge:
         """
         Get or create a gauge.
-        
+
         Args:
             name: Gauge name.
             description: Gauge description.
             labels: Label names.
-        
+
         Returns:
             Gauge instance.
         """
@@ -363,7 +363,7 @@ class MetricsCollector:
             if name not in self._gauges:
                 self._gauges[name] = Gauge(name, description, labels)
             return self._gauges[name]
-    
+
     def histogram(
         self,
         name: str,
@@ -373,13 +373,13 @@ class MetricsCollector:
     ) -> Histogram:
         """
         Get or create a histogram.
-        
+
         Args:
             name: Histogram name.
             description: Histogram description.
             labels: Label names.
             buckets: Bucket boundaries.
-        
+
         Returns:
             Histogram instance.
         """
@@ -387,7 +387,7 @@ class MetricsCollector:
             if name not in self._histograms:
                 self._histograms[name] = Histogram(name, description, labels, buckets)
             return self._histograms[name]
-    
+
     def timer(
         self,
         name: str,
@@ -396,22 +396,22 @@ class MetricsCollector:
     ) -> Timer:
         """
         Get or create a timer.
-        
+
         Args:
             name: Timer name.
             description: Timer description.
             labels: Label names.
-        
+
         Returns:
             Timer instance.
         """
         # Timers use histograms internally
         return Timer(name, description, labels)
-    
+
     def export(self) -> Dict[str, Any]:
         """
         Export all metrics.
-        
+
         Returns:
             Dictionary of all metric values.
         """
@@ -431,7 +431,7 @@ class MetricsCollector:
                 },
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             }
-    
+
     def reset(self) -> None:
         """Reset all metrics."""
         with self._lock:
@@ -522,7 +522,7 @@ def get_email_send_duration() -> Histogram:
 def track_email_send(template: str, success: bool, duration_seconds: float = 0):
     """
     Track an email send attempt.
-    
+
     Args:
         template: Email template name (verification, welcome, etc.)
         success: Whether the send was successful
@@ -559,7 +559,7 @@ def get_onboarding_completion_gauge() -> Gauge:
 def track_onboarding_step(step: str):
     """
     Track an onboarding step completion.
-    
+
     Args:
         step: Step name (email_verified, api_keys_set, first_app_generated, first_deploy_completed)
     """
@@ -569,7 +569,7 @@ def track_onboarding_step(step: str):
 def update_onboarding_rates(rates: dict):
     """
     Update onboarding completion rate gauges.
-    
+
     Args:
         rates: Dictionary of step -> completion rate (0-100)
     """
@@ -603,7 +603,7 @@ def get_contact_counter() -> Counter:
 def track_feedback_submission(category: str):
     """
     Track a feedback submission.
-    
+
     Args:
         category: Feedback category (general, bug, feature, improvement)
     """
@@ -627,12 +627,12 @@ def track_contact_reply():
 def get_dashboard_metrics() -> Dict[str, Any]:
     """
     Get aggregated metrics for the health dashboard.
-    
+
     Returns:
         Dictionary of metrics suitable for dashboard display.
     """
     metrics = get_metrics()
-    
+
     # Email metrics
     email_counter = metrics._counters.get("email_sends_total")
     email_success = 0
@@ -643,21 +643,21 @@ def get_dashboard_metrics() -> Dict[str, Any]:
                 email_success += mv.value
             elif mv.labels.get("status") == "failure":
                 email_failure += mv.value
-    
+
     # Request metrics
     request_counter = metrics._counters.get("http_requests_total")
     total_requests = 0
     if request_counter:
         for mv in request_counter.values():
             total_requests += mv.value
-    
+
     # Generation metrics
     gen_counter = metrics._counters.get("generations_total")
     total_generations = 0
     if gen_counter:
         for mv in gen_counter.values():
             total_generations += mv.value
-    
+
     # Feedback metrics
     feedback_counter = metrics._counters.get("feedback_submissions_total")
     total_feedback = 0
@@ -667,7 +667,7 @@ def get_dashboard_metrics() -> Dict[str, Any]:
             total_feedback += mv.value
             cat = mv.labels.get("category", "unknown")
             feedback_by_category[cat] = feedback_by_category.get(cat, 0) + mv.value
-    
+
     # Onboarding metrics
     onboarding_gauge = metrics._gauges.get("onboarding_completion_rate")
     onboarding_rates = {}
@@ -675,7 +675,7 @@ def get_dashboard_metrics() -> Dict[str, Any]:
         for mv in onboarding_gauge.values():
             step = mv.labels.get("step", "unknown")
             onboarding_rates[step] = mv.value
-    
+
     return {
         "email": {
             "total_sent": email_success + email_failure,

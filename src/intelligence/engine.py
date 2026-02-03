@@ -3,7 +3,7 @@ Main Intelligence-Gathering Engine.
 """
 
 import asyncio
-from datetime import timezone, datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List
 
 from loguru import logger
@@ -48,14 +48,14 @@ class IntelligenceGatheringEngine:
     async def gather(self, demo_mode: bool = False) -> IntelligenceData:
         """
         Gather intelligence from all sources and process it.
-        
+
         Args:
             demo_mode: If True, use demo data instead of calling APIs
         """
         if demo_mode:
             logger.info("Using demo mode - loading sample data")
             return self._load_demo_data()
-        
+
         logger.info("Starting intelligence gathering process")
 
         # Gather data from all sources
@@ -135,18 +135,21 @@ class IntelligenceGatheringEngine:
 
     def _load_demo_data(self) -> IntelligenceData:
         """Load demo data for testing without API calls."""
-        from uuid import uuid4
         from ..demo_data import (
-            get_demo_pain_points,
-            get_demo_industries,
             get_demo_competitors,
-            get_demo_opportunities
+            get_demo_industries,
+            get_demo_opportunities,
+            get_demo_pain_points,
         )
         from ..models import (
-            PainPoint, EmergingIndustry, CompetitorAnalysis, 
-            OpportunityCategory, SourceType, CompetitionDensity
+            CompetitionDensity,
+            CompetitorAnalysis,
+            EmergingIndustry,
+            OpportunityCategory,
+            PainPoint,
+            SourceType,
         )
-        
+
         # Convert dictionaries to Pydantic models
         pain_points = []
         for pp_dict in get_demo_pain_points():
@@ -155,17 +158,17 @@ class IntelligenceGatheringEngine:
             # Replace string ID with UUID
             pp_dict_copy.pop('id')  # Remove string ID, let Pydantic generate UUID
             pain_points.append(PainPoint(**pp_dict_copy))
-        
+
         industries = []
         for ind_dict in get_demo_industries():
             ind_dict_copy = ind_dict.copy()
             ind_dict_copy.pop('id', None)  # Remove string ID if present
             industries.append(EmergingIndustry(**ind_dict_copy))
-        
+
         competitors = []
         for comp_dict in get_demo_competitors():
             competitors.append(CompetitorAnalysis(**comp_dict))
-        
+
         opportunities = []
         for opp_dict in get_demo_opportunities():
             opp_dict_copy = opp_dict.copy()
@@ -174,9 +177,9 @@ class IntelligenceGatheringEngine:
             # For demo, we'll just use empty list since we can't map string IDs to new UUIDs easily
             opp_dict_copy['pain_point_ids'] = []
             opportunities.append(OpportunityCategory(**opp_dict_copy))
-        
+
         logger.info(f"Loaded demo data: {len(pain_points)} pain points, {len(industries)} industries")
-        
+
         return IntelligenceData(
             extraction_timestamp=datetime.now(timezone.utc),
             pain_points=pain_points,

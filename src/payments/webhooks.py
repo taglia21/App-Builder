@@ -4,11 +4,12 @@ Stripe Webhook Handlers
 Handles incoming Stripe webhooks for subscription lifecycle events.
 """
 
-from enum import Enum
-from dataclasses import dataclass
-from typing import Optional, Dict, Any, Callable, Awaitable
-from datetime import datetime
 import logging
+from dataclasses import dataclass
+from datetime import datetime
+from enum import Enum
+from typing import Any, Awaitable, Callable, Dict, Optional
+
 import stripe
 
 from src.payments.stripe_client import StripeClient, StripeError
@@ -26,22 +27,22 @@ class WebhookEventType(str, Enum):
     # Checkout
     CHECKOUT_COMPLETED = "checkout.session.completed"
     CHECKOUT_EXPIRED = "checkout.session.expired"
-    
+
     # Subscription lifecycle
     SUBSCRIPTION_CREATED = "customer.subscription.created"
     SUBSCRIPTION_UPDATED = "customer.subscription.updated"
     SUBSCRIPTION_DELETED = "customer.subscription.deleted"
     SUBSCRIPTION_TRIAL_ENDING = "customer.subscription.trial_will_end"
-    
+
     # Payment
     INVOICE_PAID = "invoice.paid"
     INVOICE_PAYMENT_FAILED = "invoice.payment_failed"
     INVOICE_UPCOMING = "invoice.upcoming"
     INVOICE_FINALIZED = "invoice.finalized"
-    
+
     PAYMENT_SUCCEEDED = "payment_intent.succeeded"
     PAYMENT_FAILED = "payment_intent.payment_failed"
-    
+
     # Customer
     CUSTOMER_CREATED = "customer.created"
     CUSTOMER_UPDATED = "customer.updated"
@@ -56,18 +57,18 @@ class WebhookEvent:
     created: datetime
     data: Dict[str, Any]
     livemode: bool
-    
+
     # Extracted common fields
     customer_id: Optional[str] = None
     subscription_id: Optional[str] = None
     invoice_id: Optional[str] = None
     payment_intent_id: Optional[str] = None
-    
+
     @classmethod
     def from_stripe_event(cls, event: stripe.Event) -> "WebhookEvent":
         """Create from Stripe event object."""
         data = event.data.object
-        
+
         return cls(
             id=event.id,
             type=event.type,
@@ -89,17 +90,17 @@ class WebhookProcessor:
     """
     Processes Stripe webhooks and dispatches to appropriate handlers.
     """
-    
+
     def __init__(self, stripe_client: Optional[StripeClient] = None):
         """
         Initialize webhook processor.
-        
+
         Args:
             stripe_client: Stripe client for verification
         """
         self.stripe = stripe_client or StripeClient()
         self._handlers: Dict[str, list] = {}
-    
+
     def register_handler(
         self,
         event_type: str,
@@ -107,7 +108,7 @@ class WebhookProcessor:
     ) -> None:
         """
         Register a handler for a specific event type.
-        
+
         Args:
             event_type: Webhook event type
             handler: Handler function
@@ -116,11 +117,11 @@ class WebhookProcessor:
             self._handlers[event_type] = []
         self._handlers[event_type].append(handler)
         logger.debug(f"Registered handler for {event_type}")
-    
+
     def on(self, event_type: str) -> Callable:
         """
         Decorator to register a webhook handler.
-        
+
         Usage:
             @processor.on("customer.subscription.created")
             def handle_subscription_created(event: WebhookEvent):
@@ -130,7 +131,7 @@ class WebhookProcessor:
             self.register_handler(event_type, func)
             return func
         return decorator
-    
+
     def verify_and_parse(
         self,
         payload: bytes,
@@ -138,14 +139,14 @@ class WebhookProcessor:
     ) -> WebhookEvent:
         """
         Verify webhook signature and parse the event.
-        
+
         Args:
             payload: Raw request body
             signature: Stripe-Signature header
-            
+
         Returns:
             Parsed WebhookEvent
-            
+
         Raises:
             WebhookError: If verification or parsing fails
         """
@@ -154,26 +155,26 @@ class WebhookProcessor:
             return WebhookEvent.from_stripe_event(stripe_event)
         except StripeError as e:
             raise WebhookError(str(e))
-    
+
     async def process_async(self, event: WebhookEvent) -> Dict[str, Any]:
         """
         Process a webhook event asynchronously.
-        
+
         Args:
             event: Parsed webhook event
-            
+
         Returns:
             Processing result
         """
         handlers = self._handlers.get(event.type, [])
-        
+
         if not handlers:
             logger.warning(f"No handlers registered for {event.type}")
             return {"status": "ignored", "event_type": event.type}
-        
+
         results = []
         errors = []
-        
+
         for handler in handlers:
             try:
                 result = handler(event)
@@ -184,7 +185,7 @@ class WebhookProcessor:
             except Exception as e:
                 logger.error(f"Handler error for {event.type}: {e}")
                 errors.append(str(e))
-        
+
         if errors:
             return {
                 "status": "partial_failure",
@@ -192,32 +193,32 @@ class WebhookProcessor:
                 "results": results,
                 "errors": errors,
             }
-        
+
         return {
             "status": "success",
             "event_type": event.type,
             "results": results,
         }
-    
+
     def process(self, event: WebhookEvent) -> Dict[str, Any]:
         """
         Process a webhook event synchronously.
-        
+
         Args:
             event: Parsed webhook event
-            
+
         Returns:
             Processing result
         """
         handlers = self._handlers.get(event.type, [])
-        
+
         if not handlers:
             logger.warning(f"No handlers registered for {event.type}")
             return {"status": "ignored", "event_type": event.type}
-        
+
         results = []
         errors = []
-        
+
         for handler in handlers:
             try:
                 result = handler(event)
@@ -225,7 +226,7 @@ class WebhookProcessor:
             except Exception as e:
                 logger.error(f"Handler error for {event.type}: {e}")
                 errors.append(str(e))
-        
+
         if errors:
             return {
                 "status": "partial_failure",
@@ -233,7 +234,7 @@ class WebhookProcessor:
                 "results": results,
                 "errors": errors,
             }
-        
+
         return {
             "status": "success",
             "event_type": event.type,
@@ -244,20 +245,20 @@ class WebhookProcessor:
 class SubscriptionWebhookHandler:
     """
     Default handlers for subscription lifecycle events.
-    
+
     Extend this class or use as reference for custom implementations.
     """
-    
+
     def __init__(self, processor: WebhookProcessor):
         """
         Initialize and register default handlers.
-        
+
         Args:
             processor: Webhook processor to register with
         """
         self.processor = processor
         self._register_handlers()
-    
+
     def _register_handlers(self) -> None:
         """Register all default handlers."""
         self.processor.register_handler(
@@ -288,11 +289,11 @@ class SubscriptionWebhookHandler:
             WebhookEventType.SUBSCRIPTION_TRIAL_ENDING.value,
             self.handle_trial_ending,
         )
-    
+
     def handle_checkout_completed(self, event: WebhookEvent) -> Dict[str, Any]:
         """
         Handle successful checkout completion.
-        
+
         This is where you typically:
         - Provision access for the customer
         - Create user account if needed
@@ -302,24 +303,24 @@ class SubscriptionWebhookHandler:
         customer_id = data.get("customer")
         subscription_id = data.get("subscription")
         customer_email = data.get("customer_email") or data.get("customer_details", {}).get("email")
-        
+
         logger.info(
             f"Checkout completed: customer={customer_id}, "
             f"subscription={subscription_id}, email={customer_email}"
         )
-        
+
         # Provision subscription (implemented)
         # Example:
         # - Update user record with stripe_customer_id
         # - Activate subscription in your database
         # - Send welcome email
-        
+
         return {
             "action": "provision_access",
             "customer_id": customer_id,
             "subscription_id": subscription_id,
         }
-    
+
     def handle_subscription_created(self, event: WebhookEvent) -> Dict[str, Any]:
         """
         Handle new subscription creation.
@@ -328,18 +329,18 @@ class SubscriptionWebhookHandler:
         subscription_id = data.get("id")
         customer_id = data.get("customer")
         status = data.get("status")
-        
+
         logger.info(
             f"Subscription created: {subscription_id}, "
             f"customer={customer_id}, status={status}"
         )
-        
+
         return {
             "action": "subscription_created",
             "subscription_id": subscription_id,
             "status": status,
         }
-    
+
     def handle_subscription_updated(self, event: WebhookEvent) -> Dict[str, Any]:
         """
         Handle subscription updates (plan changes, etc.).
@@ -348,22 +349,22 @@ class SubscriptionWebhookHandler:
         subscription_id = data.get("id")
         status = data.get("status")
         cancel_at_period_end = data.get("cancel_at_period_end")
-        
+
         # Get the new plan details
         items = data.get("items", {}).get("data", [])
         price_id = items[0].get("price", {}).get("id") if items else None
-        
+
         logger.info(
             f"Subscription updated: {subscription_id}, "
             f"status={status}, cancel_at_period_end={cancel_at_period_end}"
         )
-        
+
         # Update subscription (implemented)
         # Example:
         # - Update user's plan in database
         # - Adjust feature access
         # - Send plan change notification
-        
+
         return {
             "action": "subscription_updated",
             "subscription_id": subscription_id,
@@ -371,7 +372,7 @@ class SubscriptionWebhookHandler:
             "price_id": price_id,
             "cancel_at_period_end": cancel_at_period_end,
         }
-    
+
     def handle_subscription_deleted(self, event: WebhookEvent) -> Dict[str, Any]:
         """
         Handle subscription cancellation/deletion.
@@ -379,23 +380,23 @@ class SubscriptionWebhookHandler:
         data = event.data
         subscription_id = data.get("id")
         customer_id = data.get("customer")
-        
+
         logger.info(
             f"Subscription deleted: {subscription_id}, customer={customer_id}"
         )
-        
+
         # Cancel subscription (implemented)
         # Example:
         # - Downgrade user to free tier
         # - Revoke premium features
         # - Send cancellation confirmation
-        
+
         return {
             "action": "subscription_cancelled",
             "subscription_id": subscription_id,
             "customer_id": customer_id,
         }
-    
+
     def handle_invoice_paid(self, event: WebhookEvent) -> Dict[str, Any]:
         """
         Handle successful invoice payment.
@@ -405,24 +406,24 @@ class SubscriptionWebhookHandler:
         customer_id = data.get("customer")
         subscription_id = data.get("subscription")
         amount_paid = data.get("amount_paid")
-        
+
         logger.info(
             f"Invoice paid: {invoice_id}, amount={amount_paid}, "
             f"customer={customer_id}, subscription={subscription_id}"
         )
-        
+
         # Payment success (implemented)
         # Example:
         # - Record payment in your database
         # - Reset monthly usage counters
         # - Send receipt
-        
+
         return {
             "action": "payment_succeeded",
             "invoice_id": invoice_id,
             "amount_paid": amount_paid,
         }
-    
+
     def handle_payment_failed(self, event: WebhookEvent) -> Dict[str, Any]:
         """
         Handle failed invoice payment.
@@ -431,24 +432,24 @@ class SubscriptionWebhookHandler:
         invoice_id = data.get("id")
         customer_id = data.get("customer")
         attempt_count = data.get("attempt_count", 0)
-        
+
         logger.warning(
             f"Payment failed: invoice={invoice_id}, "
             f"customer={customer_id}, attempts={attempt_count}"
         )
-        
+
         # Payment failure (implemented)
         # Example:
         # - Send payment failure notification
         # - Update subscription status
         # - After multiple failures, may need to restrict access
-        
+
         return {
             "action": "payment_failed",
             "invoice_id": invoice_id,
             "attempt_count": attempt_count,
         }
-    
+
     def handle_trial_ending(self, event: WebhookEvent) -> Dict[str, Any]:
         """
         Handle trial ending notification (3 days before).
@@ -457,17 +458,14 @@ class SubscriptionWebhookHandler:
         subscription_id = data.get("id")
         customer_id = data.get("customer")
         trial_end = data.get("trial_end")
-        
+
         logger.info(
             f"Trial ending soon: subscription={subscription_id}, "
             f"customer={customer_id}, trial_end={trial_end}"
         )
-        
-        # Trial ending logic - notify user and log the event
-        import logging
-        logger = logging.getLogger(__name__)
+
         logger.info(f"Trial ending for subscription {subscription_id}, ends at {trial_end}")
-        
+
         # Log the trial ending event for analytics
         # In production, integrate with email service:
         # await self.email_service.send_trial_ending_email(
@@ -475,10 +473,9 @@ class SubscriptionWebhookHandler:
         #     trial_end=trial_end,
         #     upgrade_url=f"{settings.BASE_URL}/billing/upgrade"
         # )
-        
+
         # Record the notification was sent
-        notification_sent = True
-        
+
         return {
             "action": "trial_ending",
             "subscription_id": subscription_id,
@@ -489,7 +486,7 @@ class SubscriptionWebhookHandler:
 def create_default_webhook_processor() -> WebhookProcessor:
     """
     Create a webhook processor with default handlers.
-    
+
     Returns:
         Configured WebhookProcessor
     """

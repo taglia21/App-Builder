@@ -7,25 +7,25 @@ it has REAL-TIME web search built into the model's responses.
 
 Usage:
     from src.intelligence.perplexity_research import PerplexityMarketResearch
-    
+
     research = PerplexityMarketResearch()
-    
+
     # Get market trends
     trends = research.get_market_trends("AI automation", industries=["SaaS", "Healthcare"])
-    
+
     # Analyze competitors
     competitors = research.analyze_competitors("project management", top_n=10)
-    
+
     # Find pain points from web
     pain_points = research.discover_pain_points("remote team collaboration")
 """
 
-import os
 import json
 import logging
-from typing import List, Dict, Any, Optional
-from datetime import datetime, timedelta
+import os
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ class MarketTrend:
     key_players: List[str] = field(default_factory=list)
     opportunities: List[str] = field(default_factory=list)
     sources: List[str] = field(default_factory=list)
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 @dataclass
@@ -72,14 +72,14 @@ class DiscoveredPainPoint:
 class PerplexityMarketResearch:
     """
     Market research powered by Perplexity AI's real-time web search.
-    
+
     Perplexity is uniquely suited for market intelligence because:
     1. Real-time web search integrated into responses
     2. Citations and source tracking
     3. Comprehensive analysis capabilities
     4. Current market data (not just training data)
     """
-    
+
     def __init__(
         self,
         api_key: Optional[str] = None,
@@ -89,7 +89,7 @@ class PerplexityMarketResearch:
     ):
         """
         Initialize Perplexity market research.
-        
+
         Args:
             api_key: Perplexity API key (or uses PERPLEXITY_API_KEY env var)
             default_model: Model for general queries
@@ -100,17 +100,17 @@ class PerplexityMarketResearch:
         self.default_model = default_model
         self.research_model = research_model
         self.analysis_model = analysis_model
-        
+
         self._client = None
         self._available = None
-    
+
     @property
     def is_available(self) -> bool:
         """Check if Perplexity is available."""
         if self._available is None:
             self._available = bool(self.api_key)
         return self._available
-    
+
     def _get_client(self, model: Optional[str] = None):
         """Get or create Perplexity client."""
         if not self.is_available:
@@ -118,14 +118,14 @@ class PerplexityMarketResearch:
                 "Perplexity API key not configured. "
                 "Set PERPLEXITY_API_KEY environment variable."
             )
-        
+
         from src.llm import PerplexityClient
-        
+
         return PerplexityClient(
             api_key=self.api_key,
             model=model or self.default_model
         )
-    
+
     def get_market_trends(
         self,
         topic: str,
@@ -135,20 +135,20 @@ class PerplexityMarketResearch:
     ) -> List[MarketTrend]:
         """
         Discover current market trends for a topic.
-        
+
         Args:
             topic: The topic/market to research
             industries: Optional list of industries to focus on
             timeframe: Time period to focus on
             max_trends: Maximum number of trends to return
-            
+
         Returns:
             List of MarketTrend objects
         """
         client = self._get_client(self.research_model)
-        
+
         industries_str = ", ".join(industries) if industries else "technology, SaaS, enterprise"
-        
+
         prompt = f"""Research current market trends for "{topic}" in the {industries_str} space.
 
 Focus on the {timeframe} timeframe. For each trend, provide:
@@ -176,7 +176,7 @@ Return exactly {max_trends} trends as a JSON array with this structure:
 }}
 
 Focus on actionable trends that represent real business opportunities."""
-        
+
         try:
             response = client.complete(
                 prompt=prompt,
@@ -184,10 +184,10 @@ Focus on actionable trends that represent real business opportunities."""
                 temperature=0.3,
                 json_mode=True
             )
-            
+
             data = json.loads(response.content)
             trends = []
-            
+
             for t in data.get("trends", []):
                 trends.append(MarketTrend(
                     name=t.get("name", "Unknown"),
@@ -198,14 +198,14 @@ Focus on actionable trends that represent real business opportunities."""
                     opportunities=t.get("opportunities", []),
                     sources=t.get("sources", [])
                 ))
-            
+
             logger.info(f"Discovered {len(trends)} market trends for '{topic}'")
             return trends
-            
+
         except Exception as e:
             logger.error(f"Error getting market trends: {e}")
             return []
-    
+
     def analyze_competitors(
         self,
         market: str,
@@ -214,21 +214,21 @@ Focus on actionable trends that represent real business opportunities."""
     ) -> List[CompetitorInsight]:
         """
         Analyze competitors in a market.
-        
+
         Args:
             market: The market/space to analyze
             top_n: Number of competitors to analyze
             include_pricing: Whether to include pricing information
-            
+
         Returns:
             List of CompetitorInsight objects
         """
         client = self._get_client(self.research_model)
-        
+
         pricing_instruction = ""
         if include_pricing:
             pricing_instruction = "- Pricing model and price points (if publicly available)"
-        
+
         prompt = f"""Research and analyze the top {top_n} competitors in the "{market}" market.
 
 For each competitor, provide:
@@ -259,7 +259,7 @@ Return as a JSON array:
 }}
 
 Focus on identifying gaps and opportunities that a new entrant could exploit."""
-        
+
         try:
             response = client.complete(
                 prompt=prompt,
@@ -267,10 +267,10 @@ Focus on identifying gaps and opportunities that a new entrant could exploit."""
                 temperature=0.3,
                 json_mode=True
             )
-            
+
             data = json.loads(response.content)
             competitors = []
-            
+
             for c in data.get("competitors", []):
                 competitors.append(CompetitorInsight(
                     name=c.get("name", "Unknown"),
@@ -283,14 +283,14 @@ Focus on identifying gaps and opportunities that a new entrant could exploit."""
                     unique_features=c.get("unique_features", []),
                     user_complaints=c.get("user_complaints", [])
                 ))
-            
+
             logger.info(f"Analyzed {len(competitors)} competitors in '{market}'")
             return competitors
-            
+
         except Exception as e:
             logger.error(f"Error analyzing competitors: {e}")
             return []
-    
+
     def discover_pain_points(
         self,
         topic: str,
@@ -299,19 +299,19 @@ Focus on identifying gaps and opportunities that a new entrant could exploit."""
     ) -> List[DiscoveredPainPoint]:
         """
         Discover pain points from web research.
-        
+
         Args:
             topic: Topic to research pain points for
             sources: Specific sources to focus on (Reddit, forums, reviews, etc.)
             max_pain_points: Maximum pain points to return
-            
+
         Returns:
             List of DiscoveredPainPoint objects
         """
         client = self._get_client(self.research_model)
-        
+
         sources_str = ", ".join(sources) if sources else "Reddit, Twitter/X, product reviews, forums, Hacker News, G2, Capterra"
-        
+
         prompt = f"""Research pain points and frustrations people have with "{topic}".
 
 Search across {sources_str} to find real user complaints and unmet needs.
@@ -341,7 +341,7 @@ Return exactly {max_pain_points} pain points as JSON:
 }}
 
 Focus on pain points that represent real business opportunities - things people actively complain about and would pay to solve."""
-        
+
         try:
             response = client.complete(
                 prompt=prompt,
@@ -349,10 +349,10 @@ Focus on pain points that represent real business opportunities - things people 
                 temperature=0.3,
                 json_mode=True
             )
-            
+
             data = json.loads(response.content)
             pain_points = []
-            
+
             for pp in data.get("pain_points", []):
                 pain_points.append(DiscoveredPainPoint(
                     description=pp.get("description", ""),
@@ -363,14 +363,14 @@ Focus on pain points that represent real business opportunities - things people 
                     existing_solutions=pp.get("existing_solutions", []),
                     solution_gaps=pp.get("solution_gaps", [])
                 ))
-            
+
             logger.info(f"Discovered {len(pain_points)} pain points for '{topic}'")
             return pain_points
-            
+
         except Exception as e:
             logger.error(f"Error discovering pain points: {e}")
             return []
-    
+
     def validate_idea(
         self,
         idea_name: str,
@@ -379,17 +379,17 @@ Focus on pain points that represent real business opportunities - things people 
     ) -> Dict[str, Any]:
         """
         Validate a startup idea using real-time market research.
-        
+
         Args:
             idea_name: Name of the idea
             problem_statement: The problem it solves
             target_market: Who it's for
-            
+
         Returns:
             Dictionary with validation results
         """
         client = self._get_client(self.analysis_model)
-        
+
         prompt = f"""Validate this startup idea using real-time market research:
 
 **Idea:** {idea_name}
@@ -433,7 +433,7 @@ Return as JSON:
         "reasoning": "Clear explanation"
     }}
 }}"""
-        
+
         try:
             response = client.complete(
                 prompt=prompt,
@@ -441,15 +441,15 @@ Return as JSON:
                 temperature=0.4,
                 json_mode=True
             )
-            
+
             data = json.loads(response.content)
             logger.info(f"Validated idea '{idea_name}': {data.get('recommendation', {}).get('action', 'unknown')}")
             return data
-            
+
         except Exception as e:
             logger.error(f"Error validating idea: {e}")
             return {"error": str(e)}
-    
+
     def research_technology_landscape(
         self,
         technology: str,
@@ -457,18 +457,18 @@ Return as JSON:
     ) -> Dict[str, Any]:
         """
         Research the technology landscape for building a product.
-        
+
         Args:
             technology: The technology area (e.g., "AI/ML", "blockchain")
             use_case: Optional specific use case
-            
+
         Returns:
             Dictionary with technology landscape analysis
         """
         client = self._get_client(self.research_model)
-        
+
         use_case_str = f" for {use_case}" if use_case else ""
-        
+
         prompt = f"""Research the current technology landscape for building products using {technology}{use_case_str}.
 
 Provide:
@@ -509,7 +509,7 @@ Return as JSON:
     "best_practices": ["Practice 1", "Practice 2"],
     "pitfalls": ["Pitfall 1", "Pitfall 2"]
 }}"""
-        
+
         try:
             response = client.complete(
                 prompt=prompt,
@@ -517,11 +517,11 @@ Return as JSON:
                 temperature=0.3,
                 json_mode=True
             )
-            
+
             data = json.loads(response.content)
             logger.info(f"Researched technology landscape for '{technology}'")
             return data
-            
+
         except Exception as e:
             logger.error(f"Error researching technology: {e}")
             return {"error": str(e)}
@@ -531,7 +531,7 @@ Return as JSON:
 def get_perplexity_research() -> Optional[PerplexityMarketResearch]:
     """
     Get a PerplexityMarketResearch instance if Perplexity is configured.
-    
+
     Returns:
         PerplexityMarketResearch instance or None if not configured
     """

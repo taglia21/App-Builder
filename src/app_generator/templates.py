@@ -1,16 +1,23 @@
 """Template Manager - Orchestrates code generation for all tech stacks."""
-from typing import List, Dict
-from .models import GenerationRequest, GeneratedFile, Feature, TechStack
+from typing import List
+
+from .models import Feature, GeneratedFile, GenerationRequest, TechStack
 from .templates_fastapi import (
-    get_fastapi_main, get_fastapi_models, get_fastapi_database,
-    get_fastapi_auth, get_fastapi_payments, get_requirements_txt,
-    get_dockerfile, get_env_template, get_readme
+    get_dockerfile,
+    get_env_template,
+    get_fastapi_auth,
+    get_fastapi_database,
+    get_fastapi_main,
+    get_fastapi_models,
+    get_fastapi_payments,
+    get_readme,
+    get_requirements_txt,
 )
 
 
 class TemplateManager:
     """Manages code generation templates for all tech stacks."""
-    
+
     def generate_files(self, request: GenerationRequest) -> List[GeneratedFile]:
         """Generate all files for a project based on tech stack."""
         if request.tech_stack == TechStack.PYTHON_FASTAPI:
@@ -25,23 +32,23 @@ class TemplateManager:
             return self._generate_express(request)
         else:
             raise ValueError(f"Unsupported tech stack: {request.tech_stack}")
-    
+
     def _generate_fastapi(self, request: GenerationRequest) -> List[GeneratedFile]:
         """Generate FastAPI project files."""
         files = []
-        
+
         has_auth = Feature.AUTH in request.features
         has_db = Feature.DATABASE in request.features
         has_payments = Feature.PAYMENTS in request.features
         has_api = Feature.API in request.features
-        
+
         # Main application file
         files.append(GeneratedFile(
             path="main.py",
             content=get_fastapi_main(request.project_name, has_auth, has_db, has_payments),
             language="python"
         ))
-        
+
         # Database models
         if has_db:
             files.append(GeneratedFile(
@@ -49,13 +56,13 @@ class TemplateManager:
                 content=get_fastapi_models(has_auth, has_payments),
                 language="python"
             ))
-            
+
             files.append(GeneratedFile(
                 path="database.py",
                 content=get_fastapi_database(),
                 language="python"
             ))
-        
+
         # Authentication
         if has_auth:
             files.append(GeneratedFile(
@@ -63,7 +70,7 @@ class TemplateManager:
                 content=get_fastapi_auth(),
                 language="python"
             ))
-        
+
         # Payments
         if has_payments:
             files.append(GeneratedFile(
@@ -71,44 +78,44 @@ class TemplateManager:
                 content=get_fastapi_payments(),
                 language="python"
             ))
-        
+
         # Requirements.txt
         files.append(GeneratedFile(
             path="requirements.txt",
             content=get_requirements_txt(has_auth, has_db, has_payments, has_api),
             language="text"
         ))
-        
+
         # Dockerfile
         files.append(GeneratedFile(
             path="Dockerfile",
             content=get_dockerfile(),
             language="dockerfile"
         ))
-        
+
         # .env.example
         files.append(GeneratedFile(
             path=".env.example",
             content=get_env_template(has_db, has_auth, has_payments),
             language="text"
         ))
-        
+
         # README
         files.append(GeneratedFile(
             path="README.md",
             content=get_readme(request.project_name, "FastAPI"),
             language="markdown"
         ))
-        
+
         # .gitignore
         files.append(GeneratedFile(
             path=".gitignore",
             content=self._get_python_gitignore(),
             language="text"
         ))
-        
+
         return files
-    
+
     def _generate_django(self, request: GenerationRequest) -> List[GeneratedFile]:
         """Generate Django project files (basic scaffold)."""
         # Simplified Django template for now
@@ -119,7 +126,7 @@ class TemplateManager:
                 language="markdown"
             )
         ]
-    
+
     def _generate_flask(self, request: GenerationRequest) -> List[GeneratedFile]:
         """Generate Flask project files (basic scaffold)."""
         return [
@@ -134,7 +141,7 @@ class TemplateManager:
                 language="text"
             )
         ]
-    
+
     def _generate_nextjs(self, request: GenerationRequest) -> List[GeneratedFile]:
         """Generate Next.js project files (basic scaffold)."""
         return [
@@ -149,7 +156,7 @@ class TemplateManager:
                 language="markdown"
             )
         ]
-    
+
     def _generate_express(self, request: GenerationRequest) -> List[GeneratedFile]:
         """Generate Express.js project files (basic scaffold)."""
         return [
@@ -164,144 +171,22 @@ class TemplateManager:
                 language="json"
             )
         ]
-    
+
     def _get_python_gitignore(self) -> str:
-        return '''__pycache__/\n*.py[cod]\n*$py.class\n*.so\n.Python\nbuild/\ndist/\n*.egg-info/\n.env\n.venv\nvenv/\n*.db\n*.sqlite3\n.DS_Store\n.vscode/\n.idea/\n'''\nPYEOF
-echo 'TemplateManager complete'
-cat > src/app_generator/service.py << 'PYEOF'
-"""App Generator Service - Creates complete applications from user requests."""
-import asyncio
-import logging
-import uuid
-from typing import AsyncGenerator, Dict, Any
-from datetime import timezone, datetime
-
-from .models import (
-    GenerationRequest, GeneratedApp, GenerationProgress,
-    TechStack, Feature
-)
-from .templates import TemplateManager
-
-logger = logging.getLogger(__name__)
-
-
-class AppGeneratorService:
-    """Main service for generating complete applications."""
-    
-    def __init__(self):
-        self.template_manager = TemplateManager()
-        self.active_generations: Dict[str, GeneratedApp] = {}
-    
-    async def generate_app_stream(self, request: GenerationRequest) -> AsyncGenerator[GenerationProgress, None]:
-        """Generate app with real-time progress updates."""
-        try:
-            # Step 1: Initialize
-            yield GenerationProgress(
-                step="initialize",
-                progress=5,
-                message="Initializing code generation...",
-                total_files=0
-            )
-            await asyncio.sleep(0.3)  # Simulate processing
-            
-            # Step 2: Analyze requirements
-            yield GenerationProgress(
-                step="analyze",
-                progress=15,
-                message=f"Analyzing {request.app_type.value} application requirements...",
-                total_files=0
-            )
-            await asyncio.sleep(0.4)
-            
-            # Step 3: Design architecture
-            yield GenerationProgress(
-                step="architecture",
-                progress=30,
-                message="Designing application architecture...",
-                total_files=0
-            )
-            await asyncio.sleep(0.3)
-            
-            # Step 4: Generate code files
-            yield GenerationProgress(
-                step="generation",
-                progress=40,
-                message="Generating project files...",
-                total_files=0
-            )
-            
-            # Actually generate the files
-            files = self.template_manager.generate_files(request)
-            total_files = len(files)
-            
-            # Report progress for each file generated
-            for i, file in enumerate(files):
-                progress = 40 + int((i + 1) / total_files * 45)
-                yield GenerationProgress(
-                    step="generation",
-                    progress=progress,
-                    message=f"Generated {file.path}",
-                    files_generated=i + 1,
-                    total_files=total_files
-                )
-                await asyncio.sleep(0.1)  # Small delay for UI feedback
-            
-            # Step 5: Finalize
-            yield GenerationProgress(
-                step="finalize",
-                progress=95,
-                message="Finalizing project structure...",
-                files_generated=total_files,
-                total_files=total_files
-            )
-            await asyncio.sleep(0.2)
-            
-            # Create the complete GeneratedApp
-            app = GeneratedApp(
-                id=request.id,
-                project_name=request.project_name,
-                files=files,
-                tech_stack=request.tech_stack,
-                features=request.features,
-                readme=next((f.content for f in files if f.path == "README.md"), ""),
-                requirements=[],
-                env_template=next((f.content for f in files if f.path == ".env.example"), ""),
-                dockerfile=next((f.content for f in files if f.path == "Dockerfile"), None),
-                created_at=datetime.now(timezone.utc)
-            )
-            
-            # Store the generated app
-            self.active_generations[app.id] = app
-            
-            # Final step
-            yield GenerationProgress(
-                step="complete",
-                progress=100,
-                message="✅ Generation complete!",
-                files_generated=total_files,
-                total_files=total_files
-            )
-            
-        except Exception as e:
-            logger.error(f"Generation failed: {e}", exc_info=True)
-            yield GenerationProgress(
-                step="error",
-                progress=0,
-                message=f"Generation failed: {str(e)}"
-            )
-    
-    async def generate_app(self, request: GenerationRequest) -> GeneratedApp:
-        """Generate app (blocking, returns final result)."""
-        async for progress in self.generate_app_stream(request):
-            if progress.step == "complete":
-                return self.active_generations.get(request.id)
-        
-        raise Exception("Generation did not complete successfully")
-    
-    def get_generated_app(self, app_id: str) -> GeneratedApp | None:
-        """Retrieve a generated app by ID."""
-        return self.active_generations.get(app_id)
-    
-    def list_generations(self) -> list[GeneratedApp]:
-        """List all generated apps."""
-        return list(self.active_generations.values())
+        return """__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.env
+.venv
+venv/
+*.db
+*.sqlite3
+.DS_Store
+.vscode/
+.idea/
+"""

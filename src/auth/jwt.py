@@ -59,22 +59,22 @@ def create_access_token(
 ) -> str:
     """
     Create a JWT access token.
-    
+
     Args:
         user_id: User's unique identifier
         email: User's email address
         additional_claims: Extra claims to include in the token
         expires_delta: Custom expiration time
-        
+
     Returns:
         str: Encoded JWT access token
     """
     if expires_delta is None:
         expires_delta = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    
+
     now = datetime.now(timezone.utc)
     expire = now + expires_delta
-    
+
     payload = {
         "sub": user_id,
         "email": email,
@@ -82,10 +82,10 @@ def create_access_token(
         "iat": now,
         "exp": expire,
     }
-    
+
     if additional_claims:
         payload.update(additional_claims)
-    
+
     return jwt.encode(payload, get_secret_key(), algorithm=ALGORITHM)
 
 
@@ -96,31 +96,31 @@ def create_refresh_token(
 ) -> str:
     """
     Create a JWT refresh token.
-    
+
     Args:
         user_id: User's unique identifier
         token_id: Unique identifier for this refresh token (for revocation)
         expires_delta: Custom expiration time
-        
+
     Returns:
         str: Encoded JWT refresh token
     """
     if expires_delta is None:
         expires_delta = timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
-    
+
     now = datetime.now(timezone.utc)
     expire = now + expires_delta
-    
+
     payload = {
         "sub": user_id,
         "type": TokenType.REFRESH.value,
         "iat": now,
         "exp": expire,
     }
-    
+
     if token_id:
         payload["jti"] = token_id  # JWT ID for token revocation
-    
+
     return jwt.encode(payload, get_secret_key(), algorithm=ALGORITHM)
 
 
@@ -131,21 +131,21 @@ def create_email_verification_token(
 ) -> str:
     """
     Create a token for email verification.
-    
+
     Args:
         user_id: User's unique identifier
         email: Email address to verify
         expires_delta: Custom expiration time
-        
+
     Returns:
         str: Encoded JWT token for email verification
     """
     if expires_delta is None:
         expires_delta = timedelta(hours=EMAIL_VERIFICATION_EXPIRE_HOURS)
-    
+
     now = datetime.now(timezone.utc)
     expire = now + expires_delta
-    
+
     payload = {
         "sub": user_id,
         "email": email,
@@ -153,7 +153,7 @@ def create_email_verification_token(
         "iat": now,
         "exp": expire,
     }
-    
+
     return jwt.encode(payload, get_secret_key(), algorithm=ALGORITHM)
 
 
@@ -164,21 +164,21 @@ def create_password_reset_token(
 ) -> str:
     """
     Create a token for password reset.
-    
+
     Args:
         user_id: User's unique identifier
         email: User's email address
         expires_delta: Custom expiration time
-        
+
     Returns:
         str: Encoded JWT token for password reset
     """
     if expires_delta is None:
         expires_delta = timedelta(hours=PASSWORD_RESET_EXPIRE_HOURS)
-    
+
     now = datetime.now(timezone.utc)
     expire = now + expires_delta
-    
+
     payload = {
         "sub": user_id,
         "email": email,
@@ -186,20 +186,20 @@ def create_password_reset_token(
         "iat": now,
         "exp": expire,
     }
-    
+
     return jwt.encode(payload, get_secret_key(), algorithm=ALGORITHM)
 
 
 def decode_token(token: str) -> Dict[str, Any]:
     """
     Decode a JWT token without verification.
-    
+
     Args:
         token: Encoded JWT token
-        
+
     Returns:
         Dict: Token payload
-        
+
     Raises:
         InvalidTokenError: If token is malformed
     """
@@ -220,14 +220,14 @@ def verify_token(
 ) -> Dict[str, Any]:
     """
     Verify and decode a JWT token.
-    
+
     Args:
         token: Encoded JWT token
         expected_type: Expected token type (access, refresh, etc.)
-        
+
     Returns:
         Dict: Verified token payload
-        
+
     Raises:
         TokenExpiredError: If token has expired
         InvalidTokenError: If token is invalid or type mismatch
@@ -238,7 +238,7 @@ def verify_token(
             get_secret_key(),
             algorithms=[ALGORITHM],
         )
-        
+
         # Verify token type if specified
         if expected_type:
             token_type = payload.get("type")
@@ -246,9 +246,9 @@ def verify_token(
                 raise InvalidTokenError(
                     f"Expected {expected_type.value} token, got {token_type}"
                 )
-        
+
         return payload
-        
+
     except jwt.ExpiredSignatureError:
         raise TokenExpiredError("Token has expired")
     except jwt.InvalidTokenError as e:
@@ -258,10 +258,10 @@ def verify_token(
 def get_token_expiry(token: str) -> Optional[datetime]:
     """
     Get the expiration time of a token.
-    
+
     Args:
         token: Encoded JWT token
-        
+
     Returns:
         datetime: Expiration time or None if not set
     """
@@ -278,10 +278,10 @@ def get_token_expiry(token: str) -> Optional[datetime]:
 def is_token_expired(token: str) -> bool:
     """
     Check if a token has expired.
-    
+
     Args:
         token: Encoded JWT token
-        
+
     Returns:
         bool: True if expired, False otherwise
     """
@@ -294,10 +294,10 @@ def is_token_expired(token: str) -> bool:
 def get_user_id_from_token(token: str) -> Optional[str]:
     """
     Extract user ID from a token without full verification.
-    
+
     Args:
         token: Encoded JWT token
-        
+
     Returns:
         str: User ID or None if extraction fails
     """

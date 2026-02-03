@@ -5,21 +5,20 @@ Pluggable providers for business bank account setup.
 Supports Mercury, Relay, and mock providers.
 """
 
+import logging
 import os
 import uuid
-import logging
 from abc import ABC, abstractmethod
-from typing import Optional, Dict, Any, List
-from datetime import timezone, datetime
+from datetime import datetime, timezone
+from typing import Dict, Optional
+
 import httpx
 
 from src.business.models import (
-    BusinessType,
-    FormationState,
-    BankingStatus,
     BankAccountType,
     BankingRequest,
     BankingResult,
+    BankingStatus,
 )
 
 logger = logging.getLogger(__name__)
@@ -32,27 +31,27 @@ class BankingError(Exception):
 
 class BankingProvider(ABC):
     """Abstract base class for banking providers."""
-    
+
     @property
     @abstractmethod
     def name(self) -> str:
         """Provider name."""
         pass
-    
+
     @abstractmethod
     async def submit_application(
         self, request: BankingRequest
     ) -> BankingResult:
         """Submit bank account application."""
         pass
-    
+
     @abstractmethod
     async def get_application_status(
         self, request_id: str
     ) -> BankingResult:
         """Get application status."""
         pass
-    
+
     @abstractmethod
     async def get_account_info(
         self, account_id: str
@@ -64,10 +63,10 @@ class BankingProvider(ABC):
 class MercuryProvider(BankingProvider):
     """
     Mercury Bank API integration.
-    
+
     Mercury is popular for startups and tech companies.
     """
-    
+
     def __init__(
         self,
         api_key: Optional[str] = None,
@@ -76,29 +75,29 @@ class MercuryProvider(BankingProvider):
         self.api_key = api_key or os.getenv("MERCURY_API_KEY")
         self.sandbox = sandbox
         self.base_url = (
-            "https://api.mercury.com/api/v1" 
-            if not sandbox 
+            "https://api.mercury.com/api/v1"
+            if not sandbox
             else "https://api.sandbox.mercury.com/api/v1"
         )
-    
+
     @property
     def name(self) -> str:
         return "mercury"
-    
+
     def _get_headers(self) -> Dict[str, str]:
         """Get API headers."""
         return {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
         }
-    
+
     async def submit_application(
         self, request: BankingRequest
     ) -> BankingResult:
         """Submit Mercury bank account application."""
         if not self.api_key:
             raise BankingError("Mercury API key not configured")
-        
+
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
@@ -127,7 +126,7 @@ class MercuryProvider(BankingProvider):
                     },
                     timeout=60.0,
                 )
-                
+
                 if response.status_code in (200, 201):
                     data = response.json()
                     return BankingResult(
@@ -143,17 +142,17 @@ class MercuryProvider(BankingProvider):
                     )
                 else:
                     raise BankingError(f"Mercury API error: {response.text}")
-                    
+
         except httpx.RequestError as e:
             raise BankingError(f"Request failed: {e}")
-    
+
     async def get_application_status(
         self, request_id: str
     ) -> BankingResult:
         """Get Mercury application status."""
         if not self.api_key:
             raise BankingError("Mercury API key not configured")
-        
+
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
@@ -161,10 +160,10 @@ class MercuryProvider(BankingProvider):
                     headers=self._get_headers(),
                     timeout=30.0,
                 )
-                
+
                 if response.status_code == 200:
                     data = response.json()
-                    
+
                     status_map = {
                         "pending": BankingStatus.APPLICATION_PENDING,
                         "verification_required": BankingStatus.VERIFICATION_REQUIRED,
@@ -172,7 +171,7 @@ class MercuryProvider(BankingProvider):
                         "active": BankingStatus.ACTIVE,
                         "rejected": BankingStatus.REJECTED,
                     }
-                    
+
                     return BankingResult(
                         request_id=request_id,
                         status=status_map.get(data.get("status"), BankingStatus.APPLICATION_PENDING),
@@ -188,17 +187,17 @@ class MercuryProvider(BankingProvider):
                     )
                 else:
                     raise BankingError(f"Failed to get application status: {response.text}")
-                    
+
         except httpx.RequestError as e:
             raise BankingError(f"Request failed: {e}")
-    
+
     async def get_account_info(
         self, account_id: str
     ) -> BankingResult:
         """Get Mercury account information."""
         if not self.api_key:
             raise BankingError("Mercury API key not configured")
-        
+
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
@@ -206,10 +205,10 @@ class MercuryProvider(BankingProvider):
                     headers=self._get_headers(),
                     timeout=30.0,
                 )
-                
+
                 if response.status_code == 200:
                     data = response.json()
-                    
+
                     return BankingResult(
                         request_id=account_id,
                         status=BankingStatus.ACTIVE,
@@ -223,7 +222,7 @@ class MercuryProvider(BankingProvider):
                     )
                 else:
                     raise BankingError(f"Failed to get account info: {response.text}")
-                    
+
         except httpx.RequestError as e:
             raise BankingError(f"Request failed: {e}")
 
@@ -231,10 +230,10 @@ class MercuryProvider(BankingProvider):
 class RelayProvider(BankingProvider):
     """
     Relay Bank API integration.
-    
+
     Relay is another popular choice for startups.
     """
-    
+
     def __init__(
         self,
         api_key: Optional[str] = None,
@@ -247,25 +246,25 @@ class RelayProvider(BankingProvider):
             if not sandbox
             else "https://sandbox.api.relay.com/v1"
         )
-    
+
     @property
     def name(self) -> str:
         return "relay"
-    
+
     def _get_headers(self) -> Dict[str, str]:
         """Get API headers."""
         return {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
         }
-    
+
     async def submit_application(
         self, request: BankingRequest
     ) -> BankingResult:
         """Submit Relay bank account application."""
         if not self.api_key:
             raise BankingError("Relay API key not configured")
-        
+
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
@@ -294,7 +293,7 @@ class RelayProvider(BankingProvider):
                     },
                     timeout=60.0,
                 )
-                
+
                 if response.status_code in (200, 201):
                     data = response.json()
                     return BankingResult(
@@ -310,17 +309,17 @@ class RelayProvider(BankingProvider):
                     )
                 else:
                     raise BankingError(f"Relay API error: {response.text}")
-                    
+
         except httpx.RequestError as e:
             raise BankingError(f"Request failed: {e}")
-    
+
     async def get_application_status(
         self, request_id: str
     ) -> BankingResult:
         """Get Relay application status."""
         if not self.api_key:
             raise BankingError("Relay API key not configured")
-        
+
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
@@ -328,10 +327,10 @@ class RelayProvider(BankingProvider):
                     headers=self._get_headers(),
                     timeout=30.0,
                 )
-                
+
                 if response.status_code == 200:
                     data = response.json()
-                    
+
                     status_map = {
                         "pending": BankingStatus.APPLICATION_PENDING,
                         "needs_info": BankingStatus.VERIFICATION_REQUIRED,
@@ -339,7 +338,7 @@ class RelayProvider(BankingProvider):
                         "active": BankingStatus.ACTIVE,
                         "declined": BankingStatus.REJECTED,
                     }
-                    
+
                     return BankingResult(
                         request_id=request_id,
                         status=status_map.get(data.get("status"), BankingStatus.APPLICATION_PENDING),
@@ -353,17 +352,17 @@ class RelayProvider(BankingProvider):
                     )
                 else:
                     raise BankingError(f"Failed to get application status: {response.text}")
-                    
+
         except httpx.RequestError as e:
             raise BankingError(f"Request failed: {e}")
-    
+
     async def get_account_info(
         self, account_id: str
     ) -> BankingResult:
         """Get Relay account information."""
         if not self.api_key:
             raise BankingError("Relay API key not configured")
-        
+
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
@@ -371,10 +370,10 @@ class RelayProvider(BankingProvider):
                     headers=self._get_headers(),
                     timeout=30.0,
                 )
-                
+
                 if response.status_code == 200:
                     data = response.json()
-                    
+
                     return BankingResult(
                         request_id=account_id,
                         status=BankingStatus.ACTIVE,
@@ -388,27 +387,27 @@ class RelayProvider(BankingProvider):
                     )
                 else:
                     raise BankingError(f"Failed to get account info: {response.text}")
-                    
+
         except httpx.RequestError as e:
             raise BankingError(f"Request failed: {e}")
 
 
 class MockBankingProvider(BankingProvider):
     """Mock provider for testing."""
-    
+
     def __init__(self):
         self._applications: Dict[str, BankingResult] = {}
-    
+
     @property
     def name(self) -> str:
         return "mock"
-    
+
     async def submit_application(
         self, request: BankingRequest
     ) -> BankingResult:
         """Submit mock bank application."""
         request_id = str(uuid.uuid4())
-        
+
         result = BankingResult(
             request_id=request_id,
             status=BankingStatus.APPLICATION_PENDING,
@@ -420,10 +419,10 @@ class MockBankingProvider(BankingProvider):
             message="Mock application submitted",
             verification_steps=["Mock verification"],
         )
-        
+
         self._applications[request_id] = result
         return result
-    
+
     async def get_application_status(
         self, request_id: str
     ) -> BankingResult:
@@ -431,14 +430,14 @@ class MockBankingProvider(BankingProvider):
         if request_id not in self._applications:
             raise BankingError(f"Application not found: {request_id}")
         return self._applications[request_id]
-    
+
     async def approve_application(
         self, request_id: str
     ) -> BankingResult:
         """Approve a mock application (for testing)."""
         if request_id not in self._applications:
             raise BankingError(f"Application not found: {request_id}")
-        
+
         result = self._applications[request_id]
         result.status = BankingStatus.ACTIVE
         result.account_number = "****1234"
@@ -446,16 +445,16 @@ class MockBankingProvider(BankingProvider):
         result.verification_steps = []
         result.message = "Account is active"
         result.updated_at = datetime.now(timezone.utc)
-        
+
         return result
-    
+
     async def get_account_info(
         self, account_id: str
     ) -> BankingResult:
         """Get mock account info."""
         if account_id in self._applications:
             return self._applications[account_id]
-        
+
         return BankingResult(
             request_id=account_id,
             status=BankingStatus.ACTIVE,
@@ -470,20 +469,20 @@ class MockBankingProvider(BankingProvider):
 
 class BankingService:
     """High-level service for business banking."""
-    
+
     def __init__(
         self,
         provider: Optional[BankingProvider] = None,
         default_provider: str = "mercury",
     ):
         self.default_provider = default_provider
-        
+
         if provider:
             self.provider = provider
         else:
             provider_name = os.getenv("BANKING_PROVIDER", default_provider)
             self.provider = self._create_provider(provider_name)
-    
+
     def _create_provider(self, name: str) -> BankingProvider:
         """Create provider by name."""
         providers = {
@@ -491,25 +490,25 @@ class BankingService:
             "relay": RelayProvider,
             "mock": MockBankingProvider,
         }
-        
+
         if name not in providers:
             raise BankingError(f"Unknown provider: {name}")
-        
+
         return providers[name]()
-    
+
     async def apply_for_account(
         self, request: BankingRequest
     ) -> BankingResult:
         """Apply for a business bank account."""
         logger.info(f"Starting bank account application for {request.business_name}")
         return await self.provider.submit_application(request)
-    
+
     async def get_application_status(
         self, request_id: str
     ) -> BankingResult:
         """Get bank application status."""
         return await self.provider.get_application_status(request_id)
-    
+
     async def get_account(
         self, account_id: str
     ) -> BankingResult:

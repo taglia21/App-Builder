@@ -4,12 +4,12 @@ Sentry Integration
 Provides Sentry error tracking and performance monitoring.
 """
 
-import os
 import logging
-from dataclasses import dataclass, field
-from typing import Optional, Dict, Any, List, Callable
+import os
 from contextlib import contextmanager
+from dataclasses import dataclass, field
 from functools import wraps
+from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +20,8 @@ _sentry_sdk = None
 
 try:
     import sentry_sdk
-    from sentry_sdk.integrations.logging import LoggingIntegration
     from sentry_sdk.integrations.asyncio import AsyncioIntegration
+    from sentry_sdk.integrations.logging import LoggingIntegration
     _sentry_available = True
     _sentry_sdk = sentry_sdk
 except ImportError:
@@ -37,20 +37,20 @@ class SentryConfig:
     sample_rate: float = 1.0
     traces_sample_rate: float = 0.1
     profiles_sample_rate: float = 0.1
-    
+
     # Feature flags
     enable_tracing: bool = True
     enable_profiling: bool = False
     attach_stacktrace: bool = True
     send_default_pii: bool = False
-    
+
     # Filtering
     ignore_errors: List[str] = field(default_factory=list)
     deny_urls: List[str] = field(default_factory=list)
-    
+
     # Debug
     debug: bool = False
-    
+
     @classmethod
     def from_env(cls) -> "SentryConfig":
         """Create config from environment variables."""
@@ -70,43 +70,43 @@ class SentryConfig:
 class SentryClient:
     """
     Sentry client wrapper.
-    
+
     Provides a clean interface for Sentry operations with
     graceful fallbacks when Sentry is not available.
     """
-    
+
     def __init__(self, config: Optional[SentryConfig] = None):
         """
         Initialize Sentry client.
-        
+
         Args:
             config: Sentry configuration. If None, loads from environment.
         """
         self.config = config or SentryConfig.from_env()
         self._initialized = False
         self._hub = None
-    
+
     def init(self) -> bool:
         """
         Initialize Sentry SDK.
-        
+
         Returns:
             True if Sentry was initialized, False otherwise.
         """
         global _sentry_initialized
-        
+
         if not _sentry_available:
             logger.warning("Sentry SDK not available. Install with: pip install sentry-sdk")
             return False
-        
+
         if not self.config.dsn:
             logger.debug("Sentry DSN not configured. Error tracking disabled.")
             return False
-        
+
         if _sentry_initialized:
             logger.debug("Sentry already initialized.")
             return True
-        
+
         try:
             integrations = [
                 LoggingIntegration(
@@ -115,7 +115,7 @@ class SentryClient:
                 ),
                 AsyncioIntegration(),
             ]
-            
+
             _sentry_sdk.init(
                 dsn=self.config.dsn,
                 environment=self.config.environment,
@@ -129,24 +129,24 @@ class SentryClient:
                 integrations=integrations,
                 before_send=self._before_send,
             )
-            
+
             self._initialized = True
             _sentry_initialized = True
             logger.info(f"Sentry initialized for environment: {self.config.environment}")
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to initialize Sentry: {e}")
             return False
-    
+
     def _before_send(self, event: Dict[str, Any], hint: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Filter events before sending to Sentry.
-        
+
         Args:
             event: The event to be sent.
             hint: Additional information about the event.
-        
+
         Returns:
             The event to send, or None to drop it.
         """
@@ -156,9 +156,9 @@ class SentryClient:
                 exc_type = exc_info.get("type", "")
                 if exc_type in self.config.ignore_errors:
                     return None
-        
+
         return event
-    
+
     def capture_exception(
         self,
         error: Optional[Exception] = None,
@@ -166,11 +166,11 @@ class SentryClient:
     ) -> Optional[str]:
         """
         Capture an exception.
-        
+
         Args:
             error: The exception to capture. If None, captures current exception.
             **kwargs: Additional data to attach.
-        
+
         Returns:
             Event ID if captured, None otherwise.
         """
@@ -178,9 +178,9 @@ class SentryClient:
             if error:
                 logger.exception(f"Error (not sent to Sentry): {error}")
             return None
-        
+
         return _sentry_sdk.capture_exception(error, **kwargs)
-    
+
     def capture_message(
         self,
         message: str,
@@ -189,21 +189,21 @@ class SentryClient:
     ) -> Optional[str]:
         """
         Capture a message.
-        
+
         Args:
             message: The message to capture.
             level: Log level (debug, info, warning, error, fatal).
             **kwargs: Additional data to attach.
-        
+
         Returns:
             Event ID if captured, None otherwise.
         """
         if not _sentry_available or not _sentry_initialized:
             logger.log(getattr(logging, level.upper(), logging.INFO), message)
             return None
-        
+
         return _sentry_sdk.capture_message(message, level=level, **kwargs)
-    
+
     def set_user(
         self,
         user_id: Optional[str] = None,
@@ -213,7 +213,7 @@ class SentryClient:
     ) -> None:
         """
         Set user context.
-        
+
         Args:
             user_id: User ID.
             email: User email.
@@ -222,7 +222,7 @@ class SentryClient:
         """
         if not _sentry_available or not _sentry_initialized:
             return
-        
+
         user_data = {
             k: v for k, v in {
                 "id": user_id,
@@ -231,35 +231,35 @@ class SentryClient:
                 **kwargs,
             }.items() if v is not None
         }
-        
+
         _sentry_sdk.set_user(user_data)
-    
+
     def set_context(self, key: str, value: Dict[str, Any]) -> None:
         """
         Set additional context.
-        
+
         Args:
             key: Context key.
             value: Context data.
         """
         if not _sentry_available or not _sentry_initialized:
             return
-        
+
         _sentry_sdk.set_context(key, value)
-    
+
     def set_tag(self, key: str, value: str) -> None:
         """
         Set a tag.
-        
+
         Args:
             key: Tag key.
             value: Tag value.
         """
         if not _sentry_available or not _sentry_initialized:
             return
-        
+
         _sentry_sdk.set_tag(key, value)
-    
+
     def add_breadcrumb(
         self,
         message: str,
@@ -269,7 +269,7 @@ class SentryClient:
     ) -> None:
         """
         Add a breadcrumb.
-        
+
         Args:
             message: Breadcrumb message.
             category: Category for grouping.
@@ -278,14 +278,14 @@ class SentryClient:
         """
         if not _sentry_available or not _sentry_initialized:
             return
-        
+
         _sentry_sdk.add_breadcrumb(
             message=message,
             category=category,
             level=level,
             data=data,
         )
-    
+
     @contextmanager
     def start_transaction(
         self,
@@ -295,22 +295,22 @@ class SentryClient:
     ):
         """
         Start a transaction for performance monitoring.
-        
+
         Args:
             name: Transaction name.
             op: Operation type.
             **kwargs: Additional transaction data.
-        
+
         Yields:
             Transaction object or None.
         """
         if not _sentry_available or not _sentry_initialized or not self.config.enable_tracing:
             yield None
             return
-        
+
         with _sentry_sdk.start_transaction(name=name, op=op, **kwargs) as transaction:
             yield transaction
-    
+
     @contextmanager
     def start_span(
         self,
@@ -319,38 +319,38 @@ class SentryClient:
     ):
         """
         Start a span within a transaction.
-        
+
         Args:
             description: Span description.
             op: Operation type.
-        
+
         Yields:
             Span object or None.
         """
         if not _sentry_available or not _sentry_initialized:
             yield None
             return
-        
+
         with _sentry_sdk.start_span(description=description, op=op) as span:
             yield span
-    
+
     def get_current_transaction(self):
         """Get the current transaction."""
         if not _sentry_available or not _sentry_initialized:
             return None
-        
+
         return _sentry_sdk.Hub.current.scope.transaction
-    
+
     def flush(self, timeout: float = 2.0) -> None:
         """
         Flush pending events.
-        
+
         Args:
             timeout: Maximum time to wait.
         """
         if not _sentry_available or not _sentry_initialized:
             return
-        
+
         _sentry_sdk.flush(timeout=timeout)
 
 
@@ -361,10 +361,10 @@ _client: Optional[SentryClient] = None
 def init_sentry(config: Optional[SentryConfig] = None) -> bool:
     """
     Initialize Sentry globally.
-    
+
     Args:
         config: Sentry configuration.
-    
+
     Returns:
         True if initialized successfully.
     """
@@ -426,27 +426,27 @@ def get_transaction():
 def traced(name: Optional[str] = None, op: str = "function"):
     """
     Decorator to trace a function.
-    
+
     Args:
         name: Transaction name. Defaults to function name.
         op: Operation type.
     """
     def decorator(func: Callable):
         transaction_name = name or f"{func.__module__}.{func.__name__}"
-        
+
         @wraps(func)
         def sync_wrapper(*args, **kwargs):
             with get_client().start_span(description=transaction_name, op=op):
                 return func(*args, **kwargs)
-        
+
         @wraps(func)
         async def async_wrapper(*args, **kwargs):
             with get_client().start_span(description=transaction_name, op=op):
                 return await func(*args, **kwargs)
-        
+
         import asyncio
         if asyncio.iscoroutinefunction(func):
             return async_wrapper
         return sync_wrapper
-    
+
     return decorator

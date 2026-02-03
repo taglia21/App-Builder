@@ -4,16 +4,17 @@ Error Reporting
 Custom error reporting with context, severity, and multiple destinations.
 """
 
-import os
 import json
 import logging
+import os
 import traceback
-from enum import Enum
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Optional, Dict, Any, List
+from enum import Enum
 from pathlib import Path
+from typing import Any, Dict, List, Optional
+
 import httpx
 
 logger = logging.getLogger(__name__)
@@ -50,23 +51,23 @@ class ErrorContext:
     project_id: Optional[str] = None
     request_id: Optional[str] = None
     session_id: Optional[str] = None
-    
+
     # Request info
     method: Optional[str] = None
     path: Optional[str] = None
     query_params: Optional[Dict[str, Any]] = None
     headers: Optional[Dict[str, str]] = None
     body: Optional[Dict[str, Any]] = None
-    
+
     # Environment
     environment: str = "development"
     service: str = "nexusai"
     version: Optional[str] = None
     hostname: Optional[str] = None
-    
+
     # Additional data
     extra: Dict[str, Any] = field(default_factory=dict)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
         return {
@@ -86,12 +87,12 @@ class ErrorContext:
             "hostname": self.hostname,
             "extra": self.extra,
         }
-    
+
     def _sanitize_headers(self, headers: Optional[Dict[str, str]]) -> Optional[Dict[str, str]]:
         """Remove sensitive headers."""
         if not headers:
             return None
-        
+
         sensitive = {"authorization", "cookie", "x-api-key", "api-key"}
         return {
             k: "[REDACTED]" if k.lower() in sensitive else v
@@ -106,19 +107,19 @@ class ErrorReport:
     timestamp: datetime
     severity: ErrorSeverity
     category: ErrorCategory
-    
+
     # Error details
     message: str
     error_type: str
     stacktrace: Optional[str] = None
-    
+
     # Context
     context: Optional[ErrorContext] = None
-    
+
     # Grouping
     fingerprint: Optional[str] = None
     tags: Dict[str, str] = field(default_factory=dict)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
         return {
@@ -133,7 +134,7 @@ class ErrorReport:
             "fingerprint": self.fingerprint,
             "tags": self.tags,
         }
-    
+
     def to_json(self) -> str:
         """Convert to JSON string."""
         return json.dumps(self.to_dict(), indent=2, default=str)
@@ -141,20 +142,20 @@ class ErrorReport:
 
 class ErrorReporter(ABC):
     """Abstract base class for error reporters."""
-    
+
     @abstractmethod
     def report(self, error: ErrorReport) -> bool:
         """
         Report an error.
-        
+
         Args:
             error: The error report to send.
-        
+
         Returns:
             True if successfully reported.
         """
         pass
-    
+
     @abstractmethod
     def flush(self) -> None:
         """Flush any pending reports."""
@@ -163,11 +164,11 @@ class ErrorReporter(ABC):
 
 class ConsoleReporter(ErrorReporter):
     """Reports errors to console/logs."""
-    
+
     def __init__(self, log_level: int = logging.ERROR):
         self.logger = logging.getLogger("error_reporter")
         self.log_level = log_level
-    
+
     def report(self, error: ErrorReport) -> bool:
         """Report error to console."""
         level_map = {
@@ -177,24 +178,24 @@ class ConsoleReporter(ErrorReporter):
             ErrorSeverity.ERROR: logging.ERROR,
             ErrorSeverity.CRITICAL: logging.CRITICAL,
         }
-        
+
         level = level_map.get(error.severity, logging.ERROR)
-        
+
         message = (
             f"[{error.category.value}] {error.message}\n"
             f"Error ID: {error.error_id}\n"
             f"Type: {error.error_type}"
         )
-        
+
         if error.context and error.context.user_id:
             message += f"\nUser: {error.context.user_id}"
-        
+
         if error.stacktrace:
             message += f"\n\nStacktrace:\n{error.stacktrace}"
-        
+
         self.logger.log(level, message)
         return True
-    
+
     def flush(self) -> None:
         """No-op for console reporter."""
         pass
@@ -202,7 +203,7 @@ class ConsoleReporter(ErrorReporter):
 
 class FileReporter(ErrorReporter):
     """Reports errors to files."""
-    
+
     def __init__(
         self,
         log_dir: str = "./logs/errors",
@@ -215,12 +216,12 @@ class FileReporter(ErrorReporter):
         self.max_files = max_files
         self._current_file = None
         self._current_size = 0
-    
+
     def _get_log_file(self) -> Path:
         """Get current log file, rotating if needed."""
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         base_path = self.log_dir / f"errors-{today}.jsonl"
-        
+
         if base_path.exists() and base_path.stat().st_size >= self.max_file_size:
             # Rotate
             for i in range(self.max_files - 1, 0, -1):
@@ -229,9 +230,9 @@ class FileReporter(ErrorReporter):
                 if old.exists():
                     old.rename(new)
             base_path.rename(self.log_dir / f"errors-{today}.1.jsonl")
-        
+
         return base_path
-    
+
     def report(self, error: ErrorReport) -> bool:
         """Report error to file."""
         try:
@@ -242,7 +243,7 @@ class FileReporter(ErrorReporter):
         except Exception as e:
             logger.error(f"Failed to write error to file: {e}")
             return False
-    
+
     def flush(self) -> None:
         """No-op for file reporter."""
         pass
@@ -250,7 +251,7 @@ class FileReporter(ErrorReporter):
 
 class WebhookReporter(ErrorReporter):
     """Reports errors to webhooks (Slack, Discord, etc.)."""
-    
+
     def __init__(
         self,
         webhook_url: Optional[str] = None,
@@ -261,7 +262,7 @@ class WebhookReporter(ErrorReporter):
         self.min_severity = min_severity
         self.format_type = format_type
         self._pending: List[ErrorReport] = []
-    
+
     def _should_report(self, error: ErrorReport) -> bool:
         """Check if error meets minimum severity."""
         severity_order = [
@@ -272,7 +273,7 @@ class WebhookReporter(ErrorReporter):
             ErrorSeverity.CRITICAL,
         ]
         return severity_order.index(error.severity) >= severity_order.index(self.min_severity)
-    
+
     def _format_slack(self, error: ErrorReport) -> Dict[str, Any]:
         """Format error for Slack."""
         color_map = {
@@ -282,20 +283,20 @@ class WebhookReporter(ErrorReporter):
             ErrorSeverity.ERROR: "#f44336",
             ErrorSeverity.CRITICAL: "#9c27b0",
         }
-        
+
         fields = [
             {"title": "Error ID", "value": error.error_id, "short": True},
             {"title": "Category", "value": error.category.value, "short": True},
             {"title": "Type", "value": error.error_type, "short": True},
             {"title": "Severity", "value": error.severity.value, "short": True},
         ]
-        
+
         if error.context:
             if error.context.user_id:
                 fields.append({"title": "User", "value": error.context.user_id, "short": True})
             if error.context.environment:
                 fields.append({"title": "Environment", "value": error.context.environment, "short": True})
-        
+
         return {
             "attachments": [{
                 "color": color_map.get(error.severity, "#f44336"),
@@ -306,7 +307,7 @@ class WebhookReporter(ErrorReporter):
                 "ts": int(error.timestamp.timestamp()),
             }]
         }
-    
+
     def _format_discord(self, error: ErrorReport) -> Dict[str, Any]:
         """Format error for Discord."""
         color_map = {
@@ -316,7 +317,7 @@ class WebhookReporter(ErrorReporter):
             ErrorSeverity.ERROR: 0xf44336,
             ErrorSeverity.CRITICAL: 0x9c27b0,
         }
-        
+
         return {
             "embeds": [{
                 "title": f"🚨 {error.severity.value.upper()}",
@@ -330,12 +331,12 @@ class WebhookReporter(ErrorReporter):
                 "timestamp": error.timestamp.isoformat(),
             }]
         }
-    
+
     def report(self, error: ErrorReport) -> bool:
         """Report error to webhook."""
         if not self.webhook_url or not self._should_report(error):
             return False
-        
+
         try:
             if self.format_type == "slack":
                 payload = self._format_slack(error)
@@ -343,7 +344,7 @@ class WebhookReporter(ErrorReporter):
                 payload = self._format_discord(error)
             else:
                 payload = error.to_dict()
-            
+
             response = httpx.post(
                 self.webhook_url,
                 json=payload,
@@ -351,31 +352,31 @@ class WebhookReporter(ErrorReporter):
             )
             response.raise_for_status()
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to send error to webhook: {e}")
             self._pending.append(error)
             return False
-    
+
     def flush(self) -> None:
         """Retry pending reports."""
         pending = self._pending.copy()
         self._pending.clear()
-        
+
         for error in pending:
             self.report(error)
 
 
 class CompositeReporter(ErrorReporter):
     """Combines multiple reporters."""
-    
+
     def __init__(self, reporters: Optional[List[ErrorReporter]] = None):
         self.reporters = reporters or []
-    
+
     def add_reporter(self, reporter: ErrorReporter) -> None:
         """Add a reporter."""
         self.reporters.append(reporter)
-    
+
     def report(self, error: ErrorReport) -> bool:
         """Report to all reporters."""
         success = True
@@ -387,7 +388,7 @@ class CompositeReporter(ErrorReporter):
                 logger.error(f"Reporter {reporter.__class__.__name__} failed: {e}")
                 success = False
         return success
-    
+
     def flush(self) -> None:
         """Flush all reporters."""
         for reporter in self.reporters:
@@ -406,27 +407,27 @@ def create_error_reporter(
 ) -> CompositeReporter:
     """
     Create a composite error reporter.
-    
+
     Args:
         console: Enable console reporting.
         file: Enable file reporting.
         webhook_url: Webhook URL for alerts.
         log_dir: Directory for error logs.
-    
+
     Returns:
         Configured CompositeReporter.
     """
     reporters = []
-    
+
     if console:
         reporters.append(ConsoleReporter())
-    
+
     if file:
         reporters.append(FileReporter(log_dir=log_dir))
-    
+
     if webhook_url:
         reporters.append(WebhookReporter(webhook_url=webhook_url))
-    
+
     return CompositeReporter(reporters)
 
 
@@ -439,19 +440,19 @@ def create_error_report(
 ) -> ErrorReport:
     """
     Create an error report from an exception.
-    
+
     Args:
         exception: The exception to report.
         severity: Error severity.
         category: Error category.
         context: Additional context.
         tags: Additional tags.
-    
+
     Returns:
         ErrorReport instance.
     """
     import uuid
-    
+
     return ErrorReport(
         error_id=str(uuid.uuid4()),
         timestamp=datetime.now(timezone.utc),

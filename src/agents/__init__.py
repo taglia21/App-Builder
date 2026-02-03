@@ -5,13 +5,20 @@ Implements the "Team of Rivals" architecture for app generation
 with pre-declared acceptance criteria and veto authority.
 """
 
+from .base import BaseAgent, CriticAgent, LLMProvider, WriterAgent
 from .messages import (
-    AgentRole, CriticDecision, TaskStatus,
-    AgentMessage, PlanningRequest, ExecutionPlan,
-    CodeGenerationRequest, GeneratedCode, CriticReview,
-    ValidationResult, OrchestrationState
+    AgentMessage,
+    AgentRole,
+    CodeGenerationRequest,
+    CriticDecision,
+    CriticReview,
+    ExecutionPlan,
+    GeneratedCode,
+    OrchestrationState,
+    PlanningRequest,
+    TaskStatus,
+    ValidationResult,
 )
-from .base import BaseAgent, CriticAgent, WriterAgent, LLMProvider
 from .orchestrator import AIOfficeOrchestrator
 
 __all__ = [
@@ -28,16 +35,16 @@ __all__ = [
 ]
 
 # Organizational Intelligence Framework
-from .governance_orchestrator import GovernanceOrchestrator
 from .governance import (
-    ExecutiveBranch,
-    LegislativeBranch,
-    JudicialBranch,
     ExecutionResult,
-    LegislativeSession,
+    ExecutiveBranch,
+    JudicialBranch,
     JudicialReview,
-    ReviewDecision
+    LegislativeBranch,
+    LegislativeSession,
+    ReviewDecision,
 )
+from .governance_orchestrator import GovernanceOrchestrator
 
 __all__.extend([
     # Governance Orchestrator

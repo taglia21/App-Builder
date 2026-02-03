@@ -4,12 +4,12 @@ Subscription Management
 Handles subscription tiers, pricing, and plan management for LaunchForge.
 """
 
-from enum import Enum
-from dataclasses import dataclass, field
-from typing import Optional, Dict, Any, List
-from datetime import timezone, datetime
-import os
 import logging
+import os
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from enum import Enum
+from typing import Any, Dict, List, Optional
 
 from src.payments.stripe_client import StripeClient, StripeSubscription, SubscriptionError
 
@@ -34,7 +34,7 @@ class PricingPlan:
     stripe_price_id_monthly: Optional[str] = None
     stripe_price_id_yearly: Optional[str] = None
     stripe_product_id: Optional[str] = None
-    
+
     # Features
     apps_per_month: int = 1
     priority_support: bool = False
@@ -43,13 +43,13 @@ class PricingPlan:
     custom_domains: bool = False
     team_members: int = 1
     deployment_platforms: List[str] = field(default_factory=lambda: ["vercel"])
-    
+
     # Business features
     llc_formation: bool = False
     ein_application: bool = False
     banking_setup: bool = False
     domain_registration: bool = False
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for API responses."""
         return {
@@ -150,30 +150,30 @@ class UserSubscription:
     current_period_start: Optional[datetime] = None
     current_period_end: Optional[datetime] = None
     cancel_at_period_end: bool = False
-    
+
     # Usage tracking
     apps_created_this_month: int = 0
     usage_reset_date: Optional[datetime] = None
-    
+
     @property
     def plan(self) -> PricingPlan:
         """Get the pricing plan for this tier."""
         return PRICING_PLANS[self.tier]
-    
+
     @property
     def can_create_app(self) -> bool:
         """Check if user can create another app this month."""
         if self.plan.apps_per_month == -1:  # Unlimited
             return True
         return self.apps_created_this_month < self.plan.apps_per_month
-    
+
     @property
     def apps_remaining(self) -> int:
         """Get remaining apps for this month."""
         if self.plan.apps_per_month == -1:
             return -1  # Unlimited
         return max(0, self.plan.apps_per_month - self.apps_created_this_month)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for API responses."""
         return {
@@ -193,37 +193,37 @@ class SubscriptionManager:
     """
     Manages user subscriptions and plan enforcement.
     """
-    
+
     def __init__(self, stripe_client: Optional[StripeClient] = None):
         """
         Initialize subscription manager.
-        
+
         Args:
             stripe_client: Stripe client instance (creates one if not provided)
         """
         self.stripe = stripe_client or StripeClient()
-    
+
     def get_plan(self, tier: SubscriptionTier) -> PricingPlan:
         """
         Get a pricing plan by tier.
-        
+
         Args:
             tier: Subscription tier
-            
+
         Returns:
             PricingPlan for the tier
         """
         return PRICING_PLANS[tier]
-    
+
     def get_all_plans(self) -> List[PricingPlan]:
         """
         Get all available pricing plans.
-        
+
         Returns:
             List of all PricingPlan objects
         """
         return list(PRICING_PLANS.values())
-    
+
     def create_subscription(
         self,
         user_id: str,
@@ -235,7 +235,7 @@ class SubscriptionManager:
     ) -> UserSubscription:
         """
         Create a new subscription for a user.
-        
+
         Args:
             user_id: User ID
             email: User email
@@ -243,12 +243,12 @@ class SubscriptionManager:
             billing_interval: "monthly" or "yearly"
             trial_days: Number of trial days
             name: Customer name
-            
+
         Returns:
             UserSubscription object
         """
         plan = self.get_plan(tier)
-        
+
         # Free tier doesn't need Stripe
         if tier == SubscriptionTier.FREE:
             return UserSubscription(
@@ -257,26 +257,26 @@ class SubscriptionManager:
                 status="active",
                 current_period_start=datetime.now(timezone.utc),
             )
-        
+
         # Get the appropriate price ID
         price_id = (
-            plan.stripe_price_id_yearly 
-            if billing_interval == "yearly" 
+            plan.stripe_price_id_yearly
+            if billing_interval == "yearly"
             else plan.stripe_price_id_monthly
         )
-        
+
         if not price_id:
             raise SubscriptionError(
                 f"No Stripe price configured for {tier.value} {billing_interval}"
             )
-        
+
         # Create Stripe customer
         customer = self.stripe.create_customer(
             email=email,
             name=name,
             metadata={"user_id": user_id, "tier": tier.value},
         )
-        
+
         # Create subscription
         subscription = self.stripe.create_subscription(
             customer_id=customer.id,
@@ -284,9 +284,9 @@ class SubscriptionManager:
             trial_days=trial_days,
             metadata={"user_id": user_id},
         )
-        
+
         logger.info(f"Created {tier.value} subscription for user {user_id}")
-        
+
         return UserSubscription(
             user_id=user_id,
             tier=tier,
@@ -297,7 +297,7 @@ class SubscriptionManager:
             current_period_end=subscription.current_period_end,
             cancel_at_period_end=subscription.cancel_at_period_end,
         )
-    
+
     def get_subscription(
         self,
         stripe_subscription_id: str,
@@ -305,19 +305,19 @@ class SubscriptionManager:
     ) -> UserSubscription:
         """
         Get a user's subscription details.
-        
+
         Args:
             stripe_subscription_id: Stripe subscription ID
             user_id: User ID
-            
+
         Returns:
             UserSubscription object
         """
         subscription = self.stripe.get_subscription(stripe_subscription_id)
-        
+
         # Determine tier from price ID
         tier = self._tier_from_price_id(subscription.price_id)
-        
+
         return UserSubscription(
             user_id=user_id,
             tier=tier,
@@ -328,7 +328,7 @@ class SubscriptionManager:
             current_period_end=subscription.current_period_end,
             cancel_at_period_end=subscription.cancel_at_period_end,
         )
-    
+
     def upgrade_subscription(
         self,
         stripe_subscription_id: str,
@@ -337,38 +337,38 @@ class SubscriptionManager:
     ) -> StripeSubscription:
         """
         Upgrade a subscription to a higher tier.
-        
+
         Args:
             stripe_subscription_id: Stripe subscription ID
             new_tier: New subscription tier
             billing_interval: "monthly" or "yearly"
-            
+
         Returns:
             Updated StripeSubscription
         """
         plan = self.get_plan(new_tier)
-        
+
         price_id = (
-            plan.stripe_price_id_yearly 
-            if billing_interval == "yearly" 
+            plan.stripe_price_id_yearly
+            if billing_interval == "yearly"
             else plan.stripe_price_id_monthly
         )
-        
+
         if not price_id:
             raise SubscriptionError(
                 f"No Stripe price configured for {new_tier.value} {billing_interval}"
             )
-        
+
         subscription = self.stripe.update_subscription(
             subscription_id=stripe_subscription_id,
             price_id=price_id,
             proration_behavior="create_prorations",
         )
-        
+
         logger.info(f"Upgraded subscription {stripe_subscription_id} to {new_tier.value}")
-        
+
         return subscription
-    
+
     def downgrade_subscription(
         self,
         stripe_subscription_id: str,
@@ -377,43 +377,43 @@ class SubscriptionManager:
     ) -> StripeSubscription:
         """
         Downgrade a subscription to a lower tier (takes effect at period end).
-        
+
         Args:
             stripe_subscription_id: Stripe subscription ID
             new_tier: New subscription tier
             billing_interval: "monthly" or "yearly"
-            
+
         Returns:
             Updated StripeSubscription
         """
         plan = self.get_plan(new_tier)
-        
+
         # For downgrade to free, cancel the subscription
         if new_tier == SubscriptionTier.FREE:
             return self.cancel_subscription(stripe_subscription_id, immediately=False)
-        
+
         price_id = (
-            plan.stripe_price_id_yearly 
-            if billing_interval == "yearly" 
+            plan.stripe_price_id_yearly
+            if billing_interval == "yearly"
             else plan.stripe_price_id_monthly
         )
-        
+
         if not price_id:
             raise SubscriptionError(
                 f"No Stripe price configured for {new_tier.value} {billing_interval}"
             )
-        
+
         # Downgrade takes effect at period end (no proration)
         subscription = self.stripe.update_subscription(
             subscription_id=stripe_subscription_id,
             price_id=price_id,
             proration_behavior="none",
         )
-        
+
         logger.info(f"Scheduled downgrade of {stripe_subscription_id} to {new_tier.value}")
-        
+
         return subscription
-    
+
     def cancel_subscription(
         self,
         stripe_subscription_id: str,
@@ -421,11 +421,11 @@ class SubscriptionManager:
     ) -> StripeSubscription:
         """
         Cancel a subscription.
-        
+
         Args:
             stripe_subscription_id: Stripe subscription ID
             immediately: If True, cancel immediately; otherwise at period end
-            
+
         Returns:
             Cancelled StripeSubscription
         """
@@ -433,24 +433,24 @@ class SubscriptionManager:
             subscription_id=stripe_subscription_id,
             immediately=immediately,
         )
-        
+
         logger.info(
             f"Cancelled subscription {stripe_subscription_id} "
             f"(immediately={immediately})"
         )
-        
+
         return subscription
-    
+
     def reactivate_subscription(
         self,
         stripe_subscription_id: str,
     ) -> StripeSubscription:
         """
         Reactivate a subscription that was set to cancel at period end.
-        
+
         Args:
             stripe_subscription_id: Stripe subscription ID
-            
+
         Returns:
             Reactivated StripeSubscription
         """
@@ -458,11 +458,11 @@ class SubscriptionManager:
             subscription_id=stripe_subscription_id,
             cancel_at_period_end=False,
         )
-        
+
         logger.info(f"Reactivated subscription: {stripe_subscription_id}")
-        
+
         return subscription
-    
+
     def create_checkout_session(
         self,
         tier: SubscriptionTier,
@@ -475,7 +475,7 @@ class SubscriptionManager:
     ) -> Dict[str, Any]:
         """
         Create a Stripe Checkout session for subscription signup.
-        
+
         Args:
             tier: Subscription tier
             success_url: URL after successful payment
@@ -484,26 +484,26 @@ class SubscriptionManager:
             customer_email: Email for new customer
             billing_interval: "monthly" or "yearly"
             trial_days: Trial period days
-            
+
         Returns:
             Checkout session with URL
         """
         plan = self.get_plan(tier)
-        
+
         if tier == SubscriptionTier.FREE:
             raise SubscriptionError("Cannot checkout for free tier")
-        
+
         price_id = (
-            plan.stripe_price_id_yearly 
-            if billing_interval == "yearly" 
+            plan.stripe_price_id_yearly
+            if billing_interval == "yearly"
             else plan.stripe_price_id_monthly
         )
-        
+
         if not price_id:
             raise SubscriptionError(
                 f"No Stripe price configured for {tier.value} {billing_interval}"
             )
-        
+
         return self.stripe.create_checkout_session(
             price_id=price_id,
             success_url=success_url,
@@ -513,7 +513,7 @@ class SubscriptionManager:
             mode="subscription",
             trial_days=trial_days,
         )
-    
+
     def create_portal_session(
         self,
         customer_id: str,
@@ -521,11 +521,11 @@ class SubscriptionManager:
     ) -> Dict[str, Any]:
         """
         Create a customer portal session for self-service management.
-        
+
         Args:
             customer_id: Stripe customer ID
             return_url: URL to return to after portal
-            
+
         Returns:
             Portal session with URL
         """
@@ -533,7 +533,7 @@ class SubscriptionManager:
             customer_id=customer_id,
             return_url=return_url,
         )
-    
+
     def check_feature_access(
         self,
         user_subscription: UserSubscription,
@@ -541,16 +541,16 @@ class SubscriptionManager:
     ) -> bool:
         """
         Check if a user has access to a specific feature.
-        
+
         Args:
             user_subscription: User's subscription
             feature: Feature name to check
-            
+
         Returns:
             True if user has access
         """
         plan = user_subscription.plan
-        
+
         feature_map = {
             "priority_support": plan.priority_support,
             "api_access": plan.api_access,
@@ -561,15 +561,15 @@ class SubscriptionManager:
             "banking_setup": plan.banking_setup,
             "domain_registration": plan.domain_registration,
         }
-        
+
         return feature_map.get(feature, False)
-    
+
     def _tier_from_price_id(self, price_id: str) -> SubscriptionTier:
         """Determine subscription tier from Stripe price ID."""
         for tier, plan in PRICING_PLANS.items():
             if price_id in [plan.stripe_price_id_monthly, plan.stripe_price_id_yearly]:
                 return tier
-        
+
         # Default to free if unknown
         logger.warning(f"Unknown price ID: {price_id}, defaulting to FREE tier")
         return SubscriptionTier.FREE

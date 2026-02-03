@@ -5,26 +5,27 @@ Pluggable providers for business formation services.
 Supports Stripe Atlas, ZenBusiness, and mock providers for testing.
 """
 
+import logging
 import os
 import uuid
-import logging
 from abc import ABC, abstractmethod
-from typing import Optional, Dict, Any, List
-from datetime import timezone, datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, Optional
+
 import httpx
 
 from src.business.models import (
+    EXPEDITED_FEE,
+    FORMATION_PRICES,
+    REGISTERED_AGENT_ANNUAL,
     BusinessType,
-    FormationState,
-    FormationStatus,
-    FormationRequest,
-    FormationResult,
-    EINStatus,
     EINRequest,
     EINResult,
-    FORMATION_PRICES,
-    EXPEDITED_FEE,
-    REGISTERED_AGENT_ANNUAL,
+    EINStatus,
+    FormationRequest,
+    FormationResult,
+    FormationState,
+    FormationStatus,
 )
 
 logger = logging.getLogger(__name__)
@@ -37,41 +38,41 @@ class FormationError(Exception):
 
 class FormationProvider(ABC):
     """Abstract base class for formation providers."""
-    
+
     @property
     @abstractmethod
     def name(self) -> str:
         """Provider name."""
         pass
-    
+
     @abstractmethod
     async def submit_formation(
         self, request: FormationRequest
     ) -> FormationResult:
         """Submit LLC/business formation request."""
         pass
-    
+
     @abstractmethod
     async def get_formation_status(
         self, request_id: str
     ) -> FormationResult:
         """Get status of formation request."""
         pass
-    
+
     @abstractmethod
     async def submit_ein_application(
         self, request: EINRequest
     ) -> EINResult:
         """Submit EIN application."""
         pass
-    
+
     @abstractmethod
     async def get_ein_status(
         self, request_id: str
     ) -> EINResult:
         """Get status of EIN application."""
         pass
-    
+
     @abstractmethod
     def get_pricing(
         self,
@@ -86,11 +87,11 @@ class FormationProvider(ABC):
 class StripeAtlasProvider(FormationProvider):
     """
     Stripe Atlas integration for business formation.
-    
+
     Note: Stripe Atlas requires manual approval and has specific
     requirements. This provider uses their API for status tracking.
     """
-    
+
     def __init__(
         self,
         api_key: Optional[str] = None,
@@ -101,33 +102,33 @@ class StripeAtlasProvider(FormationProvider):
         self.webhook_secret = webhook_secret or os.getenv("STRIPE_ATLAS_WEBHOOK_SECRET")
         self.sandbox = sandbox
         self.base_url = "https://api.stripe.com/v1/atlas" if not sandbox else "https://api.stripe.com/v1/atlas"
-        
+
         # Stripe Atlas pricing (as of 2024)
         self.base_price = 50000  # $500
         self.includes = ["delaware_llc", "ein", "bank_account", "one_year_registered_agent"]
-    
+
     @property
     def name(self) -> str:
         return "stripe_atlas"
-    
+
     async def submit_formation(
         self, request: FormationRequest
     ) -> FormationResult:
         """
         Submit to Stripe Atlas.
-        
+
         Note: In production, this would create an Atlas application
         and return a link for the user to complete.
         """
         if not self.api_key:
             raise FormationError("Stripe Atlas API key not configured")
-        
+
         request_id = str(uuid.uuid4())
-        
+
         # In reality, Stripe Atlas requires manual application
         # This simulates creating an application link
         logger.info(f"Creating Stripe Atlas application for {request.business_name}")
-        
+
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
@@ -148,7 +149,7 @@ class StripeAtlasProvider(FormationProvider):
                     },
                     timeout=30.0,
                 )
-                
+
                 if response.status_code == 200:
                     data = response.json()
                     return FormationResult(
@@ -164,18 +165,18 @@ class StripeAtlasProvider(FormationProvider):
                     )
                 else:
                     raise FormationError(f"Stripe Atlas error: {response.text}")
-                    
+
         except httpx.RequestError as e:
             logger.error(f"Stripe Atlas request failed: {e}")
             raise FormationError(f"Request failed: {e}")
-    
+
     async def get_formation_status(
         self, request_id: str
     ) -> FormationResult:
         """Get Stripe Atlas application status."""
         if not self.api_key:
             raise FormationError("Stripe Atlas API key not configured")
-        
+
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
@@ -183,10 +184,10 @@ class StripeAtlasProvider(FormationProvider):
                     headers={"Authorization": f"Bearer {self.api_key}"},
                     timeout=30.0,
                 )
-                
+
                 if response.status_code == 200:
                     data = response.json()
-                    
+
                     # Map Stripe Atlas status to our status
                     status_map = {
                         "pending": FormationStatus.PENDING,
@@ -196,7 +197,7 @@ class StripeAtlasProvider(FormationProvider):
                         "rejected": FormationStatus.REJECTED,
                         "completed": FormationStatus.COMPLETED,
                     }
-                    
+
                     return FormationResult(
                         request_id=request_id,
                         status=status_map.get(data.get("status"), FormationStatus.PENDING),
@@ -211,16 +212,16 @@ class StripeAtlasProvider(FormationProvider):
                     )
                 else:
                     raise FormationError(f"Failed to get status: {response.text}")
-                    
+
         except httpx.RequestError as e:
             raise FormationError(f"Request failed: {e}")
-    
+
     async def submit_ein_application(
         self, request: EINRequest
     ) -> EINResult:
         """
         Submit EIN application through Atlas.
-        
+
         Note: Stripe Atlas includes EIN in the base package.
         """
         # Atlas handles EIN automatically
@@ -231,14 +232,14 @@ class StripeAtlasProvider(FormationProvider):
             message="EIN is included with Stripe Atlas formation",
             provider=self.name,
         )
-    
+
     async def get_ein_status(
         self, request_id: str
     ) -> EINResult:
         """Get EIN status from Atlas."""
         # Get formation status which includes EIN
         formation = await self.get_formation_status(request_id)
-        
+
         return EINResult(
             request_id=request_id,
             status=EINStatus.RECEIVED if formation.ein else EINStatus.PENDING,
@@ -246,7 +247,7 @@ class StripeAtlasProvider(FormationProvider):
             business_name=formation.business_name,
             provider=self.name,
         )
-    
+
     def get_pricing(
         self,
         state: FormationState,
@@ -266,10 +267,10 @@ class StripeAtlasProvider(FormationProvider):
 class ZenBusinessProvider(FormationProvider):
     """
     ZenBusiness integration for business formation.
-    
+
     More flexible pricing than Stripe Atlas.
     """
-    
+
     def __init__(
         self,
         api_key: Optional[str] = None,
@@ -278,20 +279,20 @@ class ZenBusinessProvider(FormationProvider):
         self.api_key = api_key or os.getenv("ZENBUSINESS_API_KEY")
         self.sandbox = sandbox
         self.base_url = "https://api.zenbusiness.com/v1" if not sandbox else "https://sandbox.api.zenbusiness.com/v1"
-    
+
     @property
     def name(self) -> str:
         return "zenbusiness"
-    
+
     async def submit_formation(
         self, request: FormationRequest
     ) -> FormationResult:
         """Submit formation to ZenBusiness."""
         if not self.api_key:
             raise FormationError("ZenBusiness API key not configured")
-        
+
         request_id = str(uuid.uuid4())
-        
+
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
@@ -324,7 +325,7 @@ class ZenBusinessProvider(FormationProvider):
                     },
                     timeout=30.0,
                 )
-                
+
                 if response.status_code in (200, 201):
                     data = response.json()
                     return FormationResult(
@@ -340,18 +341,18 @@ class ZenBusinessProvider(FormationProvider):
                     )
                 else:
                     raise FormationError(f"ZenBusiness error: {response.text}")
-                    
+
         except httpx.RequestError as e:
             logger.error(f"ZenBusiness request failed: {e}")
             raise FormationError(f"Request failed: {e}")
-    
+
     async def get_formation_status(
         self, request_id: str
     ) -> FormationResult:
         """Get ZenBusiness formation status."""
         if not self.api_key:
             raise FormationError("ZenBusiness API key not configured")
-        
+
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
@@ -359,10 +360,10 @@ class ZenBusinessProvider(FormationProvider):
                     headers={"Authorization": f"Bearer {self.api_key}"},
                     timeout=30.0,
                 )
-                
+
                 if response.status_code == 200:
                     data = response.json()
-                    
+
                     status_map = {
                         "pending": FormationStatus.PENDING,
                         "processing": FormationStatus.PROCESSING,
@@ -370,7 +371,7 @@ class ZenBusinessProvider(FormationProvider):
                         "completed": FormationStatus.COMPLETED,
                         "rejected": FormationStatus.REJECTED,
                     }
-                    
+
                     return FormationResult(
                         request_id=request_id,
                         status=status_map.get(data.get("status"), FormationStatus.PENDING),
@@ -386,19 +387,19 @@ class ZenBusinessProvider(FormationProvider):
                     )
                 else:
                     raise FormationError(f"Failed to get status: {response.text}")
-                    
+
         except httpx.RequestError as e:
             raise FormationError(f"Request failed: {e}")
-    
+
     async def submit_ein_application(
         self, request: EINRequest
     ) -> EINResult:
         """Submit EIN application through ZenBusiness."""
         if not self.api_key:
             raise FormationError("ZenBusiness API key not configured")
-        
+
         request_id = str(uuid.uuid4())
-        
+
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
@@ -426,7 +427,7 @@ class ZenBusinessProvider(FormationProvider):
                     },
                     timeout=30.0,
                 )
-                
+
                 if response.status_code in (200, 201):
                     data = response.json()
                     return EINResult(
@@ -439,17 +440,17 @@ class ZenBusinessProvider(FormationProvider):
                     )
                 else:
                     raise FormationError(f"EIN application failed: {response.text}")
-                    
+
         except httpx.RequestError as e:
             raise FormationError(f"Request failed: {e}")
-    
+
     async def get_ein_status(
         self, request_id: str
     ) -> EINResult:
         """Get EIN status from ZenBusiness."""
         if not self.api_key:
             raise FormationError("ZenBusiness API key not configured")
-        
+
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
@@ -457,17 +458,17 @@ class ZenBusinessProvider(FormationProvider):
                     headers={"Authorization": f"Bearer {self.api_key}"},
                     timeout=30.0,
                 )
-                
+
                 if response.status_code == 200:
                     data = response.json()
-                    
+
                     status_map = {
                         "pending": EINStatus.PENDING,
                         "submitted": EINStatus.SUBMITTED,
                         "received": EINStatus.RECEIVED,
                         "failed": EINStatus.FAILED,
                     }
-                    
+
                     return EINResult(
                         request_id=request_id,
                         status=status_map.get(data.get("status"), EINStatus.PENDING),
@@ -479,10 +480,10 @@ class ZenBusinessProvider(FormationProvider):
                     )
                 else:
                     raise FormationError(f"Failed to get EIN status: {response.text}")
-                    
+
         except httpx.RequestError as e:
             raise FormationError(f"Request failed: {e}")
-    
+
     def get_pricing(
         self,
         state: FormationState,
@@ -491,42 +492,42 @@ class ZenBusinessProvider(FormationProvider):
     ) -> Dict[str, int]:
         """Get ZenBusiness pricing."""
         base_prices = FORMATION_PRICES.get(state, {}).get(business_type, 8900)
-        
+
         total = base_prices
         breakdown = {"base": base_prices}
-        
+
         if options.get("registered_agent"):
             breakdown["registered_agent"] = REGISTERED_AGENT_ANNUAL
             total += REGISTERED_AGENT_ANNUAL
-        
+
         if options.get("expedited"):
             breakdown["expedited"] = EXPEDITED_FEE
             total += EXPEDITED_FEE
-        
+
         if options.get("operating_agreement"):
             breakdown["operating_agreement"] = 0  # Included in base
-        
+
         breakdown["total"] = total
         return breakdown
 
 
 class MockFormationProvider(FormationProvider):
     """Mock provider for testing."""
-    
+
     def __init__(self):
         self._formations: Dict[str, FormationResult] = {}
         self._eins: Dict[str, EINResult] = {}
-    
+
     @property
     def name(self) -> str:
         return "mock"
-    
+
     async def submit_formation(
         self, request: FormationRequest
     ) -> FormationResult:
         """Submit mock formation."""
         request_id = str(uuid.uuid4())
-        
+
         result = FormationResult(
             request_id=request_id,
             status=FormationStatus.SUBMITTED,
@@ -538,10 +539,10 @@ class MockFormationProvider(FormationProvider):
             message="Mock formation submitted",
             estimated_completion=datetime.now(timezone.utc) + timedelta(days=3),
         )
-        
+
         self._formations[request_id] = result
         return result
-    
+
     async def get_formation_status(
         self, request_id: str
     ) -> FormationResult:
@@ -549,29 +550,29 @@ class MockFormationProvider(FormationProvider):
         if request_id not in self._formations:
             raise FormationError(f"Formation not found: {request_id}")
         return self._formations[request_id]
-    
+
     async def complete_formation(
         self, request_id: str, ein: str = "12-3456789"
     ) -> FormationResult:
         """Complete a mock formation (for testing)."""
         if request_id not in self._formations:
             raise FormationError(f"Formation not found: {request_id}")
-        
+
         result = self._formations[request_id]
         result.status = FormationStatus.COMPLETED
         result.ein = ein
         result.formation_date = datetime.now(timezone.utc)
         result.certificate_url = f"https://mock.nexusai.dev/certs/{request_id}"
         result.updated_at = datetime.now(timezone.utc)
-        
+
         return result
-    
+
     async def submit_ein_application(
         self, request: EINRequest
     ) -> EINResult:
         """Submit mock EIN application."""
         request_id = str(uuid.uuid4())
-        
+
         result = EINResult(
             request_id=request_id,
             status=EINStatus.SUBMITTED,
@@ -580,10 +581,10 @@ class MockFormationProvider(FormationProvider):
             provider=self.name,
             provider_reference=f"MOCK-EIN-{request_id[:8]}",
         )
-        
+
         self._eins[request_id] = result
         return result
-    
+
     async def get_ein_status(
         self, request_id: str
     ) -> EINResult:
@@ -591,22 +592,22 @@ class MockFormationProvider(FormationProvider):
         if request_id not in self._eins:
             raise FormationError(f"EIN application not found: {request_id}")
         return self._eins[request_id]
-    
+
     async def complete_ein(
         self, request_id: str, ein: str = "12-3456789"
     ) -> EINResult:
         """Complete a mock EIN (for testing)."""
         if request_id not in self._eins:
             raise FormationError(f"EIN application not found: {request_id}")
-        
+
         result = self._eins[request_id]
         result.status = EINStatus.RECEIVED
         result.ein = ein
         result.confirmation_letter_url = f"https://mock.nexusai.dev/ein/{request_id}"
         result.updated_at = datetime.now(timezone.utc)
-        
+
         return result
-    
+
     def get_pricing(
         self,
         state: FormationState,
@@ -623,24 +624,24 @@ class MockFormationProvider(FormationProvider):
 class FormationService:
     """
     High-level service for business formation.
-    
+
     Orchestrates provider interactions and maintains state.
     """
-    
+
     def __init__(
         self,
         provider: Optional[FormationProvider] = None,
         default_provider: str = "zenbusiness",
     ):
         self.default_provider = default_provider
-        
+
         if provider:
             self.provider = provider
         else:
             # Select provider based on environment
             provider_name = os.getenv("FORMATION_PROVIDER", default_provider)
             self.provider = self._create_provider(provider_name)
-    
+
     def _create_provider(self, name: str) -> FormationProvider:
         """Create provider by name."""
         providers = {
@@ -648,12 +649,12 @@ class FormationService:
             "zenbusiness": ZenBusinessProvider,
             "mock": MockFormationProvider,
         }
-        
+
         if name not in providers:
             raise FormationError(f"Unknown provider: {name}")
-        
+
         return providers[name]()
-    
+
     async def form_llc(
         self,
         request: FormationRequest,
@@ -661,14 +662,14 @@ class FormationService:
         """Form an LLC using the configured provider."""
         logger.info(f"Starting LLC formation for {request.business_name}")
         return await self.provider.submit_formation(request)
-    
+
     async def get_status(
         self,
         request_id: str,
     ) -> FormationResult:
         """Get formation status."""
         return await self.provider.get_formation_status(request_id)
-    
+
     async def apply_for_ein(
         self,
         request: EINRequest,
@@ -676,14 +677,14 @@ class FormationService:
         """Apply for EIN."""
         logger.info(f"Starting EIN application for {request.business_name}")
         return await self.provider.submit_ein_application(request)
-    
+
     async def get_ein_status(
         self,
         request_id: str,
     ) -> EINResult:
         """Get EIN status."""
         return await self.provider.get_ein_status(request_id)
-    
+
     def estimate_cost(
         self,
         state: FormationState,

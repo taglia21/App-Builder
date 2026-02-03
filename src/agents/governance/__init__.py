@@ -14,24 +14,9 @@ The governance model ensures:
 4. Conflicts are resolved through arbitration
 """
 
-from .executive import (
-    ExecutiveBranch,
-    ExecutionStatus,
-    ExecutionContext,
-    ExecutionResult
-)
-from .legislative import (
-    LegislativeBranch,
-    LegislativeSession,
-    PlanProposal,
-    DebateStatus
-)
-from .judicial import (
-    JudicialBranch,
-    JudicialReview,
-    ReviewDecision,
-    ArbitrationCase
-)
+from .executive import ExecutionContext, ExecutionResult, ExecutionStatus, ExecutiveBranch
+from .judicial import ArbitrationCase, JudicialBranch, JudicialReview, ReviewDecision
+from .legislative import DebateStatus, LegislativeBranch, LegislativeSession, PlanProposal
 
 __all__ = [
     # Executive

@@ -484,6 +484,91 @@ See [DEVELOPMENT.md](../DEVELOPMENT.md) for development setup.
 
 ---
 
+## Multi-Agent System (Organizational Intelligence)
+
+App-Builder implements a sophisticated multi-agent AI system based on the "Team of Rivals" architecture with three branches of governance.
+
+### Agent Hierarchy
+
+| Role | Responsibility | Branch |
+|------|---------------|--------|
+| `PLANNER` | Creates execution plans from requirements | Legislative |
+| `CODE_WRITER` | Generates application code | Executive |
+| `CODE_CRITIC` | Reviews code quality and correctness | Judicial |
+| `OUTPUT_CRITIC` | Validates outputs match requirements | Judicial |
+| `SECURITY_CRITIC` | Identifies security vulnerabilities | Judicial |
+| `DEPLOYMENT_WRITER` | Creates deployment configurations | Executive |
+| `DEPLOYMENT_CRITIC` | Reviews deployment safety | Judicial |
+| `ORCHESTRATOR` | Coordinates all agents | Oversight |
+
+### Three Branches of Governance
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    LEGISLATIVE (Planners)                            │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐              │
+│  │ Conservative │  │  Innovative  │  │  Pragmatic   │              │
+│  │   Planner    │  │   Planner    │  │   Planner    │              │
+│  └──────────────┘  └──────────────┘  └──────────────┘              │
+│                          │                                          │
+│                    Plan Synthesis                                   │
+└─────────────────────────┬───────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                     EXECUTIVE (Writers)                              │
+│              ┌──────────────────┐                                   │
+│              │   Code Writer    │                                   │
+│              └────────┬─────────┘                                   │
+└───────────────────────┼─────────────────────────────────────────────┘
+                        │
+                        ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    JUDICIAL (Critics)                                │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐              │
+│  │ Code Critic  │  │Security Critic│  │Output Critic│              │
+│  └──────────────┘  └──────────────┘  └──────────────┘              │
+│                          │                                          │
+│         ┌────────────────┴────────────────┐                        │
+│    ┌────▼────┐                       ┌────▼────┐                   │
+│    │ APPROVE │                       │ REJECT  │→ Back to Writers  │
+│    └─────────┘                       └─────────┘                   │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Key Message Types
+
+```python
+# ExecutionPlan - Created by planners
+class ExecutionPlan(BaseModel):
+    plan_id: str
+    app_description: str
+    tech_stack: str
+    acceptance_criteria: List[str]
+    execution_steps: List[Dict[str, Any]]
+
+# CriticReview - Created by critics (with veto authority)
+class CriticReview(BaseModel):
+    critic_role: AgentRole
+    decision: CriticDecision  # APPROVE, REJECT, REQUEST_CHANGES
+    reasoning: str
+    issues: List[Dict[str, Any]]
+    veto_reason: Optional[str]
+```
+
+### Governance Orchestrator
+
+The `GovernanceOrchestrator` (`src/agents/governance_orchestrator.py`) coordinates all agents:
+
+1. **Legislative Phase**: Gather plans from rival planners, synthesize into final plan
+2. **Executive Phase**: Code writer generates code based on approved plan
+3. **Judicial Phase**: Critics review code, approve or reject with feedback
+4. **Iteration**: Rejected code returns to writers with critic feedback
+
+This ensures high-quality output through checks and balances.
+
+---
+
 ## References
 
 - [API Reference](API_REFERENCE.md)

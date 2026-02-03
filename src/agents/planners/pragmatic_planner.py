@@ -5,14 +5,12 @@ Part of the Organizational Intelligence framework implementing rival
 planning agents that propose competing strategies for synthesis.
 """
 
-from typing import Any, Dict, List, Optional
-import logging
 import json
+import logging
+from typing import Any, Dict, Optional
 
 from ..base import LLMProvider
-from ..messages import (
-    AgentRole, ExecutionPlan, PlanStep, CodeGenerationRequest
-)
+from ..messages import AgentRole, CodeGenerationRequest, ExecutionPlan, PlanStep
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +18,7 @@ logger = logging.getLogger(__name__)
 class PragmaticPlanner:
     """
     Pragmatic planning agent that balances innovation with practicality.
-    
+
     This planner represents the "experienced tech lead" perspective,
     favoring:
     - Right tool for the job mentality
@@ -30,10 +28,10 @@ class PragmaticPlanner:
     - Time-to-market focus
     - Maintainability by average developers
     """
-    
+
     role = AgentRole.PLANNER
     personality = "pragmatic"
-    
+
     PLANNING_PROMPT = '''You are a Pragmatic Planner Agent - balancing innovation with practicality.
 
 Your role is to create a PRAGMATIC, BALANCED execution plan.
@@ -108,24 +106,24 @@ Be practical and honest about trade-offs. The best plan delivers value efficient
 
     def __init__(self, llm_provider: LLMProvider):
         self.llm = llm_provider
-    
+
     async def create_plan(self, request: CodeGenerationRequest, context: Optional[Dict[str, Any]] = None) -> ExecutionPlan:
         """Create a pragmatic execution plan."""
         logger.info(f"Pragmatic planner creating plan for: {request.requirements[:50]}...")
-        
+
         prompt = self.PLANNING_PROMPT.format(
             requirements=request.requirements,
             context=json.dumps(context or {}, indent=2)
         )
-        
+
         response = await self.llm.generate(prompt)
-        
+
         try:
             plan_data = json.loads(response)
         except json.JSONDecodeError:
             logger.warning("Failed to parse pragmatic planner response as JSON")
             plan_data = self._create_fallback_plan(request)
-        
+
         # Convert to ExecutionPlan
         steps = [
             PlanStep(
@@ -143,7 +141,7 @@ Be practical and honest about trade-offs. The best plan delivers value efficient
             )
             for i, s in enumerate(plan_data.get("steps", []), 1)
         ]
-        
+
         return ExecutionPlan(
             plan_id=plan_data.get("plan_id", "pragmatic_plan"),
             planner_type=self.personality,
@@ -162,7 +160,7 @@ Be practical and honest about trade-offs. The best plan delivers value efficient
                 "future_iterations": plan_data.get("future_iterations", [])
             }
         )
-    
+
     def _create_fallback_plan(self, request: CodeGenerationRequest) -> Dict[str, Any]:
         """Create a basic fallback plan if LLM fails."""
         return {

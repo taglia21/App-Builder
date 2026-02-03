@@ -6,12 +6,12 @@ Generates comprehensive product development specifications using LLM.
 import json
 import logging
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
-from src.models import StartupIdea, ProductPrompt, IntelligenceData
 from src.config import PipelineConfig
 from src.llm import get_llm_client
 from src.llm.client import BaseLLMClient
+from src.models import IntelligenceData, ProductPrompt, StartupIdea
 
 logger = logging.getLogger(__name__)
 
@@ -21,11 +21,11 @@ class PromptEngineeringEngine:
     Generates comprehensive product specifications for startup ideas.
     Uses LLM to create detailed technical and business documentation.
     """
-    
+
     def __init__(self, config: PipelineConfig, llm_client: Optional[BaseLLMClient] = None):
         self.config = config
         self.llm_client = llm_client or get_llm_client()
-    
+
     def generate(
         self,
         idea: StartupIdea,
@@ -33,16 +33,16 @@ class PromptEngineeringEngine:
     ) -> ProductPrompt:
         """
         Generate a comprehensive product prompt for the given idea.
-        
+
         Args:
             idea: The startup idea to generate a prompt for
             intelligence: Optional intelligence data for context
-            
+
         Returns:
             ProductPrompt with complete specification
         """
         logger.info(f"Generating product prompt for: {idea.name}")
-        
+
         # Generate each section
         product_summary = self._generate_product_summary(idea)
         feature_requirements = self._generate_feature_requirements(idea)
@@ -52,7 +52,7 @@ class PromptEngineeringEngine:
         ui_ux_outline = self._generate_ui_ux_outline(idea)
         monetization = self._generate_monetization(idea)
         deployment = self._generate_deployment(idea)
-        
+
         prompt_content = {
             "product_summary": product_summary,
             "feature_requirements": feature_requirements,
@@ -63,10 +63,10 @@ class PromptEngineeringEngine:
             "monetization": monetization,
             "deployment": deployment
         }
-        
+
         # Convert to JSON string as expected by ProductPrompt model
         prompt_content_str = json.dumps(prompt_content, indent=2)
-        
+
         return ProductPrompt(
             idea_id=idea.id,
             idea_name=idea.name,
@@ -74,13 +74,13 @@ class PromptEngineeringEngine:
             generation_timestamp=datetime.now(),
             version="1.0"
         )
-    
+
     def _generate_product_summary(self, idea: StartupIdea) -> Dict[str, Any]:
         """Generate the product summary section."""
-        
+
         system_prompt = """You are a senior product manager creating a product specification document.
 Generate a comprehensive product summary in JSON format. Be specific and detailed."""
-        
+
         prompt = f"""Create a detailed product summary for this startup idea:
 
 **Name:** {idea.name}
@@ -124,20 +124,20 @@ Generate a JSON response with this exact structure:
 }}
 
 Respond with ONLY valid JSON, no other text."""
-        
+
         try:
             response = self.llm_client.complete(prompt, system_prompt, max_tokens=2000, json_mode=True)
             return json.loads(response.content)
         except (Exception, json.JSONDecodeError) as e:
             logger.error(f"Error generating product summary: {e}")
             return self._fallback_product_summary(idea)
-    
+
     def _generate_feature_requirements(self, idea: StartupIdea) -> Dict[str, Any]:
         """Generate feature requirements section."""
-        
+
         system_prompt = """You are a senior product manager defining feature requirements.
 Create detailed, actionable feature specifications in JSON format."""
-        
+
         prompt = f"""Define the feature requirements for this product:
 
 **Product:** {idea.name}
@@ -190,20 +190,20 @@ Include at least:
 - 3 AI/automation modules
 
 Respond with ONLY valid JSON."""
-        
+
         try:
             response = self.llm_client.complete(prompt, system_prompt, max_tokens=4000, json_mode=True)
             return json.loads(response.content)
         except (Exception, json.JSONDecodeError) as e:
             logger.error(f"Error generating features: {e}")
             return self._fallback_feature_requirements(idea)
-    
+
     def _generate_system_architecture(self, idea: StartupIdea) -> Dict[str, Any]:
         """Generate system architecture section."""
-        
+
         system_prompt = """You are a senior software architect designing a SaaS application.
 Provide detailed technical architecture in JSON format."""
-        
+
         prompt = f"""Design the system architecture for this SaaS product:
 
 **Product:** {idea.name}
@@ -256,20 +256,20 @@ Generate a JSON response with this structure:
 }}
 
 Respond with ONLY valid JSON."""
-        
+
         try:
             response = self.llm_client.complete(prompt, system_prompt, max_tokens=2500, json_mode=True)
             return json.loads(response.content)
         except (Exception, json.JSONDecodeError) as e:
             logger.error(f"Error generating architecture: {e}")
             return self._fallback_system_architecture(idea)
-    
+
     def _generate_database_schema(self, idea: StartupIdea) -> Dict[str, Any]:
         """Generate database schema section."""
-        
+
         system_prompt = """You are a database architect designing a schema for a SaaS application.
 Provide a complete, normalized database schema in JSON format."""
-        
+
         prompt = f"""Design the database schema for this product:
 
 **Product:** {idea.name}
@@ -321,20 +321,20 @@ Include at least these entities:
 - Plus 4-6 domain-specific entities for {idea.name}
 
 Respond with ONLY valid JSON."""
-        
+
         try:
             response = self.llm_client.complete(prompt, system_prompt, max_tokens=4000, json_mode=True)
             return json.loads(response.content)
         except (Exception, json.JSONDecodeError) as e:
             logger.error(f"Error generating schema: {e}")
             return self._fallback_database_schema(idea)
-    
+
     def _generate_api_specification(self, idea: StartupIdea) -> Dict[str, Any]:
         """Generate API specification section."""
-        
+
         system_prompt = """You are an API architect designing a RESTful API.
 Provide a complete API specification in JSON format."""
-        
+
         prompt = f"""Design the API specification for this product:
 
 **Product:** {idea.name}
@@ -395,20 +395,20 @@ Include endpoints for:
 - Billing (subscription status, plans, checkout)
 
 Respond with ONLY valid JSON."""
-        
+
         try:
             response = self.llm_client.complete(prompt, system_prompt, max_tokens=5000, json_mode=True)
             return json.loads(response.content)
         except Exception as e:
             logger.error(f"Error generating API spec: {e}")
             return self._fallback_api_specification(idea)
-    
+
     def _generate_ui_ux_outline(self, idea: StartupIdea) -> Dict[str, Any]:
         """Generate UI/UX outline section."""
-        
+
         system_prompt = """You are a UX designer creating a product interface specification.
 Provide detailed UI/UX specifications in JSON format."""
-        
+
         prompt = f"""Design the UI/UX outline for this product:
 
 **Product:** {idea.name}
@@ -476,20 +476,20 @@ Include:
 - At least 20 components
 
 Respond with ONLY valid JSON."""
-        
+
         try:
             response = self.llm_client.complete(prompt, system_prompt, max_tokens=5000, json_mode=True)
             return json.loads(response.content)
         except Exception as e:
             logger.error(f"Error generating UI/UX: {e}")
             return self._fallback_ui_ux_outline(idea)
-    
+
     def _generate_monetization(self, idea: StartupIdea) -> Dict[str, Any]:
         """Generate monetization section."""
-        
+
         system_prompt = """You are a SaaS pricing strategist designing a monetization model.
 Provide a complete pricing and billing specification in JSON format."""
-        
+
         prompt = f"""Design the monetization strategy for this product:
 
 **Product:** {idea.name}
@@ -577,20 +577,20 @@ Generate a JSON response with this structure:
 }}
 
 Respond with ONLY valid JSON."""
-        
+
         try:
             response = self.llm_client.complete(prompt, system_prompt, max_tokens=2500, json_mode=True)
             return json.loads(response.content)
         except Exception as e:
             logger.error(f"Error generating monetization: {e}")
             return self._fallback_monetization(idea)
-    
+
     def _generate_deployment(self, idea: StartupIdea) -> Dict[str, Any]:
         """Generate deployment section."""
-        
+
         system_prompt = """You are a DevOps engineer designing deployment infrastructure.
 Provide a complete deployment specification in JSON format."""
-        
+
         prompt = f"""Design the deployment infrastructure for this product:
 
 **Product:** {idea.name}
@@ -701,14 +701,14 @@ Generate a JSON response with this structure:
 }}
 
 Respond with ONLY valid JSON."""
-        
+
         try:
             response = self.llm_client.complete(prompt, system_prompt, max_tokens=3000, json_mode=True)
             return json.loads(response.content)
         except Exception as e:
             logger.error(f"Error generating deployment: {e}")
             return self._fallback_deployment(idea)
-    
+
     # Fallback methods for when LLM fails
     def _fallback_product_summary(self, idea: StartupIdea) -> Dict[str, Any]:
         # Convert Pydantic models to dicts for JSON serialization
@@ -717,7 +717,7 @@ Respond with ONLY valid JSON."""
             target_buyer = target_buyer.model_dump()
         elif hasattr(target_buyer, 'dict'):
             target_buyer = target_buyer.dict()
-        
+
         return {
             "product_name": idea.name,
             "tagline": idea.one_liner[:50],
@@ -735,7 +735,7 @@ Respond with ONLY valid JSON."""
             "target_buyer": target_buyer,
             "unique_value_proposition": idea.value_proposition
         }
-    
+
     def _fallback_feature_requirements(self, idea: StartupIdea) -> Dict[str, Any]:
         return {
             "core_features": [
@@ -751,7 +751,7 @@ Respond with ONLY valid JSON."""
                 {"id": "AI-001", "name": "Smart Automation", "automation_type": "Recommendation"}
             ]
         }
-    
+
     def _fallback_system_architecture(self, idea: StartupIdea) -> Dict[str, Any]:
         return {
             "backend": {"framework": "FastAPI", "runtime": "Python 3.11+"},
@@ -760,7 +760,7 @@ Respond with ONLY valid JSON."""
             "authentication": {"method": "JWT"},
             "infrastructure": {"hosting": "AWS"}
         }
-    
+
     def _fallback_database_schema(self, idea: StartupIdea) -> Dict[str, Any]:
         return {
             "entities": [
@@ -768,7 +768,7 @@ Respond with ONLY valid JSON."""
                 {"name": "organizations", "fields": [{"name": "id", "type": "UUID"}, {"name": "name", "type": "VARCHAR(255)"}]}
             ]
         }
-    
+
     def _fallback_api_specification(self, idea: StartupIdea) -> Dict[str, Any]:
         return {
             "base_url": "/api/v1",
@@ -778,7 +778,7 @@ Respond with ONLY valid JSON."""
                 {"path": "/users/me", "method": "GET"}
             ]
         }
-    
+
     def _fallback_ui_ux_outline(self, idea: StartupIdea) -> Dict[str, Any]:
         return {
             "screens": [
@@ -792,14 +792,14 @@ Respond with ONLY valid JSON."""
                 {"id": "CMP-001", "name": "Button"}
             ]
         }
-    
+
     def _fallback_monetization(self, idea: StartupIdea) -> Dict[str, Any]:
         return {
             "pricing_model": idea.revenue_model,
             "tiers": getattr(idea.pricing_hypothesis, "tiers", ["Free", "Pro", "Enterprise"]),
             "billing_provider": "Stripe"
         }
-    
+
     def _fallback_deployment(self, idea: StartupIdea) -> Dict[str, Any]:
         return {
             "ci_cd": {"provider": "GitHub Actions"},

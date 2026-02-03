@@ -4,19 +4,16 @@ Data processing pipeline for extracting insights from raw data.
 
 import re
 from collections import Counter
-from datetime import datetime
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 from uuid import uuid4
 
-import numpy as np
 from loguru import logger
-from sklearn.cluster import DBSCAN, KMeans
+from sklearn.cluster import DBSCAN
 from sklearn.feature_extraction.text import TfidfVectorizer
 from textblob import TextBlob
 
 from ..models import (
     CompetitionDensity,
-    CompetitorAnalysis,
     EmergingIndustry,
     OpportunityCategory,
     PainPoint,
@@ -40,7 +37,7 @@ class DataProcessor:
         pain_points = []
 
         for data_point in raw_data:
-            source_type = data_point.get("source_type", "")
+            data_point.get("source_type", "")
 
             # Extract text content
             texts = self._extract_texts(data_point)

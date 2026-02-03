@@ -1,9 +1,9 @@
 """Data models for app generation."""
-from dataclasses import dataclass, field
-from typing import List, Dict, Any, Optional
-from enum import Enum
 import uuid
-from datetime import datetime
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from enum import Enum
+from typing import Any, Dict, List, Optional
 
 
 class AppType(str, Enum):
@@ -44,7 +44,7 @@ class GenerationRequest:
     features: List[Feature]
     user_id: str
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 @dataclass
@@ -53,7 +53,7 @@ class GeneratedFile:
     path: str
     content: str
     language: str = "python"
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "path": self.path,
@@ -75,8 +75,8 @@ class GeneratedApp:
     env_template: str
     docker_compose: Optional[str] = None
     dockerfile: Optional[str] = None
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "id": self.id,

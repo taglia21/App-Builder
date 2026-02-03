@@ -42,3 +42,10 @@ exclude_lines = [
     "raise NotImplementedError",
     "if __name__ == .__main__.:",
 ]
+
+[tool.bandit]
+exclude_dirs = ["tests", "venv", ".venv", "output", "htmlcov"]
+skips = ["B101", "B104", "B311"]  # Skip assert, bind all interfaces, random for non-crypto
+
+[tool.bandit.assert_used]
+skips = ["*_test.py", "test_*.py"]

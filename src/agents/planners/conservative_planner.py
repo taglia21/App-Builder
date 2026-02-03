@@ -5,14 +5,12 @@ Part of the Organizational Intelligence framework implementing rival
 planning agents that propose competing strategies for synthesis.
 """
 
-from typing import Any, Dict, List, Optional
-import logging
 import json
+import logging
+from typing import Any, Dict, Optional
 
 from ..base import LLMProvider
-from ..messages import (
-    AgentRole, ExecutionPlan, PlanStep, CodeGenerationRequest
-)
+from ..messages import AgentRole, CodeGenerationRequest, ExecutionPlan, PlanStep
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +18,7 @@ logger = logging.getLogger(__name__)
 class ConservativePlanner:
     """
     Conservative planning agent that prioritizes stability and proven patterns.
-    
+
     This planner represents the "risk-averse executive" perspective,
     favoring:
     - Well-established patterns and libraries
@@ -30,10 +28,10 @@ class ConservativePlanner:
     - Backward compatibility
     - Thorough documentation
     """
-    
+
     role = AgentRole.PLANNER
     personality = "conservative"
-    
+
     PLANNING_PROMPT = '''You are a Conservative Planner Agent - prioritizing stability and reliability.
 
 Your role is to create a CONSERVATIVE, RISK-AVERSE execution plan.
@@ -98,24 +96,24 @@ Be thorough and defensive. Better to over-plan than under-plan.'''
 
     def __init__(self, llm_provider: LLMProvider):
         self.llm = llm_provider
-    
+
     async def create_plan(self, request: CodeGenerationRequest, context: Optional[Dict[str, Any]] = None) -> ExecutionPlan:
         """Create a conservative execution plan."""
         logger.info(f"Conservative planner creating plan for: {request.requirements[:50]}...")
-        
+
         prompt = self.PLANNING_PROMPT.format(
             requirements=request.requirements,
             context=json.dumps(context or {}, indent=2)
         )
-        
+
         response = await self.llm.generate(prompt)
-        
+
         try:
             plan_data = json.loads(response)
         except json.JSONDecodeError:
             logger.warning("Failed to parse conservative planner response as JSON")
             plan_data = self._create_fallback_plan(request)
-        
+
         # Convert to ExecutionPlan
         steps = [
             PlanStep(
@@ -132,7 +130,7 @@ Be thorough and defensive. Better to over-plan than under-plan.'''
             )
             for i, s in enumerate(plan_data.get("steps", []), 1)
         ]
-        
+
         return ExecutionPlan(
             plan_id=plan_data.get("plan_id", "conservative_plan"),
             planner_type=self.personality,
@@ -145,7 +143,7 @@ Be thorough and defensive. Better to over-plan than under-plan.'''
             testing_strategy=plan_data.get("testing_strategy", "Comprehensive unit and integration testing"),
             reasoning=plan_data.get("reasoning", "Conservative approach prioritizing stability")
         )
-    
+
     def _create_fallback_plan(self, request: CodeGenerationRequest) -> Dict[str, Any]:
         """Create a basic fallback plan if LLM fails."""
         return {

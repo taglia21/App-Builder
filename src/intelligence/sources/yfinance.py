@@ -3,7 +3,7 @@ Yahoo Finance data source for market intelligence (NO API KEY REQUIRED).
 Uses yfinance to track market trends, sector performance, and emerging industries.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any, Dict, List
 
 try:
@@ -13,7 +13,6 @@ except ImportError:
 
 from loguru import logger
 
-from ...models import PainPoint
 from ..base import DataSource
 
 
@@ -23,7 +22,7 @@ class YFinanceSource(DataSource):
     def __init__(self, config: Dict[str, Any]):
         """Initialize Yahoo Finance source."""
         super().__init__(config)
-        
+
         # Track technology and SaaS-related companies
         self.tickers = config.get("tickers", [
             # Major tech/cloud
@@ -39,7 +38,7 @@ class YFinanceSource(DataSource):
             "WCLD", # Cloud computing
             "SKYY", # Cloud computing
         ])
-        
+
         self.period = config.get("period", "3mo")  # Last 3 months
         self.analyze_news = config.get("analyze_news", True)
 
@@ -59,22 +58,22 @@ class YFinanceSource(DataSource):
         for ticker_symbol in self.tickers:
             try:
                 ticker = yf.Ticker(ticker_symbol)
-                
+
                 # Get company info
                 info = ticker.info
-                
+
                 # Get historical data
                 hist = ticker.history(period=self.period)
-                
+
                 if not hist.empty:
                     # Calculate trend
                     start_price = hist['Close'].iloc[0]
                     end_price = hist['Close'].iloc[-1]
                     price_change_pct = ((end_price - start_price) / start_price) * 100
-                    
+
                     # Get average volume
                     avg_volume = hist['Volume'].mean()
-                    
+
                     results.append({
                         "source": "yfinance",
                         "type": "stock_trend",
@@ -90,7 +89,7 @@ class YFinanceSource(DataSource):
                         "description": info.get('longBusinessSummary', ''),
                         "timestamp": datetime.now().isoformat(),
                     })
-                
+
                 # Get recent news
                 if self.analyze_news:
                     try:
@@ -109,7 +108,7 @@ class YFinanceSource(DataSource):
                             })
                     except Exception as e:
                         logger.debug(f"No news available for {ticker_symbol}: {e}")
-                        
+
             except Exception as e:
                 logger.warning(f"Failed to fetch data for {ticker_symbol}: {e}")
 

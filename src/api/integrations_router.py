@@ -1,19 +1,20 @@
-from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel
-from typing import Dict, List, Optional
-import sys
 import os
+import sys
+from typing import Dict, List, Optional
+
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from integrations import (
-    GitHubIntegration,
-    DeploymentService,
     BusinessFormationService,
+    DeploymentService,
     DomainService,
+    GitHubIntegration,
     LivePreviewService,
-    ProjectPersistenceService
+    ProjectPersistenceService,
 )
 
 router = APIRouter(prefix="/api/integrations", tags=["integrations"])
@@ -126,7 +127,7 @@ async def deploy_project(request: DeployRequest):
         )
     else:
         raise HTTPException(status_code=400, detail="Unsupported platform")
-    
+
     if not result.get('success'):
         raise HTTPException(status_code=400, detail=result.get('error', 'Deployment failed'))
     return result
@@ -301,6 +302,7 @@ async def delete_project(project_id: str, user_id: str):
 # Import Railway deployment service
 from src.integrations.railway_deployment import railway_deployment
 
+
 class DeployRequest(BaseModel):
     app_name: str
     github_repo: str
@@ -314,8 +316,8 @@ async def deploy_to_railway(request: DeployRequest):
         github_repo=request.github_repo,
         env_vars=request.env_vars
     )
-    
+
     if not result.get('success'):
         raise HTTPException(status_code=400, detail=result.get('error', 'Deployment failed'))
-    
+
     return result

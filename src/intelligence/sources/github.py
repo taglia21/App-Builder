@@ -2,7 +2,6 @@
 GitHub data source for gathering developer intelligence.
 """
 
-from datetime import datetime
 from typing import Any, Dict, List
 
 try:

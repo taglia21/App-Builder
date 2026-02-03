@@ -1,20 +1,21 @@
 
-import yaml
-import os
 from pathlib import Path
+
+import yaml
+
 
 class CICDGenerator:
     """
     Generates CI/CD pipelines. Currently supports GitHub Actions.
     """
-    
+
     def generate_github_actions(self, output_path: Path, project_type: str = "fullstack"):
         """
         Create .github/workflows/deploy.yml
         """
         workflow_dir = output_path / ".github" / "workflows"
         workflow_dir.mkdir(parents=True, exist_ok=True)
-        
+
         workflow_content = {
             "name": "Production Deploy",
             "on": {
@@ -46,9 +47,9 @@ class CICDGenerator:
                 }
             }
         }
-        
+
         file_path = workflow_dir / "deploy.yml"
         with open(file_path, "w") as f:
             yaml.dump(workflow_content, f, sort_keys=False)
-        
+
         return file_path
