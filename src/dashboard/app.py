@@ -17,6 +17,13 @@ from ..billing.routes import create_billing_router
 from .api import create_api_router
 from .routes import create_dashboard_router
 
+# Import API versioning
+try:
+    from src.api.versioning import add_versioning_to_app, create_versioned_router
+except ImportError:
+    add_versioning_to_app = None
+    create_versioned_router = None
+
 # Import health router
 try:
     from src.api.health import router as health_router
@@ -187,31 +194,37 @@ and authentication requirements.
     # Setup rate limiting
     setup_rate_limiting(app)
 
+    # Add API versioning middleware
+    if add_versioning_to_app:
+        add_versioning_to_app(app, default_version="v1")
+
     # Setup templates and routers
     templates_path = Path(__file__).parent / "templates"
     if templates_path.exists():
         templates = Jinja2Templates(directory=str(templates_path))
         templates.env.globals['csrf_token'] = lambda: secrets.token_hex(32)
-    # Include auth routes
+    
+    # Include auth routes (no versioning for web routes)
     app.include_router(auth_router)
     app.include_router(create_dashboard_router(templates))
     app.include_router(create_billing_router(templates), prefix="/billing")
 
-    app.include_router(create_api_router(), prefix="/api")
+    # API routes with /v1/ prefix for versioning
+    app.include_router(create_api_router(), prefix="/api/v1")
     
     # Include analytics router
     if analytics_router:
         app.include_router(analytics_router, prefix="/api/v1/analytics")
     
-    # Include integrations router
+    # Include integrations router (use /v1/ prefix)
     if integrations_router:
-        app.include_router(integrations_router)
+        app.include_router(integrations_router, prefix="/api/v1")
 
-    # Include multi-agent router for Organizational Intelligence
+    # Include multi-agent router for Organizational Intelligence  
     if multi_agent_router:
-        app.include_router(multi_agent_router)
+        app.include_router(multi_agent_router, prefix="/api/v1")
     
-    # Include health router
+    # Include health router (keep at /api for backwards compatibility and K8s probes)
     if health_router:
         app.include_router(health_router, prefix="/api")
 
