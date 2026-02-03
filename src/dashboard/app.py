@@ -17,6 +17,12 @@ from ..billing.routes import create_billing_router
 from .api import create_api_router
 from .routes import create_dashboard_router
 
+# Import health router
+try:
+    from src.api.health import router as health_router
+except ImportError:
+    health_router = None
+
 # Import analytics router
 try:
     from src.analytics.routes import router as analytics_router
@@ -72,10 +78,58 @@ def create_app() -> FastAPI:
     """Create and configure FastAPI application."""
     app = FastAPI(
         title="LaunchForge Dashboard",
-        description="AI-Powered Startup Builder Dashboard",
+        description="""
+# LaunchForge - AI-Powered Startup Builder
+
+LaunchForge is an advanced platform that leverages multiple AI providers to generate,
+refine, and validate startup ideas using intelligent pipelines.
+
+## Features
+
+- **Multi-Provider AI**: Support for OpenAI, Anthropic, Google, Perplexity, and Groq
+- **Intelligent Pipelines**: Multi-stage idea generation and validation
+- **Demo Mode**: Try without API keys
+- **Health Monitoring**: Kubernetes-ready health checks
+- **Comprehensive API**: RESTful endpoints for all operations
+
+## API Documentation
+
+This documentation provides details on all available endpoints, request/response formats,
+and authentication requirements.
+        """.strip(),
         version="1.0.0",
         docs_url="/docs",
-        redoc_url="/redoc"
+        redoc_url="/redoc",
+        contact={
+            "name": "LaunchForge Team",
+            "url": "https://github.com/yourusername/App-Builder",
+        },
+        license_info={
+            "name": "MIT",
+            "url": "https://opensource.org/licenses/MIT",
+        },
+        openapi_tags=[
+            {
+                "name": "health",
+                "description": "Health check and monitoring endpoints for Kubernetes/production"
+            },
+            {
+                "name": "monitoring",
+                "description": "System monitoring and metrics"
+            },
+            {
+                "name": "auth",
+                "description": "Authentication and authorization endpoints"
+            },
+            {
+                "name": "ideas",
+                "description": "Startup idea generation and management"
+            },
+            {
+                "name": "analytics",
+                "description": "Analytics and reporting endpoints"
+            },
+        ]
     )
 
     # Request logging middleware (must be first)
@@ -156,6 +210,10 @@ def create_app() -> FastAPI:
     # Include multi-agent router for Organizational Intelligence
     if multi_agent_router:
         app.include_router(multi_agent_router)
+    
+    # Include health router
+    if health_router:
+        app.include_router(health_router, prefix="/api")
 
     # Mount static files if directory exists
     static_path = Path(__file__).parent / "static"
