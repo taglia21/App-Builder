@@ -368,6 +368,281 @@ class PerplexityClient(BaseLLMClient):
         return response
 
 
+class OpenAIClient(BaseLLMClient):
+    """
+    OpenAI client for GPT models.
+
+    Available models:
+    - gpt-4o: Latest GPT-4 Optimized model
+    - gpt-4-turbo: GPT-4 Turbo with 128k context
+    - gpt-4: Standard GPT-4
+    - gpt-3.5-turbo: Fast and cost-effective
+    """
+
+    provider_name = "openai"
+
+    MODELS = {
+        "gpt-4o": "GPT-4 Optimized - Latest model",
+        "gpt-4-turbo": "GPT-4 Turbo - 128k context",
+        "gpt-4": "GPT-4 - Standard",
+        "gpt-3.5-turbo": "GPT-3.5 Turbo - Fast and cheap",
+    }
+
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        model: str = "gpt-4o",
+        use_cache: bool = True,
+        use_retry: bool = True,
+    ):
+        super().__init__(use_cache=use_cache, use_retry=use_retry)
+
+        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
+        if not self.api_key:
+            raise ValueError("OpenAI API key is required. Set OPENAI_API_KEY environment variable.")
+
+        self._model = model
+        if model not in self.MODELS:
+            logger.warning(f"Unknown model {model}, available: {list(self.MODELS.keys())}")
+
+        try:
+            import openai
+            self.client = openai.OpenAI(api_key=self.api_key)
+        except ImportError:
+            raise ImportError("openai package is required. Install with: pip install openai")
+
+    @property
+    def model(self) -> str:
+        return self._model
+
+    def _complete_impl(
+        self,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+        max_tokens: int = 4096,
+        temperature: float = 0.7,
+        json_mode: bool = False
+    ) -> LLMResponse:
+        start = time.time()
+
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+
+        kwargs = {
+            "model": self._model,
+            "messages": messages,
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+        }
+
+        if json_mode:
+            kwargs["response_format"] = {"type": "json_object"}
+
+        try:
+            response = self.client.chat.completions.create(**kwargs)
+            latency_ms = (time.time() - start) * 1000
+
+            return LLMResponse(
+                content=response.choices[0].message.content,
+                model=self._model,
+                provider=self.provider_name,
+                usage={
+                    "prompt_tokens": response.usage.prompt_tokens,
+                    "completion_tokens": response.usage.completion_tokens,
+                    "total_tokens": response.usage.total_tokens,
+                },
+                latency_ms=latency_ms,
+                raw_response=response,
+            )
+        except Exception as e:
+            logger.error(f"OpenAI API error: {e}")
+            raise
+
+
+class AnthropicClient(BaseLLMClient):
+    """
+    Anthropic client for Claude models.
+
+    Available models:
+    - claude-3-5-sonnet-20241022: Claude 3.5 Sonnet (latest)
+    - claude-3-opus-20240229: Claude 3 Opus - Most capable
+    - claude-3-sonnet-20240229: Claude 3 Sonnet - Balanced
+    - claude-3-haiku-20240307: Claude 3 Haiku - Fast
+    """
+
+    provider_name = "anthropic"
+
+    MODELS = {
+        "claude-3-5-sonnet-20241022": "Claude 3.5 Sonnet - Latest",
+        "claude-3-opus-20240229": "Claude 3 Opus - Most capable",
+        "claude-3-sonnet-20240229": "Claude 3 Sonnet - Balanced",
+        "claude-3-haiku-20240307": "Claude 3 Haiku - Fast",
+    }
+
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        model: str = "claude-3-5-sonnet-20241022",
+        use_cache: bool = True,
+        use_retry: bool = True,
+    ):
+        super().__init__(use_cache=use_cache, use_retry=use_retry)
+
+        self.api_key = api_key or os.getenv("ANTHROPIC_API_KEY")
+        if not self.api_key:
+            raise ValueError("Anthropic API key is required. Set ANTHROPIC_API_KEY environment variable.")
+
+        self._model = model
+        if model not in self.MODELS:
+            logger.warning(f"Unknown model {model}, available: {list(self.MODELS.keys())}")
+
+        try:
+            import anthropic
+            self.client = anthropic.Anthropic(api_key=self.api_key)
+        except ImportError:
+            raise ImportError("anthropic package is required. Install with: pip install anthropic")
+
+    @property
+    def model(self) -> str:
+        return self._model
+
+    def _complete_impl(
+        self,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+        max_tokens: int = 4096,
+        temperature: float = 0.7,
+        json_mode: bool = False
+    ) -> LLMResponse:
+        start = time.time()
+
+        kwargs = {
+            "model": self._model,
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+            "messages": [{"role": "user", "content": prompt}],
+        }
+
+        if system_prompt:
+            kwargs["system"] = system_prompt
+
+        try:
+            response = self.client.messages.create(**kwargs)
+            latency_ms = (time.time() - start) * 1000
+
+            content = response.content[0].text
+            if json_mode and not content.strip().startswith("{"):
+                # Try to extract JSON from markdown code blocks
+                import re
+                json_match = re.search(r'```json\s*(\{.*?\})\s*```', content, re.DOTALL)
+                if json_match:
+                    content = json_match.group(1)
+
+            return LLMResponse(
+                content=content,
+                model=self._model,
+                provider=self.provider_name,
+                usage={
+                    "input_tokens": response.usage.input_tokens,
+                    "output_tokens": response.usage.output_tokens,
+                },
+                latency_ms=latency_ms,
+                raw_response=response,
+            )
+        except Exception as e:
+            logger.error(f"Anthropic API error: {e}")
+            raise
+
+
+class GoogleClient(BaseLLMClient):
+    """
+    Google client for Gemini models.
+
+    Available models:
+    - gemini-2.0-flash-exp: Gemini 2.0 Flash (experimental)
+    - gemini-1.5-pro: Gemini 1.5 Pro - Most capable
+    - gemini-1.5-flash: Gemini 1.5 Flash - Fast
+    """
+
+    provider_name = "google"
+
+    MODELS = {
+        "gemini-2.0-flash-exp": "Gemini 2.0 Flash - Experimental",
+        "gemini-1.5-pro": "Gemini 1.5 Pro - Most capable",
+        "gemini-1.5-flash": "Gemini 1.5 Flash - Fast",
+    }
+
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        model: str = "gemini-1.5-pro",
+        use_cache: bool = True,
+        use_retry: bool = True,
+    ):
+        super().__init__(use_cache=use_cache, use_retry=use_retry)
+
+        self.api_key = api_key or os.getenv("GOOGLE_API_KEY")
+        if not self.api_key:
+            raise ValueError("Google API key is required. Set GOOGLE_API_KEY environment variable.")
+
+        self._model = model
+        if model not in self.MODELS:
+            logger.warning(f"Unknown model {model}, available: {list(self.MODELS.keys())}")
+
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=self.api_key)
+            self.client = genai.GenerativeModel(model_name=self._model)
+        except ImportError:
+            raise ImportError("google-generativeai package is required. Install with: pip install google-generativeai")
+
+    @property
+    def model(self) -> str:
+        return self._model
+
+    def _complete_impl(
+        self,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+        max_tokens: int = 4096,
+        temperature: float = 0.7,
+        json_mode: bool = False
+    ) -> LLMResponse:
+        start = time.time()
+
+        # Combine system and user prompts for Gemini
+        full_prompt = prompt
+        if system_prompt:
+            full_prompt = f"{system_prompt}\n\n{prompt}"
+
+        if json_mode:
+            full_prompt += "\n\nRespond with valid JSON only."
+
+        try:
+            response = self.client.generate_content(
+                full_prompt,
+                generation_config={
+                    "temperature": temperature,
+                    "max_output_tokens": max_tokens,
+                }
+            )
+            latency_ms = (time.time() - start) * 1000
+
+            return LLMResponse(
+                content=response.text,
+                model=self._model,
+                provider=self.provider_name,
+                usage={},  # Gemini doesn't provide usage in free tier
+                latency_ms=latency_ms,
+                raw_response=response,
+            )
+        except Exception as e:
+            logger.error(f"Google API error: {e}")
+            raise
+
+
 class GroqClient(BaseLLMClient):
     """
     Groq Cloud client - ultra-fast inference.
@@ -642,22 +917,46 @@ class MultiProviderClient(BaseLLMClient):
         Initialize with providers. If none provided, auto-detects available.
 
         Priority order:
-        1. Perplexity (real-time web search)
-        2. Groq (fast inference)
+        1. OpenAI (most popular, reliable)
+        2. Anthropic (high quality Claude models)
+        3. Google (Gemini models)
+        4. Perplexity (real-time web search)
+        5. Groq (fast inference)
         """
         if providers:
             self.providers = providers
         else:
             self.providers = []
 
-            # Try Perplexity first (primary - has web search)
+            # Try OpenAI first (most popular)
+            if os.getenv("OPENAI_API_KEY"):
+                try:
+                    self.providers.append(OpenAIClient())
+                except (ValueError, ImportError) as e:
+                    logger.debug(f"Skipping OpenAI: {e}")
+
+            # Try Anthropic second (high quality)
+            if os.getenv("ANTHROPIC_API_KEY"):
+                try:
+                    self.providers.append(AnthropicClient())
+                except (ValueError, ImportError) as e:
+                    logger.debug(f"Skipping Anthropic: {e}")
+
+            # Try Google third (Gemini)
+            if os.getenv("GOOGLE_API_KEY"):
+                try:
+                    self.providers.append(GoogleClient())
+                except (ValueError, ImportError) as e:
+                    logger.debug(f"Skipping Google: {e}")
+
+            # Try Perplexity (real-time web search)
             if os.getenv("PERPLEXITY_API_KEY"):
                 try:
                     self.providers.append(PerplexityClient())
                 except (ValueError, ImportError) as e:
                     logger.debug(f"Skipping Perplexity: {e}")
 
-            # Then Groq (backup - fast inference)
+            # Try Groq (fast inference)
             if os.getenv("GROQ_API_KEY"):
                 try:
                     self.providers.append(GroqClient())
@@ -718,8 +1017,11 @@ def get_llm_client(
     Factory function to get an LLM client.
 
     Available providers:
-    - perplexity: Primary provider with real-time web search (recommended)
-    - groq: Fast inference backup provider
+    - openai: OpenAI GPT models (gpt-4o, gpt-4-turbo, gpt-3.5-turbo)
+    - anthropic: Anthropic Claude models (claude-3-5-sonnet, claude-3-opus)
+    - google: Google Gemini models (gemini-1.5-pro, gemini-1.5-flash)
+    - perplexity: Perplexity with real-time web search (sonar-pro)
+    - groq: Fast inference with open models (llama-3.3-70b)
     - mock: Testing without API calls
     - multi: Automatic failover between providers
     - auto: Auto-detect best available provider
@@ -738,6 +1040,24 @@ def get_llm_client(
     if provider == "mock":
         return MockLLMClient()
 
+    if provider == "openai":
+        return OpenAIClient(
+            api_key=api_key,
+            model=model or os.getenv("OPENAI_MODEL", "gpt-4o")
+        )
+
+    if provider == "anthropic":
+        return AnthropicClient(
+            api_key=api_key,
+            model=model or os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022")
+        )
+
+    if provider == "google":
+        return GoogleClient(
+            api_key=api_key,
+            model=model or os.getenv("GOOGLE_MODEL", "gemini-1.5-pro")
+        )
+
     if provider == "perplexity":
         return PerplexityClient(
             api_key=api_key,
@@ -755,12 +1075,35 @@ def get_llm_client(
 
     if provider == "auto":
         # Try providers in order of preference
+        # 1. OpenAI (most popular, reliable)
+        if os.getenv("OPENAI_API_KEY"):
+            try:
+                return OpenAIClient()
+            except Exception as e:
+                logger.warning(f"Could not initialize OpenAI: {e}")
+
+        # 2. Anthropic (high quality, Claude models)
+        if os.getenv("ANTHROPIC_API_KEY"):
+            try:
+                return AnthropicClient()
+            except Exception as e:
+                logger.warning(f"Could not initialize Anthropic: {e}")
+
+        # 3. Google (Gemini models)
+        if os.getenv("GOOGLE_API_KEY"):
+            try:
+                return GoogleClient()
+            except Exception as e:
+                logger.warning(f"Could not initialize Google: {e}")
+
+        # 4. Perplexity (web search capabilities)
         if os.getenv("PERPLEXITY_API_KEY"):
             try:
                 return PerplexityClient()
             except Exception as e:
                 logger.warning(f"Could not initialize Perplexity: {e}")
 
+        # 5. Groq (fast, cost-effective)
         if os.getenv("GROQ_API_KEY"):
             try:
                 return GroqClient()
@@ -772,15 +1115,25 @@ def get_llm_client(
 
     raise ValueError(
         f"Unknown provider: {provider}\n"
-        f"Available: perplexity, groq, mock, multi, auto"
+        f"Available: openai, anthropic, google, perplexity, groq, mock, multi, auto"
     )
 
 
 def list_available_providers() -> Dict[str, bool]:
     """Check which providers are available based on environment variables."""
     return {
+        "openai": bool(os.getenv("OPENAI_API_KEY")),
+        "anthropic": bool(os.getenv("ANTHROPIC_API_KEY")),
+        "google": bool(os.getenv("GOOGLE_API_KEY")),
         "perplexity": bool(os.getenv("PERPLEXITY_API_KEY")),
         "groq": bool(os.getenv("GROQ_API_KEY")),
         "mock": True,
-        "multi": bool(os.getenv("PERPLEXITY_API_KEY") or os.getenv("GROQ_API_KEY")),
+        "multi": any([
+            os.getenv("OPENAI_API_KEY"),
+            os.getenv("ANTHROPIC_API_KEY"),
+            os.getenv("GOOGLE_API_KEY"),
+            os.getenv("PERPLEXITY_API_KEY"),
+            os.getenv("GROQ_API_KEY"),
+        ]),
     }
+
