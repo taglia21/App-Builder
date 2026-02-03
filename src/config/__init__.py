@@ -2,6 +2,15 @@
 
 from .settings import Settings, settings
 
+
+def get_settings() -> Settings:
+    """Get the settings instance (for backward compatibility).
+    
+    Returns:
+        Settings: The global settings instance
+    """
+    return settings
+
 # Backward compatibility - import old config classes from parent module
 try:
     import sys
@@ -37,7 +46,7 @@ except (ImportError, AttributeError, Exception):
         pass
 
 __all__ = [
-    "Settings", "settings", "load_config",
+    "Settings", "settings", "get_settings", "load_config",
     "PipelineConfig", "IntelligenceConfig", "IdeaGenerationConfig",
     "ScoringConfig", "PromptEngineeringConfig", "ExportConfig"
 ]
