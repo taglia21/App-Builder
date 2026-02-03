@@ -3,6 +3,7 @@ fastapi>=0.109.0
 uvicorn[standard]>=0.27.0
 pydantic>=2.5.0
 pydantic-settings>=2.1.0
+strawberry-graphql[fastapi]>=0.216.0
 
 # HTTP clients
 httpx>=0.26.0

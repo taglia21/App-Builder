@@ -47,6 +47,13 @@ try:
     from src.agents.routes import multi_agent_router
 except ImportError:
     multi_agent_router = None
+
+# Import GraphQL router
+try:
+    from src.api.graphql import create_graphql_router
+except ImportError:
+    create_graphql_router = None
+
 from .rate_limiter import setup_rate_limiting
 
 # Import logging system with fallback for minimal deployments
@@ -227,6 +234,11 @@ and authentication requirements.
     # Include health router (keep at /api for backwards compatibility and K8s probes)
     if health_router:
         app.include_router(health_router, prefix="/api")
+    
+    # Include GraphQL router
+    if create_graphql_router:
+        graphql_router = create_graphql_router()
+        app.include_router(graphql_router, prefix="")
 
     # Mount static files if directory exists
     static_path = Path(__file__).parent / "static"
