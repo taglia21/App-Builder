@@ -1,9 +1,0 @@
-[33mcommit eb1aa5332a287b130b613231de3a0888631d540f[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
-Author: Austin Tartaglia <112903443+taglia21@users.noreply.github.com>
-Date:   Tue Jan 27 23:11:07 2026 +0000
-
-    Add landing page with LaunchForge branding and value proposition
-
- src/dashboard/templates/base_public.html |  12 [32m+[m
- .../templates/pages/landing.html         | 238 [32m+++++++[m[31m--------[m
- 2 files changed, 126 insertions(+), 124 deletions(-)
