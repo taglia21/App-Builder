@@ -84,10 +84,19 @@
         </div>
     </div>
 
-    <style>
-/* URGENT: Hide ALL large SVG elements */
-svg[width] { max-width: 24px !important; max-height: 24px !important; }
-div::before, div::after { max-width: 24px !important; max-height: 24px !important; }
-</style>
+    <script>
+// NUCLEAR OPTION: Remove ALL large elements
+setTimeout(function() {
+    document.querySelectorAll('*').forEach(el => {
+        const rect = el.getBoundingClientRect();
+        if (rect.width > 100 || rect.height > 100) {
+            const style = window.getComputedStyle(el);
+            if (style.position !== 'static' && el.tagName !== 'DIV' && el.tagName !== 'BODY') {
+                el.style.display = 'none';
+            }
+        }
+    });
+}, 100);
+</script>
 </body>
 </html>
