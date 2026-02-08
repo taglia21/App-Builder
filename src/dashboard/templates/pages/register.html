@@ -2,6 +2,10 @@
     <style>
         /* EMERGENCY: Hide ALL pseudo-elements that might be large icons */
         * { position: relative !important; }
+                body, body * {
+            background-image: none !important;
+            background: transparent !important;
+        }
         *::before, *::after {
             content: none !important;
             display: none !important;
