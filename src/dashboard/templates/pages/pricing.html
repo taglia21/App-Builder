@@ -2,6 +2,21 @@
 {% block title %}Pricing - LaunchForge{% endblock %}
 {% block content %}
 <div class="max-w-6xl mx-auto py-12">
+    {% block extra_css %}
+<style>
+  /* Force hide all decorative pseudo-elements */
+  *::before, *::after {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+  }
+  /* Hide any large decorative SVGs */
+  svg[class*="w-64"], svg[class*="w-96"], svg[class*="w-128"],
+  svg[class*="h-64"], svg[class*="h-96"], svg[class*="h-128"] {
+    display: none !important;
+  }
+</style>
+{% endblock %}
     <div class="text-center mb-12">
         <h1 class="text-4xl font-bold mb-4">Simple, Transparent Pricing</h1>
         <p class="text-xl text-gray-600">Choose the plan that fits your needs. All plans include a 14-day free trial.</p>
