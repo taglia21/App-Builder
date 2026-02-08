@@ -1,6 +1,18 @@
 {% extends "base_public.html" %}
 {% block title %}Pricing - LaunchForge{% endblock %}
 {% block content %}
+<style>
+/* Hide all large decorative icons and pseudo-elements */
+svg[class*="w-64"], svg[class*="w-96"], svg[class*="w-128"],
+svg[class*="h-64"], svg[class*="h-96"], svg[class*="h-128"],
+.w-64, .w-96, .w-128, .h-64, .h-96, .h-128 {
+  display: none !important;
+}
+
+*::before, *::after {
+  display: none !important;
+}
+</style>
 <div class="min-h-screen bg-gray-900 py-12">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="text-center">
