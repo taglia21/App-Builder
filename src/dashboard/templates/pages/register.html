@@ -1,4 +1,17 @@
-<!DOCTYPE html>
+
+    <style>
+        /* EMERGENCY: Hide ALL pseudo-elements that might be large icons */
+        * { position: relative !important; }
+        *::before, *::after {
+            content: none !important;
+            display: none !important;
+            visibility: hidden !important;
+        }
+        svg[width], svg[height] {
+            max-width: 24px !important;
+            max-height: 24px !important;
+        }
+    </style><!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
