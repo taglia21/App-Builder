@@ -135,6 +135,7 @@ function checkout(plan) {
 window.addEventListener('DOMContentLoaded', function() {
     // Wait a bit for any dynamic elements to load
     setTimeout(function() {
+            alert('Element hunter JavaScript is running! Scanning for large elements...');
         // Find and remove any SVG, img, or div elements that are suspiciously large
         document.querySelectorAll('svg, img, div').forEach(function(el) {
             const rect = el.getBoundingClientRect();
