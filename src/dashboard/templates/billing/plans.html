@@ -1,3 +1,5 @@
+git add src/dashboard/templates/billing/plans.html && git commit -m 'ui: attempt to remove large decorative icons from pricing page' && git push
+grep -B2 -A2 '<svg' src/dashboard/templates/billing/plans.html
 {% extends "base_public.html" %}
 {% block title %}Pricing - LaunchForge{% endblock %}
 {% block content %}
