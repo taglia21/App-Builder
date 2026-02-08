@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
+from sqlalchemy import select
 
 from src.auth.password import hash_password, verify_password
 from src.database.db import get_db
@@ -41,7 +42,7 @@ async def login(
     """Process login form."""
     try:
         # Find user
-        user = db.query(User).filter(User.email == email.lower()).first()
+        user = db.execute(select(User).where(User.email == email.lower())).scalar_one_or_none()
 
         if not user or not verify_password(password, user.password_hash):
             return templates.TemplateResponse(
@@ -103,7 +104,7 @@ async def register(
             )
 
         # Check if user exists
-        existing_user = db.query(User).filter(User.email == email.lower()).first()
+        existing_user = db.execute(select(User).where(User.email == email.lower())).scalar_one_or_none()
         if existing_user:
             return templates.TemplateResponse(
                 "pages/register.html",
