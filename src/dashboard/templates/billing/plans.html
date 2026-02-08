@@ -130,5 +130,24 @@ function checkout(plan) {
     })
     .catch(error => console.error('Error:', error));
 }
+
+// EMERGENCY: Remove any massive decorative elements after page load
+window.addEventListener('DOMContentLoaded', function() {
+    // Wait a bit for any dynamic elements to load
+    setTimeout(function() {
+        // Find and remove any SVG, img, or div elements that are suspiciously large
+        document.querySelectorAll('svg, img, div').forEach(function(el) {
+            const rect = el.getBoundingClientRect();
+            // If element is larger than 300px in width or height, hide it unless it's a container
+            if ((rect.width > 300 || rect.height > 300) && !el.querySelector('button, input, textarea')) {
+                // Check if it's not a main content container
+                if (!el.classList.contains('max-w-6xl') && !el.classList.contains('grid') && !el.classList.contains('card')) {
+                    el.style.display = 'none';
+                    console.log('Removed large decorative element:', el);
+                }
+            }
+        });
+    }, 500); // Wait 500ms after page load
+});
 </script>
 {% endblock %}
