@@ -49,6 +49,13 @@ class Base(DeclarativeBase):
     }
 
 
+class UserRole(enum.Enum):
+    """User roles for access control."""
+    USER = "user"
+    DEMO = "demo"
+    ADMIN = "admin"
+
+
 class SubscriptionTier(enum.Enum):
     """User subscription tiers."""
     FREE = "free"
@@ -184,6 +191,20 @@ class User(Base, TimestampMixin, SoftDeleteMixin):
         nullable=True
     )
 
+    # Role and demo fields
+    role: Mapped[Optional[str]] = mapped_column(
+        String(20),
+        default="user",
+        nullable=False,
+        server_default="user"
+    )
+    is_demo_account: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
+        server_default="0"
+    )
+
     # OAuth fields
     oauth_provider: Mapped[Optional[str]] = mapped_column(
         String(50),
@@ -236,12 +257,31 @@ class User(Base, TimestampMixin, SoftDeleteMixin):
     def __repr__(self) -> str:
         return f"<User(id={self.id}, email={self.email}, tier={self.subscription_tier.value})>"
 
+    @property
+    def is_admin(self) -> bool:
+        """Check if user has admin role."""
+        return self.role == "admin"
+
+    @property
+    def is_demo(self) -> bool:
+        """Check if user is a demo account."""
+        return self.is_demo_account or self.role == "demo"
+
+    @property
+    def bypasses_billing(self) -> bool:
+        """Check if user bypasses billing (admin or demo)."""
+        return self.role in ("admin", "demo") or self.is_demo_account
+
     def has_credits(self, amount: int = 1) -> bool:
-        """Check if user has enough credits."""
+        """Check if user has enough credits. Demo/admin users always have credits."""
+        if self.bypasses_billing:
+            return True
         return self.credits_remaining >= amount
 
     def use_credits(self, amount: int = 1) -> bool:
-        """Deduct credits from user. Returns False if insufficient."""
+        """Deduct credits from user. Returns False if insufficient. Demo/admin skip deduction."""
+        if self.bypasses_billing:
+            return True
         if not self.has_credits(amount):
             return False
         self.credits_remaining -= amount

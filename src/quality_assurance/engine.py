@@ -276,7 +276,8 @@ class QualityAssuranceEngine:
                     [self.isort_path, ".", "--profile", "black"],
                     cwd=str(backend_path),
                     check=True,
-                    capture_output=True
+                    capture_output=True,
+                    timeout=30
                 )
                 logger.info("✓ Backend: Imports sorted (isort)")
             except subprocess.CalledProcessError as e:
@@ -317,9 +318,12 @@ class QualityAssuranceEngine:
         """Run Prettier on frontend code."""
         # Check if npx works (simple check)
         try:
-            # We use shell=True on Windows for npx sometimes, but try without first
-            subprocess.run(["npx", "--version"], capture_output=True, shell=True)
-        except (RuntimeError, ValueError, Exception):
+            subprocess.run(
+                ["npx", "--version"],
+                capture_output=True,
+                timeout=10
+            )
+        except (subprocess.TimeoutExpired, RuntimeError, ValueError, FileNotFoundError, Exception):
             logger.warning("npx not available, skipping frontend formatting")
             return False
 
@@ -336,9 +340,8 @@ class QualityAssuranceEngine:
                 ["npx", "--yes", "prettier", "--write", "."],
                 cwd=str(frontend_path),
                 check=True,
-                shell=True, # Often needed for npx on Windows
                 capture_output=True,
-                timeout=120, # Prettier can be slow on first run
+                timeout=120,
                 env=env
             )
             logger.info("✓ Frontend: Code formatted (prettier)")

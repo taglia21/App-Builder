@@ -1,66 +1,75 @@
 """Application configuration using environment variables."""
+import logging
 from functools import lru_cache
 from typing import Optional
 
-from pydantic import Field
-from pydantic_settings import BaseSettings
+from pydantic import Field, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+logger = logging.getLogger(__name__)
+
+_INSECURE_SECRET_KEYS = {
+    "change-me-in-production",
+    "nexusai-dev-secret-key-change-in-production",
+    "secret",
+    "password",
+}
 
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+        extra="ignore",
+    )
+
     # Application
-    APP_NAME: str = Field(default="App-Builder", env="APP_NAME")
-    APP_ENV: str = Field(default="development", env="APP_ENV")
-    DEBUG: bool = Field(default=False, env="DEBUG")
-    SECRET_KEY: str = Field(default="change-me-in-production", env="SECRET_KEY")
-    BASE_URL: str = Field(default="http://localhost:8000", env="BASE_URL")
+    APP_NAME: str = "App-Builder"
+    APP_ENV: str = "development"
+    DEBUG: bool = False
+    SECRET_KEY: str = "change-me-in-production"
+    BASE_URL: str = "http://localhost:8000"
 
     # Database
-    DATABASE_URL: str = Field(
-        default="sqlite+aiosqlite:///./app.db",
-        env="DATABASE_URL"
-    )
-    DATABASE_POOL_SIZE: int = Field(default=5, env="DATABASE_POOL_SIZE")
-    DATABASE_MAX_OVERFLOW: int = Field(default=10, env="DATABASE_MAX_OVERFLOW")
+    DATABASE_URL: str = "sqlite+aiosqlite:///./app.db"
+    DATABASE_POOL_SIZE: int = 5
+    DATABASE_MAX_OVERFLOW: int = 10
 
     # Stripe
-    STRIPE_SECRET_KEY: Optional[str] = Field(default=None, env="STRIPE_SECRET_KEY")
-    STRIPE_PUBLISHABLE_KEY: Optional[str] = Field(default=None, env="STRIPE_PUBLISHABLE_KEY")
-    STRIPE_WEBHOOK_SECRET: Optional[str] = Field(default=None, env="STRIPE_WEBHOOK_SECRET")
-    STRIPE_PRICE_ID_PRO: Optional[str] = Field(default=None, env="STRIPE_PRICE_ID_PRO")
-    STRIPE_PRICE_ID_ENTERPRISE: Optional[str] = Field(default=None, env="STRIPE_PRICE_ID_ENTERPRISE")
+    STRIPE_SECRET_KEY: Optional[str] = None
+    STRIPE_PUBLISHABLE_KEY: Optional[str] = None
+    STRIPE_WEBHOOK_SECRET: Optional[str] = None
+    STRIPE_PRICE_ID_PRO: Optional[str] = None
+    STRIPE_PRICE_ID_ENTERPRISE: Optional[str] = None
 
     # Email (SendGrid)
-    SENDGRID_API_KEY: Optional[str] = Field(default=None, env="SENDGRID_API_KEY")
-    EMAIL_FROM_ADDRESS: str = Field(default="noreply@example.com", env="EMAIL_FROM_ADDRESS")
-    EMAIL_FROM_NAME: str = Field(default="App-Builder", env="EMAIL_FROM_NAME")
+    SENDGRID_API_KEY: Optional[str] = None
+    EMAIL_FROM_ADDRESS: str = "noreply@example.com"
+    EMAIL_FROM_NAME: str = "App-Builder"
 
     # Email (SMTP fallback)
-    SMTP_HOST: Optional[str] = Field(default=None, env="SMTP_HOST")
-    SMTP_PORT: int = Field(default=587, env="SMTP_PORT")
-    SMTP_USER: Optional[str] = Field(default=None, env="SMTP_USER")
-    SMTP_PASSWORD: Optional[str] = Field(default=None, env="SMTP_PASSWORD")
-    SMTP_USE_TLS: bool = Field(default=True, env="SMTP_USE_TLS")
+    SMTP_HOST: Optional[str] = None
+    SMTP_PORT: int = 587
+    SMTP_USER: Optional[str] = None
+    SMTP_PASSWORD: Optional[str] = None
+    SMTP_USE_TLS: bool = True
 
     # Redis (for caching/queues)
-    REDIS_URL: Optional[str] = Field(default=None, env="REDIS_URL")
+    REDIS_URL: Optional[str] = None
 
     # OpenAI / LLM
-    OPENAI_API_KEY: Optional[str] = Field(default=None, env="OPENAI_API_KEY")
-    ANTHROPIC_API_KEY: Optional[str] = Field(default=None, env="ANTHROPIC_API_KEY")
+    OPENAI_API_KEY: Optional[str] = None
+    ANTHROPIC_API_KEY: Optional[str] = None
 
     # Monitoring
-    SENTRY_DSN: Optional[str] = Field(default=None, env="SENTRY_DSN")
-    LOG_LEVEL: str = Field(default="INFO", env="LOG_LEVEL")
+    SENTRY_DSN: Optional[str] = None
+    LOG_LEVEL: str = "INFO"
 
     # Rate Limiting
-    RATE_LIMIT_PER_MINUTE: int = Field(default=60, env="RATE_LIMIT_PER_MINUTE")
-
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = True
+    RATE_LIMIT_PER_MINUTE: int = 60
 
     @property
     def is_production(self) -> bool:
@@ -69,6 +78,21 @@ class Settings(BaseSettings):
     @property
     def is_development(self) -> bool:
         return self.APP_ENV == "development"
+
+    @model_validator(mode='after')
+    def _validate_secret_key_in_production(self) -> 'Settings':
+        """Raise an error if SECRET_KEY is an insecure default in production."""
+        if self.is_production and self.SECRET_KEY in _INSECURE_SECRET_KEYS:
+            raise ValueError(
+                "SECRET_KEY must be changed from its default value in production. "
+                "Generate a strong random key: python -c 'import secrets; print(secrets.token_urlsafe(48))'"
+            )
+        if self.is_production and len(self.SECRET_KEY) < 32:
+            raise ValueError(
+                f"SECRET_KEY is only {len(self.SECRET_KEY)} characters. "
+                "Production requires at least 32 random characters."
+            )
+        return self
 
     @property
     def stripe_configured(self) -> bool:

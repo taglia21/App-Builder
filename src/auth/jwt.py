@@ -38,6 +38,14 @@ class InvalidTokenError(TokenError):
 
 # Token configuration
 DEFAULT_SECRET_KEY = "nexusai-dev-secret-key-change-in-production"
+
+_INSECURE_SECRET_KEYS = {
+    "change-me-in-production",
+    "nexusai-dev-secret-key-change-in-production",
+    "secret",
+    "password",
+}
+
 ACCESS_TOKEN_EXPIRE_MINUTES = 15
 REFRESH_TOKEN_EXPIRE_DAYS = 7
 EMAIL_VERIFICATION_EXPIRE_HOURS = 24
@@ -47,8 +55,18 @@ ALGORITHM = "HS256"
 
 
 def get_secret_key() -> str:
-    """Get the JWT secret key from environment or default."""
-    return os.getenv("JWT_SECRET_KEY", os.getenv("SECRET_KEY", DEFAULT_SECRET_KEY))
+    """Get the JWT secret key from environment or default.
+    
+    Raises ValueError in production if using an insecure default key.
+    """
+    key = os.getenv("JWT_SECRET_KEY", os.getenv("SECRET_KEY", DEFAULT_SECRET_KEY))
+    env = os.getenv("APP_ENV", os.getenv("ENVIRONMENT", "development"))
+    if env.lower() in ("production", "prod") and key in _INSECURE_SECRET_KEYS:
+        raise ValueError(
+            "SECRET_KEY / JWT_SECRET_KEY must be changed from its default value in production. "
+            "Generate a strong random key: python -c 'import secrets; print(secrets.token_urlsafe(48))'"
+        )
+    return key
 
 
 def create_access_token(

@@ -2,7 +2,9 @@ from starlette.requests import Request
 
 """FastAPI Dashboard Application with Security."""
 import logging
+import os
 import secrets
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -14,6 +16,7 @@ from fastapi.templating import Jinja2Templates
 
 from ..auth.web_routes import router as auth_router
 from ..billing.routes import create_billing_router
+from ..demo.routes import router as demo_router
 from .api import create_api_router
 from .routes import create_dashboard_router
 
@@ -88,10 +91,30 @@ setup_logging()
 logger = get_logger(__name__)
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan events — startup and shutdown."""
+    # --- Startup ---
+    if os.environ.get("DEMO_MODE", "").lower() in ("true", "1", "yes"):
+        try:
+            from src.database.db import get_database_url
+            from src.demo.seed_demo_account import seed_demo_user
+            result = seed_demo_user(database_url=get_database_url())
+            logger.info(
+                f"Demo account seeded: {result['email']} "
+                f"(role={result['role']}, tier={result['tier']})"
+            )
+        except Exception as e:
+            logger.warning(f"Failed to seed demo account on startup: {e}")
+    yield
+    # --- Shutdown ---
+
+
 def create_app() -> FastAPI:
     """Create and configure FastAPI application."""
     app = FastAPI(
         title="LaunchForge Dashboard",
+        lifespan=lifespan,
         description="""
 # LaunchForge - AI-Powered Startup Builder
 
@@ -213,6 +236,7 @@ and authentication requirements.
     
     # Include auth routes (no versioning for web routes)
     app.include_router(auth_router)
+    app.include_router(demo_router)
     app.include_router(create_dashboard_router(templates))
     app.include_router(create_billing_router(templates), prefix="/billing")
 

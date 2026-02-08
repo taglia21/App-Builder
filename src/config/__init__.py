@@ -1,5 +1,8 @@
 """Configuration package for LaunchForge."""
 
+import importlib.util
+from pathlib import Path
+
 from .settings import Settings, settings
 
 
@@ -11,39 +14,43 @@ def get_settings() -> Settings:
     """
     return settings
 
-# Backward compatibility - import old config classes from parent module
+# Load legacy config classes from src/config.py (sibling module)
+# We use importlib to avoid circular import since this package shadows the module name.
+_config_module_path = Path(__file__).parent.parent / "config.py"
 try:
-    import sys
-    from pathlib import Path
-    # Add src directory to path
-    src_dir = Path(__file__).parent.parent
-    if str(src_dir) not in sys.path:
-        sys.path.insert(0, str(src_dir))
-    
-    from config import (
-        load_config,
-        PipelineConfig,
-        IntelligenceConfig,
-        IdeaGenerationConfig,
-        ScoringConfig,
-        PromptEngineeringConfig,
-        ExportConfig
-    )
-except (ImportError, AttributeError, Exception) as e:
-    # Fallback if config.py doesn't have the classes
+    _spec = importlib.util.spec_from_file_location("_legacy_config", _config_module_path)
+    _mod = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_mod)
+
+    PipelineConfig = _mod.PipelineConfig
+    IntelligenceConfig = _mod.IntelligenceConfig
+    IdeaGenerationConfig = _mod.IdeaGenerationConfig
+    ScoringConfig = _mod.ScoringConfig
+    PromptEngineeringConfig = _mod.PromptEngineeringConfig
+
+    _original_load_config = _mod.load_config
+
+    def load_config(config_path: str = "config.yml") -> "PipelineConfig":
+        """Load pipeline config from YAML, falling back to env-only config."""
+        try:
+            return _original_load_config(config_path)
+        except FileNotFoundError:
+            # No config.yml — use environment-variable-only defaults
+            return PipelineConfig()
+
+except Exception as e:
     import warnings
     warnings.warn(f"Could not import legacy config classes: {e}")
-    
+
     def load_config(config_path=None):
         """Fallback load_config function."""
         return {}
-    
-    # Provide minimal classes for backward compatibility
+
     class PipelineConfig:
         """Fallback PipelineConfig."""
         def get_data_sources(self):
             return []
-        
+
     class IntelligenceConfig:
         pass
     class IdeaGenerationConfig:
@@ -52,8 +59,10 @@ except (ImportError, AttributeError, Exception) as e:
         pass
     class PromptEngineeringConfig:
         pass
-    class ExportConfig:
-        pass
+
+# ExportConfig stub — not present in src/config.py, needed for backward compat
+class ExportConfig:
+    pass
 
 
 # Additional compatibility classes for tests

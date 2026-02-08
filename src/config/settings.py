@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "LaunchForge"
     APP_VERSION: str = "1.0.0"
     ENVIRONMENT: Literal["development", "production", "testing"] = "development"
-    DEBUG: bool = Field(default=True)
+    DEBUG: bool = Field(default=False)
     
     # LLM Provider API Keys (all optional for demo mode)
     OPENAI_API_KEY: Optional[str] = None
@@ -41,6 +41,12 @@ class Settings(BaseSettings):
     
     # Demo Mode
     DEMO_MODE: bool = False
+    DEMO_EMAIL: str = "demo@launchforge.dev"
+    DEMO_PASSWORD: str = "LaunchForge-Demo-2026!"
+    DEMO_TOKEN: Optional[str] = None  # Optional magic token for /demo?token=xxx URL
+    
+    # Admin
+    ADMIN_EMAILS: str = ""  # Comma-separated admin emails
     
     # Default LLM Provider
     DEFAULT_LLM_PROVIDER: str = "auto"

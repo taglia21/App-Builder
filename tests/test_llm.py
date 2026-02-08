@@ -155,18 +155,17 @@ class TestGoogleProvider:
         from src.llm.client import GoogleClient
         assert GoogleClient is not None
 
-    @patch('google.generativeai.GenerativeModel')
-    def test_google_client_initialization(self, mock_google):
+    @patch('google.genai.Client')
+    def test_google_client_initialization(self, mock_client_cls):
         """Test Google client initialization."""
         from src.llm.client import GoogleClient
         
-        with patch('google.generativeai.configure'):
-            client = GoogleClient(api_key="test_key", model="gemini-pro")
-            assert client.provider_name == "google"
+        client = GoogleClient(api_key="test_key", model="gemini-pro")
+        assert client.provider_name == "google"
+        mock_client_cls.assert_called_once_with(api_key="test_key")
 
-    @patch('google.generativeai.configure')
-    @patch('google.generativeai.GenerativeModel')
-    def test_google_generate_text(self, mock_model_class, mock_configure):
+    @patch('google.genai.Client')
+    def test_google_generate_text(self, mock_client_cls):
         """Test Google text generation."""
         from src.llm.client import GoogleClient
         
@@ -174,9 +173,9 @@ class TestGoogleProvider:
         mock_response = Mock()
         mock_response.text = "Gemini response"
         
-        mock_model = Mock()
-        mock_model.generate_content.return_value = mock_response
-        mock_model_class.return_value = mock_model
+        mock_genai_client = Mock()
+        mock_genai_client.models.generate_content.return_value = mock_response
+        mock_client_cls.return_value = mock_genai_client
         
         client = GoogleClient(api_key="test_key", use_cache=False, use_retry=False)
         result = client.complete("Test prompt")
@@ -280,6 +279,5 @@ class TestProviderSelection:
         """Test getting Google client."""
         from src.llm.client import get_llm_client
         
-        with patch('google.generativeai.configure'):
-            client = get_llm_client(provider="google")
-            mock_google.assert_called_once()
+        client = get_llm_client(provider="google")
+        mock_google.assert_called_once()

@@ -54,8 +54,8 @@ def cli(ctx):
     "--config",
     "-c",
     default="config.yml",
-    help="Path to configuration file",
-    type=click.Path(exists=True),
+    help="Path to configuration file (optional, uses env defaults if missing)",
+    type=click.Path(),
 )
 @click.option(
     "--output",
@@ -264,8 +264,8 @@ def demo(output):
     "--config",
     "-c",
     default="config.yml",
-    help="Path to configuration file",
-    type=click.Path(exists=True),
+    help="Path to configuration file (optional)",
+    type=click.Path(),
 )
 @click.option(
     "--schedule",
@@ -300,8 +300,8 @@ def daemon(config, schedule):
     "--config",
     "-c",
     default="config.yml",
-    help="Path to configuration file",
-    type=click.Path(exists=True),
+    help="Path to configuration file (optional)",
+    type=click.Path(),
 )
 @click.option(
     "--output",
@@ -358,8 +358,8 @@ def build_from_idea(idea_file, config, output):
     "--config",
     "-c",
     default="config.yml",
-    help="Path to configuration file",
-    type=click.Path(exists=True),
+    help="Path to configuration file (optional)",
+    type=click.Path(),
 )
 def test_intelligence(config):
     """Test intelligence gathering only (no code generation)."""
@@ -686,7 +686,7 @@ def wizard():
 
         UI.info("Running Automated Discovery Pipeline...")
         ctx = click.get_current_context()
-        ctx.invoke(generate, config="config.yml", deploy=False, theme=theme)
+        ctx.invoke(generate, config="config.yml", deploy=False, theme=theme, demo=True)
 
 
 @cli.command()

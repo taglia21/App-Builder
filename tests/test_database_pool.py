@@ -1,6 +1,6 @@
 """Tests for database connection pooling."""
 import pytest
-from unittest.mock import Mock, patch, AsyncMock
+from unittest.mock import Mock, MagicMock, patch, AsyncMock
 
 
 def test_database_pool_module_exists():
@@ -65,9 +65,12 @@ async def test_check_connection_with_mock():
     """Test check_connection handles exceptions."""
     from src.database.pool import check_connection
     
-    # Create a mock engine that raises an exception
-    mock_engine = AsyncMock()
-    mock_engine.connect.side_effect = Exception("Connection failed")
+    # Create a mock engine whose async context manager raises
+    mock_engine = MagicMock()
+    mock_conn = MagicMock()
+    mock_conn.__aenter__ = AsyncMock(side_effect=Exception("Connection failed"))
+    mock_conn.__aexit__ = AsyncMock(return_value=False)
+    mock_engine.connect.return_value = mock_conn
     
     result = await check_connection(mock_engine)
     assert result is False

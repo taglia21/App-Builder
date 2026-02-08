@@ -558,7 +558,7 @@ class AnthropicClient(BaseLLMClient):
 
 class GoogleClient(BaseLLMClient):
     """
-    Google client for Gemini models.
+    Google client for Gemini models (using google-genai SDK).
 
     Available models:
     - gemini-2.0-flash-exp: Gemini 2.0 Flash (experimental)
@@ -592,11 +592,10 @@ class GoogleClient(BaseLLMClient):
             logger.warning(f"Unknown model {model}, available: {list(self.MODELS.keys())}")
 
         try:
-            import google.generativeai as genai
-            genai.configure(api_key=self.api_key)
-            self.client = genai.GenerativeModel(model_name=self._model)
+            from google import genai
+            self.client = genai.Client(api_key=self.api_key)
         except ImportError:
-            raise ImportError("google-generativeai package is required. Install with: pip install google-generativeai")
+            raise ImportError("google-genai package is required. Install with: pip install google-genai")
 
     @property
     def model(self) -> str:
@@ -621,12 +620,14 @@ class GoogleClient(BaseLLMClient):
             full_prompt += "\n\nRespond with valid JSON only."
 
         try:
-            response = self.client.generate_content(
-                full_prompt,
-                generation_config={
-                    "temperature": temperature,
-                    "max_output_tokens": max_tokens,
-                }
+            from google.genai import types
+            response = self.client.models.generate_content(
+                model=self._model,
+                contents=full_prompt,
+                config=types.GenerateContentConfig(
+                    temperature=temperature,
+                    max_output_tokens=max_tokens,
+                ),
             )
             latency_ms = (time.time() - start) * 1000
 
@@ -634,7 +635,7 @@ class GoogleClient(BaseLLMClient):
                 content=response.text,
                 model=self._model,
                 provider=self.provider_name,
-                usage={},  # Gemini doesn't provide usage in free tier
+                usage={},
                 latency_ms=latency_ms,
                 raw_response=response,
             )

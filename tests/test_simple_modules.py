@@ -46,7 +46,6 @@ class TestServicesModule:
 class TestAppGeneratorModule:
     """Test app_generator module imports."""
 
-    @pytest.mark.skip(reason="Module has import errors in source")
     def test_app_generator_basic_imports(self):
         """Test that app_generator module basic imports work."""
         from src.app_generator import GenerationRequest, GeneratedApp, GeneratedFile

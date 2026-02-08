@@ -157,9 +157,16 @@ def verify_email_required(auth_header: Optional[str]) -> None:
         raise AuthenticationError(f"Token error: {e}")
 
 
+def _user_bypasses_billing(payload: dict) -> bool:
+    """Check if a JWT payload indicates a demo/admin user who bypasses billing."""
+    role = payload.get("role", "user")
+    return role in ("admin", "demo")
+
+
 def require_subscription_tier(required_tier: str):
     """
     Decorator to require a minimum subscription tier.
+    Demo and admin users bypass this check.
 
     Args:
         required_tier: Minimum required tier (free, starter, pro, enterprise)
@@ -176,6 +183,11 @@ def require_subscription_tier(required_tier: str):
 
             try:
                 payload = verify_token(token, TokenType.ACCESS)
+
+                # Demo/admin users bypass tier checks
+                if _user_bypasses_billing(payload):
+                    return func(*args, **kwargs)
+
                 user_tier = payload.get("tier", "free")
 
                 user_tier_level = tier_hierarchy.index(user_tier) if user_tier in tier_hierarchy else 0
@@ -199,6 +211,7 @@ def require_subscription_tier(required_tier: str):
 def require_credits(amount: int = 1):
     """
     Decorator to require user has enough credits.
+    Demo and admin users bypass this check.
 
     Args:
         amount: Required credit amount
@@ -207,6 +220,10 @@ def require_credits(amount: int = 1):
         @wraps(func)
         def wrapper(*args, auth_header: Optional[str] = None, **kwargs) -> Any:
             user = get_current_user(auth_header)
+
+            # Demo/admin users bypass credit checks
+            if hasattr(user, 'bypasses_billing') and user.bypasses_billing:
+                return func(*args, **kwargs)
 
             if user.credits_remaining < amount:
                 raise AuthorizationError(

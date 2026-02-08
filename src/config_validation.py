@@ -99,6 +99,15 @@ class ConfigValidator:
         "DATABASE_URL": "sqlite:///./app.db",
     }
 
+    # Additional insecure SECRET_KEY values to reject in production
+    INSECURE_SECRET_KEYS: Set[str] = {
+        "change-me-in-production",
+        "change-me-to-a-secure-random-string",
+        "nexusai-dev-secret-key-change-in-production",
+        "secret",
+        "password",
+    }
+
     def __init__(self, environment: Optional[str] = None):
         """Initialize validator.
         
@@ -184,6 +193,14 @@ class ConfigValidator:
         
         if not secret_key:
             return  # Already caught by required vars check
+        
+        # Reject known insecure defaults in production
+        if self.is_production and secret_key in self.INSECURE_SECRET_KEYS:
+            self.errors.append(
+                "SECRET_KEY is an insecure default value in PRODUCTION. "
+                "Generate a strong random key: python -c 'import secrets; print(secrets.token_urlsafe(48))'"
+            )
+            return
         
         # Check minimum length
         if len(secret_key) < 32:

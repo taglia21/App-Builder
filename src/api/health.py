@@ -2,7 +2,7 @@
 from datetime import datetime, UTC
 from typing import Dict, Any
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Response, status
 from pydantic import BaseModel
 
 from src.config.settings import settings
@@ -85,8 +85,8 @@ async def health_check() -> HealthResponse:
     )
 
 
-@router.get("/health/ready", response_model=ReadinessResponse, status_code=status.HTTP_200_OK)
-async def readiness_check() -> ReadinessResponse:
+@router.get("/health/ready", response_model=ReadinessResponse)
+async def readiness_check(response: Response) -> ReadinessResponse:
     """Readiness check endpoint for Kubernetes.
     
     Checks if the application is ready to accept traffic.
@@ -99,6 +99,9 @@ async def readiness_check() -> ReadinessResponse:
     
     # Ready if at least one provider is available or demo mode is enabled
     is_ready = len(providers) > 0 or settings.DEMO_MODE
+    
+    if not is_ready:
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
     
     return ReadinessResponse(
         status="ready" if is_ready else "not_ready",

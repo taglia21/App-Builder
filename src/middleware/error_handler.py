@@ -86,7 +86,7 @@ async def validation_error_exception_handler(request: Request, exc: ValidationEr
     logger.warning(f"ValidationError in request {request_id}: {exc}")
     
     return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         content={
             "error": "Validation Error",
             "message": exc.message,
@@ -183,7 +183,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     request_id = getattr(request.state, "request_id", "unknown")
     
     return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         content={
             "error": "Validation Error",
             "detail": exc.errors(),
