@@ -137,7 +137,7 @@ async def register(
 
     except Exception as e:
         logger.error(f"Registration error: {e}")
-        db.rollback()
+                # db.rollback()
         return templates.TemplateResponse(
             "pages/register.html",
             {"request": request, "error": "An error occurred. Please try again."}
