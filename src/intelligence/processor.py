@@ -8,9 +8,24 @@ from typing import Any, Dict, List
 from uuid import uuid4
 
 from loguru import logger
-from sklearn.cluster import DBSCAN
-from sklearn.feature_extraction.text import TfidfVectorizer
-from textblob import TextBlob
+
+try:
+    from sklearn.cluster import DBSCAN
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    HAS_SKLEARN = True
+except ImportError:
+    HAS_SKLEARN = False
+    DBSCAN = None
+    TfidfVectorizer = None
+    logger.warning("scikit-learn not installed — clustering features disabled")
+
+try:
+    from textblob import TextBlob
+    HAS_TEXTBLOB = True
+except ImportError:
+    HAS_TEXTBLOB = False
+    TextBlob = None
+    logger.warning("textblob not installed — sentiment analysis disabled")
 
 from ..models import (
     CompetitionDensity,
@@ -26,9 +41,11 @@ class DataProcessor:
 
     def __init__(self):
         """Initialize the processor."""
-        self.vectorizer = TfidfVectorizer(
-            max_features=1000, stop_words="english", ngram_range=(1, 2)
-        )
+        self.vectorizer = None
+        if HAS_SKLEARN and TfidfVectorizer is not None:
+            self.vectorizer = TfidfVectorizer(
+                max_features=1000, stop_words="english", ngram_range=(1, 2)
+            )
 
     def process_pain_points(self, raw_data: List[Dict[str, Any]]) -> List[PainPoint]:
         """Extract and structure pain points from raw data."""
@@ -117,8 +134,11 @@ class DataProcessor:
         """Create a PainPoint object from text and metadata."""
         try:
             # Sentiment analysis
-            blob = TextBlob(text)
-            sentiment = blob.sentiment.polarity
+            if HAS_TEXTBLOB and TextBlob is not None:
+                blob = TextBlob(text)
+                sentiment = blob.sentiment.polarity
+            else:
+                sentiment = 0.0  # Neutral fallback when textblob unavailable
 
             # Calculate urgency score based on sentiment and keywords
             urgency_keywords = [
@@ -215,6 +235,10 @@ class DataProcessor:
 
         # Extract descriptions for clustering
         descriptions = [pp.description for pp in pain_points]
+
+        if not HAS_SKLEARN or self.vectorizer is None:
+            logger.warning("scikit-learn not available — skipping pain point clustering")
+            return pain_points
 
         try:
             # TF-IDF vectorization

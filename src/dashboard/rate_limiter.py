@@ -8,7 +8,13 @@ import logging
 import os
 from typing import Callable, Optional
 
-import redis
+try:
+    import redis
+    HAS_REDIS = True
+except ImportError:
+    redis = None
+    HAS_REDIS = False
+
 from fastapi import Request
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -115,14 +121,14 @@ def create_limiter() -> Limiter:
 
     # Use Redis storage if available, otherwise in-memory
     storage_uri = None
-    if redis_url:
+    if redis_url and HAS_REDIS and redis is not None:
         try:
             # Test Redis connection
             r = redis.from_url(redis_url)
             r.ping()
             storage_uri = redis_url
             logger.info("Rate limiter using Redis storage")
-        except redis.ConnectionError:
+        except (redis.ConnectionError, Exception):
             logger.warning("Redis not available, using in-memory rate limiting")
 
     return Limiter(

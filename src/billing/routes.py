@@ -2,12 +2,18 @@
 import json
 import os
 
-import stripe
+try:
+    import stripe
+    stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+    HAS_STRIPE = True
+except ImportError:
+    stripe = None
+    HAS_STRIPE = False
+
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 # Stripe configuration
-stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
 
 # Price IDs from environment
