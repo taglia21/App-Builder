@@ -17,6 +17,18 @@ svg:not([width="20"]):not([width="24"]):not([class*="w-5"]):not([class*="w-4"]):
     display: none !important;
 }
 </style>
+
+/* NUCLEAR OPTION - Hide EVERYTHING that could be the checkmark */
+* { background-image: none !important; }
+*::before, *::after { content: none !important; background: none !important; }
+img[src*="check"], img[alt*="check"] { display: none !important; }
+.min-h-screen > * > *:not([class*="text"]):not([class*="grid"]):not([class*="flex"]):not(button):not(h1):not(div[class*="max"]) {
+    opacity: 1 !important;
+}
+/* Hide any absolutely positioned large elements */
+.absolute[class*="w-"], .fixed[class*="w-"] {
+    display: none !important;
+}
 <div class="min-h-screen bg-gray-900 py-12">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="text-center">
