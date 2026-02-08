@@ -1,6 +1,22 @@
 {% extends "base.html" %}
 {% block title %}Pricing - LaunchForge{% endblock %}
 {% block content %}
+<style>
+/* CRITICAL: Hide the massive decorative checkmark */
+svg:not([width="20"]):not([width="24"]):not([class*="w-5"]):not([class*="w-4"]):not([class*="h-5"]):not([class*="h-4"]) {
+    display: none !important;
+}
+
+/* Hide any element with massive dimensions */
+[style*="width: 200"], [style*="width:200"], [style*="height: 200"], [style*="height:200"] {
+    display: none !important;
+}
+
+/* Hide positioned decorative elements */
+.absolute.inset-0, .fixed.inset-0 {
+    display: none !important;
+}
+</style>
 <div class="min-h-screen bg-gray-900 py-12">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="text-center">
