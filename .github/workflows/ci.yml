@@ -59,13 +59,13 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-mypy-${{ hashFiles('requirements.txt') }}
+          key: ${{ runner.os }}-pip-mypy-${{ hashFiles('requirements-prod.txt') }}
           restore-keys: ${{ runner.os }}-pip-
 
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements-prod.txt
           pip install mypy types-PyYAML types-requests types-redis
 
       - name: Run mypy
@@ -105,6 +105,7 @@ jobs:
   test:
     name: Test Suite
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       
@@ -117,13 +118,13 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements-prod.txt') }}
           restore-keys: ${{ runner.os }}-pip-
           
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements-prod.txt
           pip install pytest pytest-cov pytest-asyncio
           
       - name: Run tests with coverage
