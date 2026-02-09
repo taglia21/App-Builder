@@ -7,10 +7,9 @@ from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
-from sqlalchemy import select
 
 from src.auth.password import hash_password, verify_password
-from src.database.db import get_db
+from src.database.db import 
 from src.database.models import User
 
 logger = logging.getLogger(__name__)
@@ -37,12 +36,12 @@ async def login(
     email: str = Form(...),
     password: str = Form(...),
     remember: bool = Form(False),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_session)
 ):
     """Process login form."""
     try:
         # Find user
-        user = db.execute(select(User).where(User.email == email.lower())).scalar_one_or_none()
+        user = db.query(User).filter(User.email == email.lower()).first()
 
         if not user or not verify_password(password, user.password_hash):
             return templates.TemplateResponse(
@@ -86,7 +85,7 @@ async def register(
     email: str = Form(...),
     password: str = Form(...),
     terms: bool = Form(False),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_session)
 ):
     """Process registration form."""
     try:
@@ -104,7 +103,7 @@ async def register(
             )
 
         # Check if user exists
-        existing_user = db.execute(select(User).where(User.email == email.lower())).scalar_one_or_none()
+        existing_user = db.query(User).filter(User.email == email.lower()).first()
         if existing_user:
             return templates.TemplateResponse(
                 "pages/register.html",
@@ -138,7 +137,7 @@ async def register(
 
     except Exception as e:
         logger.error(f"Registration error: {e}")
-                # db.rollback()
+        db.rollback()
         return templates.TemplateResponse(
             "pages/register.html",
             {"request": request, "error": "An error occurred. Please try again."}
