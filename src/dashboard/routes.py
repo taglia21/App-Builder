@@ -5,12 +5,34 @@ HTML routes for the LaunchForge dashboard using HTMX.
 """
 
 import logging
+import os
+from typing import Optional
 
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 logger = logging.getLogger(__name__)
+
+
+def get_current_user(request: Request) -> Optional["User"]:
+    """Get the currently logged-in user from the request cookie."""
+    user_id = request.cookies.get("user_id")
+    if not user_id:
+        return None
+    try:
+        from src.database.db import get_db
+        from src.database.models import User
+        db = get_db()
+        with db.session() as session:
+            user = session.query(User).filter(User.id == user_id).first()
+            if user:
+                # Detach from session so it can be used after session closes
+                session.expunge(user)
+            return user
+    except Exception as e:
+        logger.warning(f"Failed to get current user: {e}")
+        return None
 
 
 class DashboardRoutes:
@@ -59,30 +81,50 @@ class DashboardRoutes:
         return self.render(request, "pages/landing.html", {"active": "home"})
     async def dashboard(self, request: Request) -> HTMLResponse:
         """Main dashboard page."""
-        # Mock data for now
-        projects = [
-            {
-                "id": "proj_1",
-                "name": "My SaaS App",
-                "status": "deployed",
-                "url": "https://my-saas.vercel.app",
-                "created_at": "2024-01-15",
-            },
-            {
-                "id": "proj_2",
-                "name": "Portfolio Site",
-                "status": "building",
-                "url": None,
-                "created_at": "2024-01-20",
-            },
-        ]
+        user = get_current_user(request)
+        if not user:
+            return RedirectResponse(url="/login", status_code=303)
 
+        # Try to load real projects from DB
+        projects = []
+        try:
+            from src.database.db import get_db
+            from src.database.models import Project
+            db = get_db()
+            with db.session() as session:
+                db_projects = (
+                    session.query(Project)
+                    .filter(Project.user_id == user.id, Project.is_deleted == False)
+                    .order_by(Project.created_at.desc())
+                    .limit(10)
+                    .all()
+                )
+                for p in db_projects:
+                    projects.append({
+                        "id": p.id,
+                        "name": p.name,
+                        "status": p.status.value if hasattr(p.status, 'value') else str(p.status),
+                        "url": getattr(p, 'deployment_url', None),
+                        "created_at": p.created_at.strftime("%Y-%m-%d") if p.created_at else "",
+                    })
+        except Exception as e:
+            logger.warning(f"Could not load projects from DB: {e}")
+
+        # Fallback demo data if no projects found
+        if not projects:
+            projects = [
+                {"id": "proj_1", "name": "My SaaS App", "status": "deployed", "url": "https://my-saas.vercel.app", "created_at": "2024-01-15"},
+                {"id": "proj_2", "name": "Portfolio Site", "status": "building", "url": None, "created_at": "2024-01-20"},
+            ]
+
+        deployed_count = len([p for p in projects if p.get("status") == "deployed"])
         return self.render(request, "pages/dashboard.html", {
+            "user": user,
             "projects": projects,
             "stats": {
-                "total_projects": 2,
-                "deployed": 1,
-                "apps_remaining": 3,
+                "total_projects": len(projects),
+                "deployed": deployed_count,
+                "apps_remaining": max(0, getattr(user, 'credits_remaining', 5) - len(projects)),
             },
         })
 
@@ -98,13 +140,44 @@ class DashboardRoutes:
         })
     async def projects_list(self, request: Request) -> HTMLResponse:
         """Display list of all projects."""
-        projects = [
-            {"id": "proj_1", "name": "My SaaS App", "status": "deployed", "description": "Full-stack SaaS application", "url": "https://my-saas.vercel.app", "created_at": "Jan 15, 2024"},
-            {"id": "proj_2", "name": "Portfolio Site", "status": "building", "description": "Personal portfolio", "url": None, "created_at": "Jan 20, 2024"},
-            {"id": "proj_3", "name": "Task Manager", "status": "draft", "description": "Team productivity app", "url": None, "created_at": "Jan 22, 2024"},
-        ]
+        user = get_current_user(request)
+        if not user:
+            return RedirectResponse(url="/login", status_code=303)
+
+        projects = []
+        try:
+            from src.database.db import get_db
+            from src.database.models import Project
+            db = get_db()
+            with db.session() as session:
+                db_projects = (
+                    session.query(Project)
+                    .filter(Project.user_id == user.id, Project.is_deleted == False)
+                    .order_by(Project.created_at.desc())
+                    .all()
+                )
+                for p in db_projects:
+                    projects.append({
+                        "id": p.id,
+                        "name": p.name,
+                        "status": p.status.value if hasattr(p.status, 'value') else str(p.status),
+                        "description": getattr(p, 'description', ''),
+                        "url": getattr(p, 'deployment_url', None),
+                        "created_at": p.created_at.strftime("%b %d, %Y") if p.created_at else "",
+                    })
+        except Exception as e:
+            logger.warning(f"Could not load projects from DB: {e}")
+
+        if not projects:
+            projects = [
+                {"id": "proj_1", "name": "My SaaS App", "status": "deployed", "description": "Full-stack SaaS application", "url": "https://my-saas.vercel.app", "created_at": "Jan 15, 2024"},
+                {"id": "proj_2", "name": "Portfolio Site", "status": "building", "description": "Personal portfolio", "url": None, "created_at": "Jan 20, 2024"},
+                {"id": "proj_3", "name": "Task Manager", "status": "draft", "description": "Team productivity app", "url": None, "created_at": "Jan 22, 2024"},
+            ]
+
         return self.render(request, "pages/projects.html", {
             "active": "projects",
+            "user": user,
             "projects": projects,
         })
 
@@ -137,7 +210,16 @@ class DashboardRoutes:
 
     async def settings(self, request: Request) -> HTMLResponse:
         """Settings page."""
+        user = get_current_user(request)
+        if not user:
+            return RedirectResponse(url="/login", status_code=303)
+
         return self.render(request, "pages/settings.html", {
+            "user": user,
+            "user_name": getattr(user, 'name', '') or '',
+            "user_email": getattr(user, 'email', '') or '',
+            "user_company": getattr(user, 'company', '') or '',
+            "user_role": getattr(user, 'role', 'user') or 'user',
             "sections": ["Profile", "API Keys", "Billing", "Notifications"],
         })
 
@@ -604,12 +686,29 @@ def create_dashboard_router(templates: Jinja2Templates) -> APIRouter:
     router.add_api_route("/api/generate", generate_app_api, methods=["POST"])
     router.add_api_route("/api/ideas/analyze", analyze_idea_api, methods=["POST"])
     router.add_api_route("/api/projects/{project_id}", get_project_api, methods=["GET"])
+
+    # Store templates reference for standalone route functions
+    _set_templates(templates)
+
     return router
 
 
+# Module-level templates reference for standalone route functions
+_templates: Optional[Jinja2Templates] = None
 
 
-# ============================================
+def _set_templates(templates: Jinja2Templates) -> None:
+    """Set the module-level templates reference."""
+    global _templates
+    _templates = templates
+
+
+def _render(request: Request, template: str, context: dict = None, status_code: int = 200) -> HTMLResponse:
+    """Render a template using the shared templates instance."""
+    ctx = {"request": request}
+    if context:
+        ctx.update(context)
+    return _templates.TemplateResponse(request, template, ctx, status_code=status_code)
 
 
 
@@ -624,14 +723,7 @@ def create_dashboard_router(templates: Jinja2Templates) -> APIRouter:
 
 async def pricing_page(request: Request) -> HTMLResponse:
     """Pricing page with subscription plans."""
-    from pathlib import Path
-
-    from jinja2 import Environment, FileSystemLoader
-    template_dir = Path(__file__).parent / "templates"
-    env = Environment(loader=FileSystemLoader(str(template_dir)))
-    template = env.get_template("pages/pricing.html")
-    html_content = template.render(request=request)
-    return HTMLResponse(content=html_content)
+    return _render(request, "pages/pricing.html", {})
 
 async def business_formation(request: Request) -> HTMLResponse:
     """Business formation page for LLC registration."""
@@ -639,17 +731,9 @@ async def business_formation(request: Request) -> HTMLResponse:
 
     project = _projects_store.get(project_id)
     if not project:
-        from starlette.responses import RedirectResponse
         return RedirectResponse(url="/dashboard", status_code=302)
 
-    from pathlib import Path
-
-    from jinja2 import Environment, FileSystemLoader
-    template_dir = Path(__file__).parent / "templates"
-    env = Environment(loader=FileSystemLoader(str(template_dir)))
-    template = env.get_template("pages/business_formation.html")
-    html_content = template.render(project=project)
-    return HTMLResponse(content=html_content)
+    return _render(request, "pages/business_formation.html", {"project": project})
 
 async def deploy_page(request: Request) -> HTMLResponse:
     """Deploy page for one-click deployment."""
@@ -657,17 +741,9 @@ async def deploy_page(request: Request) -> HTMLResponse:
 
     project = _projects_store.get(project_id)
     if not project:
-        from starlette.responses import RedirectResponse
         return RedirectResponse(url="/dashboard", status_code=302)
 
-    from pathlib import Path
-
-    from jinja2 import Environment, FileSystemLoader
-    template_dir = Path(__file__).parent / "templates"
-    env = Environment(loader=FileSystemLoader(str(template_dir)))
-    template = env.get_template("pages/deploy.html")
-    html_content = template.render(project=project)
-    return HTMLResponse(content=html_content)
+    return _render(request, "pages/deploy.html", {"project": project})
 
 async def agent_workspace(request: Request) -> HTMLResponse:
     """Agent workspace for customizing generated apps."""
@@ -675,17 +751,9 @@ async def agent_workspace(request: Request) -> HTMLResponse:
 
     project = _projects_store.get(project_id)
     if not project:
-        from starlette.responses import RedirectResponse
         return RedirectResponse(url="/dashboard", status_code=302)
 
-    from pathlib import Path
-
-    from jinja2 import Environment, FileSystemLoader
-    template_dir = Path(__file__).parent / "templates"
-    env = Environment(loader=FileSystemLoader(str(template_dir)))
-    template = env.get_template("pages/agent_workspace.html")
-    html_content = template.render(project=project)
-    return HTMLResponse(content=html_content)
+    return _render(request, "pages/agent_workspace.html", {"project": project})
 
 async def project_generated(request: Request) -> HTMLResponse:
     """Project generated page showing download and next steps."""
@@ -693,37 +761,19 @@ async def project_generated(request: Request) -> HTMLResponse:
 
     project = _projects_store.get(project_id)
     if not project:
-        from starlette.responses import RedirectResponse
         return RedirectResponse(url="/dashboard", status_code=302)
 
-    from pathlib import Path
-
-    from jinja2 import Environment, FileSystemLoader
-    template_dir = Path(__file__).parent / "templates"
-    env = Environment(loader=FileSystemLoader(str(template_dir)))
-    template = env.get_template("pages/project_generated.html")
-    html_content = template.render(project=project)
-    return HTMLResponse(content=html_content)
+    return _render(request, "pages/project_generated.html", {"project": project})
 
 async def project_review(request: Request) -> HTMLResponse:
     """Project review page showing idea analysis."""
     project_id = request.path_params.get('project_id')
 
-    # Get project from store
     project = _projects_store.get(project_id)
     if not project:
-        # Return 404 or redirect
-        from starlette.responses import RedirectResponse
         return RedirectResponse(url="/dashboard", status_code=302)
 
-    from pathlib import Path
-
-    from jinja2 import Environment, FileSystemLoader
-    template_dir = Path(__file__).parent / "templates"
-    env = Environment(loader=FileSystemLoader(str(template_dir)))
-    template = env.get_template("pages/project_review.html")
-    html_content = template.render(project=project)
-    return HTMLResponse(content=html_content)
+    return _render(request, "pages/project_review.html", {"project": project})
 
 
 
