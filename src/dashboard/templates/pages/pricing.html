@@ -4,16 +4,13 @@
 <div class="max-w-6xl mx-auto py-12">
     {% block extra_css %}
 <style>
-  /* Force hide all decorative pseudo-elements */
-  *::before, *::after {
-    display: none !important;
-    opacity: 0 !important;
-    visibility: hidden !important;
-  }
-  /* Hide any large decorative SVGs */
-  svg[class*="w-64"], svg[class*="w-96"], svg[class*="w-128"],
-  svg[class*="h-64"], svg[class*="h-96"], svg[class*="h-128"] {
-    display: none !important;
+  /* Ensure checkmark SVGs stay correctly sized */
+  .plan-feature-icon {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    min-height: 20px;
+    flex-shrink: 0;
   }
 </style>
 {% endblock %}
@@ -38,7 +35,7 @@
             <ul class="space-y-3 mb-8">
                 {% for feature in plan.features %}
                 <li class="flex items-center">
-                    <svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="plan-feature-icon" width="20" height="20" style="max-width: 20px; max-height: 20px; color: #22c55e; margin-right: 8px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                     </svg>
                     {{ feature }}
