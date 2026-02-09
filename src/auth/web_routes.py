@@ -9,7 +9,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from src.auth.password import hash_password, verify_password
-from src.database.db import 
+from src.database.db import  get_session
 from src.database.models import User
 
 logger = logging.getLogger(__name__)
