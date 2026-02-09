@@ -409,13 +409,18 @@ def get_session() -> Generator[Session, None, None]:
     """
     Convenience function for getting a database session.
 
-    Usage:
-        with get_session() as session:
-            user = session.query(User).first()
+    Works as a FastAPI dependency via Depends(get_session).
 
     Yields:
         Session: SQLAlchemy session instance
     """
     db = get_db()
-    with db.session() as session:
+    session = db.get_session()
+    try:
         yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
