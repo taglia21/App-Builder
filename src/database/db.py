@@ -404,7 +404,7 @@ def get_db() -> DatabaseManager:
     return _db_manager
 
 
-@contextmanager
+# @contextmanager
 def get_session() -> Generator[Session, None, None]:
     """
     Convenience function for getting a database session.
