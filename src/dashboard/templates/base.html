@@ -6,21 +6,6 @@
     <title>{% block title %}LaunchForge{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-            /* EMERGENCY FIX: Hide the massive checkmark that appears on pricing page */
-    .content-area::before, .content-area::after,
-    main::before, main::after,
-    [role="main"]::before, [role="main"]::after {
-        display: none !important;
-        content: none !important;
-    }
-    /* Hide any absolutely positioned large white elements */
-    *[style*="position: absolute"][style*="width"],
-    *[style*="position: fixed"][style*="width"] {
-        opacity: 0 !important;
-        
-            /* URGENT: Hide ALL large SVG elements */
-    svg { max-width: 24px !important; max-height: 24px !important; }
-    }
         :root {
             --nexus-dark: #0a0a0b;
             --nexus-card: #141416;
