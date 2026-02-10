@@ -216,7 +216,7 @@ and authentication requirements.
         from datetime import datetime, timezone
         return {
             "status": "ok",
-            "service": "nexusai-dashboard",
+            "service": "launchforge",
             "version": "1.0.0",
             "timestamp": datetime.now(timezone.utc).isoformat() + "Z"
         }

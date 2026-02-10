@@ -47,9 +47,8 @@ from .governance import (
 from .governance_orchestrator import GovernanceOrchestrator
 
 __all__.extend([
-    # Governance Orchestrator
+    # Governance Framework
     "GovernanceOrchestrator",
-    # Governance Branches
     "ExecutiveBranch",
     "LegislativeBranch",
     "JudicialBranch",
