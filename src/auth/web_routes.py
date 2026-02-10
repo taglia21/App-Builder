@@ -112,6 +112,7 @@ async def register(
 
         # Create user
         new_user = User(
+            name=name,
             email=email.lower(),
             password_hash=hash_password(password),
             subscription_tier="free",
