@@ -110,24 +110,25 @@
     
     <!-- Tabs -->
     <div class="mt-8 border-b border-gray-200">
-        <nav class="-mb-px flex space-x-8" aria-label="Tabs">
-            <a href="#overview" class="border-forge-500 text-forge-600 whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium">
+        <nav class="-mb-px flex space-x-8" aria-label="Tabs" id="project-tabs">
+            <a href="#overview" data-tab="overview" class="tab-link border-forge-500 text-forge-600 whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium">
                 Overview
             </a>
-            <a href="#code" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium">
+            <a href="#code" data-tab="code" class="tab-link border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium">
                 Code
             </a>
-            <a href="#deployments" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium">
+            <a href="#deployments" data-tab="deployments" class="tab-link border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium">
                 Deployments
             </a>
-            <a href="#settings" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium">
+            <a href="#settings" data-tab="settings" class="tab-link border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium">
                 Settings
             </a>
         </nav>
     </div>
     
-    <!-- Content -->
-    <div class="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- Tab Content: Overview -->
+    <div id="overview" class="tab-content mt-8">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <!-- Main content -->
         <div class="lg:col-span-2 space-y-6">
             <!-- Description -->
@@ -281,5 +282,197 @@
             </div>
         </div>
     </div>
+    </div><!-- end #overview -->
+
+    <!-- Tab Content: Code -->
+    <div id="code" class="tab-content mt-8 hidden">
+    <div class="grid grid-cols-1 gap-6">
+        <!-- Generated Files -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">Generated Files</h2>
+            {% if project.output_path %}
+            <div id="code-files"
+                 hx-get="/htmx/projects/{{ project.id }}/files"
+                 hx-trigger="revealed"
+                 hx-swap="innerHTML">
+                <div class="border rounded-lg divide-y divide-gray-200">
+                    <div class="p-4 text-sm text-gray-500 flex items-center">
+                        <svg class="animate-spin mr-2 h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Loading files...
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <p class="text-sm text-gray-500">No code has been generated yet. Generate your project first to view the code.</p>
+            {% endif %}
+        </div>
+
+        <!-- Download Code -->
+        {% if project.output_path %}
+        <div class="bg-white shadow rounded-lg p-6">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">Download</h2>
+            <a href="/api/projects/{{ project.id }}/download"
+               class="inline-flex items-center rounded-md bg-forge-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-forge-500">
+                <svg class="-ml-0.5 mr-1.5 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                </svg>
+                Download Source Code
+            </a>
+        </div>
+        {% endif %}
+    </div>
+    </div><!-- end #code -->
+
+    <!-- Tab Content: Deployments -->
+    <div id="deployments" class="tab-content mt-8 hidden">
+    <div class="grid grid-cols-1 gap-6">
+        <!-- Deployment Status -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">Deployment Status</h2>
+            <div id="deployment-detail"
+                 hx-get="/htmx/projects/{{ project.id }}/deployment"
+                 hx-trigger="revealed"
+                 hx-swap="innerHTML">
+                <p class="text-sm text-gray-500">Loading deployment information...</p>
+            </div>
+        </div>
+
+        <!-- Deployment History -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">Deployment History</h2>
+            <div id="deployment-history"
+                 hx-get="/htmx/projects/{{ project.id }}/deployment-history"
+                 hx-trigger="revealed"
+                 hx-swap="innerHTML">
+                <p class="text-sm text-gray-500">Loading deployment history...</p>
+            </div>
+        </div>
+
+        <!-- Deploy Actions -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">Actions</h2>
+            <div class="flex space-x-3">
+                {% if project.status == 'draft' or project.status == 'ready' or project.status == 'deployed' %}
+                <button type="button"
+                        hx-post="/api/deploy"
+                        hx-vals='{"project_id": "{{ project.id }}"}'
+                        hx-swap="none"
+                        class="inline-flex items-center rounded-md bg-forge-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-forge-500">
+                    <svg class="-ml-0.5 mr-1.5 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 17a.75.75 0 01-.75-.75V5.612L5.29 9.77a.75.75 0 01-1.08-1.04l5.25-5.5a.75.75 0 011.08 0l5.25 5.5a.75.75 0 11-1.08 1.04l-3.96-4.158V16.25A.75.75 0 0110 17z" clip-rule="evenodd" />
+                    </svg>
+                    {% if project.status == 'deployed' %}Redeploy{% else %}Deploy{% endif %}
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    </div><!-- end #deployments -->
+
+    <!-- Tab Content: Settings -->
+    <div id="settings" class="tab-content mt-8 hidden">
+    <div class="grid grid-cols-1 gap-6">
+        <!-- Project Settings -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">Project Settings</h2>
+            <form hx-put="/api/projects/{{ project.id }}" hx-swap="none" class="space-y-4">
+                <div>
+                    <label for="project-name" class="block text-sm font-medium text-gray-700">Project Name</label>
+                    <input type="text" id="project-name" name="name" value="{{ project.name }}"
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-forge-500 focus:ring-forge-500 sm:text-sm">
+                </div>
+                <div>
+                    <label for="project-description" class="block text-sm font-medium text-gray-700">Description</label>
+                    <textarea id="project-description" name="description" rows="3"
+                              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-forge-500 focus:ring-forge-500 sm:text-sm">{{ project.description }}</textarea>
+                </div>
+                <div class="flex justify-end">
+                    <button type="submit"
+                            class="inline-flex items-center rounded-md bg-forge-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-forge-500">
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="bg-white shadow rounded-lg p-6 border border-red-200">
+            <h2 class="text-lg font-medium text-red-600 mb-4">Danger Zone</h2>
+            <p class="text-sm text-gray-600 mb-4">Once you delete a project, there is no going back. Please be certain.</p>
+            <button type="button"
+                    onclick="confirm('Are you sure you want to delete this project? This action cannot be undone.') && document.getElementById('delete-form-settings').submit()"
+                    class="inline-flex items-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500">
+                <svg class="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                </svg>
+                Delete This Project
+            </button>
+            <form id="delete-form-settings" action="/api/projects/{{ project.id }}" method="DELETE" class="hidden"></form>
+        </div>
+    </div>
+    </div><!-- end #settings -->
+
 </div>
+
+<!-- Tab Switching JavaScript -->
+<script>
+(function() {
+    const tabLinks = document.querySelectorAll('.tab-link');
+    const tabContents = document.querySelectorAll('.tab-content');
+    const ACTIVE_CLASSES = ['border-forge-500', 'text-forge-600'];
+    const INACTIVE_CLASSES = ['border-transparent', 'text-gray-500', 'hover:border-gray-300', 'hover:text-gray-700'];
+
+    function switchTab(tabName) {
+        // Hide all tab contents
+        tabContents.forEach(function(content) {
+            content.classList.add('hidden');
+        });
+
+        // Deactivate all tab links
+        tabLinks.forEach(function(link) {
+            ACTIVE_CLASSES.forEach(function(cls) { link.classList.remove(cls); });
+            INACTIVE_CLASSES.forEach(function(cls) { link.classList.add(cls); });
+        });
+
+        // Show target tab content
+        var target = document.getElementById(tabName);
+        if (target) {
+            target.classList.remove('hidden');
+        }
+
+        // Activate the clicked tab link
+        var activeLink = document.querySelector('.tab-link[data-tab="' + tabName + '"]');
+        if (activeLink) {
+            INACTIVE_CLASSES.forEach(function(cls) { activeLink.classList.remove(cls); });
+            ACTIVE_CLASSES.forEach(function(cls) { activeLink.classList.add(cls); });
+        }
+
+        // Process any htmx attributes on newly revealed content
+        if (target && typeof htmx !== 'undefined') {
+            htmx.process(target);
+        }
+    }
+
+    // Attach click handlers
+    tabLinks.forEach(function(link) {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            var tabName = this.getAttribute('data-tab');
+            switchTab(tabName);
+            history.replaceState(null, '', '#' + tabName);
+        });
+    });
+
+    // Handle initial hash or default to overview
+    var hash = window.location.hash.replace('#', '');
+    if (hash && document.getElementById(hash)) {
+        switchTab(hash);
+    } else {
+        switchTab('overview');
+    }
+})();
+</script>
 {% endblock %}

@@ -110,10 +110,12 @@
 
 <div class="search-box">
     <i data-lucide="search"></i>
-    <input type="text" placeholder="Search projects...">
+    <input type="text" id="project-search" placeholder="Search projects...">
 </div>
 
-<table class="projects-table">
+<div id="no-results" style="display:none; text-align:center; padding:40px 0; color:#6b7280; font-size:0.9375rem;">No projects match your search.</div>
+
+<table class="projects-table" id="projects-table">
     <thead>
         <tr>
             <th>Name</th>
@@ -125,7 +127,7 @@
     </thead>
     <tbody>
         {% for project in projects %}
-        <tr>
+        <tr class="project-row" data-name="{{ project.name|lower }}" data-type="{{ (project.description or 'Web App')|lower }}">
             <td>
                 <div class="project-name">
                     <div class="project-icon"><i data-lucide="folder"></i></div>
@@ -148,4 +150,29 @@
         {% endfor %}
     </tbody>
 </table>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    var searchInput = document.getElementById('project-search');
+    var rows = document.querySelectorAll('.project-row');
+    var noResults = document.getElementById('no-results');
+    var table = document.getElementById('projects-table');
+
+    searchInput.addEventListener('input', function() {
+        var query = this.value.toLowerCase().trim();
+        var visibleCount = 0;
+        rows.forEach(function(row) {
+            var name = row.getAttribute('data-name') || '';
+            var type = row.getAttribute('data-type') || '';
+            var match = !query || name.indexOf(query) !== -1 || type.indexOf(query) !== -1;
+            row.style.display = match ? '' : 'none';
+            if (match) visibleCount++;
+        });
+        noResults.style.display = visibleCount === 0 ? 'block' : 'none';
+        table.style.display = visibleCount === 0 ? 'none' : '';
+    });
+})();
+</script>
 {% endblock %}

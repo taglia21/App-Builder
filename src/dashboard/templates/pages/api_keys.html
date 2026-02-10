@@ -133,7 +133,12 @@
         <h1>API Keys</h1>
         <p>Manage your API keys for programmatic access</p>
     </div>
-    <button class="btn btn-primary"><i data-lucide="plus" style="width:16px;height:16px;"></i> Create New Key</button>
+    <button class="btn btn-primary" onclick="document.getElementById('create-key-input').focus()"><i data-lucide="plus" style="width:16px;height:16px;"></i> Create New Key</button>
+</div>
+
+<!-- Toast notification -->
+<div id="api-toast" style="display:none; position:fixed; top:24px; right:24px; z-index:9999; padding:16px 24px; border-radius:10px; font-size:0.875rem; font-weight:500; box-shadow:0 8px 24px rgba(0,0,0,0.4); transition: opacity 0.3s ease;">
+    <span id="api-toast-msg"></span>
 </div>
 
 <div class="security-notice">
@@ -144,35 +149,149 @@
     </div>
 </div>
 
-<div class="api-key-card">
-    <div class="api-key-info">
-        <div class="api-key-name">Production Key <span class="api-key-badge">Active</span></div>
-        <div class="api-key-value">lf_prod_sk_************************3f8a</div>
-        <div class="api-key-meta">Created: Feb 1, 2026 &bull; Last used: 2 hours ago</div>
-    </div>
-    <div class="api-key-actions">
-        <button class="btn btn-secondary btn-sm">Regenerate</button>
-        <button class="btn btn-secondary btn-sm">Revoke</button>
-    </div>
-</div>
-
-<div class="api-key-card">
-    <div class="api-key-info">
-        <div class="api-key-name">Development Key <span class="api-key-badge">Active</span></div>
-        <div class="api-key-value">lf_dev_sk_************************9b2c</div>
-        <div class="api-key-meta">Created: Feb 5, 2026 &bull; Last used: 5 days ago</div>
-    </div>
-    <div class="api-key-actions">
-        <button class="btn btn-secondary btn-sm">Regenerate</button>
-        <button class="btn btn-secondary btn-sm">Revoke</button>
-    </div>
+<div id="api-keys-list">
+    <!-- Keys are rendered here by JS on load -->
 </div>
 
 <div class="create-key-section">
     <h3>Create New API Key</h3>
     <div class="input-group">
-        <input type="text" placeholder="Enter a name for this key (e.g., Production, Staging)">
-        <button class="btn btn-primary">Create Key</button>
+        <input type="text" id="create-key-input" placeholder="Enter a name for this key (e.g., Production, Staging)">
+        <button class="btn btn-primary" id="create-key-btn">Create Key</button>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    var STORAGE_KEY = 'launchforge_api_keys';
+
+    // --- helpers ---
+    function generateKey() {
+        var chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+        var key = 'lf_key_sk_';
+        for (var i = 0; i < 40; i++) key += chars.charAt(Math.floor(Math.random() * chars.length));
+        return key;
+    }
+
+    function maskKey(key) {
+        return key.substring(0, 10) + '************************' + key.slice(-4);
+    }
+
+    function formatDate(iso) {
+        var d = new Date(iso);
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function loadKeys() {
+        var raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) {
+            // Seed with default keys
+            var defaults = [
+                { id: 'key_1', name: 'Production Key', key: 'lf_prod_sk_a8d3f19e7c4b6052e1d9f3a8c7b2e4013f8a', created: '2026-02-01T12:00:00Z', lastUsed: '2 hours ago', active: true },
+                { id: 'key_2', name: 'Development Key', key: 'lf_dev_sk_c4e2a1b8d7f6093e5a1c8d4b7f2e60a39b2c', created: '2026-02-05T12:00:00Z', lastUsed: '5 days ago', active: true }
+            ];
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(defaults));
+            return defaults;
+        }
+        return JSON.parse(raw);
+    }
+
+    function saveKeys(keys) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(keys));
+    }
+
+    // --- toast ---
+    function showToast(msg, type) {
+        var el = document.getElementById('api-toast');
+        var msgEl = document.getElementById('api-toast-msg');
+        msgEl.textContent = msg;
+        el.style.background = type === 'error' ? '#991b1b' : '#166534';
+        el.style.color = '#fff';
+        el.style.display = 'block';
+        el.style.opacity = '1';
+        clearTimeout(el._timer);
+        el._timer = setTimeout(function() { el.style.opacity = '0'; setTimeout(function(){ el.style.display = 'none'; }, 300); }, 3500);
+    }
+
+    // --- render ---
+    function renderKeys() {
+        var keys = loadKeys();
+        var container = document.getElementById('api-keys-list');
+        if (!keys.length) {
+            container.innerHTML = '<p style="color:#6b7280; font-size:0.875rem; padding:20px 0;">No API keys yet. Create one below.</p>';
+            return;
+        }
+        var html = '';
+        keys.forEach(function(k) {
+            html += '<div class="api-key-card" data-key-id="' + k.id + '">' +
+                '<div class="api-key-info">' +
+                    '<div class="api-key-name">' + k.name + ' <span class="api-key-badge">' + (k.active ? 'Active' : 'Revoked') + '</span></div>' +
+                    '<div class="api-key-value">' + maskKey(k.key) + '</div>' +
+                    '<div class="api-key-meta">Created: ' + formatDate(k.created) + ' &bull; Last used: ' + (k.lastUsed || 'Never') + '</div>' +
+                '</div>' +
+                '<div class="api-key-actions">' +
+                    (k.active
+                        ? '<button class="btn btn-secondary btn-sm" onclick="window.__apiKeys.copyKey(\'' + k.id + '\')">Copy</button>' +
+                          '<button class="btn btn-secondary btn-sm" onclick="window.__apiKeys.revokeKey(\'' + k.id + '\')">Revoke</button>'
+                        : '<span style="color:#6b7280;font-size:0.8125rem;">Revoked</span>') +
+                '</div>' +
+            '</div>';
+        });
+        container.innerHTML = html;
+    }
+
+    // --- actions ---
+    function createKey() {
+        var input = document.getElementById('create-key-input');
+        var name = input.value.trim();
+        if (!name) { showToast('Please enter a name for the key.', 'error'); return; }
+        var keys = loadKeys();
+        var newKey = {
+            id: 'key_' + Date.now(),
+            name: name,
+            key: generateKey(),
+            created: new Date().toISOString(),
+            lastUsed: 'Never',
+            active: true
+        };
+        keys.unshift(newKey);
+        saveKeys(keys);
+        input.value = '';
+        renderKeys();
+        showToast('API key "' + name + '" created successfully!', 'success');
+    }
+
+    function revokeKey(id) {
+        if (!confirm('Revoke this API key? This cannot be undone.')) return;
+        var keys = loadKeys();
+        keys = keys.map(function(k) { if (k.id === id) k.active = false; return k; });
+        saveKeys(keys);
+        renderKeys();
+        showToast('API key revoked.', 'success');
+    }
+
+    function copyKey(id) {
+        var keys = loadKeys();
+        var found = keys.find(function(k) { return k.id === id; });
+        if (!found) return;
+        navigator.clipboard.writeText(found.key).then(function() {
+            showToast('Key copied to clipboard!', 'success');
+        }).catch(function() {
+            prompt('Copy this key:', found.key);
+        });
+    }
+
+    // expose for inline onclick
+    window.__apiKeys = { revokeKey: revokeKey, copyKey: copyKey };
+
+    // --- init ---
+    document.getElementById('create-key-btn').addEventListener('click', createKey);
+    document.getElementById('create-key-input').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') createKey();
+    });
+    renderKeys();
+})();
+</script>
 {% endblock %}
