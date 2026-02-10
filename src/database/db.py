@@ -69,7 +69,7 @@ def get_database_url() -> str:
 
     # Fallback to SQLite for development
     logger.warning("No PostgreSQL configuration found. Using SQLite for development.")
-    return "sqlite:///./nexusai_dev.db"
+    return "sqlite:////tmp/nexusai_dev.db"
 
 
 class DatabaseError(Exception):
@@ -167,6 +167,13 @@ class DatabaseManager:
 
         self._database_url = database_url or get_database_url()
         self._is_sqlite = self._database_url.startswith("sqlite")
+
+        # Ensure SQLite parent directory exists
+        if self._is_sqlite:
+            # Extract file path from sqlite:///path or sqlite:////abs/path
+            db_path = self._database_url.split("sqlite:///", 1)[1]
+            if db_path and os.path.dirname(db_path):
+                os.makedirs(os.path.dirname(db_path), exist_ok=True)
 
         # Configure engine options
         engine_options: dict[str, Any] = {
