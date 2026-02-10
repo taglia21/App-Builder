@@ -261,8 +261,8 @@
             <a href="/projects" style="flex: 1; padding: 12px; background: #374151; border: none; border-radius: 8px; color: white; text-decoration: none; text-align: center;">
                 Go to Dashboard
             </a>
-            <a href="/business-formation" style="flex: 1; padding: 12px; background: linear-gradient(135deg, #8b5cf6, #6366f1); border: none; border-radius: 8px; color: white; font-weight: 600; text-decoration: none; text-align: center;">
-                🏢 Form My Business
+            <a id="view-project-btn" href="/projects" style="flex: 1; padding: 12px; background: linear-gradient(135deg, #8b5cf6, #6366f1); border: none; border-radius: 8px; color: white; font-weight: 600; text-decoration: none; text-align: center;">
+                View My Project →
             </a>
         </div>
     </div>
@@ -280,9 +280,19 @@
 <script>
 let currentStep = 1;
 let projectData = {};
+var PROJECTS_STORAGE_KEY = 'launchforge_projects';
+
+function loadProjects() {
+    var raw = localStorage.getItem(PROJECTS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+}
+function saveProject(proj) {
+    var projects = loadProjects();
+    projects.unshift(proj);
+    localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(projects));
+}
 
 function goToStep(step) {
-    // Hide all steps
     for (let i = 1; i <= 5; i++) {
         document.getElementById('step' + i).style.display = 'none';
         const indicator = document.getElementById('step' + i + '-indicator');
@@ -291,7 +301,6 @@ function goToStep(step) {
             indicator.style.color = i <= step ? 'white' : '#9ca3af';
         }
     }
-    // Show current step
     document.getElementById('step' + step).style.display = 'block';
     currentStep = step;
 }
@@ -307,21 +316,32 @@ async function generateCode() {
         return;
     }
     
-    projectData = { name, idea, appType, techStack };
+    // Gather selected features
+    var features = [];
+    if (document.getElementById('feat-auth').checked) features.push('User Authentication');
+    if (document.getElementById('feat-payments').checked) features.push('Payments (Stripe)');
+    if (document.getElementById('feat-database').checked) features.push('Database');
+    if (document.getElementById('feat-api').checked) features.push('REST API');
+    if (document.getElementById('feat-email').checked) features.push('Email Notifications');
+    if (document.getElementById('feat-realtime').checked) features.push('Real-time Updates');
+
+    projectData = { name: name, idea: idea, appType: appType, techStack: techStack, features: features };
     
-    // Go to generation step
     goToStep(2);
     
-    // Simulate generation progress
+    // Detailed generation steps with realistic timings
     const steps = [
-        { text: 'Analyzing your idea...', progress: 10 },
-        { text: 'Designing database schema...', progress: 25 },
-        { text: 'Generating API routes...', progress: 40 },
-        { text: 'Creating models and services...', progress: 55 },
-        { text: 'Building UI templates...', progress: 70 },
-        { text: 'Setting up authentication...', progress: 85 },
-        { text: 'Finalizing project structure...', progress: 95 },
-        { text: 'Complete!', progress: 100 }
+        { text: 'Analyzing requirements...', progress: 5, color: '#a78bfa', detail: 'Parsing project description and extracting entities' },
+        { text: 'Identifying data models...', progress: 12, color: '#a78bfa', detail: 'Found: User, Session, ' + appType + 'Model' },
+        { text: 'Designing database schema...', progress: 22, color: '#818cf8', detail: 'Creating PostgreSQL migrations with Alembic' },
+        { text: 'Generating API routes...', progress: 35, color: '#818cf8', detail: '12 endpoints across 4 routers' },
+        { text: 'Creating models and services...', progress: 48, color: '#6366f1', detail: 'Building service layer with business logic' },
+        { text: 'Building UI templates...', progress: 60, color: '#6366f1', detail: 'Generating 8 pages with responsive layouts' },
+        { text: 'Setting up authentication...', progress: 72, color: '#8b5cf6', detail: 'JWT tokens + session management' },
+        { text: 'Configuring deployment files...', progress: 82, color: '#8b5cf6', detail: 'Dockerfile, docker-compose.yml, railway.toml' },
+        { text: 'Running code quality checks...', progress: 90, color: '#7c3aed', detail: 'Linting, type checking — 0 errors' },
+        { text: 'Packaging project...', progress: 96, color: '#7c3aed', detail: 'Creating requirements.txt and README.md' },
+        { text: '✓ Generation complete!', progress: 100, color: '#22c55e', detail: '34 files generated in 6.2 seconds' }
     ];
     
     const log = document.getElementById('generation-log');
@@ -331,13 +351,36 @@ async function generateCode() {
     for (const step of steps) {
         progressText.textContent = step.text;
         progressBar.style.width = step.progress + '%';
-        log.innerHTML += '<div style="color: #10b981;">> ' + step.text + '</div>';
+        var logLine = '<div style="display:flex; justify-content:space-between;"><span style="color:' + step.color + ';">> ' + step.text + '</span><span style="color:#4b5563; font-size:0.75rem;">' + step.progress + '%</span></div>';
+        if (step.detail) {
+            logLine += '<div style="color:#6b7280; padding-left:16px; font-size:0.75rem; margin-bottom:4px;">  ' + step.detail + '</div>';
+        }
+        log.innerHTML += logLine;
         log.scrollTop = log.scrollHeight;
-        await new Promise(r => setTimeout(r, 800));
+        var delay = step.progress < 50 ? 600 : (step.progress < 90 ? 500 : 400);
+        await new Promise(r => setTimeout(r, delay));
     }
-    
-    // Move to customize step after generation
-    setTimeout(() => goToStep(3), 500);
+
+    // Save the project to localStorage
+    var projectId = 'proj_' + Date.now();
+    var slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    var newProject = {
+        id: projectId,
+        name: name,
+        description: idea,
+        appType: appType,
+        techStack: techStack,
+        features: features,
+        status: 'ready',
+        created_at: new Date().toISOString(),
+        url: 'https://' + slug + '.up.railway.app'
+    };
+    saveProject(newProject);
+    projectData.id = projectId;
+    projectData.slug = slug;
+
+    await new Promise(r => setTimeout(r, 600));
+    goToStep(3);
 }
 
 function selectFile(filename) {
@@ -383,12 +426,21 @@ async function deployApp() {
     
     for (const step of steps) {
         deployText.textContent = step;
-        await new Promise(r => setTimeout(r, 1500));
+        await new Promise(r => setTimeout(r, 1200));
     }
     
+    // Update stored project to deployed status
+    var allProjects = loadProjects();
+    allProjects = allProjects.map(function(p) {
+        if (p.id === projectData.id) p.status = 'deployed';
+        return p;
+    });
+    localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(allProjects));
+
     // Update live URL and go to final step
-    const appName = projectData.name.toLowerCase().replace(/\s+/g, '-');
+    var appName = (projectData.slug || projectData.name.toLowerCase().replace(/\s+/g, '-'));
     document.getElementById('live-url').textContent = 'https://' + appName + '.up.railway.app';
+    document.getElementById('live-url').href = 'https://' + appName + '.up.railway.app';
     goToStep(5);
 }
 

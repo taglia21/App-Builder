@@ -155,13 +155,50 @@
 {% block extra_js %}
 <script>
 (function() {
+    // Inject localStorage projects into the table
+    var PROJECTS_STORAGE_KEY = 'launchforge_projects';
+    var stored = [];
+    try { stored = JSON.parse(localStorage.getItem(PROJECTS_STORAGE_KEY) || '[]'); } catch(e) {}
+
+    if (stored.length) {
+        var tbody = document.querySelector('#projects-table tbody');
+        stored.forEach(function(p) {
+            var tr = document.createElement('tr');
+            tr.className = 'project-row';
+            tr.setAttribute('data-name', (p.name || '').toLowerCase());
+            tr.setAttribute('data-type', (p.appType || p.description || 'Web App').toLowerCase());
+
+            var statusLabel, statusClass;
+            if (p.status === 'deployed') { statusLabel = 'Deployed'; statusClass = 'status-deployed'; }
+            else if (p.status === 'building') { statusLabel = 'Building'; statusClass = 'status-building'; }
+            else { statusLabel = 'Active'; statusClass = 'status-active'; }
+
+            var created = p.created_at ? new Date(p.created_at).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) : 'Just now';
+
+            tr.innerHTML =
+                '<td><div class="project-name"><div class="project-icon"><i data-lucide="folder"></i></div>' + (p.name || 'Untitled') + '</div></td>' +
+                '<td class="project-type">' + (p.appType || p.description || 'Web App') + '</td>' +
+                '<td><span class="status-badge ' + statusClass + '">' + statusLabel + '</span></td>' +
+                '<td class="project-date">' + created + '</td>' +
+                '<td class="project-actions"><a href="/projects/' + p.id + '">View &rarr;</a></td>';
+
+            // Prepend so newest appears first
+            if (tbody.firstChild) tbody.insertBefore(tr, tbody.firstChild);
+            else tbody.appendChild(tr);
+        });
+
+        // Re-initialize Lucide icons for new rows
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    // Search filter
     var searchInput = document.getElementById('project-search');
-    var rows = document.querySelectorAll('.project-row');
     var noResults = document.getElementById('no-results');
     var table = document.getElementById('projects-table');
 
     searchInput.addEventListener('input', function() {
         var query = this.value.toLowerCase().trim();
+        var rows = document.querySelectorAll('.project-row');
         var visibleCount = 0;
         rows.forEach(function(row) {
             var name = row.getAttribute('data-name') || '';

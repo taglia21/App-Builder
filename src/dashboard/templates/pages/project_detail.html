@@ -190,13 +190,14 @@
             {% endif %}
             
             <!-- Deployment Status -->
-            <div id="deployment-status"
-                 hx-get="/htmx/projects/{{ project.id }}/deployment"
-                 hx-trigger="load"
-                 hx-swap="innerHTML"
-                 class="detail-card">
+            <div id="deployment-status" class="detail-card">
                 <h2 class="text-lg font-medium text-white mb-4">Deployment</h2>
-                <p class="text-sm text-gray-400">Loading deployment status...</p>
+                <div id="deploy-overview-content">
+                    <div style="display:flex; align-items:center; gap:8px; color:#9ca3af; font-size:0.875rem;">
+                        <svg style="width:16px;height:16px;animation:spin 1s linear infinite;" fill="none" viewBox="0 0 24 24"><circle style="opacity:0.25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path style="opacity:0.75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        Loading deployment status...
+                    </div>
+                </div>
             </div>
             
             <!-- Tech Stack -->
@@ -356,22 +357,22 @@
         <!-- Deployment Status -->
         <div class="detail-card">
             <h2 class="text-lg font-medium text-white mb-4">Deployment Status</h2>
-            <div id="deployment-detail"
-                 hx-get="/htmx/projects/{{ project.id }}/deployment"
-                 hx-trigger="revealed"
-                 hx-swap="innerHTML">
-                <p class="text-sm text-gray-400">Loading deployment information...</p>
+            <div id="deployment-detail-content">
+                <div style="display:flex; align-items:center; gap:8px; color:#9ca3af; font-size:0.875rem;">
+                    <svg style="width:16px;height:16px;animation:spin 1s linear infinite;" fill="none" viewBox="0 0 24 24"><circle style="opacity:0.25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path style="opacity:0.75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    Loading deployment info...
+                </div>
             </div>
         </div>
 
         <!-- Deployment History -->
         <div class="detail-card">
             <h2 class="text-lg font-medium text-white mb-4">Deployment History</h2>
-            <div id="deployment-history"
-                 hx-get="/htmx/projects/{{ project.id }}/deployment-history"
-                 hx-trigger="revealed"
-                 hx-swap="innerHTML">
-                <p class="text-sm text-gray-400">Loading deployment history...</p>
+            <div id="deployment-history-content">
+                <div style="display:flex; align-items:center; gap:8px; color:#9ca3af; font-size:0.875rem;">
+                    <svg style="width:16px;height:16px;animation:spin 1s linear infinite;" fill="none" viewBox="0 0 24 24"><circle style="opacity:0.25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path style="opacity:0.75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    Loading history...
+                </div>
             </div>
         </div>
 
@@ -497,6 +498,102 @@
     } else {
         switchTab('overview');
     }
+})();
+
+/* ── Mock deployment data injection ── */
+(function() {
+    var projectName = document.querySelector('h1') ? document.querySelector('h1').textContent.trim() : 'my-app';
+    var slug = projectName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+    // Overview tab – deployment status card
+    function renderOverviewDeployment(el) {
+        el.innerHTML =
+            '<div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">' +
+                '<div style="padding:14px; background:var(--nexus-dark,#0a0a0b); border:1px solid var(--nexus-border,#27272a); border-radius:8px;">' +
+                    '<div style="font-size:0.75rem; color:#6b7280; text-transform:uppercase; font-weight:600; margin-bottom:4px;">Status</div>' +
+                    '<div style="display:flex; align-items:center; gap:6px;">' +
+                        '<span style="width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block;"></span>' +
+                        '<span style="color:#22c55e; font-weight:600;">Active</span>' +
+                    '</div>' +
+                '</div>' +
+                '<div style="padding:14px; background:var(--nexus-dark,#0a0a0b); border:1px solid var(--nexus-border,#27272a); border-radius:8px;">' +
+                    '<div style="font-size:0.75rem; color:#6b7280; text-transform:uppercase; font-weight:600; margin-bottom:4px;">Environment</div>' +
+                    '<span style="color:white; font-weight:600;">Production</span>' +
+                '</div>' +
+                '<div style="padding:14px; background:var(--nexus-dark,#0a0a0b); border:1px solid var(--nexus-border,#27272a); border-radius:8px;">' +
+                    '<div style="font-size:0.75rem; color:#6b7280; text-transform:uppercase; font-weight:600; margin-bottom:4px;">Last Deployed</div>' +
+                    '<span style="color:white;">Feb 9, 2026 at 3:42 PM</span>' +
+                '</div>' +
+                '<div style="padding:14px; background:var(--nexus-dark,#0a0a0b); border:1px solid var(--nexus-border,#27272a); border-radius:8px;">' +
+                    '<div style="font-size:0.75rem; color:#6b7280; text-transform:uppercase; font-weight:600; margin-bottom:4px;">URL</div>' +
+                    '<a href="https://' + slug + '.up.railway.app" target="_blank" style="color:#a78bfa; font-size:0.875rem;">https://' + slug + '.up.railway.app</a>' +
+                '</div>' +
+            '</div>';
+    }
+
+    // Deployments tab – detail card
+    function renderDeployDetail(el) {
+        el.innerHTML =
+            '<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:24px;">' +
+                '<div style="padding:16px; background:var(--nexus-dark,#0a0a0b); border:1px solid var(--nexus-border,#27272a); border-radius:8px; text-align:center;">' +
+                    '<div style="font-size:1.5rem; font-weight:700; color:#22c55e;">99.98%</div>' +
+                    '<div style="font-size:0.75rem; color:#6b7280; margin-top:2px;">Uptime (30d)</div>' +
+                '</div>' +
+                '<div style="padding:16px; background:var(--nexus-dark,#0a0a0b); border:1px solid var(--nexus-border,#27272a); border-radius:8px; text-align:center;">' +
+                    '<div style="font-size:1.5rem; font-weight:700; color:white;">142ms</div>' +
+                    '<div style="font-size:0.75rem; color:#6b7280; margin-top:2px;">Avg Response</div>' +
+                '</div>' +
+                '<div style="padding:16px; background:var(--nexus-dark,#0a0a0b); border:1px solid var(--nexus-border,#27272a); border-radius:8px; text-align:center;">' +
+                    '<div style="font-size:1.5rem; font-weight:700; color:white;">12.4k</div>' +
+                    '<div style="font-size:0.75rem; color:#6b7280; margin-top:2px;">Requests (24h)</div>' +
+                '</div>' +
+            '</div>' +
+            '<div style="padding:16px; background:var(--nexus-dark,#0a0a0b); border:1px solid var(--nexus-border,#27272a); border-radius:8px;">' +
+                '<div style="display:grid; grid-template-columns:120px 1fr; gap:8px; font-size:0.875rem;">' +
+                    '<span style="color:#6b7280;">Platform</span><span style="color:white;">Railway</span>' +
+                    '<span style="color:#6b7280;">Region</span><span style="color:white;">US West (Oregon)</span>' +
+                    '<span style="color:#6b7280;">Instance</span><span style="color:white;">Starter (512 MB / 1 vCPU)</span>' +
+                    '<span style="color:#6b7280;">SSL</span><span style="color:#22c55e;">Active — auto-renewed</span>' +
+                    '<span style="color:#6b7280;">Branch</span><span style="color:white;">main</span>' +
+                    '<span style="color:#6b7280;">Commit</span><span style="color:#a78bfa; font-family:monospace;">a3f8c2d</span>' +
+                '</div>' +
+            '</div>';
+    }
+
+    // Deployments tab – history list
+    function renderDeployHistory(el) {
+        var entries = [
+            { ver:'v1.2.4', status:'success', time:'Feb 9, 2026', commit:'a3f8c2d', msg:'Update auth middleware', dur:'47s' },
+            { ver:'v1.2.3', status:'success', time:'Feb 8, 2026', commit:'b7e1f09', msg:'Add payment webhook', dur:'52s' },
+            { ver:'v1.2.2', status:'failed',  time:'Feb 7, 2026', commit:'c4d2a11', msg:'Database migration fix', dur:'31s' },
+            { ver:'v1.2.1', status:'success', time:'Feb 5, 2026', commit:'e9f3b78', msg:'Initial deployment', dur:'1m 12s' }
+        ];
+        var rows = entries.map(function(e) {
+            var badge = e.status === 'success'
+                ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;font-size:0.75rem;font-weight:500;background:rgba(34,197,94,0.15);color:#22c55e;"><span style="width:6px;height:6px;border-radius:50%;background:#22c55e;display:inline-block;"></span> Success</span>'
+                : '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;font-size:0.75rem;font-weight:500;background:rgba(239,68,68,0.15);color:#f87171;"><span style="width:6px;height:6px;border-radius:50%;background:#f87171;display:inline-block;"></span> Failed</span>';
+            return '<div style="display:grid; grid-template-columns:60px 80px 1fr 100px 80px; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--nexus-border,#27272a); font-size:0.8125rem;">' +
+                '<span style="color:white; font-weight:600;">' + e.ver + '</span>' +
+                badge +
+                '<div><span style="color:white;">' + e.msg + '</span> <span style="color:#6b7280; font-family:monospace; font-size:0.75rem;">(' + e.commit + ')</span></div>' +
+                '<span style="color:#6b7280;">' + e.time + '</span>' +
+                '<span style="color:#6b7280;">' + e.dur + '</span>' +
+            '</div>';
+        }).join('');
+        el.innerHTML =
+            '<div style="display:grid; grid-template-columns:60px 80px 1fr 100px 80px; gap:12px; padding:0 0 8px; font-size:0.6875rem; color:#6b7280; text-transform:uppercase; font-weight:600; letter-spacing:0.05em; border-bottom:1px solid var(--nexus-border,#27272a);">' +
+                '<span>Version</span><span>Status</span><span>Commit</span><span>Date</span><span>Duration</span>' +
+            '</div>' + rows;
+    }
+
+    // Simulate brief loading then inject data
+    var overviewEl = document.getElementById('deploy-overview-content');
+    var detailEl = document.getElementById('deployment-detail-content');
+    var historyEl = document.getElementById('deployment-history-content');
+
+    if (overviewEl) setTimeout(function() { renderOverviewDeployment(overviewEl); }, 800);
+    if (detailEl) setTimeout(function() { renderDeployDetail(detailEl); }, 1000);
+    if (historyEl) setTimeout(function() { renderDeployHistory(historyEl); }, 1200);
 })();
 </script>
 {% endblock %}

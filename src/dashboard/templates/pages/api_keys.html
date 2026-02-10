@@ -141,6 +141,30 @@
     <span id="api-toast-msg"></span>
 </div>
 
+<!-- Key Created Modal -->
+<div id="key-modal-overlay" style="display:none; position:fixed; inset:0; z-index:10000; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); align-items:center; justify-content:center;">
+    <div style="background:var(--nexus-card); border:1px solid var(--nexus-border); border-radius:16px; padding:32px; max-width:560px; width:90%; box-shadow:0 24px 48px rgba(0,0,0,0.5);">
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
+            <div style="width:40px; height:40px; border-radius:50%; background:rgba(34,197,94,0.15); display:flex; align-items:center; justify-content:center;">
+                <svg style="width:20px; height:20px; color:#22c55e;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            </div>
+            <div>
+                <h3 style="font-size:1.125rem; font-weight:600; color:white; margin:0;">API Key Created</h3>
+                <p style="font-size:0.8125rem; color:#9ca3af; margin:0;">Copy it now — you won't be able to see it again</p>
+            </div>
+        </div>
+        <div style="background:var(--nexus-dark, #0a0a0b); border:1px solid var(--nexus-border); border-radius:8px; padding:14px 16px; margin-bottom:8px; position:relative;">
+            <code id="modal-key-value" style="font-family:'SF Mono',Monaco,monospace; font-size:0.8125rem; color:#a5b4fc; word-break:break-all; display:block; padding-right:70px;"></code>
+            <button id="modal-copy-btn" onclick="window.__apiKeys.copyModalKey()" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); padding:6px 14px; background:#8b5cf6; border:none; border-radius:6px; color:white; font-size:0.75rem; font-weight:600; cursor:pointer;">Copy</button>
+        </div>
+        <p id="modal-copy-feedback" style="font-size:0.75rem; color:#6b7280; margin:0 0 16px 0; min-height:18px;"></p>
+        <div style="padding:12px 16px; background:rgba(251,191,36,0.08); border:1px solid rgba(251,191,36,0.2); border-radius:8px; margin-bottom:24px;">
+            <p style="font-size:0.8125rem; color:#fbbf24; margin:0;">⚠️ Store this key in a secure location. For security, we only show it once.</p>
+        </div>
+        <button onclick="window.__apiKeys.closeModal()" style="width:100%; padding:12px; background:#374151; border:1px solid #4b5563; border-radius:8px; color:white; font-weight:500; cursor:pointer; font-size:0.9375rem;">Done</button>
+    </div>
+</div>
+
 <div class="security-notice">
     <i data-lucide="shield-alert"></i>
     <div>
@@ -260,7 +284,38 @@
         saveKeys(keys);
         input.value = '';
         renderKeys();
-        showToast('API key "' + name + '" created successfully!', 'success');
+        // Show the copy-once modal with the full key
+        showKeyModal(newKey.key);
+    }
+
+    function showKeyModal(fullKey) {
+        var overlay = document.getElementById('key-modal-overlay');
+        document.getElementById('modal-key-value').textContent = fullKey;
+        document.getElementById('modal-copy-feedback').textContent = '';
+        document.getElementById('modal-copy-btn').textContent = 'Copy';
+        document.getElementById('modal-copy-btn').style.background = '#8b5cf6';
+        overlay.style.display = 'flex';
+        overlay._fullKey = fullKey;
+    }
+
+    function closeModal() {
+        document.getElementById('key-modal-overlay').style.display = 'none';
+        showToast('API key created successfully!', 'success');
+    }
+
+    function copyModalKey() {
+        var overlay = document.getElementById('key-modal-overlay');
+        var feedback = document.getElementById('modal-copy-feedback');
+        var btn = document.getElementById('modal-copy-btn');
+        navigator.clipboard.writeText(overlay._fullKey).then(function() {
+            feedback.textContent = '✓ Copied to clipboard!';
+            feedback.style.color = '#22c55e';
+            btn.textContent = 'Copied!';
+            btn.style.background = '#16a34a';
+            setTimeout(function() { btn.textContent = 'Copy'; btn.style.background = '#8b5cf6'; }, 2000);
+        }).catch(function() {
+            prompt('Copy this key:', overlay._fullKey);
+        });
     }
 
     function revokeKey(id) {
@@ -284,7 +339,7 @@
     }
 
     // expose for inline onclick
-    window.__apiKeys = { revokeKey: revokeKey, copyKey: copyKey };
+    window.__apiKeys = { revokeKey: revokeKey, copyKey: copyKey, copyModalKey: copyModalKey, closeModal: closeModal };
 
     // --- init ---
     document.getElementById('create-key-btn').addEventListener('click', createKey);
