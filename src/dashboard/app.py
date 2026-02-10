@@ -95,6 +95,10 @@ logger = get_logger(__name__)
 async def lifespan(app: FastAPI):
     """Application lifespan events — startup and shutdown."""
     # --- Startup ---
+    from src.database.db import init_db
+    init_db(create_tables=True)
+    logger.info("Database tables initialized at startup")
+
     if os.environ.get("DEMO_MODE", "").lower() in ("true", "1", "yes"):
         try:
             from src.database.db import get_database_url
