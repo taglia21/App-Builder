@@ -113,8 +113,8 @@ class DashboardRoutes:
         # Fallback demo data if no projects found
         if not projects:
             projects = [
-                {"id": "proj_1", "name": "My SaaS App", "status": "deployed", "url": "https://my-saas.vercel.app", "created_at": "2024-01-15"},
-                {"id": "proj_2", "name": "Portfolio Site", "status": "building", "url": None, "created_at": "2024-01-20"},
+                {"id": "proj_1", "name": "My SaaS App", "status": "deployed", "url": "https://my-saas.vercel.app", "created_at": "2026-02-01"},
+                {"id": "proj_2", "name": "Portfolio Site", "status": "building", "url": None, "created_at": "2026-02-05"},
             ]
 
         deployed_count = len([p for p in projects if p.get("status") == "deployed"])
@@ -170,9 +170,9 @@ class DashboardRoutes:
 
         if not projects:
             projects = [
-                {"id": "proj_1", "name": "My SaaS App", "status": "deployed", "description": "Full-stack SaaS application", "url": "https://my-saas.vercel.app", "created_at": "Jan 15, 2024"},
-                {"id": "proj_2", "name": "Portfolio Site", "status": "building", "description": "Personal portfolio", "url": None, "created_at": "Jan 20, 2024"},
-                {"id": "proj_3", "name": "Task Manager", "status": "draft", "description": "Team productivity app", "url": None, "created_at": "Jan 22, 2024"},
+                {"id": "proj_1", "name": "My SaaS App", "status": "deployed", "description": "Full-stack SaaS application", "url": "https://my-saas.vercel.app", "created_at": "Feb 1, 2026"},
+                {"id": "proj_2", "name": "Portfolio Site", "status": "building", "description": "Personal portfolio", "url": None, "created_at": "Feb 5, 2026"},
+                {"id": "proj_3", "name": "Task Manager", "status": "draft", "description": "Team productivity app", "url": None, "created_at": "Feb 7, 2026"},
             ]
 
         return self.render(request, "pages/projects.html", {
@@ -200,8 +200,8 @@ class DashboardRoutes:
                 "github": "https://github.com/user/my-saas",
             },
             "tech_stack": ["Next.js", "FastAPI", "PostgreSQL"],
-            "created_at": "2024-01-15",
-            "deployed_at": "2024-01-16",
+            "created_at": "2026-02-01",
+            "deployed_at": "2026-02-02",
         }
 
         return self.render(request, "pages/project_detail.html", {
@@ -266,8 +266,8 @@ class DashboardRoutes:
         return self.render(request, "pages/billing.html", {
             "current_plan": "pro",
             "billing_period": "monthly",
-            "next_invoice": "Feb 1, 2024",
-            "amount": "$29.00",
+            "next_invoice": "Mar 1, 2026",
+            "amount": "$49.00",
         })
 
     async def api_keys_page(self, request: Request) -> HTMLResponse:

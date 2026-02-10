@@ -11,20 +11,20 @@
         <div style="display: grid; gap: 16px;">
             <div>
                 <label style="display: block; font-size: 0.875rem; color: var(--nexus-text); margin-bottom: 6px;">Full Name</label>
-                <input type="text" value="John Doe" style="width: 100%; padding: 10px 14px; background: var(--nexus-dark); border: 1px solid var(--nexus-border); border-radius: 8px; color: white; font-size: 0.95rem;">
+                <input type="text" value="{{ user_name }}" style="width: 100%; padding: 10px 14px; background: var(--nexus-dark); border: 1px solid var(--nexus-border); border-radius: 8px; color: white; font-size: 0.95rem;">
             </div>
             <div>
                 <label style="display: block; font-size: 0.875rem; color: var(--nexus-text); margin-bottom: 6px;">Email Address</label>
-                <input type="email" value="john@example.com" style="width: 100%; padding: 10px 14px; background: var(--nexus-dark); border: 1px solid var(--nexus-border); border-radius: 8px; color: white; font-size: 0.95rem;">
+                <input type="email" value="{{ user_email }}" style="width: 100%; padding: 10px 14px; background: var(--nexus-dark); border: 1px solid var(--nexus-border); border-radius: 8px; color: white; font-size: 0.95rem;">
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                 <div>
                     <label style="display: block; font-size: 0.875rem; color: var(--nexus-text); margin-bottom: 6px;">Company</label>
-                    <input type="text" value="Acme Inc." style="width: 100%; padding: 10px 14px; background: var(--nexus-dark); border: 1px solid var(--nexus-border); border-radius: 8px; color: white; font-size: 0.95rem;">
+                    <input type="text" value="{{ user_company }}" style="width: 100%; padding: 10px 14px; background: var(--nexus-dark); border: 1px solid var(--nexus-border); border-radius: 8px; color: white; font-size: 0.95rem;">
                 </div>
                 <div>
                     <label style="display: block; font-size: 0.875rem; color: var(--nexus-text); margin-bottom: 6px;">Role</label>
-                    <input type="text" value="Developer" style="width: 100%; padding: 10px 14px; background: var(--nexus-dark); border: 1px solid var(--nexus-border); border-radius: 8px; color: white; font-size: 0.95rem;">
+                    <input type="text" value="{{ user_role }}" style="width: 100%; padding: 10px 14px; background: var(--nexus-dark); border: 1px solid var(--nexus-border); border-radius: 8px; color: white; font-size: 0.95rem;">
                 </div>
             </div>
             <div style="margin-top: 8px;">
