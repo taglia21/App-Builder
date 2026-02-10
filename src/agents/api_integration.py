@@ -99,26 +99,26 @@ class MultiAgentService:
                 orchestration_stats=stats
             )
 
-        except ValueError as e:
+        except ValueError as err:
             # Validation failures (vetoed after max retries)
-            logger.warning(f"App generation vetoed: {e}")
+            logger.warning(f"App generation vetoed: {err}")
             raise HTTPException(
                 status_code=422,
                 detail={
                     "error": "generation_vetoed",
-                    "message": str(e),
+                    "message": str(err),
                     "stats": self.orchestrator.get_stats()
                 }
-            )
-        except Exception as e:
-            logger.error(f"App generation failed: {e}")
+            ) from err
+        except Exception as err:
+            logger.error(f"App generation failed: {err}")
             raise HTTPException(
                 status_code=500,
                 detail={
                     "error": "generation_failed",
-                    "message": str(e)
+                    "message": str(err)
                 }
-            )
+            ) from err
 
 
 # Convenience function for route handlers
