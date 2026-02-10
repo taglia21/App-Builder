@@ -115,7 +115,7 @@ async def register(
             name=name,
             email=email.lower(),
             password_hash=hash_password(password),
-            subscription_tier="free",
+            subscription_tier="FREE",
             credits_remaining=5,  # Free tier gets 5 apps
             email_verified=False
         )
