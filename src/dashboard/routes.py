@@ -780,6 +780,8 @@ def create_dashboard_router(templates: Jinja2Templates) -> APIRouter:
     router.add_api_route("/api/preview", preview_app_api, methods=["POST"])
     router.add_api_route("/api/ideas/analyze", analyze_idea_api, methods=["POST"])
     router.add_api_route("/api/projects/{project_id}", get_project_api, methods=["GET"])
+    router.add_api_route("/api/user/billing-status", billing_status_api, methods=["GET"])
+    router.add_api_route("/api/deploy/start", deploy_start_api, methods=["POST"])
 
     # Store templates reference for standalone route functions
     _set_templates(templates)
@@ -1014,6 +1016,121 @@ async def preview_app_api(request: Request) -> JSONResponse:
 
     except Exception as e:
         return JSONResponse({'error': str(e)}, status_code=500)
+
+
+async def billing_status_api(request: Request) -> JSONResponse:
+    """Check if the current user has a paid subscription that allows deployment."""
+    user = get_current_user(request)
+    if not user:
+        return JSONResponse({'error': 'Not authenticated'}, status_code=401)
+
+    tier = getattr(user, 'subscription_tier', None)
+    tier_value = tier.value if hasattr(tier, 'value') else str(tier) if tier else 'free'
+    is_paid = tier_value in ('starter', 'pro', 'enterprise')
+    # Admin and demo users bypass billing
+    if getattr(user, 'role', '') in ('admin', 'demo') or getattr(user, 'is_demo_account', False):
+        is_paid = True
+
+    return JSONResponse({
+        'tier': tier_value,
+        'is_paid': is_paid,
+        'can_deploy': is_paid,
+    })
+
+
+async def deploy_start_api(request: Request) -> JSONResponse:
+    """Start a real deployment for a paid user's project."""
+    user = get_current_user(request)
+    if not user:
+        return JSONResponse({'error': 'Not authenticated'}, status_code=401)
+
+    # Check billing
+    tier = getattr(user, 'subscription_tier', None)
+    tier_value = tier.value if hasattr(tier, 'value') else str(tier) if tier else 'free'
+    is_paid = tier_value in ('starter', 'pro', 'enterprise')
+    if getattr(user, 'role', '') in ('admin', 'demo') or getattr(user, 'is_demo_account', False):
+        is_paid = True
+
+    if not is_paid:
+        return JSONResponse({
+            'success': False,
+            'error': 'Deployment requires a paid plan. Please upgrade at /billing.',
+            'upgrade_required': True,
+        }, status_code=403)
+
+    try:
+        body = await request.json()
+        project_name = body.get('project_name', 'my-app')
+        project_id = body.get('project_id')
+        platform = body.get('platform', 'railway')
+        files = body.get('files', {})
+
+        if not files:
+            return JSONResponse({
+                'success': False,
+                'error': 'No generated files to deploy. Please generate your app first.',
+            }, status_code=400)
+
+        # Use the real deployment service
+        try:
+            from src.integrations.deployment_service import DeploymentService
+            deploy_service = DeploymentService()
+
+            result = await deploy_service.deploy(
+                project_name=project_name,
+                files=files,
+                platform=platform,
+            )
+
+            if result.get('success'):
+                deployment_url = result.get('url', '')
+
+                # Update project in DB with deployment URL
+                if project_id:
+                    try:
+                        from src.database.db import get_db
+                        from src.database.models import Project
+                        db = get_db()
+                        with db.session() as session:
+                            db_project = session.query(Project).filter(
+                                Project.id == project_id, Project.user_id == user.id
+                            ).first()
+                            if db_project:
+                                db_project.deployment_url = deployment_url
+                                db_project.status = 'deployed'
+                                if result.get('github_url'):
+                                    db_project.github_url = result['github_url']
+                                session.commit()
+                    except Exception as db_err:
+                        logger.warning(f"Could not update project deployment URL: {db_err}")
+
+                return JSONResponse({
+                    'success': True,
+                    'url': deployment_url,
+                    'dashboard_url': result.get('dashboard_url', ''),
+                    'github_url': result.get('github_url', ''),
+                    'message': result.get('message', f'Successfully deployed to {platform}!'),
+                })
+            else:
+                return JSONResponse({
+                    'success': False,
+                    'error': result.get('error', 'Deployment failed'),
+                    'message': result.get('error', f'Deployment to {platform} failed.'),
+                    'github_url': result.get('github_url', ''),
+                    'manual_deploy': True,
+                }, status_code=502)
+
+        except ImportError:
+            return JSONResponse({
+                'success': False,
+                'error': 'Deployment service not available',
+                'message': 'The deployment service is not configured. Your code has been saved — you can download it and deploy manually.',
+                'manual_deploy': True,
+            }, status_code=503)
+
+    except Exception as e:
+        logger.error(f"Deploy start error: {e}")
+        return JSONResponse({'success': False, 'error': str(e)}, status_code=500)
 
 
 def _generate_mock_file_contents(name: str, idea: str) -> dict:

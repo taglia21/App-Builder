@@ -230,57 +230,119 @@
         </button>
     </div>
 
-    <!-- Step 5: Launch Business (hidden by default) -->
+    <!-- Step 5: Success (hidden by default) -->
     <div id="step5" class="step-content" style="display: none; background: #1f2937; border-radius: 16px; padding: 32px; border: 1px solid #374151;">
-        <div style="text-align: center; margin-bottom: 32px;">
-            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #10b981, #059669); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
-                <i data-lucide="check" style="width: 40px; height: 40px; color: white;"></i>
+
+        <!-- 5A: Deployed successfully (shown for paid users after real deploy) -->
+        <div id="step5-deployed" style="display: none;">
+            <div style="text-align: center; margin-bottom: 32px;">
+                <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #10b981, #059669); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+                    <i data-lucide="check" style="width: 40px; height: 40px; color: white;"></i>
+                </div>
+                <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 8px;">🎉 Your App is Live!</h2>
+                <a id="live-url" href="#" target="_blank" style="color: #8b5cf6; font-size: 1.1rem; text-decoration: none;"></a>
             </div>
-            <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 8px;">🎉 Your App is Live!</h2>
-            <p id="live-url" style="color: #8b5cf6; font-size: 1.1rem;">https://your-app.railway.app</p>
+
+            <div style="background: #111827; border-radius: 12px; padding: 24px; margin-bottom: 24px;">
+                <h3 style="font-weight: 600; margin-bottom: 16px;">Ready to launch your business?</h3>
+                <p style="color: #9ca3af; margin-bottom: 16px;">Turn your app into a real business with LLC formation, EIN, and custom domain.</p>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+                    <div style="text-align: center; padding: 16px;">
+                        <i data-lucide="building" style="width: 32px; height: 32px; color: #8b5cf6; margin-bottom: 8px;"></i>
+                        <p style="font-weight: 500;">LLC Formation</p>
+                        <p style="font-size: 12px; color: #6b7280;">Delaware LLC in 24h</p>
+                    </div>
+                    <div style="text-align: center; padding: 16px;">
+                        <i data-lucide="globe" style="width: 32px; height: 32px; color: #8b5cf6; margin-bottom: 8px;"></i>
+                        <p style="font-weight: 500;">Custom Domain</p>
+                        <p style="font-size: 12px; color: #6b7280;">yourcompany.com</p>
+                    </div>
+                    <div style="text-align: center; padding: 16px;">
+                        <i data-lucide="file-text" style="width: 32px; height: 32px; color: #8b5cf6; margin-bottom: 8px;"></i>
+                        <p style="font-weight: 500;">EIN Number</p>
+                        <p style="font-size: 12px; color: #6b7280;">Tax ID for your business</p>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 16px;">
+                <a href="/business-formation" style="width: 100%; padding: 18px; background: linear-gradient(135deg, #8b5cf6, #6366f1); border: none; border-radius: 12px; color: white; font-size: 1.15rem; font-weight: 700; text-decoration: none; text-align: center; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 4px 24px rgba(139,92,246,0.35); transition: transform 0.15s, box-shadow 0.15s;"
+                   onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 32px rgba(139,92,246,0.45)'"
+                   onmouseout="this.style.transform='';this.style.boxShadow='0 4px 24px rgba(139,92,246,0.35)'">
+                    <i data-lucide="building" style="width: 22px; height: 22px;"></i>
+                    Register Your Business
+                </a>
+                <div style="display: flex; gap: 16px; width: 100%;">
+                    <a id="view-project-btn" href="#" target="_blank" style="flex: 1; padding: 12px; background: #374151; border: none; border-radius: 8px; color: white; font-weight: 600; text-decoration: none; text-align: center; transition: background 0.15s;"
+                       onmouseover="this.style.background='#4b5563'" onmouseout="this.style.background='#374151'">
+                        View My Project ↗
+                    </a>
+                    <a href="/dashboard" style="flex: 1; padding: 12px; background: transparent; border: 1px solid #374151; border-radius: 8px; color: #9ca3af; text-decoration: none; text-align: center; transition: color 0.15s, border-color 0.15s;"
+                       onmouseover="this.style.color='#e5e7eb';this.style.borderColor='#6b7280'" onmouseout="this.style.color='#9ca3af';this.style.borderColor='#374151'">
+                        Back to Dashboard
+                    </a>
+                </div>
+            </div>
         </div>
 
-        <div style="background: #111827; border-radius: 12px; padding: 24px; margin-bottom: 24px;">
-            <h3 style="font-weight: 600; margin-bottom: 16px;">Ready to launch your business?</h3>
-            <p style="color: #9ca3af; margin-bottom: 16px;">Turn your app into a real business with LLC formation, EIN, and custom domain.</p>
-            
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
-                <div style="text-align: center; padding: 16px;">
-                    <i data-lucide="building" style="width: 32px; height: 32px; color: #8b5cf6; margin-bottom: 8px;"></i>
-                    <p style="font-weight: 500;">LLC Formation</p>
-                    <p style="font-size: 12px; color: #6b7280;">Delaware LLC in 24h</p>
+        <!-- 5B: Free user — app ready, upgrade to deploy (shown for free users) -->
+        <div id="step5-upgrade" style="display: none;">
+            <div style="text-align: center; margin-bottom: 32px;">
+                <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #8b5cf6, #6366f1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+                    <i data-lucide="package" style="width: 40px; height: 40px; color: white;"></i>
                 </div>
-                <div style="text-align: center; padding: 16px;">
-                    <i data-lucide="globe" style="width: 32px; height: 32px; color: #8b5cf6; margin-bottom: 8px;"></i>
-                    <p style="font-weight: 500;">Custom Domain</p>
-                    <p style="font-size: 12px; color: #6b7280;">yourcompany.com</p>
+                <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 8px;">✅ Your App is Ready!</h2>
+                <p style="color: #9ca3af; font-size: 1rem;">Your code has been generated and saved. Upgrade to a paid plan to deploy it live.</p>
+            </div>
+
+            <div style="background: #111827; border-radius: 12px; padding: 24px; margin-bottom: 24px;">
+                <h3 style="font-weight: 600; margin-bottom: 12px;">What you get with a paid plan:</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div style="display: flex; align-items: center; gap: 10px; padding: 12px; background: rgba(139,92,246,0.08); border-radius: 8px;">
+                        <i data-lucide="rocket" style="width: 20px; height: 20px; color: #8b5cf6; flex-shrink: 0;"></i>
+                        <span style="font-size: 0.9rem;">One-click deployment to Railway</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px; padding: 12px; background: rgba(139,92,246,0.08); border-radius: 8px;">
+                        <i data-lucide="globe" style="width: 20px; height: 20px; color: #8b5cf6; flex-shrink: 0;"></i>
+                        <span style="font-size: 0.9rem;">Custom domain + SSL</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px; padding: 12px; background: rgba(139,92,246,0.08); border-radius: 8px;">
+                        <i data-lucide="building" style="width: 20px; height: 20px; color: #8b5cf6; flex-shrink: 0;"></i>
+                        <span style="font-size: 0.9rem;">LLC formation &amp; EIN</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px; padding: 12px; background: rgba(139,92,246,0.08); border-radius: 8px;">
+                        <i data-lucide="shield" style="width: 20px; height: 20px; color: #8b5cf6; flex-shrink: 0;"></i>
+                        <span style="font-size: 0.9rem;">Priority support</span>
+                    </div>
                 </div>
-                <div style="text-align: center; padding: 16px;">
-                    <i data-lucide="file-text" style="width: 32px; height: 32px; color: #8b5cf6; margin-bottom: 8px;"></i>
-                    <p style="font-weight: 500;">EIN Number</p>
-                    <p style="font-size: 12px; color: #6b7280;">Tax ID for your business</p>
+            </div>
+
+            <!-- Deploy error message (shown if deploy fails for paid users too) -->
+            <div id="deploy-error-msg" style="display: none; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+                <p id="deploy-error-text" style="color: #f87171; font-size: 0.9rem;"></p>
+            </div>
+
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 16px;">
+                <a href="/billing" style="width: 100%; padding: 18px; background: linear-gradient(135deg, #8b5cf6, #6366f1); border: none; border-radius: 12px; color: white; font-size: 1.15rem; font-weight: 700; text-decoration: none; text-align: center; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 4px 24px rgba(139,92,246,0.35); transition: transform 0.15s, box-shadow 0.15s;"
+                   onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 32px rgba(139,92,246,0.45)'"
+                   onmouseout="this.style.transform='';this.style.boxShadow='0 4px 24px rgba(139,92,246,0.35)'">
+                    <i data-lucide="zap" style="width: 22px; height: 22px;"></i>
+                    Upgrade to Deploy Live
+                </a>
+                <div style="display: flex; gap: 16px; width: 100%;">
+                    <a id="download-code-btn" href="#" onclick="downloadProject()" style="flex: 1; padding: 12px; background: #374151; border: none; border-radius: 8px; color: white; font-weight: 600; text-decoration: none; text-align: center; cursor: pointer; transition: background 0.15s;"
+                       onmouseover="this.style.background='#4b5563'" onmouseout="this.style.background='#374151'">
+                        <i data-lucide="download" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;"></i>
+                        Download Code
+                    </a>
+                    <a href="/dashboard" style="flex: 1; padding: 12px; background: transparent; border: 1px solid #374151; border-radius: 8px; color: #9ca3af; text-decoration: none; text-align: center; transition: color 0.15s, border-color 0.15s;"
+                       onmouseover="this.style.color='#e5e7eb';this.style.borderColor='#6b7280'" onmouseout="this.style.color='#9ca3af';this.style.borderColor='#374151'">
+                        Back to Dashboard
+                    </a>
                 </div>
             </div>
         </div>
 
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 16px;">
-            <a href="/business-formation" style="width: 100%; padding: 18px; background: linear-gradient(135deg, #8b5cf6, #6366f1); border: none; border-radius: 12px; color: white; font-size: 1.15rem; font-weight: 700; text-decoration: none; text-align: center; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 4px 24px rgba(139,92,246,0.35); transition: transform 0.15s, box-shadow 0.15s;"
-               onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 32px rgba(139,92,246,0.45)'"
-               onmouseout="this.style.transform='';this.style.boxShadow='0 4px 24px rgba(139,92,246,0.35)'">
-                <i data-lucide="building" style="width: 22px; height: 22px;"></i>
-                Register Your Business
-            </a>
-            <div style="display: flex; gap: 16px; width: 100%;">
-                <a id="view-project-btn" href="#" target="_blank" onclick="this.href=document.getElementById('live-url').textContent.trim()" style="flex: 1; padding: 12px; background: #374151; border: none; border-radius: 8px; color: white; font-weight: 600; text-decoration: none; text-align: center; transition: background 0.15s;"
-                   onmouseover="this.style.background='#4b5563'" onmouseout="this.style.background='#374151'">
-                    View My Project ↗
-                </a>
-                <a href="/dashboard" style="flex: 1; padding: 12px; background: transparent; border: 1px solid #374151; border-radius: 8px; color: #9ca3af; text-decoration: none; text-align: center; transition: color 0.15s, border-color 0.15s;"
-                   onmouseover="this.style.color='#e5e7eb';this.style.borderColor='#6b7280'" onmouseout="this.style.color='#9ca3af';this.style.borderColor='#374151'">
-                    Back to Dashboard
-                </a>
-            </div>
-        </div>
     </div>
 </div>
 
@@ -423,7 +485,7 @@ async function generateCode() {
         features: features,
         status: 'ready',
         created_at: new Date().toISOString(),
-        url: 'https://' + slug + '.up.railway.app'
+        url: null
     };
     saveProject(newProject);
     projectData.id = projectId;
@@ -645,41 +707,143 @@ function checkDomain() {
 }
 
 async function deployApp() {
-    const deployStatus = document.getElementById('deploy-status');
-    const deployText = document.getElementById('deploy-text');
-    const deployBtn = document.getElementById('deploy-btn');
-    
+    var deployStatus = document.getElementById('deploy-status');
+    var deployText = document.getElementById('deploy-text');
+    var deployBtn = document.getElementById('deploy-btn');
+
     deployStatus.style.display = 'block';
     deployBtn.disabled = true;
     deployBtn.style.opacity = '0.5';
-    
-    const steps = [
+    deployText.textContent = 'Checking your account...';
+
+    // 1. Check billing status
+    try {
+        var billingResp = await fetch('/api/user/billing-status');
+        var billingData = await billingResp.json();
+
+        if (!billingData.can_deploy) {
+            // Free user — show upgrade step
+            deployStatus.style.display = 'none';
+            deployBtn.disabled = false;
+            deployBtn.style.opacity = '1';
+            showStep5Upgrade();
+            return;
+        }
+    } catch(e) {
+        // If billing check fails, assume free
+        deployStatus.style.display = 'none';
+        deployBtn.disabled = false;
+        deployBtn.style.opacity = '1';
+        showStep5Upgrade();
+        return;
+    }
+
+    // 2. Paid user — start real deployment
+    var steps = [
         'Pushing code to GitHub...',
         'Building Docker container...',
-        'Deploying to Railway...',
+        'Deploying to ' + (projectData.platform || 'Railway') + '...',
         'Configuring SSL certificate...',
         'Setting up domain...',
         'Running health checks...'
     ];
-    
-    for (const step of steps) {
-        deployText.textContent = step;
-        await new Promise(r => setTimeout(r, 1200));
-    }
-    
-    // Update stored project to deployed status
-    var allProjects = loadProjects();
-    allProjects = allProjects.map(function(p) {
-        if (p.id === projectData.id) p.status = 'deployed';
-        return p;
-    });
-    localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(allProjects));
 
-    // Update live URL and go to final step
-    var appName = (projectData.slug || projectData.name.toLowerCase().replace(/\s+/g, '-'));
-    document.getElementById('live-url').textContent = 'https://' + appName + '.up.railway.app';
-    document.getElementById('live-url').href = 'https://' + appName + '.up.railway.app';
+    // Show progress while deploying
+    var stepIndex = 0;
+    var progressInterval = setInterval(function() {
+        if (stepIndex < steps.length) {
+            deployText.textContent = steps[stepIndex];
+            stepIndex++;
+        }
+    }, 2000);
+
+    try {
+        var deployResp = await fetch('/api/deploy/start', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                project_id: projectData.backendId || projectData.id,
+                project_name: projectData.slug || projectData.name.toLowerCase().replace(/\s+/g, '-'),
+                platform: projectData.platform || 'railway',
+                files: previewFiles || {}
+            })
+        });
+        clearInterval(progressInterval);
+        var deployData = await deployResp.json();
+
+        if (deployData.success && deployData.url) {
+            // Real deployment succeeded!
+            deployText.textContent = '✓ Deployed successfully!';
+            await new Promise(r => setTimeout(r, 800));
+
+            // Update localStorage
+            var allProjects = loadProjects();
+            allProjects = allProjects.map(function(p) {
+                if (p.id === projectData.id) {
+                    p.status = 'deployed';
+                    p.url = deployData.url;
+                }
+                return p;
+            });
+            localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(allProjects));
+
+            // Show deployed step with real URL
+            showStep5Deployed(deployData.url);
+        } else {
+            // Deploy failed — show upgrade/download step with error
+            showStep5Upgrade(deployData.message || deployData.error || 'Deployment failed. You can download your code and deploy manually.');
+        }
+    } catch(e) {
+        clearInterval(progressInterval);
+        showStep5Upgrade('Could not connect to deployment service. You can download your code and deploy manually.');
+    }
+}
+
+function showStep5Deployed(url) {
+    var liveUrlEl = document.getElementById('live-url');
+    liveUrlEl.textContent = url;
+    liveUrlEl.href = url;
+    var viewBtn = document.getElementById('view-project-btn');
+    viewBtn.href = url;
+
+    document.getElementById('step5-deployed').style.display = 'block';
+    document.getElementById('step5-upgrade').style.display = 'none';
     goToStep(5);
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function showStep5Upgrade(errorMsg) {
+    document.getElementById('step5-deployed').style.display = 'none';
+    document.getElementById('step5-upgrade').style.display = 'block';
+
+    if (errorMsg) {
+        var errEl = document.getElementById('deploy-error-msg');
+        var errText = document.getElementById('deploy-error-text');
+        errText.textContent = errorMsg;
+        errEl.style.display = 'block';
+    }
+
+    goToStep(5);
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function downloadProject() {
+    // Download the generated code as a simple text summary
+    if (!previewFiles || Object.keys(previewFiles).length === 0) {
+        alert('No generated files to download. Please generate your app first.');
+        return;
+    }
+    var content = '# Generated Project: ' + (projectData.name || 'My App') + '\n\n';
+    for (var fname in previewFiles) {
+        content += '\n=== ' + fname + ' ===\n' + previewFiles[fname] + '\n';
+    }
+    var blob = new Blob([content], {type: 'text/plain'});
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = (projectData.slug || 'project') + '-source.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
 }
 
 // Initialize Lucide icons

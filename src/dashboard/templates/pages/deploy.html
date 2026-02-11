@@ -120,30 +120,93 @@ async function deployApp() {
     btn.textContent = 'Deploying...';
     statusCard.classList.add('active');
     
-    // Simulate deployment progress
-    const stages = [
+    // Check billing first
+    try {
+        var billingResp = await fetch('/api/user/billing-status');
+        var billingData = await billingResp.json();
+        if (!billingData.can_deploy) {
+            statusText.textContent = 'Deployment requires a paid plan.';
+            btn.textContent = 'Upgrade to Deploy';
+            btn.disabled = false;
+            btn.onclick = function() { window.location.href = '/billing'; };
+            return;
+        }
+    } catch(e) {
+        statusText.textContent = 'Could not verify billing status.';
+        btn.textContent = 'Retry';
+        btn.disabled = false;
+        return;
+    }
+
+    // Show progress while calling real deploy
+    var stages = [
         { progress: 20, text: 'Creating project...' },
         { progress: 40, text: 'Uploading files...' },
         { progress: 60, text: 'Building container...' },
         { progress: 80, text: 'Configuring environment...' },
-        { progress: 100, text: 'Finalizing deployment...' }
     ];
-    
-    for (const stage of stages) {
-        await new Promise(r => setTimeout(r, 1500));
-        progressFill.style.width = stage.progress + '%';
-        statusText.textContent = stage.text;
+    var stageIdx = 0;
+    var progressTimer = setInterval(function() {
+        if (stageIdx < stages.length) {
+            progressFill.style.width = stages[stageIdx].progress + '%';
+            statusText.textContent = stages[stageIdx].text;
+            stageIdx++;
+        }
+    }, 1500);
+
+    try {
+        // Gather generated files from the project (fetch from preview API if available)
+        var projectFiles = window._deployFiles || {};
+        if (!Object.keys(projectFiles).length) {
+            // Try to fetch generated files from preview endpoint
+            try {
+                var previewResp = await fetch('/api/preview', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({project_id: '{{ project.id }}'})
+                });
+                if (previewResp.ok) {
+                    var previewData = await previewResp.json();
+                    projectFiles = previewData.files || {};
+                }
+            } catch(pe) { /* preview not available */ }
+        }
+
+        var resp = await fetch('/api/deploy/start', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                project_id: '{{ project.id }}',
+                project_name: '{{ project.name | default("my-app") }}'.toLowerCase().replace(/\s+/g, '-'),
+                platform: 'railway',
+                files: projectFiles
+            })
+        });
+        clearInterval(progressTimer);
+        var data = await resp.json();
+
+        if (data.success && data.url) {
+            progressFill.style.width = '100%';
+            statusText.textContent = 'Deployment complete!';
+            btn.textContent = '✅ Deployed!';
+            document.getElementById('deploymentUrl').style.display = 'block';
+            var liveUrl = document.getElementById('liveUrl');
+            liveUrl.href = data.url;
+            liveUrl.textContent = data.url;
+        } else {
+            progressFill.style.width = '100%';
+            progressFill.style.background = '#ef4444';
+            statusText.textContent = data.message || 'Deployment failed. You can download your code and deploy manually.';
+            btn.textContent = 'Back to Project';
+            btn.disabled = false;
+            btn.onclick = function() { window.location.href = '/projects/{{ project.id }}'; };
+        }
+    } catch(e) {
+        clearInterval(progressTimer);
+        statusText.textContent = 'Could not connect to deployment service.';
+        btn.textContent = 'Retry';
+        btn.disabled = false;
     }
-    
-    await new Promise(r => setTimeout(r, 1000));
-    statusText.textContent = 'Deployment complete!';
-    btn.textContent = '✅ Deployed!';
-    
-    // Show live URL
-    document.getElementById('deploymentUrl').style.display = 'block';
-    const liveUrl = document.getElementById('liveUrl');
-    liveUrl.href = 'https://{{ project.id }}-app.up.railway.app';
-    liveUrl.textContent = 'https://{{ project.id }}-app.up.railway.app';
 }
 </script>
 {% endblock %}
