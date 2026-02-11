@@ -387,12 +387,39 @@ def init_db(
         DatabaseManager: Initialized database manager
     """
     global _db_manager
-    _db_manager = DatabaseManager(database_url=database_url, **kwargs)
 
-    if create_tables:
-        _db_manager.create_tables()
+    resolved_url = database_url or get_database_url()
+    is_postgres = resolved_url.startswith("postgresql")
+    backend_label = "PostgreSQL" if is_postgres else "SQLite"
+    logger.info(f"Initializing database with backend: {backend_label}")
 
-    return _db_manager
+    max_attempts = 3 if is_postgres else 1
+    last_error = None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            _db_manager = DatabaseManager(database_url=resolved_url, **kwargs)
+            if create_tables:
+                _db_manager.create_tables()
+            logger.info(f"Database initialized successfully ({backend_label})")
+            return _db_manager
+        except Exception as e:
+            last_error = e
+            if attempt < max_attempts:
+                wait = 2 ** attempt
+                logger.warning(
+                    f"{backend_label} connection attempt {attempt}/{max_attempts} failed: {e}. "
+                    f"Retrying in {wait}s..."
+                )
+                time.sleep(wait)
+                # Reset singleton so DatabaseManager.__init__ runs again
+                DatabaseManager._instance = None
+                DatabaseManager._engine = None
+                DatabaseManager._session_factory = None
+                DatabaseManager._scoped_session = None
+            else:
+                logger.error(f"{backend_label} connection failed after {max_attempts} attempts: {e}")
+
+    raise ConnectionError(f"Could not initialize {backend_label} database: {last_error}")
 
 
 def get_db() -> DatabaseManager:

@@ -49,13 +49,15 @@ async def login(
                 {"request": request, "error": "Invalid email or password"}
             )
 
-        # Create session (we'll implement proper session management later)
-        response = RedirectResponse(url="/dashboard", status_code=303)
+        # Set persistent cookie-based session
+        response = RedirectResponse(url="/projects", status_code=303)
         response.set_cookie(
             key="user_id",
             value=str(user.id),
             httponly=True,
-            max_age=2592000 if remember else 3600  # 30 days or 1 hour
+            secure=True,
+            samesite="lax",
+            max_age=2592000 if remember else 86400  # 30 days or 1 day
         )
 
         logger.info(f"User {email} logged in successfully")
@@ -126,13 +128,15 @@ async def register(
 
         logger.info(f"New user registered: {email}")
 
-        # Auto-login after registration
-        response = RedirectResponse(url="/dashboard", status_code=303)
+        # Auto-login after registration — 30 day persistent cookie
+        response = RedirectResponse(url="/projects", status_code=303)
         response.set_cookie(
             key="user_id",
             value=str(new_user.id),
             httponly=True,
-            max_age=3600
+            secure=True,
+            samesite="lax",
+            max_age=2592000  # 30 days
         )
         return response
 

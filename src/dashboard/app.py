@@ -200,6 +200,49 @@ and authentication requirements.
     )
 
 
+    # --- Auth-guard middleware -------------------------------------------------
+    # Public paths that do NOT require a logged-in user.
+    PUBLIC_PATH_PREFIXES = (
+        "/login", "/register", "/auth/", "/logout",
+        "/health", "/docs", "/redoc", "/openapi.json",
+        "/static/", "/favicon.ico",
+        "/",  # landing page
+    )
+    # Paths that are public but must match exactly (not as prefix)
+    PUBLIC_EXACT_PATHS = {
+        "/", "/about", "/terms", "/privacy", "/contact",
+        "/compare", "/pricing", "/health",
+    }
+
+    @app.middleware("http")
+    async def auth_guard_middleware(request: Request, call_next):
+        """Redirect unauthenticated users to /login on protected pages."""
+        from starlette.responses import RedirectResponse as StarletteRedirect
+        path = request.url.path
+
+        # Always allow API endpoints, static files, auth pages, OPTIONS
+        is_public = (
+            request.method == "OPTIONS"
+            or path.startswith("/api/")
+            or path.startswith("/static/")
+            or path.startswith("/auth/")
+            or path in {"/login", "/register", "/logout"}
+            or path in PUBLIC_EXACT_PATHS
+            or path.startswith("/docs") or path.startswith("/redoc")
+            or path.startswith("/openapi")
+            or path.startswith("/favicon")
+            or path.startswith("/htmx/")
+            or path.startswith("/demo")
+        )
+
+        if not is_public:
+            user_id = request.cookies.get("user_id")
+            if not user_id:
+                return StarletteRedirect(url="/login", status_code=303)
+
+        response = await call_next(request)
+        return response
+
     @app.middleware("http")
     async def add_security_headers(request: Request, call_next):
         """Add security headers to all responses."""

@@ -130,6 +130,9 @@ class DashboardRoutes:
 
     async def new_project(self, request: Request) -> HTMLResponse:
         """New project wizard."""
+        user = get_current_user(request)
+        if not user:
+            return RedirectResponse(url="/login", status_code=303)
         return self.render(request, "pages/new_project.html", {
             "step": 1,
             "steps": [
@@ -263,6 +266,9 @@ class DashboardRoutes:
 
     async def billing(self, request: Request) -> HTMLResponse:
         """Billing and subscription page."""
+        user = get_current_user(request)
+        if not user:
+            return RedirectResponse(url="/login", status_code=303)
         return self.render(request, "pages/billing.html", {
             "current_plan": "pro",
             "billing_period": "monthly",
@@ -272,11 +278,17 @@ class DashboardRoutes:
 
     async def api_keys_page(self, request: Request) -> HTMLResponse:
         """API Keys management page."""
-        return self.render(request, "pages/api_keys.html", {"active": "api-keys"})
+        user = get_current_user(request)
+        if not user:
+            return RedirectResponse(url="/login", status_code=303)
+        return self.render(request, "pages/api_keys.html", {"active": "api-keys", "user": user})
 
     async def billing_page(self, request):
         """Billing page"""
-        return self.render(request, "pages/billing.html", {"active": "billing"})
+        user = get_current_user(request)
+        if not user:
+            return RedirectResponse(url="/login", status_code=303)
+        return self.render(request, "pages/billing.html", {"active": "billing", "user": user})
 
     async def about_page(self, request: Request) -> HTMLResponse:
         """About Us page."""
@@ -292,11 +304,17 @@ class DashboardRoutes:
 
     async def business_formation_page(self, request: Request) -> HTMLResponse:
         """Business Formation page."""
-        return self.render(request, "pages/business_formation.html", {"active": "business-formation"})
+        user = get_current_user(request)
+        if not user:
+            return RedirectResponse(url="/login", status_code=303)
+        return self.render(request, "pages/business_formation.html", {"active": "business-formation", "user": user})
 
     async def new_project_page(self, request: Request) -> HTMLResponse:
         """Create new project page."""
-        return self.render(request, "pages/new_project.html", {"active": "projects"})
+        user = get_current_user(request)
+        if not user:
+            return RedirectResponse(url="/login", status_code=303)
+        return self.render(request, "pages/new_project.html", {"active": "projects", "user": user})
 
     # ==================== HTMX Partial Routes ====================
 
