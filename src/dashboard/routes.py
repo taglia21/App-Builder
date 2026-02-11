@@ -110,13 +110,6 @@ class DashboardRoutes:
         except Exception as e:
             logger.warning(f"Could not load projects from DB: {e}")
 
-        # Fallback demo data if no projects found
-        if not projects:
-            projects = [
-                {"id": "proj_1", "name": "My SaaS App", "status": "deployed", "url": "https://my-saas.vercel.app", "created_at": "2026-02-01"},
-                {"id": "proj_2", "name": "Portfolio Site", "status": "building", "url": None, "created_at": "2026-02-05"},
-            ]
-
         deployed_count = len([p for p in projects if p.get("status") == "deployed"])
         return self.render(request, "pages/dashboard.html", {
             "user": user,
@@ -171,13 +164,6 @@ class DashboardRoutes:
         except Exception as e:
             logger.warning(f"Could not load projects from DB: {e}")
 
-        if not projects:
-            projects = [
-                {"id": "proj_1", "name": "My SaaS App", "status": "deployed", "description": "Full-stack SaaS application", "url": "https://my-saas.vercel.app", "created_at": "Feb 1, 2026"},
-                {"id": "proj_2", "name": "Portfolio Site", "status": "building", "description": "Personal portfolio", "url": None, "created_at": "Feb 5, 2026"},
-                {"id": "proj_3", "name": "Task Manager", "status": "draft", "description": "Team productivity app", "url": None, "created_at": "Feb 7, 2026"},
-            ]
-
         return self.render(request, "pages/projects.html", {
             "active": "projects",
             "user": user,
@@ -191,21 +177,45 @@ class DashboardRoutes:
         project_id: str,
     ) -> HTMLResponse:
         """Project detail page."""
-        # Mock project data
-        project = {
-            "id": project_id,
-            "name": "My SaaS App",
-            "description": "A productivity app for teams",
-            "status": "deployed",
-            "urls": {
-                "frontend": "https://my-saas.vercel.app",
-                "backend": "https://my-saas-api.onrender.com",
-                "github": "https://github.com/user/my-saas",
-            },
-            "tech_stack": ["Next.js", "FastAPI", "PostgreSQL"],
-            "created_at": "2026-02-01",
-            "deployed_at": "2026-02-02",
-        }
+        user = get_current_user(request)
+        if not user:
+            return RedirectResponse(url="/login", status_code=303)
+
+        project = None
+        try:
+            from src.database.db import get_db
+            from src.database.models import Project
+            db = get_db()
+            with db.session() as session:
+                db_project = (
+                    session.query(Project)
+                    .filter(Project.id == project_id, Project.user_id == user.id, Project.is_deleted == False)
+                    .first()
+                )
+                if db_project:
+                    config = db_project.config or {}
+                    urls = {}
+                    if db_project.deployment_url:
+                        urls["frontend"] = db_project.deployment_url
+                    if db_project.code_url:
+                        urls["github"] = db_project.code_url
+                    project = {
+                        "id": db_project.id,
+                        "name": db_project.name,
+                        "description": db_project.description or "",
+                        "status": db_project.status.value if hasattr(db_project.status, 'value') else str(db_project.status),
+                        "urls": urls if urls else None,
+                        "tech_stack": config.get("tech_stack", []),
+                        "features": config.get("features", []),
+                        "output_path": config.get("output_path"),
+                        "created_at": db_project.created_at.strftime("%b %d, %Y") if db_project.created_at else "",
+                        "deployed_at": config.get("deployed_at", ""),
+                    }
+        except Exception as e:
+            logger.warning(f"Could not load project {project_id} from DB: {e}")
+
+        if not project:
+            return RedirectResponse(url="/projects", status_code=303)
 
         return self.render(request, "pages/project_detail.html", {
             "project": project,
@@ -232,20 +242,37 @@ class DashboardRoutes:
 
     async def health_dashboard(self, request: Request) -> HTMLResponse:
         """Deployment health dashboard."""
-        # Mock deployment data
-        deployments = [
-            {
-                "id": "dep_1",
-                "project_id": "proj_1",
-                "name": "My SaaS App",
-                "url": "https://my-saas.vercel.app",
-                "status": "healthy",
-                "response_time": 120,
-                "uptime": 99.95,
-                "ssl_valid": True,
-                "ssl_days_remaining": 45,
-            },
-        ]
+        user = get_current_user(request)
+        deployments = []
+        if user:
+            try:
+                from src.database.db import get_db
+                from src.database.models import Project
+                db = get_db()
+                with db.session() as session:
+                    db_projects = (
+                        session.query(Project)
+                        .filter(
+                            Project.user_id == user.id,
+                            Project.is_deleted == False,
+                            Project.deployment_url.isnot(None),
+                        )
+                        .all()
+                    )
+                    for p in db_projects:
+                        deployments.append({
+                            "id": str(p.id),
+                            "project_id": str(p.id),
+                            "name": p.name,
+                            "url": p.deployment_url,
+                            "status": "healthy",
+                            "response_time": None,
+                            "uptime": None,
+                            "ssl_valid": p.deployment_url.startswith("https://") if p.deployment_url else False,
+                            "ssl_days_remaining": None,
+                        })
+            except Exception as e:
+                logger.warning(f"Could not load deployments for health dashboard: {e}")
 
         stats = {
             "total_deployments": len(deployments),
@@ -320,10 +347,29 @@ class DashboardRoutes:
 
     async def htmx_project_list(self, request: Request) -> HTMLResponse:
         """HTMX partial: Project list."""
-        projects = [
-            {"id": "proj_1", "name": "My SaaS App", "status": "deployed"},
-            {"id": "proj_2", "name": "Portfolio Site", "status": "building"},
-        ]
+        user = get_current_user(request)
+        projects = []
+        if user:
+            try:
+                from src.database.db import get_db
+                from src.database.models import Project
+                db = get_db()
+                with db.session() as session:
+                    db_projects = (
+                        session.query(Project)
+                        .filter(Project.user_id == user.id, Project.is_deleted == False)
+                        .order_by(Project.created_at.desc())
+                        .all()
+                    )
+                    for p in db_projects:
+                        projects.append({
+                            "id": p.id,
+                            "name": p.name,
+                            "status": p.status.value if hasattr(p.status, 'value') else str(p.status),
+                            "description": getattr(p, 'description', ''),
+                        })
+            except Exception as e:
+                logger.warning(f"Could not load projects for HTMX list: {e}")
 
         return self.render(request, "partials/project_list.html", {
             "projects": projects,
@@ -335,12 +381,29 @@ class DashboardRoutes:
         project_id: str,
     ) -> HTMLResponse:
         """HTMX partial: Single project card."""
-        project = {
-            "id": project_id,
-            "name": "My SaaS App",
-            "status": "deployed",
-            "url": "https://my-saas.vercel.app",
-        }
+        user = get_current_user(request)
+        project = {"id": project_id, "name": "Unknown", "status": "draft"}
+        if user:
+            try:
+                from src.database.db import get_db
+                from src.database.models import Project
+                db = get_db()
+                with db.session() as session:
+                    p = session.query(Project).filter(
+                        Project.id == project_id, Project.user_id == user.id
+                    ).first()
+                    if p:
+                        project = {
+                            "id": p.id,
+                            "name": p.name,
+                            "description": p.description or "",
+                            "status": p.status.value if hasattr(p.status, 'value') else str(p.status),
+                            "deployment_url": p.deployment_url,
+                            "github_url": p.code_url,
+                            "created_at": p.created_at,
+                        }
+            except Exception as e:
+                logger.warning(f"Could not load project card {project_id}: {e}")
 
         return self.render(request, "partials/project_card.html", {
             "project": project,
@@ -352,15 +415,27 @@ class DashboardRoutes:
         project_id: str,
     ) -> HTMLResponse:
         """HTMX partial: Deployment status (for polling)."""
-        # This would poll actual deployment status
-        import random
-        statuses = ["building", "deploying", "deployed"]
-        status = random.choice(statuses)
+        user = get_current_user(request)
+        status = "draft"
+        if user:
+            try:
+                from src.database.db import get_db
+                from src.database.models import Project
+                db = get_db()
+                with db.session() as session:
+                    p = session.query(Project).filter(
+                        Project.id == project_id, Project.user_id == user.id
+                    ).first()
+                    if p:
+                        status = p.status.value if hasattr(p.status, 'value') else str(p.status)
+            except Exception as e:
+                logger.warning(f"Could not load deployment status for {project_id}: {e}")
 
+        progress_map = {"building": 25, "deploying": 75, "deployed": 100}
         return self.render(request, "partials/deployment_status.html", {
             "project_id": project_id,
             "status": status,
-            "progress": 75 if status == "deploying" else 100 if status == "deployed" else 25,
+            "progress": progress_map.get(status, 0),
         })
 
     async def htmx_generate_progress(
