@@ -263,13 +263,23 @@
             </div>
         </div>
 
-        <div style="display: flex; gap: 16px;">
-            <a href="/projects" style="flex: 1; padding: 12px; background: #374151; border: none; border-radius: 8px; color: white; text-decoration: none; text-align: center;">
-                Go to Dashboard
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 16px;">
+            <a href="/business-formation" style="width: 100%; padding: 18px; background: linear-gradient(135deg, #8b5cf6, #6366f1); border: none; border-radius: 12px; color: white; font-size: 1.15rem; font-weight: 700; text-decoration: none; text-align: center; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 4px 24px rgba(139,92,246,0.35); transition: transform 0.15s, box-shadow 0.15s;"
+               onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 32px rgba(139,92,246,0.45)'"
+               onmouseout="this.style.transform='';this.style.boxShadow='0 4px 24px rgba(139,92,246,0.35)'">
+                <i data-lucide="building" style="width: 22px; height: 22px;"></i>
+                Register Your Business
             </a>
-            <a id="view-project-btn" href="/projects" style="flex: 1; padding: 12px; background: linear-gradient(135deg, #8b5cf6, #6366f1); border: none; border-radius: 8px; color: white; font-weight: 600; text-decoration: none; text-align: center;">
-                View My Project →
-            </a>
+            <div style="display: flex; gap: 16px; width: 100%;">
+                <a id="view-project-btn" href="#" target="_blank" onclick="this.href=document.getElementById('live-url').textContent.trim()" style="flex: 1; padding: 12px; background: #374151; border: none; border-radius: 8px; color: white; font-weight: 600; text-decoration: none; text-align: center; transition: background 0.15s;"
+                   onmouseover="this.style.background='#4b5563'" onmouseout="this.style.background='#374151'">
+                    View My Project ↗
+                </a>
+                <a href="/dashboard" style="flex: 1; padding: 12px; background: transparent; border: 1px solid #374151; border-radius: 8px; color: #9ca3af; text-decoration: none; text-align: center; transition: color 0.15s, border-color 0.15s;"
+                   onmouseover="this.style.color='#e5e7eb';this.style.borderColor='#6b7280'" onmouseout="this.style.color='#9ca3af';this.style.borderColor='#374151'">
+                    Back to Dashboard
+                </a>
+            </div>
         </div>
     </div>
 </div>
