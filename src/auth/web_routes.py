@@ -1,4 +1,4 @@
-"""Web authentication routes for LaunchForge dashboard."""
+"""Web authentication routes for Valeric dashboard."""
 
 import logging
 from pathlib import Path

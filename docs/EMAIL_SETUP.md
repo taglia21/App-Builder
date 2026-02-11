@@ -1,10 +1,10 @@
 # Email Setup Guide
 
-LaunchForge uses transactional email for user communications. This guide covers setting up email with Resend.com (recommended) or SMTP fallback.
+Valeric uses transactional email for user communications. This guide covers setting up email with Resend.com (recommended) or SMTP fallback.
 
 ## 📧 Email Types
 
-LaunchForge sends the following transactional emails:
+Valeric sends the following transactional emails:
 
 | Email Type | Trigger | Template |
 |------------|---------|----------|
@@ -36,7 +36,7 @@ For production, you must verify your sending domain:
 
 1. Go to **Settings** → **Domains**
 2. Click **"Add Domain"**
-3. Enter your domain (e.g., `launchforge.dev`)
+3. Enter your domain (e.g., `valeric.dev`)
 4. Add the DNS records Resend provides:
 
 ```
@@ -58,11 +58,11 @@ Value: "p=MIGfMA0GCSqGSIb3DQEB..."
 
 1. Go to **API Keys**
 2. Click **"Create API Key"**
-3. Name it (e.g., "LaunchForge Production")
+3. Name it (e.g., "Valeric Production")
 4. Select permissions: **"Full Access"** or **"Sending access"**
 5. Copy the key (starts with `re_`)
 
-### Step 4: Configure LaunchForge
+### Step 4: Configure Valeric
 
 Add to your `.env` file:
 
@@ -82,7 +82,7 @@ async def test():
     result = await send_verification_email(
         email="test@example.com",
         name="Test User",
-        verification_url="https://launchforge.dev/verify/abc123"
+        verification_url="https://valeric.dev/verify/abc123"
     )
     print(f"Success: {result.success}, ID: {result.message_id}")
 

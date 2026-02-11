@@ -1,6 +1,6 @@
-# 📖 LaunchForge API Reference
+# 📖 Valeric API Reference
 
-Complete API documentation for all LaunchForge modules.
+Complete API documentation for all Valeric modules.
 
 ---
 
@@ -17,7 +17,7 @@ Complete API documentation for all LaunchForge modules.
 
 ## Authentication
 
-LaunchForge uses JWT-based authentication with optional OAuth2 providers.
+Valeric uses JWT-based authentication with optional OAuth2 providers.
 
 ### Endpoints
 
@@ -481,9 +481,9 @@ X-RateLimit-Reset: 1705315800
 ### Python
 
 ```python
-from launchforge import LaunchForge
+from valeric import Valeric
 
-client = LaunchForge(api_key="sk_...")
+client = Valeric(api_key="sk_...")
 
 # Create a project
 project = client.projects.create(
@@ -502,9 +502,9 @@ deployment = client.deploy.production(
 ### JavaScript/TypeScript
 
 ```typescript
-import { LaunchForge } from '@launchforge/sdk';
+import { Valeric } from '@valeric/sdk';
 
-const client = new LaunchForge({ apiKey: 'sk_...' });
+const client = new Valeric({ apiKey: 'sk_...' });
 
 // Create a project
 const project = await client.projects.create({
@@ -547,7 +547,7 @@ curl -X POST "http://localhost:8000/api/webhooks" \
 All webhook payloads include a signature header:
 
 ```
-X-LaunchForge-Signature: sha256=abc123...
+X-Valeric-Signature: sha256=abc123...
 ```
 
 Verify using:
@@ -568,7 +568,7 @@ def verify_signature(payload: bytes, signature: str, secret: str) -> bool:
 
 ## Support
 
-- **Documentation**: https://docs.launchforge.dev
-- **API Status**: https://status.launchforge.dev
-- **Email**: support@launchforge.dev
-- **Discord**: https://discord.gg/launchforge
+- **Documentation**: https://docs.valeric.dev
+- **API Status**: https://status.valeric.dev
+- **Email**: support@valeric.dev
+- **Discord**: https://discord.gg/valeric

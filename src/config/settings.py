@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     )
     
     # Application Settings
-    APP_NAME: str = "LaunchForge"
+    APP_NAME: str = "Valeric"
     APP_VERSION: str = "1.0.0"
     ENVIRONMENT: Literal["development", "production", "testing"] = "development"
     DEBUG: bool = Field(default=False)
@@ -41,8 +41,8 @@ class Settings(BaseSettings):
     
     # Demo Mode
     DEMO_MODE: bool = False
-    DEMO_EMAIL: str = "demo@launchforge.dev"
-    DEMO_PASSWORD: str = "LaunchForge-Demo-2026!"
+    DEMO_EMAIL: str = "demo@valeric.dev"
+    DEMO_PASSWORD: str = "Valeric-Demo-2026!"
     DEMO_TOKEN: Optional[str] = None  # Optional magic token for /demo?token=xxx URL
     
     # Admin

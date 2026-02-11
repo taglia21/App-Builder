@@ -102,7 +102,7 @@ class PlausibleClient:
 
         headers = {
             "Content-Type": "application/json",
-            "User-Agent": user_agent or "LaunchForge/1.0",
+            "User-Agent": user_agent or "Valeric/1.0",
         }
 
         if ip_address:
@@ -156,9 +156,9 @@ class PlausibleClient:
         )
 
 
-# Pre-defined events for LaunchForge
+# Pre-defined events for Valeric
 class Events:
-    """Standard LaunchForge analytics events."""
+    """Standard Valeric analytics events."""
 
     # User events
     SIGNUP = "Signup"

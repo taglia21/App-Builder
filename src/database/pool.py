@@ -1,4 +1,4 @@
-"""Database connection pooling for LaunchForge.
+"""Database connection pooling for Valeric.
 
 Provides async SQLAlchemy engine with connection pooling,
 health checks, and graceful shutdown.

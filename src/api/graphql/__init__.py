@@ -41,7 +41,7 @@ class Query:
     @strawberry.field
     def hello(self) -> str:
         """Simple hello world query."""
-        return "Hello from LaunchForge GraphQL!"
+        return "Hello from Valeric GraphQL!"
 
     @strawberry.field
     def health(self) -> HealthStatus:

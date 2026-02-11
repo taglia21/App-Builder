@@ -1,4 +1,4 @@
-"""Configuration package for LaunchForge."""
+"""Configuration package for Valeric."""
 
 import importlib.util
 from pathlib import Path

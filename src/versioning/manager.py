@@ -20,7 +20,7 @@ class VersionManager:
         Args:
             storage_path: Directory to store version snapshots
         """
-        self.storage_path = storage_path or Path("/tmp/launchforge_versions")
+        self.storage_path = storage_path or Path("/tmp/valeric_versions")
         self.storage_path.mkdir(parents=True, exist_ok=True)
 
     def _get_project_dir(self, project_id: str) -> Path:

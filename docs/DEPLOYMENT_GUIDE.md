@@ -19,7 +19,7 @@ Before deploying to production, ensure you have completed:
 
 ## 🚂 Railway Deployment (Recommended)
 
-Railway is the recommended platform for LaunchForge apps due to its simplicity and PostgreSQL/Redis support.
+Railway is the recommended platform for Valeric apps due to its simplicity and PostgreSQL/Redis support.
 
 ### Step 1: Create Railway Account
 1. Go to [railway.app](https://railway.app)

@@ -6,7 +6,7 @@ version: '3.9'
 services:
   app:
     build: .
-    container_name: launchforge-dev
+    container_name: valeric-dev
     volumes:
       - ./output:/app/output
       - ./generated_projects:/app/generated_projects
@@ -25,7 +25,7 @@ services:
       - FROM_EMAIL=noreply@localhost
       # For Resend testing, comment above and use:
       # - RESEND_API_KEY=${RESEND_API_KEY}
-      # - FROM_EMAIL=noreply@launchforge.dev
+      # - FROM_EMAIL=noreply@valeric.dev
     ports:
       - "8000:8000"
     depends_on:
@@ -36,24 +36,24 @@ services:
 
   db:
     image: postgres:15
-    container_name: launchforge-db-dev
+    container_name: valeric-db-dev
     environment:
-      - POSTGRES_USER=launchforge
-      - POSTGRES_PASSWORD=launchforge_dev_password
-      - POSTGRES_DB=launchforge_dev
+      - POSTGRES_USER=valeric
+      - POSTGRES_PASSWORD=valeric_dev_password
+      - POSTGRES_DB=valeric_dev
     volumes:
       - postgres_dev_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U launchforge -d launchforge_dev"]
+      test: ["CMD-SHELL", "pg_isready -U valeric -d valeric_dev"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   redis:
     image: redis:7-alpine
-    container_name: launchforge-redis-dev
+    container_name: valeric-redis-dev
     volumes:
       - redis_dev_data:/data
     ports:
@@ -76,7 +76,7 @@ services:
   # ============================================
   mailhog:
     image: mailhog/mailhog:v1.0.1
-    container_name: launchforge-mailhog
+    container_name: valeric-mailhog
     ports:
       - "1025:1025"  # SMTP server
       - "8025:8025"  # Web UI
@@ -86,9 +86,9 @@ services:
   # Optional: pgAdmin for database management
   pgadmin:
     image: dpage/pgadmin4:latest
-    container_name: launchforge-pgadmin
+    container_name: valeric-pgadmin
     environment:
-      - PGADMIN_DEFAULT_EMAIL=admin@launchforge.dev
+      - PGADMIN_DEFAULT_EMAIL=admin@valeric.dev
       - PGADMIN_DEFAULT_PASSWORD=admin
       - PGADMIN_CONFIG_SERVER_MODE=False
     ports:
@@ -101,7 +101,7 @@ services:
   # Optional: Redis Commander for Redis management
   redis-commander:
     image: rediscommander/redis-commander:latest
-    container_name: launchforge-redis-commander
+    container_name: valeric-redis-commander
     environment:
       - REDIS_HOSTS=local:redis:6379
     ports:

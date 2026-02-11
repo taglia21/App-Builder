@@ -303,7 +303,7 @@ class WebhookReporter(ErrorReporter):
                 "title": f"🚨 {error.severity.value.upper()}: {error.message[:100]}",
                 "text": error.message,
                 "fields": fields,
-                "footer": "LaunchForge Error Monitor",
+                "footer": "Valeric Error Monitor",
                 "ts": int(error.timestamp.timestamp()),
             }]
         }

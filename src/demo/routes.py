@@ -1,5 +1,5 @@
 """
-Demo access routes for LaunchForge.
+Demo access routes for Valeric.
 
 Provides a /demo URL that auto-authenticates users with the demo account,
 and a /demo/info endpoint that returns demo credentials as JSON.

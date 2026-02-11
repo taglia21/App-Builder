@@ -163,13 +163,13 @@ Example Kubernetes deployment with health checks:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: launchforge
+  name: valeric
 spec:
   template:
     spec:
       containers:
       - name: app
-        image: launchforge:latest
+        image: valeric:latest
         ports:
         - containerPort: 8000
         livenessProbe:

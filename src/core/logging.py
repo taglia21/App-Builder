@@ -1,4 +1,4 @@
-"""Logging configuration for LaunchForge."""
+"""Logging configuration for Valeric."""
 import logging
 import sys
 from typing import Optional

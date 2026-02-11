@@ -1,6 +1,6 @@
-# LaunchForge Setup Guide
+# Valeric Setup Guide
 
-This guide covers installation, configuration, and initial setup for LaunchForge.
+This guide covers installation, configuration, and initial setup for Valeric.
 
 ## Prerequisites
 
@@ -41,7 +41,7 @@ pip install -r requirements-dev.txt
 
 ### Environment Variables
 
-LaunchForge uses environment variables for configuration. Copy the example file:
+Valeric uses environment variables for configuration. Copy the example file:
 
 ```bash
 cp .env.example .env
@@ -51,7 +51,7 @@ Edit `.env` with your settings:
 
 ```bash
 # Application Settings
-APP_NAME=LaunchForge
+APP_NAME=Valeric
 ENVIRONMENT=development  # development, production, or testing
 DEBUG=true
 
@@ -63,7 +63,7 @@ PERPLEXITY_API_KEY=pplx-...
 GROQ_API_KEY=gsk_...
 
 # Optional: Database (defaults to SQLite)
-DATABASE_URL=sqlite:///./launchforge.db
+DATABASE_URL=sqlite:///./valeric.db
 
 # Optional: Redis for caching
 REDIS_URL=redis://localhost:6379
@@ -81,7 +81,7 @@ DEMO_MODE=false
 
 #### LLM Providers
 
-LaunchForge supports multiple LLM providers. Configure at least one:
+Valeric supports multiple LLM providers. Configure at least one:
 
 - **OpenAI**: Best for general-purpose generation
   - Get key: https://platform.openai.com/api-keys
@@ -105,7 +105,7 @@ LaunchForge supports multiple LLM providers. Configure at least one:
 
 #### Demo Mode
 
-To try LaunchForge without API keys:
+To try Valeric without API keys:
 
 ```bash
 DEMO_MODE=true
@@ -119,10 +119,10 @@ Default is SQLite (no setup required). For production:
 
 ```bash
 # PostgreSQL
-DATABASE_URL=postgresql://user:password@localhost/launchforge
+DATABASE_URL=postgresql://user:password@localhost/valeric
 
 # MySQL
-DATABASE_URL=mysql://user:password@localhost/launchforge
+DATABASE_URL=mysql://user:password@localhost/valeric
 ```
 
 ## Running the Application
@@ -221,7 +221,7 @@ If you see database errors:
 
 ```bash
 # Reset database (development only!)
-rm launchforge.db
+rm valeric.db
 python -c "from src.models import Base, engine; Base.metadata.create_all(engine)"
 ```
 
@@ -236,4 +236,4 @@ python -c "from src.models import Base, engine; Base.metadata.create_all(engine)
 
 - **Issues**: https://github.com/yourusername/App-Builder/issues
 - **Discussions**: https://github.com/yourusername/App-Builder/discussions
-- **Email**: support@launchforge.dev
+- **Email**: support@valeric.dev

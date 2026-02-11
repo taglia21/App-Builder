@@ -1,4 +1,4 @@
-"""Security middleware for LaunchForge.
+"""Security middleware for Valeric.
 
 Provides:
 - Rate limiting per IP

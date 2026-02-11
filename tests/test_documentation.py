@@ -11,7 +11,7 @@ def test_readme_exists():
     # Should have content
     content = readme_path.read_text()
     assert len(content) > 1000, "README should have substantial content"
-    assert "LaunchForge" in content
+    assert "Valeric" in content
 
 
 def test_readme_has_badges():

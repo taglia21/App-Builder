@@ -1,5 +1,5 @@
 """
-LaunchForge Authentication Tests
+Valeric Authentication Tests
 
 Comprehensive tests for authentication system:
 - Password hashing and validation

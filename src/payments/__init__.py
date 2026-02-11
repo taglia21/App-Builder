@@ -1,5 +1,5 @@
 """
-LaunchForge Payments Module
+Valeric Payments Module
 
 Stripe integration for subscription management, payments, and billing.
 """

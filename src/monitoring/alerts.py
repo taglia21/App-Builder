@@ -102,7 +102,7 @@ class SlackAlerter(Alerter):
         self,
         webhook_url: Optional[str] = None,
         channel: Optional[str] = None,
-        username: str = "LaunchForge Alerts",
+        username: str = "Valeric Alerts",
         min_severity: AlertSeverity = AlertSeverity.WARNING,
     ):
         self.webhook_url = webhook_url or os.getenv("SLACK_ALERT_WEBHOOK_URL")

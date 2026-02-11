@@ -1,5 +1,5 @@
 """
-LaunchForge Email Module
+Valeric Email Module
 
 Provides transactional email functionality via Resend.com.
 """

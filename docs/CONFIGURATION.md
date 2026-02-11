@@ -2,7 +2,7 @@
 
 ## Overview
 
-LaunchForge uses a combination of environment variables and a YAML configuration file for settings. This guide covers all configuration options.
+Valeric uses a combination of environment variables and a YAML configuration file for settings. This guide covers all configuration options.
 
 ---
 
@@ -28,7 +28,7 @@ LaunchForge uses a combination of environment variables and a YAML configuration
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `DATABASE_URL` | PostgreSQL connection string | `sqlite:///launchforge.db` |
+| `DATABASE_URL` | PostgreSQL connection string | `sqlite:///valeric.db` |
 | `REDIS_URL` | Redis connection string | None (in-memory cache) |
 
 #### Authentication
@@ -95,11 +95,11 @@ The primary configuration file located at the project root.
 ### Full Example
 
 ```yaml
-# LaunchForge Configuration
+# Valeric Configuration
 # Copy to config.yml and customize
 
 app:
-  name: "LaunchForge"
+  name: "Valeric"
   version: "1.0.0"
   environment: "development"  # development, staging, production
   debug: true
@@ -376,7 +376,7 @@ Use secret managers:
 import boto3
 
 client = boto3.client('secretsmanager')
-secret = client.get_secret_value(SecretId='launchforge/production')
+secret = client.get_secret_value(SecretId='valeric/production')
 ```
 
 **Docker Secrets:**
@@ -392,7 +392,7 @@ secrets:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: launchforge-secrets
+  name: valeric-secrets
 data:
   STRIPE_SECRET_KEY: base64encoded...
 ```
@@ -401,7 +401,7 @@ data:
 
 ## Validation
 
-LaunchForge validates configuration on startup:
+Valeric validates configuration on startup:
 
 ```python
 from pydantic import BaseSettings, validator
@@ -424,11 +424,11 @@ $ python main.py build
 
 ✓ Configuration loaded
 ✓ LLM provider: perplexity
-✓ Database: sqlite:///launchforge.db
+✓ Database: sqlite:///valeric.db
 ✗ Stripe: Not configured (payments disabled)
 ✗ Sentry: Not configured (monitoring limited)
 
-Starting LaunchForge...
+Starting Valeric...
 ```
 
 ---
@@ -448,10 +448,10 @@ export GROQ_API_KEY="gsk_..."
 **"Database connection failed"**
 ```bash
 # Check DATABASE_URL format
-export DATABASE_URL="postgresql://user:password@localhost:5432/launchforge"
+export DATABASE_URL="postgresql://user:password@localhost:5432/valeric"
 
 # For SQLite
-export DATABASE_URL="sqlite:///./launchforge.db"
+export DATABASE_URL="sqlite:///./valeric.db"
 ```
 
 **"Stripe webhook signature verification failed"**

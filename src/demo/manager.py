@@ -1,4 +1,4 @@
-"""Demo mode manager for LaunchForge."""
+"""Demo mode manager for Valeric."""
 import os
 import logging
 from typing import Dict, Optional
@@ -109,7 +109,7 @@ class DemoManager:
 
         # Add watermark to README if it exists
         if "files" in project and "README.md" in project["files"]:
-            project["files"]["README.md"] += "\n\n---\n*This is a demo project from LaunchForge*\n"
+            project["files"]["README.md"] += "\n\n---\n*This is a demo project from Valeric*\n"
 
         # Add demo flag to project metadata
         if "metadata" not in project:

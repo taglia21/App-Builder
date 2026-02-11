@@ -1,8 +1,8 @@
-# 🏗️ LaunchForge Architecture
+# 🏗️ Valeric Architecture
 
 ## Overview
 
-LaunchForge is a modular, AI-powered application builder designed for scalability, extensibility, and production readiness.
+Valeric is a modular, AI-powered application builder designed for scalability, extensibility, and production readiness.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -31,7 +31,7 @@ LaunchForge is a modular, AI-powered application builder designed for scalabilit
 
 ### 1. CLI Interface (`src/cli.py`)
 
-The command-line interface provides access to all LaunchForge features.
+The command-line interface provides access to all Valeric features.
 
 **Key Commands:**
 - `build` - Interactive AI assistant for building apps
@@ -439,7 +439,7 @@ SLACK_WEBHOOK_URL=https://hooks.slack.com/...
 ```yaml
 # config.yml
 app:
-  name: LaunchForge
+  name: Valeric
   version: 1.0.0
   environment: production
 

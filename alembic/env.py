@@ -1,5 +1,5 @@
 """
-Alembic Environment Configuration for LaunchForge
+Alembic Environment Configuration for Valeric
 
 This module configures Alembic to work with our SQLAlchemy models
 and supports both online and offline migration modes.

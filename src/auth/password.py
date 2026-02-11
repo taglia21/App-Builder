@@ -1,5 +1,5 @@
 """
-LaunchForge Password Security Module
+Valeric Password Security Module
 
 Secure password hashing using bcrypt with strength validation.
 """

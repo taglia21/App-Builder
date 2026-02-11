@@ -1,5 +1,5 @@
 """
-LaunchForge Database Utilities
+Valeric Database Utilities
 
 Connection management, session handling, and database operations.
 Provides a production-ready database layer with connection pooling,

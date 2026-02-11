@@ -1,7 +1,7 @@
 """
 Stripe API Client
 
-Production-ready Stripe integration for LaunchForge.
+Production-ready Stripe integration for Valeric.
 """
 
 import logging

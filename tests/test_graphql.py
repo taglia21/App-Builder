@@ -41,7 +41,7 @@ def test_graphql_hello_query(client):
     assert response.status_code == 200
     data = response.json()
     assert "data" in data
-    assert data["data"]["hello"] == "Hello from LaunchForge GraphQL!"
+    assert data["data"]["hello"] == "Hello from Valeric GraphQL!"
 
 
 def test_graphql_health_query(client):

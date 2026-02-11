@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-⚡ LaunchForge - AI-Powered Startup Builder
+⚡ Valeric - AI-Powered Startup Builder
 
 Generate validated startup ideas and production-ready applications
 using AI with real-time market intelligence.

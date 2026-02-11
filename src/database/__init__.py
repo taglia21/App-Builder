@@ -1,5 +1,5 @@
 """
-LaunchForge Database Module
+Valeric Database Module
 
 PostgreSQL database integration with SQLAlchemy ORM.
 Provides models, utilities, and connection management for production use.

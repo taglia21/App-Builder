@@ -1,5 +1,5 @@
 """
-LaunchForge Authentication Schemas
+Valeric Authentication Schemas
 
 Pydantic models for request/response validation in auth endpoints.
 """

@@ -1,4 +1,4 @@
-"""Custom exceptions for LaunchForge."""
+"""Custom exceptions for Valeric."""
 
 
 class AppError(Exception):

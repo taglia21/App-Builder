@@ -33,7 +33,7 @@ class GitHubIntegration:
                 return {'success': True, 'data': response.json()}
             return {'success': False, 'error': response.json()}
 
-    async def push_files(self, owner: str, repo: str, files: Dict[str, str], branch: str = 'main', message: str = 'Initial commit from LaunchForge') -> Dict:
+    async def push_files(self, owner: str, repo: str, files: Dict[str, str], branch: str = 'main', message: str = 'Initial commit from Valeric') -> Dict:
         """Push multiple files to a repository."""
         try:
             async with httpx.AsyncClient() as client:

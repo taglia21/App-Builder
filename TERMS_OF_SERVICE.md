@@ -1,16 +1,16 @@
 # Terms of Service
 
-**LaunchForge - AI-Powered Startup Builder**
+**Valeric - AI-Powered Startup Builder**
 
 *Last Updated: January 25, 2026*
 
 ## 1. Acceptance of Terms
 
-By accessing or using LaunchForge ("Service"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree, do not use the Service.
+By accessing or using Valeric ("Service"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree, do not use the Service.
 
 ## 2. Description of Service
 
-LaunchForge is an AI-powered platform that:
+Valeric is an AI-powered platform that:
 - Generates validated startup ideas using market intelligence
 - Creates production-ready application code
 - Provides business planning and validation tools
@@ -19,7 +19,7 @@ LaunchForge is an AI-powered platform that:
 ## 3. Account Registration
 
 ### 3.1 Eligibility
-You must be at least 16 years old and capable of forming a binding contract to use LaunchForge.
+You must be at least 16 years old and capable of forming a binding contract to use Valeric.
 
 ### 3.2 Account Responsibility
 - Provide accurate, complete registration information
@@ -72,7 +72,7 @@ You retain ownership of:
 - We retain rights to underlying AI models and systems
 
 ### 6.3 Our Intellectual Property
-LaunchForge, our logos, and Service design are our property.
+Valeric, our logos, and Service design are our property.
 
 ## 7. AI-Generated Content Disclaimer
 
@@ -100,7 +100,7 @@ TO THE MAXIMUM EXTENT PERMITTED BY LAW:
 
 ## 9. Indemnification
 
-You agree to indemnify and hold harmless LaunchForge from claims arising from:
+You agree to indemnify and hold harmless Valeric from claims arising from:
 - Your use of the Service
 - Your violation of these Terms
 - Applications you deploy using generated code
@@ -110,7 +110,7 @@ You agree to indemnify and hold harmless LaunchForge from claims arising from:
 ### 10.1 Termination by You
 - Cancel your subscription anytime
 - Delete your account via settings
-- Contact support@launchforge.io
+- Contact support@valeric.io
 
 ### 10.2 Termination by Us
 We may terminate or suspend your access for violation of these Terms.
@@ -134,9 +134,9 @@ Disputes shall be resolved through binding arbitration under AAA rules.
 
 ## 13. Contact
 
-- **Email**: legal@launchforge.io
-- **Support**: support@launchforge.io
+- **Email**: legal@valeric.io
+- **Support**: support@valeric.io
 
 ---
 
-*By using LaunchForge, you acknowledge that you have read, understood, and agree to these Terms of Service.*
+*By using Valeric, you acknowledge that you have read, understood, and agree to these Terms of Service.*

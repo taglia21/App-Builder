@@ -1,12 +1,12 @@
 # Privacy Policy
 
-**LaunchForge - AI-Powered Startup Builder**
+**Valeric - AI-Powered Startup Builder**
 
 *Last Updated: January 25, 2026*
 
 ## 1. Introduction
 
-LaunchForge ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our AI-powered startup building platform.
+Valeric ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our AI-powered startup building platform.
 
 ## 2. Information We Collect
 
@@ -72,7 +72,7 @@ You have the right to:
 - **Opt-out**: Unsubscribe from marketing communications
 - **Restrict Processing**: Limit how we use your data
 
-To exercise these rights, contact: privacy@launchforge.io
+To exercise these rights, contact: privacy@valeric.io
 
 ## 8. International Data Transfers
 
@@ -83,7 +83,7 @@ Data may be transferred to and processed in countries outside your residence. We
 
 ## 9. Children's Privacy
 
-LaunchForge is not intended for users under 16. We do not knowingly collect data from children. If you believe we have collected such data, contact us immediately.
+Valeric is not intended for users under 16. We do not knowingly collect data from children. If you believe we have collected such data, contact us immediately.
 
 ## 10. Cookies Policy
 
@@ -107,9 +107,9 @@ We may update this Privacy Policy periodically. We will notify you of material c
 ## 13. Contact Us
 
 For privacy-related inquiries:
-- **Email**: privacy@launchforge.io
-- **Address**: LaunchForge Inc., [Your Address]
-- **Data Protection Officer**: dpo@launchforge.io
+- **Email**: privacy@valeric.io
+- **Address**: Valeric Inc., [Your Address]
+- **Data Protection Officer**: dpo@valeric.io
 
 ## 14. Regulatory Compliance
 
@@ -121,4 +121,4 @@ California residents have additional rights under CCPA, including the right to k
 
 ---
 
-*By using LaunchForge, you acknowledge that you have read and understood this Privacy Policy.*
+*By using Valeric, you acknowledge that you have read and understood this Privacy Policy.*

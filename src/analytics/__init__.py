@@ -1,5 +1,5 @@
 """
-LaunchForge Analytics Module
+Valeric Analytics Module
 
 Privacy-friendly analytics using Plausible.io and internal metrics tracking.
 """

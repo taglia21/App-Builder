@@ -1,4 +1,4 @@
-"""Initial LaunchForge schema
+"""Initial Valeric schema
 
 Revision ID: 40d31dbb95d6
 Revises: 

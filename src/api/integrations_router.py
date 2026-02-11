@@ -38,7 +38,7 @@ class PushFilesRequest(BaseModel):
     repo: str
     files: Dict[str, str]
     branch: str = "main"
-    message: str = "Update from LaunchForge"
+    message: str = "Update from Valeric"
 
 class DeployRequest(BaseModel):
     project_name: str

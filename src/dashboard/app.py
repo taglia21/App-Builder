@@ -117,12 +117,12 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     """Create and configure FastAPI application."""
     app = FastAPI(
-        title="LaunchForge Dashboard",
+        title="Valeric Dashboard",
         lifespan=lifespan,
         description="""
-# LaunchForge - AI-Powered Startup Builder
+# Valeric - AI-Powered Startup Builder
 
-LaunchForge is an advanced platform that leverages multiple AI providers to generate,
+Valeric is an advanced platform that leverages multiple AI providers to generate,
 refine, and validate startup ideas using intelligent pipelines.
 
 ## Features
@@ -142,7 +142,7 @@ and authentication requirements.
         docs_url="/docs",
         redoc_url="/redoc",
         contact={
-            "name": "LaunchForge Team",
+            "name": "Valeric Team",
             "url": "https://github.com/yourusername/App-Builder",
         },
         license_info={
@@ -263,7 +263,7 @@ and authentication requirements.
         from datetime import datetime, timezone
         return {
             "status": "ok",
-            "service": "launchforge",
+            "service": "valeric",
             "version": "1.0.0",
             "timestamp": datetime.now(timezone.utc).isoformat() + "Z"
         }
@@ -332,7 +332,7 @@ and authentication requirements.
 class DashboardApp:
     """Dashboard application wrapper for compatibility."""
 
-    def __init__(self, title: str = "LaunchForge"):
+    def __init__(self, title: str = "Valeric"):
         self.title = title
         self.app = create_app()
         # Update app title if custom

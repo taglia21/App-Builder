@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: launchforge-app
+    container_name: valeric-app
     restart: always
     deploy:
       resources:
@@ -49,11 +49,11 @@ services:
       sh -c "alembic upgrade head && 
              uvicorn src.dashboard.app:app --host 0.0.0.0 --port 8000 --workers 4"
     networks:
-      - launchforge-network
+      - valeric-network
 
   db:
     image: postgres:15-alpine
-    container_name: launchforge-db
+    container_name: valeric-db
     restart: always
     deploy:
       resources:
@@ -64,26 +64,26 @@ services:
           cpus: '1'
           memory: 2G
     environment:
-      - POSTGRES_USER=${POSTGRES_USER:-launchforge}
+      - POSTGRES_USER=${POSTGRES_USER:-valeric}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB:-launchforge}
+      - POSTGRES_DB=${POSTGRES_DB:-valeric}
       - PGDATA=/var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-launchforge} -d ${POSTGRES_DB:-launchforge}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-valeric} -d ${POSTGRES_DB:-valeric}"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
     networks:
-      - launchforge-network
+      - valeric-network
     # Not exposed externally in production
 
   redis:
     image: redis:7-alpine
-    container_name: launchforge-redis
+    container_name: valeric-redis
     restart: always
     deploy:
       resources:
@@ -103,12 +103,12 @@ services:
       retries: 5
       start_period: 10s
     networks:
-      - launchforge-network
+      - valeric-network
     # Not exposed externally in production
 
   nginx:
     image: nginx:alpine
-    container_name: launchforge-nginx
+    container_name: valeric-nginx
     restart: always
     ports:
       - "80:80"
@@ -125,14 +125,14 @@ services:
       timeout: 10s
       retries: 3
     networks:
-      - launchforge-network
+      - valeric-network
 
   # Background worker for async tasks
   worker:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: launchforge-worker
+    container_name: valeric-worker
     restart: always
     deploy:
       resources:
@@ -157,18 +157,18 @@ services:
         condition: service_healthy
     command: python -m src.worker
     networks:
-      - launchforge-network
+      - valeric-network
 
   # Database backups
   backup:
     image: postgres:15-alpine
-    container_name: launchforge-backup
+    container_name: valeric-backup
     restart: "no"
     environment:
       - PGHOST=db
-      - PGUSER=${POSTGRES_USER:-launchforge}
+      - PGUSER=${POSTGRES_USER:-valeric}
       - PGPASSWORD=${POSTGRES_PASSWORD}
-      - PGDATABASE=${POSTGRES_DB:-launchforge}
+      - PGDATABASE=${POSTGRES_DB:-valeric}
     volumes:
       - ./backups:/backups
     entrypoint: >
@@ -177,12 +177,12 @@ services:
       db:
         condition: service_healthy
     networks:
-      - launchforge-network
+      - valeric-network
     profiles:
       - backup
 
 networks:
-  launchforge-network:
+  valeric-network:
     driver: bridge
     ipam:
       driver: default

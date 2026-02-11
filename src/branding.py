@@ -1,5 +1,5 @@
 """
-LaunchForge - AI-Powered Startup Builder
+Valeric - AI-Powered Startup Builder
 Professional branding and CLI presentation.
 """
 
@@ -27,7 +27,7 @@ LOGO_ASCII = """
 """
 
 # Alternative compact logo
-LOGO_COMPACT = "⚡ LaunchForge"
+LOGO_COMPACT = "⚡ Valeric"
 
 # Taglines
 TAGLINE = "AI-Powered Startup Builder"
@@ -35,7 +35,7 @@ TAGLINE_FULL = "From idea to deployed app in minutes, not months."
 
 # Product description
 DESCRIPTION = """
-LaunchForge uses AI with real-time web intelligence to:
+Valeric uses AI with real-time web intelligence to:
 • Discover validated market opportunities
 • Generate production-ready applications
 • Deploy to cloud with one command

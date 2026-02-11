@@ -1,4 +1,4 @@
-## 🚀 LaunchForge Quick Reference
+## 🚀 Valeric Quick Reference
 
 ### The Killer Feature: Interactive Build Mode
 
@@ -6,7 +6,7 @@
 python main.py build
 ```
 
-This is the recommended way to use LaunchForge. Users describe their idea, and LaunchForge:
+This is the recommended way to use Valeric. Users describe their idea, and Valeric:
 1. Researches the market (Perplexity AI)
 2. Asks smart follow-up questions
 3. Generates a complete startup profile
@@ -153,4 +153,4 @@ Ready to deploy immediately!
 
 ---
 
-**Made with ❤️ by LaunchForge**
+**Made with ❤️ by Valeric**

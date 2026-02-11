@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-LaunchForge Interactive AI Assistant
+Valeric Interactive AI Assistant
 
 The killer feature - users describe their startup idea in plain English
 and get working, production-ready code in minutes.
@@ -125,7 +125,7 @@ class InteractiveAssistant:
         self.console.print()
 
         welcome_text = """
-[bold white]Welcome to LaunchForge Build Mode![/bold white]
+[bold white]Welcome to Valeric Build Mode![/bold white]
 
 I'm your AI startup builder. Describe your app idea in plain English,
 and I'll help you:
@@ -651,7 +651,7 @@ Return ONLY valid JSON. Make it compelling and market-ready.
                 self.console.print("[dim]Deployment will push to Vercel (frontend) + Render (backend)[/dim]")
 
             self.console.print()
-            self.console.print("[bold cyan]Thank you for using LaunchForge![/bold cyan]")
+            self.console.print("[bold cyan]Thank you for using Valeric![/bold cyan]")
             self.console.print("[dim]Build something amazing! 🚀[/dim]")
             self.console.print()
 

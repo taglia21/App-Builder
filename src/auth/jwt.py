@@ -1,5 +1,5 @@
 """
-LaunchForge JWT Token Module
+Valeric JWT Token Module
 
 JWT token generation and verification for authentication.
 Supports access tokens (short-lived) and refresh tokens (long-lived).

@@ -37,8 +37,8 @@ class TestSettings:
     def test_settings_app_name(self):
         """Test APP_NAME is set."""
         from src.config import settings
-        # App name should be either LaunchForge or App-Builder
-        assert settings.APP_NAME in ["LaunchForge", "App-Builder"]
+        # App name should be either Valeric or App-Builder
+        assert settings.APP_NAME in ["Valeric", "App-Builder"]
 
     def test_settings_environment_default(self):
         """Test ENVIRONMENT defaults to development."""

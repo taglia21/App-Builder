@@ -10,7 +10,7 @@ class ProjectPersistenceService:
 
     def __init__(self):
         self.db_url = os.environ.get('DATABASE_URL')
-        self.storage_path = os.environ.get('STORAGE_PATH', '/tmp/launchforge_projects')
+        self.storage_path = os.environ.get('STORAGE_PATH', '/tmp/valeric_projects')
         self.s3_bucket = os.environ.get('AWS_S3_BUCKET')
         self.s3_region = os.environ.get('AWS_REGION', 'us-east-1')
 

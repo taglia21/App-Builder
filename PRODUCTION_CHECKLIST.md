@@ -1,4 +1,4 @@
-# LaunchForge Production Checklist
+# Valeric Production Checklist
 
 ## Phase 1-2: Core Infrastructure ✅
 - [x] Database models and repositories

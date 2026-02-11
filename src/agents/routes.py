@@ -116,7 +116,7 @@ async def system_info():
     Returns documentation about the architecture and capabilities.
     """
     return {
-        "name": "LaunchForge Multi-Agent System",
+        "name": "Valeric Multi-Agent System",
         "version": "1.0.0",
         "architecture": "Team of Rivals (Organizational Intelligence)",
         "paper": "If You Want Coherence, Orchestrate a Team of Rival Multi-Agent Models",

@@ -28,7 +28,7 @@ def stripe_client() -> StripeClient:
 def test_customer_email() -> str:
     """Generate unique test customer email."""
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    return f"test_user_{timestamp}@launchforge-test.com"
+    return f"test_user_{timestamp}@valeric-test.com"
 
 
 class TestStripeConnection:
@@ -362,8 +362,8 @@ class TestStripeCheckout:
                 "price": test_price_id,
                 "quantity": 1
             }],
-            success_url="https://launchforge.io/success?session_id={CHECKOUT_SESSION_ID}",
-            cancel_url="https://launchforge.io/cancel",
+            success_url="https://valeric.io/success?session_id={CHECKOUT_SESSION_ID}",
+            cancel_url="https://valeric.io/cancel",
             metadata={"source": "integration_test"}
         )
         
@@ -399,7 +399,7 @@ class TestStripeBillingPortal:
         
         session = stripe.billing_portal.Session.create(
             customer=customer.id,
-            return_url="https://launchforge.io/dashboard"
+            return_url="https://valeric.io/dashboard"
         )
         
         assert session.url is not None

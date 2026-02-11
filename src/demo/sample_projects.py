@@ -92,7 +92,7 @@ uvicorn main:app --reload
 - DELETE /todos/{id} - Delete a todo
 
 ---
-*This is a demo project from LaunchForge*
+*This is a demo project from Valeric*
 ''',
         },
     },
@@ -161,7 +161,7 @@ python app.py
 ```
 
 ---
-*This is a demo project from LaunchForge*
+*This is a demo project from Valeric*
 ''',
         },
     },

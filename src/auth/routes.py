@@ -1,5 +1,5 @@
 """
-LaunchForge Authentication API Routes
+Valeric Authentication API Routes
 
 REST API endpoints for authentication operations.
 Designed for use with FastAPI or similar frameworks.

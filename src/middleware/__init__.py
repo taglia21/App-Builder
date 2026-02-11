@@ -1,4 +1,4 @@
-"""Middleware package for LaunchForge."""
+"""Middleware package for Valeric."""
 
 from .error_handler import (
     add_exception_handlers,

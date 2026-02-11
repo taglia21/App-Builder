@@ -1,5 +1,5 @@
 """
-LaunchForge Authentication Module
+Valeric Authentication Module
 
 Production-ready authentication system with:
 - Password hashing (bcrypt)

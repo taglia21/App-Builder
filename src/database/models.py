@@ -1,5 +1,5 @@
 """
-LaunchForge Database Models
+Valeric Database Models
 
 SQLAlchemy ORM models for PostgreSQL/SQLite database.
 Includes users, projects, generations, and deployments.
@@ -125,7 +125,7 @@ class SoftDeleteMixin:
 
 class User(Base, TimestampMixin, SoftDeleteMixin):
     """
-    User model for LaunchForge accounts.
+    User model for Valeric accounts.
 
     Attributes:
         id: Unique user identifier (UUID)
