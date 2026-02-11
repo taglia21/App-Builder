@@ -130,52 +130,58 @@
     <!-- Step 3: Customize (hidden by default) -->
     <div id="step3" class="step-content" style="display: none; background: #1f2937; border-radius: 16px; padding: 32px; border: 1px solid #374151;">
         <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 24px;">🎨 Customize Your App</h2>
-        
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
-            <!-- Code Preview -->
-            <div>
-                <h3 style="font-size: 1rem; font-weight: 500; margin-bottom: 12px;">Generated Files</h3>
-                <div id="file-tree" style="background: #111827; border-radius: 8px; padding: 16px;">
-                    <div style="display: flex; align-items: center; gap: 8px; padding: 8px; cursor: pointer; border-radius: 4px;" onclick="selectFile('main.py')">
-                        <i data-lucide="file-code" style="width: 16px; height: 16px; color: #8b5cf6;"></i>
-                        <span>main.py</span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 8px; padding: 8px; cursor: pointer; border-radius: 4px;" onclick="selectFile('models.py')">
-                        <i data-lucide="file-code" style="width: 16px; height: 16px; color: #8b5cf6;"></i>
-                        <span>models.py</span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 8px; padding: 8px; cursor: pointer; border-radius: 4px;" onclick="selectFile('routes.py')">
-                        <i data-lucide="file-code" style="width: 16px; height: 16px; color: #8b5cf6;"></i>
-                        <span>routes.py</span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 8px; padding: 8px; cursor: pointer; border-radius: 4px;" onclick="selectFile('templates/')">
-                        <i data-lucide="folder" style="width: 16px; height: 16px; color: #fbbf24;"></i>
-                        <span>templates/</span>
-                    </div>
-                </div>
+
+        <!-- Loading skeleton (shown while preview loads) -->
+        <div id="preview-loading" style="display: none;">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px;">
+                <div class="spinner" style="width: 24px; height: 24px; border: 3px solid #374151; border-top-color: #8b5cf6; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                <span style="color: #9ca3af;">Loading live preview...</span>
             </div>
-            
-            <!-- Live Preview -->
-            <div>
-                <h3 style="font-size: 1rem; font-weight: 500; margin-bottom: 12px;">Live Preview</h3>
-                <div id="preview-frame" style="background: #111827; border-radius: 8px; height: 300px; display: flex; align-items: center; justify-content: center; border: 1px solid #374151;">
-                    <p style="color: #6b7280;">Preview will appear here</p>
-                </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                <div style="background: #111827; border-radius: 8px; height: 320px; animation: pulse 1.5s ease-in-out infinite;"></div>
+                <div style="background: #111827; border-radius: 8px; height: 320px; animation: pulse 1.5s ease-in-out infinite; animation-delay: 0.3s;"></div>
             </div>
         </div>
 
-        <div style="margin-top: 24px;">
-            <h3 style="font-size: 1rem; font-weight: 500; margin-bottom: 12px;">Make Changes</h3>
-            <textarea id="code-editor" rows="10" style="width: 100%; padding: 16px; background: #111827; border: 1px solid #374151; border-radius: 8px; color: #e5e7eb; font-family: monospace; font-size: 13px;"></textarea>
-        </div>
+        <!-- Main preview content (hidden until loaded) -->
+        <div id="preview-content" style="display: none;">
+            <div style="display: grid; grid-template-columns: 280px 1fr; gap: 24px;">
+                <!-- File Tree -->
+                <div>
+                    <h3 style="font-size: 1rem; font-weight: 500; margin-bottom: 12px;">📁 Generated Files</h3>
+                    <div id="file-tree" style="background: #111827; border-radius: 8px; padding: 12px; max-height: 360px; overflow-y: auto;">
+                    </div>
+                </div>
 
-        <div style="display: flex; gap: 16px; margin-top: 24px;">
-            <button onclick="regenerateSection()" style="flex: 1; padding: 12px; background: #374151; border: none; border-radius: 8px; color: white; cursor: pointer;">
-                <i data-lucide="refresh-cw" style="width: 16px; height: 16px;"></i> Regenerate Section
-            </button>
-            <button onclick="goToStep(4)" style="flex: 1; padding: 12px; background: linear-gradient(135deg, #8b5cf6, #6366f1); border: none; border-radius: 8px; color: white; font-weight: 600; cursor: pointer;">
-                Deploy My App <i data-lucide="rocket" style="width: 16px; height: 16px;"></i>
-            </button>
+                <!-- Live Preview -->
+                <div>
+                    <h3 style="font-size: 1rem; font-weight: 500; margin-bottom: 12px;">🌐 Live Preview</h3>
+                    <div id="preview-frame" style="background: #ffffff; border-radius: 8px; height: 360px; overflow: hidden; position: relative;">
+                        <iframe id="preview-iframe" style="width: 100%; height: 100%; border: none; border-radius: 8px;" sandbox="allow-scripts"></iframe>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 24px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <h3 style="font-size: 1rem; font-weight: 500;">
+                        ✏️ Code Editor
+                        <span id="editor-filename" style="color: #8b5cf6; margin-left: 8px; font-size: 0.875rem;"></span>
+                    </h3>
+                </div>
+                <textarea id="code-editor" rows="14" spellcheck="false"
+                          style="width: 100%; padding: 16px; background: #0f172a; border: 1px solid #374151; border-radius: 8px; color: #a5f3fc; font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace; font-size: 13px; line-height: 1.6; resize: vertical; tab-size: 4;"
+                          placeholder="Select a file from the tree to view and edit its code..."></textarea>
+            </div>
+
+            <div style="display: flex; gap: 16px; margin-top: 24px;">
+                <button id="regenerate-btn" onclick="regenerateSection()" style="flex: 1; padding: 12px; background: #374151; border: none; border-radius: 8px; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.2s;">
+                    <i data-lucide="refresh-cw" style="width: 16px; height: 16px;"></i> Regenerate Preview
+                </button>
+                <button onclick="goToStep(4)" style="flex: 1; padding: 12px; background: linear-gradient(135deg, #8b5cf6, #6366f1); border: none; border-radius: 8px; color: white; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    Deploy My App <i data-lucide="rocket" style="width: 16px; height: 16px;"></i>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -272,8 +278,42 @@
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
+@keyframes pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.7; }
+}
 .step-content {
     transition: all 0.3s ease;
+}
+/* File tree item styles */
+.file-tree-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    cursor: pointer;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #cbd5e1;
+    transition: background 0.15s, color 0.15s;
+    user-select: none;
+}
+.file-tree-item:hover {
+    background: #1e293b;
+    color: #f1f5f9;
+}
+.file-tree-item.active {
+    background: #312e81;
+    color: #c4b5fd;
+}
+.file-tree-item .file-icon {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+}
+/* Regenerate button hover */
+#regenerate-btn:hover {
+    background: #4b5563 !important;
 }
 </style>
 
@@ -379,18 +419,206 @@ async function generateCode() {
     projectData.id = projectId;
     projectData.slug = slug;
 
+    // Also create the project in the backend store via analyze endpoint
+    try {
+        var analyzeResp = await fetch('/api/ideas/analyze', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({idea: idea})
+        });
+        var analyzeData = await analyzeResp.json();
+        if (analyzeData.success && analyzeData.project_id) {
+            projectData.backendId = analyzeData.project_id;
+            // Trigger generation
+            await fetch('/api/generate', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({project_id: analyzeData.project_id, name: name})
+            });
+        }
+    } catch(e) {
+        console.warn('Backend project creation failed, continuing with local data:', e);
+    }
+
     await new Promise(r => setTimeout(r, 600));
     goToStep(3);
+
+    // Load Live Preview after transitioning to Step 3
+    loadLivePreview();
+}
+
+// ===================== Live Preview State =====================
+var previewFiles = {};
+var selectedFilename = null;
+
+async function loadLivePreview() {
+    var loadingEl = document.getElementById('preview-loading');
+    var contentEl = document.getElementById('preview-content');
+    loadingEl.style.display = 'block';
+    contentEl.style.display = 'none';
+
+    try {
+        var backendId = projectData.backendId;
+        if (!backendId) {
+            throw new Error('No backend project ID');
+        }
+        var resp = await fetch('/api/preview', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({project_id: backendId})
+        });
+        var data = await resp.json();
+        if (data.success) {
+            previewFiles = data.files || {};
+            renderFileTree(previewFiles);
+            renderPreviewIframe(data.html);
+            // Auto-select first file
+            var firstFile = Object.keys(previewFiles)[0];
+            if (firstFile) selectFile(firstFile);
+        } else {
+            showPreviewError(data.error || 'Failed to load preview');
+        }
+    } catch(e) {
+        console.error('Preview load error:', e);
+        showPreviewError('Could not connect to preview service');
+    }
+
+    loadingEl.style.display = 'none';
+    contentEl.style.display = 'block';
+
+    // Re-init Lucide icons for dynamically added elements
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function renderFileTree(files) {
+    var tree = document.getElementById('file-tree');
+    tree.innerHTML = '';
+    var filenames = Object.keys(files).sort(function(a, b) {
+        // Folders (paths with /) first, then files
+        var aIsDir = a.includes('/');
+        var bIsDir = b.includes('/');
+        if (aIsDir !== bIsDir) return aIsDir ? -1 : 1;
+        return a.localeCompare(b);
+    });
+    filenames.forEach(function(fname) {
+        var isDir = fname.endsWith('/');
+        var iconName = isDir ? 'folder' : getFileIcon(fname);
+        var iconColor = isDir ? '#fbbf24' : getFileIconColor(fname);
+        var item = document.createElement('div');
+        item.className = 'file-tree-item';
+        item.setAttribute('data-filename', fname);
+        item.onclick = function() { selectFile(fname); };
+        item.innerHTML = '<i data-lucide="' + iconName + '" class="file-icon" style="color: ' + iconColor + ';"></i>' +
+                         '<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + fname + '</span>';
+        tree.appendChild(item);
+    });
+}
+
+function getFileIcon(filename) {
+    if (filename.endsWith('.py')) return 'file-code';
+    if (filename.endsWith('.html')) return 'file-code';
+    if (filename.endsWith('.css')) return 'palette';
+    if (filename.endsWith('.md')) return 'file-text';
+    if (filename.endsWith('.txt')) return 'file-text';
+    if (filename === 'Dockerfile') return 'box';
+    if (filename.startsWith('.env')) return 'lock';
+    return 'file';
+}
+
+function getFileIconColor(filename) {
+    if (filename.endsWith('.py')) return '#3b82f6';
+    if (filename.endsWith('.html')) return '#f97316';
+    if (filename.endsWith('.css')) return '#8b5cf6';
+    if (filename.endsWith('.md')) return '#6b7280';
+    if (filename === 'Dockerfile') return '#2dd4bf';
+    return '#8b5cf6';
+}
+
+function renderPreviewIframe(html) {
+    var iframe = document.getElementById('preview-iframe');
+    iframe.srcdoc = html;
+}
+
+function showPreviewError(msg) {
+    var frame = document.getElementById('preview-frame');
+    var iframe = document.getElementById('preview-iframe');
+    iframe.srcdoc = '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-family:sans-serif;color:#666;"><p>' + msg + '</p></div>';
 }
 
 function selectFile(filename) {
-    // Load file content into editor (simulated)
-    const editor = document.getElementById('code-editor');
-    editor.value = '# ' + filename + ' - Generated by LaunchForge AI\n\n# Your code here...';
+    selectedFilename = filename;
+    var editor = document.getElementById('code-editor');
+    var filenameLabel = document.getElementById('editor-filename');
+    var content = previewFiles[filename];
+
+    if (content !== undefined) {
+        editor.value = content;
+        filenameLabel.textContent = filename;
+    } else {
+        editor.value = '// File not found: ' + filename;
+        filenameLabel.textContent = filename;
+    }
+
+    // Update active state in tree
+    document.querySelectorAll('.file-tree-item').forEach(function(el) {
+        el.classList.remove('active');
+        if (el.getAttribute('data-filename') === filename) {
+            el.classList.add('active');
+        }
+    });
 }
 
-function regenerateSection() {
-    alert('Regenerating selected section with AI...');
+async function regenerateSection() {
+    if (!projectData.backendId) {
+        alert('No project to regenerate. Please generate first.');
+        return;
+    }
+
+    var btn = document.getElementById('regenerate-btn');
+    var origHTML = btn.innerHTML;
+    btn.innerHTML = '<div class="spinner" style="width:16px;height:16px;border:2px solid #555;border-top-color:#8b5cf6;border-radius:50%;animation:spin 1s linear infinite;"></div> Regenerating...';
+    btn.disabled = true;
+
+    // If user edited a file, send modifications
+    var modifications = null;
+    if (selectedFilename && previewFiles[selectedFilename] !== undefined) {
+        var editorContent = document.getElementById('code-editor').value;
+        if (editorContent !== previewFiles[selectedFilename]) {
+            modifications = {
+                filename: selectedFilename,
+                content: editorContent
+            };
+            // Update local copy
+            previewFiles[selectedFilename] = editorContent;
+        }
+    }
+
+    try {
+        var body = {project_id: projectData.backendId};
+        if (modifications) body.modifications = modifications;
+
+        var resp = await fetch('/api/preview', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(body)
+        });
+        var data = await resp.json();
+        if (data.success) {
+            previewFiles = data.files || previewFiles;
+            renderPreviewIframe(data.html);
+            renderFileTree(previewFiles);
+            if (selectedFilename) selectFile(selectedFilename);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        } else {
+            alert('Regeneration failed: ' + (data.error || 'Unknown error'));
+        }
+    } catch(e) {
+        alert('Error regenerating preview: ' + e.message);
+    }
+
+    btn.innerHTML = origHTML;
+    btn.disabled = false;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function selectPlatform(platform) {

@@ -1,3 +1,4 @@
+import json
 from typing import Dict
 
 import httpx
@@ -154,7 +155,7 @@ run = ["sh", "-c", "python main.py"]
         </div>
     </div>
     <script>
-        const files = ''' + str({k: v.replace('`', '\\`').replace('${', '\\${') for k, v in files.items()}) + ''';
+        const files = ''' + json.dumps(files) + ''';
         function showCode(filename) {
             document.getElementById('codeDisplay').innerHTML = '<code>' + (files[filename] || 'File not found').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</code>';
         }
