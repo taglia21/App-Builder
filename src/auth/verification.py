@@ -181,7 +181,7 @@ def verify_token_and_get_user(
     # Find user with token
     user = db.query(User).filter(
         User.verification_token == token,
-        not User.is_deleted
+        User.is_deleted == False
     ).first()
 
     if not user:
@@ -318,7 +318,7 @@ async def resend_verification(
     try:
         user = db.query(User).filter(
             User.email == data.email,
-            not User.is_deleted
+            User.is_deleted == False
         ).first()
 
         # Always return success to prevent email enumeration

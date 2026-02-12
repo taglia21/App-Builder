@@ -33,15 +33,12 @@ jobs:
 
       - name: Run Ruff linter
         run: ruff check src/ --output-format=github
-        continue-on-error: true
 
       - name: Check Black formatting
         run: black --check --line-length=100 src/
-        continue-on-error: true
 
       - name: Check import sorting
         run: isort --check-only --profile=black --line-length=100 src/
-        continue-on-error: true
 
   # Job 2: Type Checking
   type-check:
@@ -106,6 +103,25 @@ jobs:
     name: Test Suite
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: valeric
+          POSTGRES_PASSWORD: valeric_test
+          POSTGRES_DB: valeric_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://valeric:valeric_test@localhost:5432/valeric_test
+      APP_ENV: testing
+      SECRET_KEY: ci-test-secret-key-not-for-production
+      COOKIE_SECRET: ci-test-cookie-secret
     steps:
       - uses: actions/checkout@v4
       
@@ -126,7 +142,10 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements-prod.txt
           pip install pytest pytest-cov pytest-asyncio
-          
+
+      - name: Run database migrations
+        run: alembic upgrade head
+
       - name: Run tests with coverage
         run: |
           pytest tests/ -v --cov=src --cov-report=xml --cov-report=html

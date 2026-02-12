@@ -432,6 +432,55 @@ class MetricsCollector:
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             }
 
+    def export_prometheus(self) -> str:
+        """
+        Export all metrics in Prometheus text exposition format.
+        
+        Returns:
+            String of metrics in Prometheus format, ready for /metrics endpoint.
+        """
+        lines: List[str] = []
+        with self._lock:
+            # Counters
+            for name, counter in self._counters.items():
+                lines.append(f"# HELP {name} {counter.description}")
+                lines.append(f"# TYPE {name} counter")
+                for mv in counter.values():
+                    label_str = self._format_labels(mv.labels)
+                    lines.append(f"{name}{label_str} {mv.value}")
+
+            # Gauges
+            for name, gauge in self._gauges.items():
+                lines.append(f"# HELP {name} {gauge.description}")
+                lines.append(f"# TYPE {name} gauge")
+                for mv in gauge.values():
+                    label_str = self._format_labels(mv.labels)
+                    lines.append(f"{name}{label_str} {mv.value}")
+
+            # Histograms
+            for name, histogram in self._histograms.items():
+                lines.append(f"# HELP {name} {histogram.description}")
+                lines.append(f"# TYPE {name} summary")
+                stats = histogram.get_stats()
+                label_str = ""
+                lines.append(f'{name}_count{label_str} {stats.get("count", 0)}')
+                lines.append(f'{name}_sum{label_str} {stats.get("sum", 0)}')
+                for quantile_label in ["p50", "p90", "p95", "p99"]:
+                    q_val = stats.get(quantile_label, 0)
+                    q_num = quantile_label.replace("p", "0.")
+                    lines.append(f'{name}{{quantile="{q_num}"}}{" "}{q_val}')
+
+        lines.append("")
+        return "\n".join(lines)
+
+    @staticmethod
+    def _format_labels(labels: Dict[str, str]) -> str:
+        """Format labels dict into Prometheus label string."""
+        if not labels:
+            return ""
+        parts = [f'{k}="{v}"' for k, v in sorted(labels.items())]
+        return "{" + ",".join(parts) + "}"
+
     def reset(self) -> None:
         """Reset all metrics."""
         with self._lock:

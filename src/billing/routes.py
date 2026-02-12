@@ -1,5 +1,6 @@
 """Billing routes for subscription management with Stripe Checkout."""
 import json
+import logging
 import os
 
 try:
@@ -13,20 +14,22 @@ except ImportError:
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
+logger = logging.getLogger(__name__)
+
 # Stripe configuration
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
 
-# Price IDs from environment
+# Unified price IDs from environment — tier names match SubscriptionTier enum
 PRICE_IDS = {
     "starter": os.getenv("STRIPE_PRICE_STARTER"),
-    "growth": os.getenv("STRIPE_PRICE_GROWTH"),
-    "pro": os.getenv("STRIPE_PRICE_PRO")
+    "pro": os.getenv("STRIPE_PRICE_PRO"),
+    "enterprise": os.getenv("STRIPE_PRICE_ENTERPRISE"),
 }
 
 PLAN_DETAILS = {
-    "starter": {"name": "Starter", "price": 9, "features": ["5 apps/month", "Basic templates", "Email support"]},
-    "growth": {"name": "Growth", "price": 49, "features": ["25 apps/month", "All templates", "Priority support", "Custom domains"]},
-    "pro": {"name": "Pro", "price": 99, "features": ["Unlimited apps", "All features", "24/7 support", "White-label", "API access"]}
+    "starter": {"name": "Starter", "price": 29, "features": ["5 apps/month", "Basic templates", "Email support"]},
+    "pro": {"name": "Pro", "price": 99, "features": ["25 apps/month", "All templates", "Priority support", "Custom domains"]},
+    "enterprise": {"name": "Enterprise", "price": 299, "features": ["Unlimited apps", "All features", "24/7 support", "White-label", "API access"]},
 }
 
 def create_billing_router(templates):
@@ -103,51 +106,134 @@ def create_billing_router(templates):
 
     @router.post("/webhook")
     async def stripe_webhook(request: Request):
-        """Handle Stripe webhook events."""
+        """Handle Stripe webhook events with signature verification and DB provisioning."""
         payload = await request.body()
         sig_header = request.headers.get("stripe-signature", "")
 
+        if not STRIPE_WEBHOOK_SECRET:
+            logger.error("STRIPE_WEBHOOK_SECRET not configured — rejecting webhook")
+            raise HTTPException(status_code=500, detail="Webhook secret not configured")
+
         try:
-            if STRIPE_WEBHOOK_SECRET:
-                event = stripe.Webhook.construct_event(
-                    payload, sig_header, STRIPE_WEBHOOK_SECRET
-                )
-            else:
-                event = stripe.Event.construct_from(
-                    json.loads(payload.decode()), stripe.api_key
-                )
+            event = stripe.Webhook.construct_event(
+                payload, sig_header, STRIPE_WEBHOOK_SECRET
+            )
         except (ValueError, stripe.error.SignatureVerificationError):
             raise HTTPException(status_code=400, detail="Invalid signature")
 
-        # Handle events
-        if event["type"] == "checkout.session.completed":
-            session = event["data"]["object"]
-            # Provision subscription for user
-            import logging
-            logger = logging.getLogger(__name__)
+        # --- Idempotency: check if already processed ---
+        try:
+            from src.database.db import get_db
+            from src.database.models import (
+                Subscription, SubscriptionStatus, SubscriptionTier,
+                WebhookEvent, User,
+            )
+            from uuid import uuid4
 
-            # Extract session details
-            customer_id = session.get('customer')
-            subscription_id = session.get('subscription')
-            session.get('customer_email') or session.get('customer_details', {}).get('email')
+            db = get_db()
+            with db.session() as session:
+                existing = session.query(WebhookEvent).filter(
+                    WebhookEvent.stripe_event_id == event["id"]
+                ).first()
+                if existing:
+                    logger.info(f"Duplicate webhook {event['id']} — skipping")
+                    return JSONResponse({"status": "duplicate"})
 
-            logger.info(f"Provisioning subscription {subscription_id} for customer {customer_id}")
+                # Record the event
+                wh = WebhookEvent(
+                    id=str(uuid4()),
+                    stripe_event_id=event["id"],
+                    event_type=event["type"],
+                )
+                session.add(wh)
 
-            # In production, create/update subscription record:
-            # await billing_service.provision_subscription(
-            #     customer_id=customer_id,
-            #     subscription_id=subscription_id,
-            #     plan=session.get('metadata', {}).get('plan', 'pro'),
-            #     email=customer_email
-            # )
+                # --- Provision based on event type ---
+                if event["type"] == "checkout.session.completed":
+                    sess_obj = event["data"]["object"]
+                    user_id = sess_obj.get("metadata", {}).get("user_id")
+                    tier_name = sess_obj.get("metadata", {}).get("plan", "pro")
+                    customer_id = sess_obj.get("customer")
+                    subscription_id = sess_obj.get("subscription")
 
-            print(f"Checkout completed: {session['id']} - Subscription provisioned")
-        elif event["type"] == "customer.subscription.updated":
-            subscription = event["data"]["object"]
-            print(f"Subscription updated: {subscription['id']}")
-        elif event["type"] == "customer.subscription.deleted":
-            subscription = event["data"]["object"]
-            print(f"Subscription cancelled: {subscription['id']}")
+                    if user_id:
+                        sub = session.query(Subscription).filter(
+                            Subscription.user_id == user_id
+                        ).first()
+                        tier_enum = SubscriptionTier(tier_name) if tier_name in [t.value for t in SubscriptionTier] else SubscriptionTier.PRO
+
+                        if sub:
+                            sub.stripe_customer_id = customer_id
+                            sub.stripe_subscription_id = subscription_id
+                            sub.tier = tier_enum
+                            sub.status = SubscriptionStatus.ACTIVE
+                        else:
+                            sub = Subscription(
+                                id=str(uuid4()),
+                                user_id=user_id,
+                                stripe_customer_id=customer_id,
+                                stripe_subscription_id=subscription_id,
+                                tier=tier_enum,
+                                status=SubscriptionStatus.ACTIVE,
+                            )
+                            session.add(sub)
+
+                        # Update user's tier
+                        user = session.query(User).filter(User.id == user_id).first()
+                        if user:
+                            user.subscription_tier = tier_enum
+
+                    logger.info(f"Checkout completed: {sess_obj.get('id')} — subscription provisioned for user {user_id}")
+
+                elif event["type"] == "customer.subscription.updated":
+                    sub_obj = event["data"]["object"]
+                    stripe_sub_id = sub_obj["id"]
+                    sub = session.query(Subscription).filter(
+                        Subscription.stripe_subscription_id == stripe_sub_id
+                    ).first()
+                    if sub:
+                        status_map = {
+                            "active": SubscriptionStatus.ACTIVE,
+                            "past_due": SubscriptionStatus.PAST_DUE,
+                            "canceled": SubscriptionStatus.CANCELED,
+                            "trialing": SubscriptionStatus.TRIALING,
+                            "paused": SubscriptionStatus.PAUSED,
+                        }
+                        sub.status = status_map.get(sub_obj["status"], SubscriptionStatus.ACTIVE)
+                        sub.cancel_at_period_end = sub_obj.get("cancel_at_period_end", False)
+                    logger.info(f"Subscription updated: {stripe_sub_id}")
+
+                elif event["type"] == "customer.subscription.deleted":
+                    sub_obj = event["data"]["object"]
+                    stripe_sub_id = sub_obj["id"]
+                    sub = session.query(Subscription).filter(
+                        Subscription.stripe_subscription_id == stripe_sub_id
+                    ).first()
+                    if sub:
+                        sub.status = SubscriptionStatus.CANCELED
+                        sub.tier = SubscriptionTier.FREE
+                        # Also downgrade the user
+                        user = session.query(User).filter(User.id == sub.user_id).first()
+                        if user:
+                            user.subscription_tier = SubscriptionTier.FREE
+                    logger.info(f"Subscription cancelled: {stripe_sub_id}")
+
+                elif event["type"] == "invoice.payment_failed":
+                    inv_obj = event["data"]["object"]
+                    cust_id = inv_obj["customer"]
+                    sub = session.query(Subscription).filter(
+                        Subscription.stripe_customer_id == cust_id
+                    ).first()
+                    if sub:
+                        sub.status = SubscriptionStatus.PAST_DUE
+                    logger.warning(f"Payment failed for customer {cust_id}")
+
+                wh.processed = True
+                session.commit()
+
+        except Exception as e:
+            logger.error(f"Error processing webhook {event.get('id', '?')}: {e}", exc_info=True)
+            # Still return 200 so Stripe doesn't keep retrying
+            return JSONResponse({"status": "error", "message": str(e)})
 
         return JSONResponse({"status": "received"})
     return router

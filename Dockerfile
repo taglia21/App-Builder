@@ -47,9 +47,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy application code
 COPY --chown=appuser:appuser . .
 
-# Remove unnecessary files from the image
+# Remove unnecessary files from the image (keep alembic/ for migrations)
 RUN rm -rf tests/ .git/ .github/ *.md .env* __pycache__/ .pytest_cache/ \
-    docs/ output/ scripts/ alembic/ nginx/ \
+    docs/ output/ scripts/ nginx/ \
     requirements-dev.txt mypy.ini pyproject.toml \
     docker-compose*.yml tailwind.config.js
 
@@ -69,5 +69,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Run with uvicorn
-CMD ["uvicorn", "src.dashboard.app:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run migrations then start server
+CMD ["sh", "-c", "alembic upgrade head && uvicorn src.dashboard.app:app --host 0.0.0.0 --port ${PORT:-8000}"]

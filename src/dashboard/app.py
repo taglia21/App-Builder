@@ -13,6 +13,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from src.middleware.csrf import CSRFProtectMiddleware, COOKIE_NAME as CSRF_COOKIE_NAME
 
 from ..auth.web_routes import router as auth_router
 from ..billing.routes import create_billing_router
@@ -61,7 +62,7 @@ from .rate_limiter import setup_rate_limiting
 
 # Import logging system with fallback for minimal deployments
 try:
-    from src.logging_config import RequestLoggingMiddleware, get_logger, setup_logging, setup_sentry
+    from src.logging_config import RequestLoggingMiddleware, get_logger, setup_logging
     HAS_CUSTOM_LOGGING = True
 except ImportError:
     HAS_CUSTOM_LOGGING = False
@@ -71,9 +72,6 @@ except ImportError:
 
     def get_logger(name):
         return logging.getLogger(name)
-
-    def setup_sentry():
-        pass
 
     class RequestLoggingMiddleware:
         """Fallback middleware that does nothing."""
@@ -85,7 +83,20 @@ except ImportError:
 
 # Initialize logging
 setup_logging()
-    # p_sentry()
+
+# Initialize Sentry using the canonical monitoring module
+try:
+    from src.monitoring.sentry import init_sentry
+    init_sentry()
+except ImportError:
+    # Fall back to logging_config.setup_sentry if monitoring module unavailable
+    try:
+        from src.logging_config import setup_sentry
+        setup_sentry()
+    except Exception:
+        pass
+except Exception as _sentry_err:
+    logging.getLogger(__name__).warning(f"Sentry init failed: {_sentry_err}")
 
 
 logger = get_logger(__name__)
@@ -180,23 +191,33 @@ and authentication requirements.
     app.add_middleware(GZipMiddleware, minimum_size=1000)
 
     # CORS - Configure for production
+    allowed_origins = os.getenv("CORS_ORIGINS", "").split(",")
+    allowed_origins = [o.strip() for o in allowed_origins if o.strip()]
+    if not allowed_origins:
+        allowed_origins = [
+            "http://localhost:3000",
+            "http://localhost:8000",
+            "http://localhost:8080",
+        ]
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[
-            "http://localhost:3000",
-            "http://localhost:8080",
-            "https://*.vercel.app",
-            "https://*.render.com"
-        ],
+        allow_origins=allowed_origins,
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type", "X-Requested-With", "HX-Request"],
     )
 
-    # Trusted Host Middleware
+    # Trusted Host Middleware — restrict to known hosts
+    allowed_hosts = os.getenv("ALLOWED_HOSTS", "").split(",")
+    allowed_hosts = [h.strip() for h in allowed_hosts if h.strip()]
+    if not allowed_hosts:
+        allowed_hosts = ["localhost", "127.0.0.1", "*.valeric.dev"]
+    # Allow "testserver" for FastAPI TestClient in tests
+    if "testserver" not in allowed_hosts:
+        allowed_hosts.append("testserver")
     app.add_middleware(
         TrustedHostMiddleware,
-        allowed_hosts=["*"]  # Configure for production
+        allowed_hosts=allowed_hosts,
     )
 
 
@@ -236,7 +257,12 @@ and authentication requirements.
         )
 
         if not is_public:
-            user_id = request.cookies.get("user_id")
+            from src.auth.web_routes import verify_session_cookie
+            # Check signed session cookie first, then legacy
+            session_cookie = request.cookies.get("session")
+            user_id = verify_session_cookie(session_cookie) if session_cookie else None
+            if not user_id:
+                user_id = request.cookies.get("user_id")
             if not user_id:
                 return StarletteRedirect(url="/login", status_code=303)
 
@@ -251,7 +277,17 @@ and authentication requirements.
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-        response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://fastapi.tiangolo.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.tailwindcss.com; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; connect-src 'self' https:;"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' 'nonce-htmx' https://unpkg.com https://cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.tailwindcss.com https://fonts.googleapis.com; "
+            "img-src 'self' data: https:; "
+            "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; "
+            "connect-src 'self' https:; "
+            "frame-ancestors 'none'; "
+            "base-uri 'self'; "
+            "form-action 'self';"
+        )
         return response
 
 
@@ -271,6 +307,14 @@ and authentication requirements.
     # Setup rate limiting
     setup_rate_limiting(app)
 
+    # CSRF protection middleware (must be before routers)
+    is_secure = os.getenv("APP_ENV", "development") == "production"
+    app.add_middleware(
+        CSRFProtectMiddleware,
+        cookie_secure=is_secure,
+        cookie_samesite="lax",
+    )
+
     # Add API versioning middleware
     if add_versioning_to_app:
         add_versioning_to_app(app, default_version="v1")
@@ -279,7 +323,8 @@ and authentication requirements.
     templates_path = Path(__file__).parent / "templates"
     if templates_path.exists():
         templates = Jinja2Templates(directory=str(templates_path))
-        templates.env.globals['csrf_token'] = lambda: secrets.token_hex(32)
+        # CSRF tokens are injected by JavaScript reading the csrftoken cookie
+        # (set by CSRFProtectMiddleware). No server-side template global needed.
     
     # Include auth routes (no versioning for web routes)
     app.include_router(auth_router)
@@ -306,6 +351,18 @@ and authentication requirements.
     if health_router:
         app.include_router(health_router, prefix="/api")
     
+    # Prometheus metrics endpoint
+    @app.get("/metrics", include_in_schema=False)
+    async def prometheus_metrics():
+        """Prometheus-compatible metrics endpoint."""
+        from starlette.responses import PlainTextResponse
+        try:
+            from src.monitoring.metrics import get_metrics
+            body = get_metrics().export_prometheus()
+            return PlainTextResponse(body, media_type="text/plain; version=0.0.4; charset=utf-8")
+        except Exception:
+            return PlainTextResponse("", media_type="text/plain")
+
     # Include GraphQL router
     if create_graphql_router:
         graphql_router = create_graphql_router()

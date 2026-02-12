@@ -785,7 +785,7 @@ async def health_check():
     """
     return {
         "status": "healthy",
-        "service": "nexusai",
+        "service": "valeric",
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 

@@ -1,5 +1,6 @@
 """Error handler middleware for FastAPI."""
 import logging
+import os
 import traceback
 import uuid
 from fastapi import FastAPI, Request, status
@@ -36,11 +37,13 @@ async def error_handler_middleware(request: Request, call_next):
             f"Unhandled exception in request {request_id}: {exc}",
             exc_info=True
         )
+        env = os.getenv("APP_ENV", os.getenv("ENVIRONMENT", "development"))
+        detail = str(exc) if env in ("development", "dev", "testing") else "An internal error occurred"
         return JSONResponse(
             status_code=500,
             content={
                 "error": "Internal Server Error",
-                "message": str(exc),
+                "message": detail,
                 "request_id": request_id
             }
         )

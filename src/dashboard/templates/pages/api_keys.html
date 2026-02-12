@@ -194,7 +194,7 @@
     // --- helpers ---
     function generateKey() {
         var chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-        var key = 'lf_key_sk_';
+        var key = 'val_key_sk_';
         for (var i = 0; i < 40; i++) key += chars.charAt(Math.floor(Math.random() * chars.length));
         return key;
     }
@@ -213,8 +213,8 @@
         if (!raw) {
             // Seed with default keys
             var defaults = [
-                { id: 'key_1', name: 'Production Key', key: 'lf_prod_sk_a8d3f19e7c4b6052e1d9f3a8c7b2e4013f8a', created: '2026-02-01T12:00:00Z', lastUsed: '2 hours ago', active: true },
-                { id: 'key_2', name: 'Development Key', key: 'lf_dev_sk_c4e2a1b8d7f6093e5a1c8d4b7f2e60a39b2c', created: '2026-02-05T12:00:00Z', lastUsed: '5 days ago', active: true }
+                { id: 'key_1', name: 'Production Key', key: 'val_prod_sk_a8d3f19e7c4b6052e1d9f3a8c7b2e4013f8a', created: '2026-02-01T12:00:00Z', lastUsed: '2 hours ago', active: true },
+                { id: 'key_2', name: 'Development Key', key: 'val_dev_sk_c4e2a1b8d7f6093e5a1c8d4b7f2e60a39b2c', created: '2026-02-05T12:00:00Z', lastUsed: '5 days ago', active: true }
             ];
             localStorage.setItem(STORAGE_KEY, JSON.stringify(defaults));
             return defaults;

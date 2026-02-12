@@ -1,8 +1,9 @@
 """Stripe billing service for subscription management."""
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict
+from uuid import uuid4
 
 import stripe
 from sqlalchemy import select
@@ -13,18 +14,18 @@ logger = logging.getLogger(__name__)
 # Stripe configuration
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
-# Price IDs for each tier (set these in environment or Stripe dashboard)
+# Unified price IDs — tier names match SubscriptionTier enum values
 PRICE_IDS = {
     "starter": os.getenv("STRIPE_PRICE_STARTER", "price_starter"),
-    "professional": os.getenv("STRIPE_PRICE_PROFESSIONAL", "price_professional"),
-    "business": os.getenv("STRIPE_PRICE_BUSINESS", "price_business"),
+    "pro": os.getenv("STRIPE_PRICE_PRO", "price_pro"),
+    "enterprise": os.getenv("STRIPE_PRICE_ENTERPRISE", "price_enterprise"),
 }
 
 TIER_LIMITS = {
-    "free": {"app_generations": 0, "price": 0},
-    "starter": {"app_generations": 1, "price": 4900},  # $49
-    "professional": {"app_generations": 5, "price": 14900},  # $149
-    "business": {"app_generations": -1, "price": 39900},  # $399, -1 = unlimited
+    "free":       {"app_generations": 1,  "price": 0},
+    "starter":    {"app_generations": 5,  "price": 2900},   # $29
+    "pro":        {"app_generations": 25, "price": 9900},   # $99
+    "enterprise": {"app_generations": -1, "price": 29900},  # $299, -1 = unlimited
 }
 
 
@@ -34,7 +35,7 @@ class BillingService:
     def __init__(self, db_session: AsyncSession):
         self.db = db_session
 
-    async def create_customer(self, user_id: int, email: str, name: str = None) -> str:
+    async def create_customer(self, user_id: str, email: str, name: str = None) -> str:
         """Create a Stripe customer for a user."""
         try:
             customer = stripe.Customer.create(
@@ -49,7 +50,7 @@ class BillingService:
 
     async def create_checkout_session(
         self,
-        user_id: int,
+        user_id: str,
         tier: str,
         success_url: str,
         cancel_url: str,
@@ -104,8 +105,12 @@ class BillingService:
             raise
 
     async def handle_webhook(self, payload: bytes, sig_header: str) -> Dict[str, Any]:
-        """Handle Stripe webhook events."""
+        """Handle Stripe webhook events with idempotency."""
         webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
+
+        if not webhook_secret:
+            logger.error("STRIPE_WEBHOOK_SECRET not configured — rejecting webhook")
+            raise ValueError("Webhook secret not configured")
 
         try:
             event = stripe.Webhook.construct_event(
@@ -118,25 +123,50 @@ class BillingService:
             logger.error(f"Invalid webhook signature: {e}")
             raise
 
-        # Handle specific events
-        if event["type"] == "checkout.session.completed":
-            session = event["data"]["object"]
-            await self._handle_checkout_completed(session)
-        elif event["type"] == "customer.subscription.updated":
-            subscription = event["data"]["object"]
-            await self._handle_subscription_updated(subscription)
-        elif event["type"] == "customer.subscription.deleted":
-            subscription = event["data"]["object"]
-            await self._handle_subscription_deleted(subscription)
-        elif event["type"] == "invoice.payment_failed":
-            invoice = event["data"]["object"]
-            await self._handle_payment_failed(invoice)
+        # Idempotency: check if we've already processed this event
+        from src.database.models import WebhookEvent
+        existing = await self.db.execute(
+            select(WebhookEvent).where(WebhookEvent.stripe_event_id == event["id"])
+        )
+        if existing.scalar_one_or_none():
+            logger.info(f"Duplicate webhook event {event['id']} — skipping")
+            return {"status": "duplicate", "event_type": event["type"]}
 
+        # Record the event
+        webhook_record = WebhookEvent(
+            id=str(uuid4()),
+            stripe_event_id=event["id"],
+            event_type=event["type"],
+            payload=dict(event["data"]["object"]) if event.get("data") else None,
+        )
+        self.db.add(webhook_record)
+
+        # Handle specific events
+        try:
+            if event["type"] == "checkout.session.completed":
+                session = event["data"]["object"]
+                await self._handle_checkout_completed(session)
+            elif event["type"] == "customer.subscription.updated":
+                subscription = event["data"]["object"]
+                await self._handle_subscription_updated(subscription)
+            elif event["type"] == "customer.subscription.deleted":
+                subscription = event["data"]["object"]
+                await self._handle_subscription_deleted(subscription)
+            elif event["type"] == "invoice.payment_failed":
+                invoice = event["data"]["object"]
+                await self._handle_payment_failed(invoice)
+
+            webhook_record.processed = True
+        except Exception as e:
+            webhook_record.error_message = str(e)
+            logger.error(f"Error processing webhook {event['id']}: {e}")
+
+        await self.db.commit()
         return {"status": "success", "event_type": event["type"]}
 
     async def _handle_checkout_completed(self, session: Dict):
         """Handle successful checkout."""
-        user_id = int(session["metadata"]["user_id"])
+        user_id = session["metadata"]["user_id"]
         tier = session["metadata"]["tier"]
         customer_id = session["customer"]
         subscription_id = session["subscription"]
@@ -197,11 +227,11 @@ class BillingService:
 
             if subscription.get("current_period_start"):
                 sub.current_period_start = datetime.fromtimestamp(
-                    subscription["current_period_start"]
+                    subscription["current_period_start"], tz=timezone.utc
                 )
             if subscription.get("current_period_end"):
                 sub.current_period_end = datetime.fromtimestamp(
-                    subscription["current_period_end"]
+                    subscription["current_period_end"], tz=timezone.utc
                 )
 
             await self.db.commit()
@@ -239,16 +269,10 @@ class BillingService:
         if sub:
             sub.status = SubscriptionStatus.PAST_DUE
             await self.db.commit()
-            # Send email notification about failed payment
-            try:
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.info(f"Payment failed for subscription {subscription_id}, user {sub.user_id}. Sending notification...")
-                # In production, integrate with email service like SendGrid/Postmark:
-                # await email_service.send_payment_failed_email(
-                #     user_email=user.email,
-                #     subscription_id=subscription_id,
-                #     retry_url=f"{settings.BASE_URL}/billing/update-payment"
-                # )
-            except Exception as e:
-                logger.error(f"Failed to send payment failure notification: {e}")
+            logger.warning(
+                f"Payment failed for customer {customer_id}, "
+                f"subscription {sub.stripe_subscription_id}, user {sub.user_id}. "
+                f"Marked as PAST_DUE."
+            )
+            # TODO: integrate with email service to notify user
+            # await email_service.send_payment_failed_email(user_email=..., ...)

@@ -37,11 +37,11 @@ class InvalidTokenError(TokenError):
 
 
 # Token configuration
-DEFAULT_SECRET_KEY = "nexusai-dev-secret-key-change-in-production"
+DEFAULT_SECRET_KEY = "valeric-dev-secret-key-change-in-production"
 
 _INSECURE_SECRET_KEYS = {
     "change-me-in-production",
-    "nexusai-dev-secret-key-change-in-production",
+    "valeric-dev-secret-key-change-in-production",
     "secret",
     "password",
 }
@@ -52,20 +52,27 @@ EMAIL_VERIFICATION_EXPIRE_HOURS = 24
 PASSWORD_RESET_EXPIRE_HOURS = 1
 
 ALGORITHM = "HS256"
+JWT_ISSUER = "valeric"
+JWT_AUDIENCE = "valeric-api"
 
 
 def get_secret_key() -> str:
     """Get the JWT secret key from environment or default.
     
-    Raises ValueError in production if using an insecure default key.
+    Raises ValueError if using an insecure default key in ANY non-development environment,
+    or if the key is too short.
     """
     key = os.getenv("JWT_SECRET_KEY", os.getenv("SECRET_KEY", DEFAULT_SECRET_KEY))
     env = os.getenv("APP_ENV", os.getenv("ENVIRONMENT", "development"))
-    if env.lower() in ("production", "prod") and key in _INSECURE_SECRET_KEYS:
-        raise ValueError(
-            "SECRET_KEY / JWT_SECRET_KEY must be changed from its default value in production. "
-            "Generate a strong random key: python -c 'import secrets; print(secrets.token_urlsafe(48))'"
-        )
+    if key in _INSECURE_SECRET_KEYS:
+        if env.lower() not in ("development", "dev", "test", "testing"):
+            raise ValueError(
+                "SECRET_KEY / JWT_SECRET_KEY must be changed from its default value "
+                "in non-development environments. "
+                "Generate a strong random key: python -c 'import secrets; print(secrets.token_urlsafe(48))'"
+            )
+    if env.lower() in ("production", "prod") and len(key) < 32:
+        raise ValueError("SECRET_KEY must be at least 32 characters in production.")
     return key
 
 
@@ -97,6 +104,8 @@ def create_access_token(
         "sub": user_id,
         "email": email,
         "type": TokenType.ACCESS.value,
+        "iss": JWT_ISSUER,
+        "aud": JWT_AUDIENCE,
         "iat": now,
         "exp": expire,
     }
@@ -132,6 +141,8 @@ def create_refresh_token(
     payload = {
         "sub": user_id,
         "type": TokenType.REFRESH.value,
+        "iss": JWT_ISSUER,
+        "aud": JWT_AUDIENCE,
         "iat": now,
         "exp": expire,
     }
@@ -168,6 +179,8 @@ def create_email_verification_token(
         "sub": user_id,
         "email": email,
         "type": TokenType.EMAIL_VERIFICATION.value,
+        "iss": JWT_ISSUER,
+        "aud": JWT_AUDIENCE,
         "iat": now,
         "exp": expire,
     }
@@ -201,6 +214,8 @@ def create_password_reset_token(
         "sub": user_id,
         "email": email,
         "type": TokenType.PASSWORD_RESET.value,
+        "iss": JWT_ISSUER,
+        "aud": JWT_AUDIENCE,
         "iat": now,
         "exp": expire,
     }
@@ -226,7 +241,8 @@ def decode_token(token: str) -> Dict[str, Any]:
             token,
             get_secret_key(),
             algorithms=[ALGORITHM],
-            options={"verify_exp": False}
+            options={"verify_exp": False, "verify_aud": False},
+            issuer=JWT_ISSUER,
         )
     except jwt.InvalidTokenError as e:
         raise InvalidTokenError(f"Invalid token: {str(e)}")
@@ -255,9 +271,9 @@ def verify_token(
             token,
             get_secret_key(),
             algorithms=[ALGORITHM],
+            issuer=JWT_ISSUER,
+            audience=JWT_AUDIENCE,
         )
-
-        # Verify token type if specified
         if expected_type:
             token_type = payload.get("type")
             if token_type != expected_type.value:

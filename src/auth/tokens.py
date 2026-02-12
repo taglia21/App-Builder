@@ -104,7 +104,7 @@ def generate_api_token() -> Tuple[str, str]:
     # Generate token with prefix for easy identification
     token_id = str(uuid4()).replace("-", "")[:8]
     token_secret = generate_secure_token(API_TOKEN_LENGTH)
-    full_token = f"lf_{token_id}_{token_secret}"
+    full_token = f"val_{token_id}_{token_secret}"
 
     # Hash for storage
     token_hash = hash_api_token(full_token)

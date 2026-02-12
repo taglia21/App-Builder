@@ -63,7 +63,7 @@ class BaseRepository(Generic[ModelType]):
 
         # Filter soft-deleted records if model supports it
         if hasattr(self.model, 'is_deleted') and not include_deleted:
-            query = query.filter(not self.model.is_deleted)
+            query = query.filter(self.model.is_deleted == False)
 
         return query.offset(skip).limit(limit).all()
 
@@ -112,7 +112,7 @@ class BaseRepository(Generic[ModelType]):
         """Get total count of records."""
         query = self.session.query(self.model)
         if hasattr(self.model, 'is_deleted') and not include_deleted:
-            query = query.filter(not self.model.is_deleted)
+            query = query.filter(self.model.is_deleted == False)
         return query.count()
 
 

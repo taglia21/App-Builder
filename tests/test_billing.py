@@ -100,8 +100,8 @@ class TestBillingServiceCheckout:
             assert result["url"] == "https://checkout.stripe.com/test"
 
     @pytest.mark.asyncio
-    async def test_create_checkout_session_professional(self, billing_service):
-        """Test creating checkout session for professional tier."""
+    async def test_create_checkout_session_pro(self, billing_service):
+        """Test creating checkout session for pro tier."""
         with patch('stripe.checkout.Session.create') as mock_create:
             mock_session = Mock()
             mock_session.id = "cs_prof123"
@@ -110,7 +110,7 @@ class TestBillingServiceCheckout:
 
             result = await billing_service.create_checkout_session(
                 user_id=2,
-                tier="professional",
+                tier="pro",
                 success_url="https://example.com/success",
                 cancel_url="https://example.com/cancel",
                 customer_id="cus_456"
@@ -128,7 +128,7 @@ class TestBillingServiceCheckout:
             with pytest.raises(stripe.error.StripeError):
                 await billing_service.create_checkout_session(
                     user_id=3,
-                    tier="business",
+                    tier="enterprise",
                     success_url="https://example.com/success",
                     cancel_url="https://example.com/cancel"
                 )
@@ -139,27 +139,27 @@ class TestTierLimits:
 
     def test_free_tier_limits(self):
         """Test free tier has correct limits."""
-        assert TIER_LIMITS["free"]["app_generations"] == 0
+        assert TIER_LIMITS["free"]["app_generations"] == 1
         assert TIER_LIMITS["free"]["price"] == 0
 
     def test_starter_tier_limits(self):
         """Test starter tier has correct limits."""
-        assert TIER_LIMITS["starter"]["app_generations"] == 1
-        assert TIER_LIMITS["starter"]["price"] == 4900
+        assert TIER_LIMITS["starter"]["app_generations"] == 5
+        assert TIER_LIMITS["starter"]["price"] == 2900
 
-    def test_professional_tier_limits(self):
-        """Test professional tier has correct limits."""
-        assert TIER_LIMITS["professional"]["app_generations"] == 5
-        assert TIER_LIMITS["professional"]["price"] == 14900
+    def test_pro_tier_limits(self):
+        """Test pro tier has correct limits."""
+        assert TIER_LIMITS["pro"]["app_generations"] == 25
+        assert TIER_LIMITS["pro"]["price"] == 9900
 
-    def test_business_tier_unlimited(self):
-        """Test business tier has unlimited generations."""
-        assert TIER_LIMITS["business"]["app_generations"] == -1
-        assert TIER_LIMITS["business"]["price"] == 39900
+    def test_enterprise_tier_unlimited(self):
+        """Test enterprise tier has unlimited generations."""
+        assert TIER_LIMITS["enterprise"]["app_generations"] == -1
+        assert TIER_LIMITS["enterprise"]["price"] == 29900
 
     def test_all_tiers_exist(self):
         """Test all expected tiers are configured."""
-        expected_tiers = ["free", "starter", "professional", "business"]
+        expected_tiers = ["free", "starter", "pro", "enterprise"]
         for tier in expected_tiers:
             assert tier in TIER_LIMITS
             assert "app_generations" in TIER_LIMITS[tier]
@@ -249,8 +249,8 @@ class TestPriceIds:
     def test_price_ids_exist(self):
         """Test all price IDs are configured."""
         assert "starter" in PRICE_IDS
-        assert "professional" in PRICE_IDS
-        assert "business" in PRICE_IDS
+        assert "pro" in PRICE_IDS
+        assert "enterprise" in PRICE_IDS
 
     def test_price_ids_not_empty(self):
         """Test price IDs are not empty strings."""

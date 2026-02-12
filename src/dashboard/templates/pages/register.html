@@ -220,5 +220,24 @@
             <a href="/" class="back-link">← Back to Home</a>
         </div>
     </div>
+    <script>
+    (function() {
+        function getCookie(name) {
+            var match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+            return match ? match[2] : '';
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('form[method="POST"], form[method="post"]').forEach(function(form) {
+                if (!form.querySelector('input[name="csrf_token"]')) {
+                    var input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'csrf_token';
+                    input.value = getCookie('csrftoken');
+                    form.appendChild(input);
+                }
+            });
+        });
+    })();
+    </script>
 </body>
 </html>

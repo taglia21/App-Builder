@@ -29,7 +29,7 @@ class JSONFormatter(logging.Formatter):
     like Datadog, ELK, CloudWatch, etc.
     """
 
-    def __init__(self, service_name: str = "nexusai"):
+    def __init__(self, service_name: str = "valeric"):
         super().__init__()
         self.service_name = service_name
 
@@ -150,7 +150,7 @@ class StructuredLogger:
 def setup_logging(
     level: str = None,
     format_type: str = None,
-    service_name: str = "nexusai",
+    service_name: str = "valeric",
 ) -> None:
     """
     Configure application-wide logging.

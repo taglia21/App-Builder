@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     # Demo Mode
     DEMO_MODE: bool = False
     DEMO_EMAIL: str = "demo@valeric.dev"
-    DEMO_PASSWORD: str = "Valeric-Demo-2026!"
+    DEMO_PASSWORD: str = ""  # MUST be set via DEMO_PASSWORD env variable
     DEMO_TOKEN: Optional[str] = None  # Optional magic token for /demo?token=xxx URL
     
     # Admin

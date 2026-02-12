@@ -360,7 +360,7 @@ class APIRoutes:
                 "scopes": ["read", "write"],
                 "created_at": "2024-01-15T12:00:00Z",
                 "last_used": "2024-01-20T15:30:00Z",
-                "prefix": "lf_prod_",
+                "prefix": "val_prod_",
             },
         ]
 
@@ -368,7 +368,7 @@ class APIRoutes:
     async def create_api_key(request: APIKeyCreate) -> APIKeyResponse:
         """Create a new API key."""
         import secrets
-        key = f"lf_{secrets.token_urlsafe(32)}"
+        key = f"val_{secrets.token_urlsafe(32)}"
 
         return APIKeyResponse(
             id="key_new",

@@ -4,11 +4,16 @@ Dashboard Routes
 HTML routes for the Valeric dashboard using HTMX.
 """
 
+from __future__ import annotations
+
 import logging
 import os
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from fastapi import APIRouter, Form, HTTPException, Request
+
+if TYPE_CHECKING:
+    from src.database.models import User
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
@@ -16,8 +21,17 @@ logger = logging.getLogger(__name__)
 
 
 def get_current_user(request: Request) -> Optional["User"]:
-    """Get the currently logged-in user from the request cookie."""
-    user_id = request.cookies.get("user_id")
+    """Get the currently logged-in user from the signed session cookie."""
+    from src.auth.web_routes import verify_session_cookie
+
+    # Try signed session cookie first, fall back to legacy cookie
+    cookie = request.cookies.get("session")
+    user_id = verify_session_cookie(cookie) if cookie else None
+
+    # Legacy fallback (unsigned cookie) — only for migration
+    if not user_id:
+        user_id = request.cookies.get("user_id")
+
     if not user_id:
         return None
     try:

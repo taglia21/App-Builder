@@ -124,12 +124,12 @@ class TestAPIModels:
         response = APIKeyResponse(
             id="key_123",
             name="Production Key",
-            key="lf_abc123",
+            key="val_abc123",
             scopes=["read", "write"],
             created_at=datetime.now(timezone.utc),
         )
         assert response.id == "key_123"
-        assert response.key == "lf_abc123"
+        assert response.key == "val_abc123"
 
 
 # ==================== Test API Routes ====================
@@ -265,7 +265,7 @@ class TestAPIRoutes:
         request = APIKeyCreate(name="Test Key", scopes=["read"])
         result = await api_routes.create_api_key(request)
         assert result.name == "Test Key"
-        assert result.key.startswith("lf_")
+        assert result.key.startswith("val_")
         assert result.scopes == ["read"]
     
     @pytest.mark.asyncio
@@ -314,7 +314,21 @@ class TestDashboardRoutes:
         request = Mock()
         request.url = Mock()
         request.url.path = "/dashboard"
+        request.cookies = {"user_id": "test-user-123"}
         return request
+
+    @pytest.fixture(autouse=True)
+    def _patch_get_current_user(self):
+        """Patch get_current_user so route tests don't hit the DB."""
+        mock_user = Mock()
+        mock_user.id = "test-user-123"
+        mock_user.email = "test@example.com"
+        mock_user.name = "Test User"
+        mock_user.subscription_tier = "free"
+        mock_user.credits_remaining = 100
+        mock_user.subscription = None
+        with patch("src.dashboard.routes.get_current_user", return_value=mock_user):
+            yield
     
     def test_dashboard_routes_initialization(self, mock_templates):
         """Test DashboardRoutes initialization."""

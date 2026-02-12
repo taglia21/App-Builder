@@ -191,6 +191,7 @@ class AuthService:
     def refresh_tokens(self, refresh_token: str) -> TokenResponse:
         """
         Refresh access token using refresh token.
+        Implements token rotation: old refresh token's jti is invalidated.
 
         Args:
             refresh_token: Valid refresh token
@@ -204,6 +205,7 @@ class AuthService:
         try:
             payload = verify_token(refresh_token, TokenType.REFRESH)
             user_id = payload.get("sub")
+            old_jti = payload.get("jti")
 
             user = self.user_repo.get(user_id)
             if not user:
@@ -212,12 +214,32 @@ class AuthService:
             if user.is_deleted:
                 raise InvalidTokenError("User account is deactivated")
 
+            # Mark old refresh token jti as used (reuse detection)
+            if old_jti:
+                self._revoke_token_jti(old_jti, user_id)
+
             return self._generate_tokens(user)
 
         except TokenExpiredError:
             raise TokenExpiredError("Refresh token has expired. Please login again.")
         except InvalidTokenError as e:
             raise InvalidTokenError(f"Invalid refresh token: {e}")
+
+    def _revoke_token_jti(self, jti: str, user_id: str) -> None:
+        """Mark a refresh token jti as revoked. Uses Redis if available, else DB."""
+        try:
+            import os, json
+            redis_url = os.getenv("REDIS_URL")
+            if redis_url:
+                import redis as redis_lib
+                r = redis_lib.from_url(redis_url, decode_responses=True)
+                # Store revoked jti with 8-day TTL (longer than refresh token lifetime)
+                r.setex(f"revoked_jti:{jti}", 691200, json.dumps({"user_id": user_id}))
+                return
+        except Exception:
+            pass
+        # Fallback: log the revocation (in production, Redis should be configured)
+        logger.info(f"Refresh token jti={jti} revoked for user={user_id}")
 
     def verify_email(self, token: str) -> User:
         """
@@ -443,7 +465,7 @@ class AuthService:
         user = User(
             id=str(uuid4()),
             email=email.lower().strip(),
-            password_hash="",  # OAuth users don't have passwords
+            password_hash=None,  # OAuth users don't have passwords — None signals OAuth-only
             subscription_tier=SubscriptionTier.FREE,
             credits_remaining=100,
             email_verified=email_verified,

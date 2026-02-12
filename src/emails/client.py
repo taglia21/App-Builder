@@ -107,7 +107,7 @@ class EmailClient:
         """
         settings = get_settings()
         self.api_key = api_key or getattr(settings, 'resend_api_key', None)
-        self.from_email = from_email or getattr(settings, 'email_from', 'noreply@nexusai.dev')
+        self.from_email = from_email or getattr(settings, 'email_from', 'noreply@valeric.app')
         self.from_name = from_name
 
         # Set up Jinja2 template environment
@@ -472,7 +472,7 @@ async def send_welcome_email(
     html = client.render_template(
         "welcome.html",
         name=name or "there",
-        dashboard_url="https://nexusai.dev/dashboard",
+        dashboard_url="https://valeric.app/dashboard",
         year=2026
     )
 

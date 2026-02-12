@@ -478,7 +478,7 @@ Return ONLY valid JSON. Make it compelling and market-ready.
 
         self.console.print()
         if not self._confirm("Does this capture your vision? Generate the app?"):
-            self.console.print("[yellow]You can restart with 'nexusai build' to try again.[/yellow]")
+            self.console.print("[yellow]You can restart with 'valeric build' to try again.[/yellow]")
             return False
 
         return True
@@ -596,7 +596,7 @@ Return ONLY valid JSON. Make it compelling and market-ready.
   Then visit: [underline cyan]http://localhost:8000/docs[/underline cyan]
 
 [bold white]Deploy to Cloud:[/bold white]
-  [cyan]nexusai deploy {output_path}[/cyan]
+  [cyan]valeric deploy {output_path}[/cyan]
 
 [dim]Your startup journey begins! 🚀[/dim]
 """
@@ -647,7 +647,7 @@ Return ONLY valid JSON. Make it compelling and market-ready.
             self.console.print()
             if self._confirm("Would you like to deploy your app now?"):
                 self.console.print()
-                self.console.print(f"[cyan]Run:[/cyan] nexusai deploy {self.context.output_path}")
+                self.console.print(f"[cyan]Run:[/cyan] valeric deploy {self.context.output_path}")
                 self.console.print("[dim]Deployment will push to Vercel (frontend) + Render (backend)[/dim]")
 
             self.console.print()

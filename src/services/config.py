@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 _INSECURE_SECRET_KEYS = {
     "change-me-in-production",
-    "nexusai-dev-secret-key-change-in-production",
+    "valeric-dev-secret-key-change-in-production",
     "secret",
     "password",
 }

@@ -26,14 +26,21 @@ logger = logging.getLogger(__name__)
 
 # Demo account defaults
 DEFAULT_DEMO_EMAIL = "demo@valeric.dev"
-DEFAULT_DEMO_PASSWORD = "Valeric-Demo-2026!"
 DEMO_USER_ID = "demo-00000000-0000-0000-0000-000000000001"
 
 
 def get_demo_credentials() -> tuple[str, str]:
-    """Get demo credentials from environment or defaults."""
+    """Get demo credentials from environment.
+    
+    DEMO_PASSWORD must be set in the environment. No hardcoded fallback.
+    """
     email = os.environ.get("DEMO_EMAIL", DEFAULT_DEMO_EMAIL)
-    password = os.environ.get("DEMO_PASSWORD", DEFAULT_DEMO_PASSWORD)
+    password = os.environ.get("DEMO_PASSWORD", "")
+    if not password:
+        raise RuntimeError(
+            "DEMO_PASSWORD environment variable is required when DEMO_MODE is enabled. "
+            "Set it in your .env file or deployment config."
+        )
     return email, password
 
 

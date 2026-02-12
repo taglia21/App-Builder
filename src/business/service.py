@@ -146,6 +146,7 @@ class BusinessFormationService:
         domain_service: Optional[DomainService] = None,
         banking_service: Optional[BankingService] = None,
         use_mocks: bool = False,
+        db_session=None,
     ):
         """
         Initialize business formation service.
@@ -155,6 +156,7 @@ class BusinessFormationService:
             domain_service: Custom domain service
             banking_service: Custom banking service
             use_mocks: Use mock providers for testing
+            db_session: SQLAlchemy session for persistence
         """
         if use_mocks:
             self.formation = FormationService(provider=MockFormationProvider())
@@ -165,8 +167,51 @@ class BusinessFormationService:
             self.domain = domain_service or DomainService()
             self.banking = banking_service or BankingService()
 
-        # Track formation status (in production, use database)
+        self._db_session = db_session
+        # In-memory cache (hydrated from DB on first access)
         self._status_cache: Dict[str, BusinessFormationStatus] = {}
+
+    def _get_db_session(self):
+        """Get a database session if available."""
+        if self._db_session is None:
+            return None
+        if callable(self._db_session) and not hasattr(self._db_session, 'query'):
+            return self._db_session()
+        return self._db_session
+
+    def _persist_status(self, status: BusinessFormationStatus) -> None:
+        """Persist formation status to DB."""
+        session = self._get_db_session()
+        if session is None:
+            return
+        try:
+            from src.database.models import BusinessFormation
+            existing = session.query(BusinessFormation).filter(
+                BusinessFormation.user_id == status.user_id,
+            ).first()
+            if existing:
+                existing.business_name = status.business_name
+                existing.business_type = status.business_type
+                existing.state = status.state
+                existing.status = status.formation_status.value if status.formation_status else "pending"
+                existing.provider_reference = status.formation_id
+            else:
+                bf = BusinessFormation(
+                    user_id=status.user_id,
+                    business_name=status.business_name or "",
+                    business_type=status.business_type or "llc",
+                    state=status.state or "",
+                    status=status.formation_status.value if status.formation_status else "pending",
+                    provider_reference=status.formation_id,
+                )
+                session.add(bf)
+            session.commit()
+        except Exception as e:
+            logger.error(f"Failed to persist formation status: {e}")
+            try:
+                session.rollback()
+            except Exception:
+                pass
 
     def _get_status(
         self, user_id: str, project_id: Optional[str] = None
@@ -208,6 +253,7 @@ class BusinessFormationService:
             logger.error(f"Formation failed: {e}")
             status.formation_status = FormationStatus.FAILED
 
+        self._persist_status(status)
         return status
 
     async def apply_for_ein(

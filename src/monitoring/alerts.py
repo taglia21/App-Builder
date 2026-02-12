@@ -42,7 +42,7 @@ class Alert:
     severity: AlertSeverity
 
     # Source
-    source: str = "nexusai"
+    source: str = "valeric"
     component: Optional[str] = None
 
     # Context
@@ -221,7 +221,7 @@ class EmailAlerter(Alerter):
         self.smtp_port = int(os.getenv("SMTP_PORT", str(smtp_port)))
         self.smtp_user = smtp_user or os.getenv("SMTP_USER")
         self.smtp_password = smtp_password or os.getenv("SMTP_PASSWORD")
-        self.from_email = from_email or os.getenv("ALERT_FROM_EMAIL", "alerts@nexusai.dev")
+        self.from_email = from_email or os.getenv("ALERT_FROM_EMAIL", "alerts@valeric.app")
 
         to_env = os.getenv("ALERT_TO_EMAILS", "")
         self.to_emails = to_emails or [e.strip() for e in to_env.split(",") if e.strip()]

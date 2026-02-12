@@ -103,7 +103,7 @@ class ConfigValidator:
     INSECURE_SECRET_KEYS: Set[str] = {
         "change-me-in-production",
         "change-me-to-a-secure-random-string",
-        "nexusai-dev-secret-key-change-in-production",
+        "valeric-dev-secret-key-change-in-production",
         "secret",
         "password",
     }

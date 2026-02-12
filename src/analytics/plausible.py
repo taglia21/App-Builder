@@ -49,7 +49,7 @@ class PlausibleClient:
         Initialize Plausible client.
 
         Args:
-            domain: Plausible site domain (e.g., 'nexusai.dev')
+            domain: Plausible site domain (e.g., 'valeric.app')
             api_key: Optional API key for stats access
         """
         settings = get_settings()

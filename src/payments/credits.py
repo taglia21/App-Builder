@@ -138,42 +138,91 @@ class CreditManager:
     """
     Manages user credits for metered features.
 
-    This is a reference implementation - in production, you'd persist
-    balances and transactions to your database.
+    Persists transactions and balances to the database via the CreditTransaction
+    model. Falls back to in-memory storage if no database session is available.
     """
 
-    def __init__(self):
-        """Initialize credit manager."""
-        # In-memory storage for demo purposes
-        # In production, use database
+    def __init__(self, db_session=None):
+        """Initialize credit manager.
+        
+        Args:
+            db_session: SQLAlchemy session factory or session. If None, operates in-memory.
+        """
+        self._db_session = db_session
+        # In-memory fallback (used only when no DB session provided)
         self._balances: Dict[str, Dict[CreditType, CreditBalance]] = {}
         self._transactions: List[CreditTransaction] = []
         self._transaction_counter = 0
+
+    def _get_db_session(self):
+        """Get a database session if available."""
+        if self._db_session is None:
+            return None
+        # Support both session factories and direct sessions
+        if callable(self._db_session) and not hasattr(self._db_session, 'query'):
+            return self._db_session()
+        return self._db_session
+
+    def _persist_transaction(self, txn: CreditTransaction, user_id: str) -> None:
+        """Persist a credit transaction to the database."""
+        session = self._get_db_session()
+        if session is None:
+            return
+        try:
+            from src.database.models import CreditTransaction as CreditTxModel, User
+            db_txn = CreditTxModel(
+                id=txn.id,
+                user_id=user_id,
+                amount=txn.amount,
+                balance_after=txn.balance_after,
+                transaction_type=txn.transaction_type.value,
+                description=txn.description,
+                reference_id=txn.subscription_id or txn.project_id or txn.invoice_id,
+            )
+            session.add(db_txn)
+            # Also update user.credits_remaining
+            user = session.query(User).filter(User.id == user_id).first()
+            if user:
+                user.credits_remaining = txn.balance_after
+            session.commit()
+        except Exception as e:
+            logger.error(f"Failed to persist credit transaction: {e}")
+            try:
+                session.rollback()
+            except Exception:
+                pass
+
+    def _load_balance_from_db(self, user_id: str) -> Optional[int]:
+        """Load user's credit balance from the database."""
+        session = self._get_db_session()
+        if session is None:
+            return None
+        try:
+            from src.database.models import User
+            user = session.query(User).filter(User.id == user_id).first()
+            if user and hasattr(user, 'credits_remaining'):
+                return user.credits_remaining
+        except Exception as e:
+            logger.error(f"Failed to load balance from DB: {e}")
+        return None
 
     def get_balance(
         self,
         user_id: str,
         credit_type: CreditType,
     ) -> CreditBalance:
-        """
-        Get user's credit balance for a specific type.
-
-        Args:
-            user_id: User ID
-            credit_type: Type of credit
-
-        Returns:
-            CreditBalance object
-        """
+        """Get user's credit balance for a specific type."""
         if user_id not in self._balances:
             self._balances[user_id] = {}
 
         if credit_type not in self._balances[user_id]:
-            # Create default balance
+            # Try loading from DB first
+            db_balance = self._load_balance_from_db(user_id)
+            initial_balance = db_balance if db_balance is not None else 0
             self._balances[user_id][credit_type] = CreditBalance(
                 user_id=user_id,
                 credit_type=credit_type,
-                balance=0,
+                balance=initial_balance,
                 reserved=0,
                 expires_at=None,
                 last_updated=datetime.now(timezone.utc),
@@ -253,6 +302,7 @@ class CreditManager:
         )
 
         self._transactions.append(transaction)
+        self._persist_transaction(transaction, user_id)
 
         logger.info(
             f"Added {amount} {credit_type.value} credits to user {user_id}, "
@@ -325,6 +375,7 @@ class CreditManager:
         )
 
         self._transactions.append(transaction)
+        self._persist_transaction(transaction, user_id)
 
         logger.info(
             f"Used {amount} {credit_type.value} credits from user {user_id}, "
@@ -441,6 +492,7 @@ class CreditManager:
         )
 
         self._transactions.append(transaction)
+        self._persist_transaction(transaction, user_id)
 
         logger.info(
             f"Committed {amount} {credit_type.value} credits from user {user_id}"
@@ -497,6 +549,7 @@ class CreditManager:
         )
 
         self._transactions.append(transaction)
+        self._persist_transaction(transaction, user_id)
 
         logger.info(
             f"Refunded {amount} {credit_type.value} credits to user {user_id}"

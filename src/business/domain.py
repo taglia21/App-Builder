@@ -145,8 +145,23 @@ class NamecheapProvider(DomainProvider):
                 )
 
                 if response.status_code == 200:
-                    # Parse XML response (simplified)
-                    is_available = "Available=\"true\"" in response.text
+                    # Parse XML response properly
+                    try:
+                        import xml.etree.ElementTree as ET
+                        root = ET.fromstring(response.text)
+                        # Namecheap uses a namespace in responses
+                        ns = {'nc': 'http://api.namecheap.com/xml.response'}
+                        domain_check = root.find('.//nc:DomainCheckResult', ns)
+                        if domain_check is None:
+                            # Try without namespace
+                            domain_check = root.find('.//*[@Available]')
+                        is_available = (
+                            domain_check is not None
+                            and domain_check.get('Available', '').lower() == 'true'
+                        )
+                    except ET.ParseError:
+                        # Fallback to string matching if XML parsing fails
+                        is_available = 'Available="true"' in response.text
 
                     return DomainResult(
                         request_id=str(uuid.uuid4()),

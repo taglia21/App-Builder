@@ -39,8 +39,49 @@ from src.database.db import get_db
 logger = logging.getLogger(__name__)
 
 
-# OAuth state storage (in production, use Redis or database)
-_oauth_states: Dict[str, Dict[str, Any]] = {}
+# OAuth state storage — Redis-backed with in-memory fallback
+class OAuthStateStore:
+    """Stores OAuth CSRF state tokens in Redis (preferred) or in-memory."""
+    
+    TTL_SECONDS = 600  # 10 minutes
+
+    def __init__(self):
+        self._memory: Dict[str, Dict[str, Any]] = {}
+        self._redis = None
+        try:
+            import os
+            redis_url = os.getenv("REDIS_URL")
+            if redis_url:
+                import redis
+                self._redis = redis.from_url(redis_url, decode_responses=True)
+                self._redis.ping()
+        except Exception:
+            self._redis = None
+
+    def set(self, state: str, data: Dict[str, Any]) -> None:
+        if self._redis:
+            import json
+            self._redis.setex(f"oauth_state:{state}", self.TTL_SECONDS, json.dumps(data))
+        else:
+            data["_expires"] = time.time() + self.TTL_SECONDS
+            self._memory[state] = data
+
+    def pop(self, state: str) -> Optional[Dict[str, Any]]:
+        if self._redis:
+            import json
+            key = f"oauth_state:{state}"
+            raw = self._redis.get(key)
+            if raw:
+                self._redis.delete(key)
+                return json.loads(raw)
+            return None
+        data = self._memory.pop(state, None)
+        if data and data.get("_expires", 0) < time.time():
+            return None  # Expired
+        return data
+
+import time
+_oauth_states = OAuthStateStore()
 
 
 class AuthRoutes:
@@ -85,8 +126,6 @@ class AuthRoutes:
                         "email": user.email,
                         "email_verified": user.email_verified,
                     },
-                    # In production, send this via email instead
-                    "verification_token": verification_token,
                 }
 
             except UserExistsError:
@@ -282,10 +321,6 @@ class AuthRoutes:
                 "message": "If an account exists with this email, a password reset link has been sent.",
             }
 
-            # In development, include the token
-            if reset_token:
-                response["reset_token"] = reset_token  # Remove in production!
-
             return response
 
     @staticmethod
@@ -445,9 +480,9 @@ class AuthRoutes:
             state = generate_oauth_state()
 
             # Store state for verification
-            _oauth_states[state] = {
+            _oauth_states.set(state, {
                 "created_at": datetime.now(timezone.utc).isoformat(),
-            }
+            })
 
             auth_url, _ = oauth.get_authorization_url(state=state)
 
@@ -482,15 +517,13 @@ class AuthRoutes:
             dict: User data and tokens
         """
         # Verify state
-        if state not in _oauth_states:
+        state_data = _oauth_states.pop(state) if state else None
+        if not state_data:
             return {
                 "status": "error",
                 "error": "invalid_state",
                 "message": "Invalid OAuth state parameter",
             }
-
-        # Remove used state
-        del _oauth_states[state]
 
         try:
             oauth = GoogleOAuth()

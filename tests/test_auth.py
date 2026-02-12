@@ -446,7 +446,7 @@ class TestTokenUtilities:
         """Test API token generation."""
         full_token, token_hash = generate_api_token()
         
-        assert full_token.startswith("lf_")
+        assert full_token.startswith("val_")
         assert len(token_hash) == 64  # SHA-256 hex
     
     def test_verify_api_token(self):
@@ -458,7 +458,7 @@ class TestTokenUtilities:
     
     def test_mask_token(self):
         """Test token masking."""
-        token = "lf_abc12345_secretsecret"
+        token = "val_abc12345_secretsecret"
         masked = mask_token(token, 4)
         
         assert token[:4] in masked

@@ -1,7 +1,7 @@
-nixpkgs = ['python311', 'postgresql']
+nixpkgs = ['python312', 'postgresql']
 
 [phases.install]
-cmds = ['pip install --upgrade pip', 'pip install -r requirements-railway.txt']
+cmds = ['pip install --upgrade pip', 'pip install -r requirements-prod.txt']
 
 [start]
-cmd = "python -m uvicorn src.dashboard.app:create_app --factory --host 0.0.0.0 --port $PORT"
+cmd = "alembic upgrade head && uvicorn src.dashboard.app:app --host 0.0.0.0 --port $PORT"

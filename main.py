@@ -17,22 +17,3 @@ from src.cli import cli
 
 if __name__ == "__main__":
     cli()
-@app.route('/about')
-def about():
-    return render_template('about.html')
-
-@app.route('/terms')
-def terms():
-    return render_template('terms.html')
-
-@app.route('/contact', methods=['GET', 'POST'])
-def contact():
-    if request.method == 'POST':
-        name = request.form.get('name')
-        email = request.form.get('email')
-        subject = request.form.get('subject')
-        message = request.form.get('message')
-        flash('Thank you for your message! We\'ll get back to you soon.', 'success')
-        return redirect(url_for('contact'))
-    return render_template('contact.html')
-

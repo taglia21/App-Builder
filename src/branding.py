@@ -155,13 +155,13 @@ def get_cli_help_text() -> str:
 {TAGLINE_FULL}
 
 QUICK START:
-  nexusai generate --demo           # Try with sample data
-  nexusai generate --llm-provider perplexity  # Use real AI
+  valeric generate --demo           # Try with sample data
+  valeric generate --llm-provider perplexity  # Use real AI
 
 EXAMPLES:
-  nexusai generate -o ./my-startup  # Custom output directory
-  nexusai generate --deploy         # Generate and deploy
-  nexusai providers                 # List available AI providers
+  valeric generate -o ./my-startup  # Custom output directory
+  valeric generate --deploy         # Generate and deploy
+  valeric providers                 # List available AI providers
 
 API KEYS:
   PERPLEXITY_API_KEY  - Primary (real-time web search)

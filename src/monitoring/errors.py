@@ -61,7 +61,7 @@ class ErrorContext:
 
     # Environment
     environment: str = "development"
-    service: str = "nexusai"
+    service: str = "valeric"
     version: Optional[str] = None
     hostname: Optional[str] = None
 

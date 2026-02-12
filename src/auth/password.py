@@ -44,17 +44,19 @@ def hash_password(password: str) -> str:
     return hashed.decode('utf-8')
 
 
-def verify_password(password: str, hashed: str) -> bool:
+def verify_password(password: str, hashed: str | None) -> bool:
     """
     Verify a password against its hash.
 
     Args:
         password: Plain text password to verify
-        hashed: Bcrypt hash to verify against
+        hashed: Bcrypt hash to verify against (None for OAuth-only accounts)
 
     Returns:
         bool: True if password matches, False otherwise
     """
+    if not hashed:
+        return False  # OAuth users have no password hash
     try:
         password_bytes = password.encode('utf-8')
         hashed_bytes = hashed.encode('utf-8')

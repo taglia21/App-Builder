@@ -32,9 +32,9 @@ def cli(ctx):
 
     \b
     QUICK START:
-      nexusai build                  # 🚀 Interactive AI assistant (recommended!)
-      nexusai generate --demo        # Try with sample data
-      nexusai generate               # Use real AI providers
+      valeric build                  # 🚀 Interactive AI assistant (recommended!)
+      valeric generate --demo        # Try with sample data
+      valeric generate               # Use real AI providers
 
     \b
     API KEYS:
@@ -45,8 +45,8 @@ def cli(ctx):
         # Show welcome banner if no command given
         console = Console()
         print_welcome(console)
-        console.print("[bold cyan]🚀 Quick Start:[/bold cyan] Run [bold]nexusai build[/bold] to describe your idea and get code!\n")
-        console.print("[dim]Run [bold]nexusai --help[/bold] for all commands[/dim]\n")
+        console.print("[bold cyan]🚀 Quick Start:[/bold cyan] Run [bold]valeric build[/bold] to describe your idea and get code!\n")
+        console.print("[dim]Run [bold]valeric --help[/bold] for all commands[/dim]\n")
 
 
 @cli.command()
@@ -184,7 +184,7 @@ def generate(config, output, demo, skip_refinement, skip_code_gen, llm_provider,
 @click.option(
     "--output",
     "-o",
-    default="./nexusai-demo",
+    default="./valeric-demo",
     help="Output directory for demo app",
 )
 def demo(output):
@@ -196,7 +196,7 @@ def demo(output):
     \b
     Example:
       python main.py demo
-      cd nexusai-demo/backend
+      cd valeric-demo/backend
       pip install -r requirements.txt
       uvicorn main:app --reload
     """
@@ -455,7 +455,7 @@ def providers():
         console.print("   [dim]Get key: https://console.groq.com/keys[/dim]")
         console.print()
 
-    console.print("[dim]Use: nexusai generate --llm-provider <name>[/dim]")
+    console.print("[dim]Use: valeric generate --llm-provider <name>[/dim]")
 
 
 @cli.command(name="list-providers", hidden=True)
@@ -721,7 +721,7 @@ def build(output, llm_provider, verbose):
 
     \b
     Example:
-      nexusai build
+      valeric build
       > Describe your idea: An AI tool that helps developers write better tests
       ... Valeric researches, asks questions, and builds your app!
 

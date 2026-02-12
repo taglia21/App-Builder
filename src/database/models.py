@@ -149,9 +149,9 @@ class User(Base, TimestampMixin, SoftDeleteMixin):
         nullable=False,
         index=True
     )
-    password_hash: Mapped[str] = mapped_column(
+    password_hash: Mapped[Optional[str]] = mapped_column(
         String(255),
-        nullable=False
+        nullable=True  # OAuth users have no password
     )
     subscription_tier: Mapped[SubscriptionTier] = mapped_column(
         Enum(SubscriptionTier),
@@ -758,8 +758,14 @@ class Subscription(Base, TimestampMixin):
     """User subscription model."""
     __tablename__ = "subscriptions"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=lambda: str(uuid4())
+    )
+    user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True
+    )
 
     # Stripe fields
     stripe_customer_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
@@ -799,8 +805,14 @@ class APIKey(Base, TimestampMixin, SoftDeleteMixin):
     """API Key model for programmatic access."""
     __tablename__ = "api_keys"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=lambda: str(uuid4())
+    )
+    user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
 
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     key_hash: Mapped[str] = mapped_column(String(255), nullable=False)  # Hashed API key
@@ -825,9 +837,17 @@ class BusinessFormation(Base, TimestampMixin):
     """Business formation/registration model."""
     __tablename__ = "business_formations"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
-    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False)
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=lambda: str(uuid4())
+    )
+    user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    project_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
 
     # Business details
     business_name: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -848,3 +868,55 @@ class BusinessFormation(Base, TimestampMixin):
     # Relationships
     user: Mapped["User"] = relationship(back_populates="business_formations")
     project: Mapped["Project"] = relationship(back_populates="business_formation")
+
+
+# ==================== Credit & Webhook Models ====================
+
+
+class CreditTransaction(Base):
+    """Records every credit change for audit trail and billing."""
+    __tablename__ = "credit_transactions"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid4())
+    )
+    user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    amount: Mapped[int] = mapped_column(Integer, nullable=False)  # positive=credit, negative=debit
+    balance_after: Mapped[int] = mapped_column(Integer, nullable=False)
+    transaction_type: Mapped[str] = mapped_column(String(50), nullable=False)  # credit, debit, refund, grant
+    description: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    reference_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    # Indexes
+    __table_args__ = (
+        Index("idx_credit_tx_user_created", "user_id", "created_at"),
+        Index("idx_credit_tx_type", "transaction_type"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<CreditTransaction(id={self.id}, user={self.user_id}, amount={self.amount})>"
+
+
+class WebhookEvent(Base):
+    """Stores processed Stripe webhook events for idempotency and auditing."""
+    __tablename__ = "webhook_events"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid4())
+    )
+    stripe_event_id: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    event_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    payload: Mapped[Optional[dict]] = mapped_column(JSONType, nullable=True)
+    processed: Mapped[bool] = mapped_column(Boolean, default=False)
+    error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    def __repr__(self) -> str:
+        return f"<WebhookEvent(id={self.id}, type={self.event_type}, processed={self.processed})>"

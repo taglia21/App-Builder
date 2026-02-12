@@ -140,5 +140,31 @@
     </div>
     
     {% block extra_js %}{% endblock %}
+
+    <!-- CSRF Protection: auto-inject token into all forms and HTMX requests -->
+    <script>
+    (function() {
+        function getCookie(name) {
+            var match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+            return match ? match[2] : '';
+        }
+        // Inject hidden csrf_token field into all POST forms
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('form[method="POST"], form[method="post"]').forEach(function(form) {
+                if (!form.querySelector('input[name="csrf_token"]')) {
+                    var input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'csrf_token';
+                    input.value = getCookie('csrftoken');
+                    form.appendChild(input);
+                }
+            });
+        });
+        // Set X-CSRFToken header for all HTMX requests
+        document.body.addEventListener('htmx:configRequest', function(event) {
+            event.detail.headers['x-csrftoken'] = getCookie('csrftoken');
+        });
+    })();
+    </script>
 </body>
 </html>

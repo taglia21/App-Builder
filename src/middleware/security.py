@@ -1,11 +1,12 @@
 """Security middleware for Valeric.
 
 Provides:
-- Rate limiting per IP
+- Rate limiting per IP (Redis-backed when available, in-memory fallback)
 - CORS configuration
 - Security headers
 - Request size limits
 """
+import logging
 import time
 from collections import defaultdict
 from typing import Dict, List, Optional
@@ -14,40 +15,62 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
+logger = logging.getLogger(__name__)
+
 
 class RateLimiter:
-    """Rate limiter to prevent abuse."""
+    """Rate limiter with Redis backend and in-memory fallback."""
     
     def __init__(self, max_requests: int = 100, window_seconds: int = 60):
-        """Initialize rate limiter.
-        
-        Args:
-            max_requests: Maximum requests allowed in window
-            window_seconds: Time window in seconds
-        """
         self.max_requests = max_requests
         self.window_seconds = window_seconds
+        # In-memory fallback
         self.requests: Dict[str, List[float]] = defaultdict(list)
+        self._last_cleanup = time.time()
+        # Try Redis
+        self._redis = None
+        try:
+            import os
+            redis_url = os.getenv("REDIS_URL")
+            if redis_url:
+                import redis
+                self._redis = redis.from_url(redis_url, decode_responses=True)
+                self._redis.ping()
+                logger.info("Rate limiter using Redis backend")
+        except Exception:
+            self._redis = None
+            logger.info("Rate limiter using in-memory backend")
     
     def is_allowed(self, ip: str) -> bool:
-        """Check if request from IP is allowed.
-        
-        Args:
-            ip: Client IP address
-            
-        Returns:
-            True if request is allowed, False if rate limited
-        """
+        """Check if request from IP is allowed."""
+        if self._redis:
+            return self._is_allowed_redis(ip)
+        return self._is_allowed_memory(ip)
+    
+    def _is_allowed_redis(self, ip: str) -> bool:
+        """Redis-backed rate limiting using sliding window."""
+        key = f"ratelimit:{ip}"
+        try:
+            pipe = self._redis.pipeline()
+            now = time.time()
+            pipe.zremrangebyscore(key, 0, now - self.window_seconds)
+            pipe.zadd(key, {str(now): now})
+            pipe.zcard(key)
+            pipe.expire(key, self.window_seconds)
+            results = pipe.execute()
+            count = results[2]
+            return count <= self.max_requests
+        except Exception:
+            # Fall back to memory on Redis error
+            return self._is_allowed_memory(ip)
+
+    def _is_allowed_memory(self, ip: str) -> bool:
+        """In-memory rate limiting."""
         now = time.time()
         cutoff = now - self.window_seconds
         
-        # Remove old requests
-        self.requests[ip] = [
-            req_time for req_time in self.requests[ip]
-            if req_time > cutoff
-        ]
+        self.requests[ip] = [t for t in self.requests[ip] if t > cutoff]
         
-        # Check if under limit
         if len(self.requests[ip]) < self.max_requests:
             self.requests[ip].append(now)
             return True
@@ -58,13 +81,10 @@ class RateLimiter:
         """Clean up old entries to prevent memory leak."""
         now = time.time()
         cutoff = now - self.window_seconds
-        
-        # Remove IPs with no recent requests
         to_remove = [
             ip for ip, times in self.requests.items()
             if not times or max(times) < cutoff
         ]
-        
         for ip in to_remove:
             del self.requests[ip]
 
@@ -191,13 +211,17 @@ def add_security_middleware(
     """
     # CORS middleware
     if cors_origins is None:
-        cors_origins = ["*"]  # Allow all origins (configure for production)
+        cors_origins = [
+            "http://localhost:3000",
+            "http://localhost:8000",
+            "http://localhost:8080",
+        ]
     
     app.add_middleware(
         CORSMiddleware,
         allow_origins=cors_origins,
         allow_credentials=True,
-        allow_methods=["*"],
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allow_headers=["*"],
     )
     
