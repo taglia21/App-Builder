@@ -265,7 +265,7 @@ class TestStripeErrorHandling:
         client = StripeClient(api_key="sk_test_123")
         
         with patch('stripe.PaymentIntent.create') as mock_create:
-            mock_create.side_effect = stripe.CardError(
+            mock_create.side_effect = stripe.error.CardError(
                 message="Card declined",
                 param="card",
                 code="card_declined",
@@ -281,7 +281,7 @@ class TestStripeErrorHandling:
         client = StripeClient(api_key="sk_test_123")
         
         with patch('stripe.Customer.retrieve') as mock_retrieve:
-            mock_retrieve.side_effect = stripe.InvalidRequestError(
+            mock_retrieve.side_effect = stripe.error.InvalidRequestError(
                 message="No such customer",
                 param="customer",
             )
