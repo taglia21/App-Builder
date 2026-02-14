@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Build History - Valeric{% endblock %}
+{% block content %}
+<div style="max-width: 1100px; margin: 0 auto;">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem;">
+        <div>
+            <h1 style="font-size: 1.75rem; font-weight: 700; color: white; margin-bottom: 4px;">Build History</h1>
+            <p style="color: #9ca3af;">All pipeline builds, newest first.</p>
+        </div>
+        <a href="/build" style="padding: 10px 20px; background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%); border-radius: 10px; color: white; font-weight: 600; text-decoration: none; font-size: 0.9rem;">
+            New Build
+        </a>
+    </div>
+
+    <div id="loading" style="color: #9ca3af; text-align: center; padding: 3rem;">Loading builds…</div>
+
+    <table id="builds-table" style="display: none; width: 100%; border-collapse: separate; border-spacing: 0;">
+        <thead>
+            <tr style="text-align: left; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280;">
+                <th style="padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.06);">Date</th>
+                <th style="padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.06);">Idea</th>
+                <th style="padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.06);">Status</th>
+                <th style="padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.06);">Provider</th>
+                <th style="padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.06);">Duration</th>
+                <th style="padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.06);">Actions</th>
+            </tr>
+        </thead>
+        <tbody id="builds-body"></tbody>
+    </table>
+
+    <div id="empty-state" style="display: none; text-align: center; padding: 4rem 2rem; color: #6b7280;">
+        <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">No builds yet</p>
+        <p>Start your first build to see it here.</p>
+    </div>
+</div>
+
+<script>
+(function() {
+    function statusBadge(status) {
+        const colors = {
+            completed: { bg: 'rgba(34,197,94,0.15)', text: '#22c55e' },
+            running:   { bg: 'rgba(234,179,8,0.15)', text: '#eab308' },
+            failed:    { bg: 'rgba(239,68,68,0.15)', text: '#ef4444' },
+            pending:   { bg: 'rgba(107,114,128,0.15)', text: '#9ca3af' },
+        };
+        const c = colors[status] || colors.pending;
+        return '<span style="display:inline-block;padding:3px 10px;border-radius:999px;font-size:0.75rem;font-weight:600;background:' + c.bg + ';color:' + c.text + ';">' + status + '</span>';
+    }
+
+    function truncate(s, len) {
+        if (!s) return '';
+        return s.length > len ? s.substring(0, len) + '…' : s;
+    }
+
+    function duration(started, completed) {
+        if (!started || !completed) return '—';
+        const ms = new Date(completed) - new Date(started);
+        const s = Math.floor(ms / 1000);
+        if (s < 60) return s + 's';
+        return Math.floor(s / 60) + 'm ' + (s % 60) + 's';
+    }
+
+    fetch('/api/builds')
+        .then(function(res) { return res.json(); })
+        .then(function(builds) {
+            document.getElementById('loading').style.display = 'none';
+            if (!builds.length) {
+                document.getElementById('empty-state').style.display = 'block';
+                return;
+            }
+            document.getElementById('builds-table').style.display = 'table';
+            var body = document.getElementById('builds-body');
+            builds.forEach(function(b) {
+                var tr = document.createElement('tr');
+                tr.style.borderBottom = '1px solid rgba(255,255,255,0.04)';
+                var started = b.started_at ? new Date(b.started_at).toLocaleDateString() : '—';
+                var actions = '<a href="/build/' + b.build_id + '" style="color:#a855f7;text-decoration:none;margin-right:12px;">View</a>';
+                if (b.status === 'completed' && b.output_path) {
+                    actions += '<a href="/api/build/' + b.build_id + '/download" style="color:#22c55e;text-decoration:none;">Download</a>';
+                }
+                tr.innerHTML =
+                    '<td style="padding:12px 14px;color:#d1d5db;font-size:0.875rem;">' + started + '</td>' +
+                    '<td style="padding:12px 14px;color:#d1d5db;font-size:0.875rem;max-width:300px;">' + truncate(b.idea, 60) + '</td>' +
+                    '<td style="padding:12px 14px;">' + statusBadge(b.status) + '</td>' +
+                    '<td style="padding:12px 14px;color:#9ca3af;font-size:0.85rem;">' + (b.llm_provider || 'auto') + '</td>' +
+                    '<td style="padding:12px 14px;color:#9ca3af;font-size:0.85rem;">' + duration(b.started_at, b.completed_at) + '</td>' +
+                    '<td style="padding:12px 14px;font-size:0.85rem;">' + actions + '</td>';
+                body.appendChild(tr);
+            });
+        })
+        .catch(function(err) {
+            document.getElementById('loading').textContent = 'Failed to load builds.';
+        });
+})();
+</script>
+{% endblock %}

@@ -6,6 +6,7 @@ import asyncio
 import json
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Callable, Optional
 
 from loguru import logger
 
@@ -84,7 +85,7 @@ class StartupGenerationPipeline:
             self._code_generator = CodeGenerationEngine(self.config, self.llm_client)
         return self._code_generator
 
-    async def run(self, demo_mode: bool = False, skip_refinement: bool = False, skip_code_gen: bool = False, output_dir: str = "./generated_project", theme: str = "Modern") -> PipelineOutput:
+    async def run(self, demo_mode: bool = False, skip_refinement: bool = False, skip_code_gen: bool = False, output_dir: str = "./generated_project", theme: str = "Modern", progress_callback: Optional[Callable[[str, int, str], None]] = None) -> PipelineOutput:
         """Run the complete pipeline.
 
         Args:
@@ -93,6 +94,7 @@ class StartupGenerationPipeline:
             skip_code_gen: Skip code generation step
             output_dir: Output directory for generated code
             theme: UI theme - one of "Modern", "Minimalist", "Cyberpunk", "Corporate"
+            progress_callback: Optional callback(stage_name, percent, message) for progress reporting
         """
         logger.info("=" * 80)
         logger.info("STARTING STARTUP GENERATION PIPELINE")
@@ -110,6 +112,8 @@ class StartupGenerationPipeline:
             # Step 1: Gather Intelligence
             logger.info("\n[STEP 1/6] Gathering Intelligence")
             self.metadata.current_stage = PipelineStage.INTELLIGENCE
+            if progress_callback is not None:
+                progress_callback("intelligence", 10, "Gathering market intelligence")
             intelligence_data = await self.intelligence_engine.gather(demo_mode=demo_mode)
             output.intelligence = intelligence_data
             self._save_intermediate(intelligence_data, "intelligence")
@@ -117,6 +121,8 @@ class StartupGenerationPipeline:
             # Step 2: Generate Ideas
             logger.info("\n[STEP 2/6] Generating Startup Ideas")
             self.metadata.current_stage = PipelineStage.IDEA_GENERATION
+            if progress_callback is not None:
+                progress_callback("ideas", 25, "Generating startup ideas")
             ideas = await self.idea_engine.generate(intelligence_data)
             output.ideas = ideas
             self._save_intermediate(ideas, "ideas")
@@ -124,6 +130,8 @@ class StartupGenerationPipeline:
             # Step 3: Score and Rank Ideas
             logger.info("\n[STEP 3/6] Scoring and Ranking Ideas")
             self.metadata.current_stage = PipelineStage.SCORING
+            if progress_callback is not None:
+                progress_callback("scoring", 40, "Scoring and ranking ideas")
             evaluation = await self.scoring_engine.evaluate(ideas, intelligence_data)
             output.evaluation = evaluation
             self._save_intermediate(evaluation, "evaluation")
@@ -145,6 +153,8 @@ class StartupGenerationPipeline:
             # Step 4: Generate Product Prompt
             logger.info("\n[STEP 4/6] Generating Product Prompt")
             self.metadata.current_stage = PipelineStage.PROMPT_ENGINEERING
+            if progress_callback is not None:
+                progress_callback("prompts", 55, "Engineering product prompt")
             product_prompt = self.prompt_engine.generate(selected_idea, intelligence_data)
             self._save_intermediate(product_prompt, "prompt")
 
@@ -155,6 +165,8 @@ class StartupGenerationPipeline:
             if not skip_refinement:
                 logger.info("\n[STEP 5/6] Refining Prompt to Gold Standard")
                 self.metadata.current_stage = PipelineStage.REFINEMENT
+                if progress_callback is not None:
+                    progress_callback("refinement", 70, "Refining prompt to gold standard")
                 gold_standard_prompt = self.refinement_engine.refine(product_prompt)
                 output.gold_standard_prompt = gold_standard_prompt
                 self._save_intermediate(gold_standard_prompt, "gold_standard_prompt")
@@ -168,6 +180,8 @@ class StartupGenerationPipeline:
             if not skip_code_gen:
                 logger.info("\n[STEP 6/6] Generating Codebase")
                 self.metadata.current_stage = PipelineStage.CODE_GENERATION
+                if progress_callback is not None:
+                    progress_callback("code_gen", 85, "Generating codebase")
                 # Use final_prompt which is either refined or original based on skip_refinement flag
                 codebase = self.code_generator.generate(final_prompt, output_dir, theme=self.theme)
 
@@ -180,9 +194,15 @@ class StartupGenerationPipeline:
             else:
                 logger.info("\n[STEP 6/6] Skipping Code Generation (--skip-code-gen flag)")
 
+            # Quality Assurance stage
+            if progress_callback is not None:
+                progress_callback("qa", 95, "Running quality assurance checks")
+
             # Complete
             self.metadata.status = PipelineStatus.COMPLETED
             self.metadata.completed_at = datetime.now(timezone.utc)
+            if progress_callback is not None:
+                progress_callback("complete", 100, "Pipeline completed successfully")
 
             logger.info("\n" + "=" * 80)
             logger.info("PIPELINE COMPLETED SUCCESSFULLY")
@@ -207,13 +227,14 @@ class StartupGenerationPipeline:
             self.metadata.completed_at = datetime.now(timezone.utc)
             raise
 
-    async def run_from_idea(self, idea: StartupIdea, theme: str = "Modern", output_dir: str = "./generated_project") -> PipelineOutput:
+    async def run_from_idea(self, idea: StartupIdea, theme: str = "Modern", output_dir: str = "./generated_project", progress_callback: Optional[Callable[[str, int, str], None]] = None) -> PipelineOutput:
         """Run pipeline starting from an existing idea (skip intelligence and idea generation).
 
         Args:
             idea: StartupIdea to build
             theme: UI theme - one of "Modern", "Minimalist", "Cyberpunk", "Corporate"
             output_dir: Output directory for generated code
+            progress_callback: Optional callback(stage_name, percent, message) for progress reporting
         """
         logger.info("Running pipeline from existing idea")
         logger.info(f"Theme: {theme}")
@@ -282,16 +303,22 @@ class StartupGenerationPipeline:
 
             # Continue with prompt generation
             self.metadata.current_stage = PipelineStage.PROMPT_ENGINEERING
+            if progress_callback is not None:
+                progress_callback("prompts", 55, "Engineering product prompt")
             product_prompt = self.prompt_engine.generate(
                 idea, intelligence_data
             )
 
             self.metadata.current_stage = PipelineStage.REFINEMENT
+            if progress_callback is not None:
+                progress_callback("refinement", 70, "Refining prompt to gold standard")
             gold_standard_prompt = self.refinement_engine.refine(product_prompt)
             output.gold_standard_prompt = gold_standard_prompt
             logger.info(f"Refinement complete: {gold_standard_prompt.certification.status.value}")
 
             self.metadata.current_stage = PipelineStage.CODE_GENERATION
+            if progress_callback is not None:
+                progress_callback("code_gen", 85, "Generating codebase")
             # Use the refined prompt's product_prompt for code generation
             codebase = self.code_generator.generate(gold_standard_prompt.product_prompt, output_dir=self.output_dir, theme=self.theme)
 
@@ -301,8 +328,13 @@ class StartupGenerationPipeline:
 
             output.generated_codebase = codebase
 
+            if progress_callback is not None:
+                progress_callback("qa", 95, "Running quality assurance checks")
+
             self.metadata.status = PipelineStatus.COMPLETED
             self.metadata.completed_at = datetime.now(timezone.utc)
+            if progress_callback is not None:
+                progress_callback("complete", 100, "Pipeline completed successfully")
 
             logger.info("Pipeline completed successfully")
 

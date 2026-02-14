@@ -5,8 +5,10 @@ JSON API endpoints for the Valeric platform.
 """
 
 import logging
+import zipfile
 from datetime import datetime, timezone
 from enum import Enum
+from io import BytesIO
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Body
@@ -146,6 +148,25 @@ class OnboardingStatusResponse(BaseModel):
     completedCount: int
     totalSteps: int
     allComplete: bool
+
+
+# ==================== Build Models ====================
+
+class BuildRequest(BaseModel):
+    """Request to start a pipeline build."""
+    idea: str = Field(..., min_length=5, max_length=5000)
+    target_users: Optional[str] = None
+    features: Optional[str] = None
+    monetization: Optional[str] = None
+    theme: str = Field(default="Modern")
+    llm_provider: str = Field(default="auto")
+
+
+class BuildResponse(BaseModel):
+    """Response after creating a build."""
+    build_id: str
+    status: str
+    stream_url: str
 
 
 # ==================== API Routes ====================
@@ -536,5 +557,217 @@ def create_api_router() -> APIRouter:
     # Onboarding
     router.add_api_route("/onboarding/status", api.get_onboarding_status, methods=["GET"])
 
+    # Build pipeline endpoints (mounted at /api prefix, not /api/v1)
+    # They are registered separately below.
 
+    return router
+
+
+# ==================== Build Pipeline Endpoints ====================
+
+
+def _run_pipeline_thread(
+    build_id: str,
+    idea: str,
+    llm_provider: str,
+    theme: str,
+) -> None:
+    """Run the pipeline in a daemon thread, updating the build manager."""
+    import asyncio
+
+    from src.config import load_config
+    from src.pipeline import StartupGenerationPipeline
+    from src.services.build_manager import build_manager
+
+    def _progress_cb(stage: str, percent: int, message: str) -> None:
+        build_manager.update_build(
+            build_id,
+            current_stage=stage,
+            progress=percent,
+            status="running",
+        )
+        build_manager.push_event(build_id, {
+            "type": "progress",
+            "stage": stage,
+            "progress": percent,
+            "message": message,
+        })
+
+    try:
+        build_manager.update_build(build_id, status="running")
+        build_manager.push_event(build_id, {
+            "type": "started",
+            "message": "Pipeline started",
+        })
+
+        config = load_config("config.yml")
+        pipeline = StartupGenerationPipeline(config, llm_provider=llm_provider)
+
+        output_dir = f"./output/{build_id}"
+        result = asyncio.run(
+            pipeline.run(
+                demo_mode=True,
+                output_dir=output_dir,
+                theme=theme,
+                progress_callback=_progress_cb,
+            )
+        )
+
+        completed_at = datetime.now(timezone.utc).isoformat()
+        output_path = ""
+        if result.generated_codebase:
+            output_path = result.generated_codebase.output_path
+
+        build_manager.update_build(
+            build_id,
+            status="completed",
+            progress=100,
+            current_stage="complete",
+            completed_at=completed_at,
+            output_path=output_path,
+        )
+        build_manager.push_event(build_id, {
+            "type": "complete",
+            "progress": 100,
+            "message": "Build completed successfully",
+            "output_path": output_path,
+        })
+
+    except Exception as exc:
+        logger.exception("Pipeline build %s failed", build_id)
+        completed_at = datetime.now(timezone.utc).isoformat()
+        build_manager.update_build(
+            build_id,
+            status="failed",
+            error_message=str(exc),
+            completed_at=completed_at,
+        )
+        build_manager.push_event(build_id, {
+            "type": "failed",
+            "message": str(exc),
+        })
+
+
+async def api_create_build(data: BuildRequest) -> BuildResponse:
+    """POST /api/build — start a pipeline build."""
+    import threading
+
+    from src.services.build_manager import build_manager
+
+    build_id = build_manager.create_build(
+        idea=data.idea,
+        llm_provider=data.llm_provider,
+        theme=data.theme,
+    )
+
+    t = threading.Thread(
+        target=_run_pipeline_thread,
+        args=(build_id, data.idea, data.llm_provider, data.theme),
+        daemon=True,
+    )
+    t.start()
+
+    return BuildResponse(
+        build_id=build_id,
+        status="pending",
+        stream_url=f"/api/build/{build_id}/stream",
+    )
+
+
+async def api_get_build(build_id: str) -> Dict[str, Any]:
+    """GET /api/build/{build_id} — return build status."""
+    from fastapi import HTTPException
+
+    from src.services.build_manager import build_manager
+
+    build = build_manager.get_build(build_id)
+    if not build:
+        raise HTTPException(status_code=404, detail="Build not found")
+    return build
+
+
+async def api_list_builds() -> List[Dict[str, Any]]:
+    """GET /api/builds — list all builds newest first."""
+    from src.services.build_manager import build_manager
+
+    return build_manager.list_builds(limit=50)
+
+
+async def api_build_stream(build_id: str):
+    """GET /api/build/{build_id}/stream — SSE endpoint."""
+    import asyncio
+    import json as _json
+
+    from fastapi import HTTPException
+    from starlette.responses import StreamingResponse
+
+    from src.services.build_manager import build_manager
+
+    build = build_manager.get_build(build_id)
+    if not build:
+        raise HTTPException(status_code=404, detail="Build not found")
+
+    async def _event_generator():
+        keepalive_counter = 0
+        while True:
+            events = build_manager.get_events(build_id)
+            for ev in events:
+                yield f"data: {_json.dumps(ev)}\n\n"
+                if ev.get("type") in ("complete", "failed"):
+                    return
+
+            keepalive_counter += 1
+            if keepalive_counter >= 30:  # 30 * 0.5s = 15s
+                yield ": keepalive\n\n"
+                keepalive_counter = 0
+
+            await asyncio.sleep(0.5)
+
+    return StreamingResponse(
+        _event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+async def api_build_download(build_id: str):
+    """GET /api/build/{build_id}/download — zip and download output."""
+    from pathlib import Path
+
+    from fastapi import HTTPException
+    from starlette.responses import StreamingResponse
+
+    from src.services.build_manager import build_manager
+
+    build = build_manager.get_build(build_id)
+    if not build:
+        raise HTTPException(status_code=404, detail="Build not found")
+
+    output_path = build.get("output_path")
+    if not output_path or not Path(output_path).exists():
+        raise HTTPException(status_code=404, detail="Build output not available")
+
+    buf = BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        base = Path(output_path)
+        for file in base.rglob("*"):
+            if file.is_file():
+                zf.write(file, file.relative_to(base))
+    buf.seek(0)
+
+    return StreamingResponse(
+        buf,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="build-{build_id}.zip"'},
+    )
+
+
+def create_build_router() -> APIRouter:
+    """Create router for build pipeline API endpoints."""
+    router = APIRouter()
+    router.add_api_route("/build", api_create_build, methods=["POST"])
+    router.add_api_route("/build/{build_id}", api_get_build, methods=["GET"])
+    router.add_api_route("/builds", api_list_builds, methods=["GET"])
+    router.add_api_route("/build/{build_id}/stream", api_build_stream, methods=["GET"])
+    router.add_api_route("/build/{build_id}/download", api_build_download, methods=["GET"])
     return router

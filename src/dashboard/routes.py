@@ -357,6 +357,27 @@ class DashboardRoutes:
             return RedirectResponse(url="/login", status_code=303)
         return self.render(request, "pages/new_project.html", {"active": "projects", "user": user})
 
+    async def build_page(self, request: Request) -> HTMLResponse:
+        """Build form page."""
+        user = get_current_user(request)
+        if not user:
+            return RedirectResponse(url="/login", status_code=303)
+        return self.render(request, "pages/build.html", {"active": "build", "user": user})
+
+    async def build_progress_page(self, request: Request, build_id: str) -> HTMLResponse:
+        """Build progress page."""
+        user = get_current_user(request)
+        if not user:
+            return RedirectResponse(url="/login", status_code=303)
+        return self.render(request, "pages/build_progress.html", {"active": "build", "build_id": build_id, "user": user})
+
+    async def builds_page(self, request: Request) -> HTMLResponse:
+        """Build history page."""
+        user = get_current_user(request)
+        if not user:
+            return RedirectResponse(url="/login", status_code=303)
+        return self.render(request, "pages/builds.html", {"active": "builds", "user": user})
+
     # ==================== HTMX Partial Routes ====================
 
     async def htmx_project_list(self, request: Request) -> HTMLResponse:
@@ -763,6 +784,11 @@ def create_dashboard_router(templates: Jinja2Templates) -> APIRouter:
     router.add_api_route("/privacy", routes.privacy_page, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/business-formation", routes.business_formation_page, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/new-project", routes.new_project_page, methods=["GET"], response_class=HTMLResponse)
+
+    # Build pipeline page routes
+    router.add_api_route("/build", routes.build_page, methods=["GET"], response_class=HTMLResponse)
+    router.add_api_route("/build/{build_id}", routes.build_progress_page, methods=["GET"], response_class=HTMLResponse)
+    router.add_api_route("/builds", routes.builds_page, methods=["GET"], response_class=HTMLResponse)
 
 
     # Admin routes

@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}New Build - Valeric{% endblock %}
+{% block content %}
+<div style="max-width: 720px; margin: 0 auto;">
+    <h1 style="font-size: 1.75rem; font-weight: 700; color: white; margin-bottom: 4px;">Start a Build</h1>
+    <p style="color: #9ca3af; margin-bottom: 2rem;">Describe your idea and Valeric will generate a production-ready application.</p>
+
+    <form id="build-form" style="display: flex; flex-direction: column; gap: 1.25rem;">
+        <!-- Idea -->
+        <div>
+            <label for="idea" style="display: block; font-size: 0.875rem; font-weight: 600; color: #d1d5db; margin-bottom: 6px;">Your Idea *</label>
+            <textarea id="idea" name="idea" required rows="4" placeholder="Describe your startup idea in detail…"
+                style="width: 100%; padding: 12px 14px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: white; font-size: 0.9rem; resize: vertical;"></textarea>
+        </div>
+
+        <!-- Target Users -->
+        <div>
+            <label for="target_users" style="display: block; font-size: 0.875rem; font-weight: 600; color: #d1d5db; margin-bottom: 6px;">Target Users</label>
+            <input id="target_users" name="target_users" type="text" placeholder="e.g. Small business owners, developers"
+                style="width: 100%; padding: 12px 14px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: white; font-size: 0.9rem;">
+        </div>
+
+        <!-- Features -->
+        <div>
+            <label for="features" style="display: block; font-size: 0.875rem; font-weight: 600; color: #d1d5db; margin-bottom: 6px;">Key Features</label>
+            <textarea id="features" name="features" rows="3" placeholder="List the main features you want (one per line)…"
+                style="width: 100%; padding: 12px 14px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: white; font-size: 0.9rem; resize: vertical;"></textarea>
+        </div>
+
+        <!-- Monetization -->
+        <div>
+            <label for="monetization" style="display: block; font-size: 0.875rem; font-weight: 600; color: #d1d5db; margin-bottom: 6px;">Monetization Model</label>
+            <input id="monetization" name="monetization" type="text" placeholder="e.g. SaaS subscription, usage-based"
+                style="width: 100%; padding: 12px 14px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: white; font-size: 0.9rem;">
+        </div>
+
+        <!-- Row: Theme + Provider -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div>
+                <label for="theme" style="display: block; font-size: 0.875rem; font-weight: 600; color: #d1d5db; margin-bottom: 6px;">Theme</label>
+                <select id="theme" name="theme"
+                    style="width: 100%; padding: 12px 14px; background: #1a1a24; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: white; font-size: 0.9rem;">
+                    <option value="Modern">Modern</option>
+                    <option value="Minimalist">Minimalist</option>
+                    <option value="Cyberpunk">Cyberpunk</option>
+                    <option value="Corporate">Corporate</option>
+                </select>
+            </div>
+            <div>
+                <label for="llm_provider" style="display: block; font-size: 0.875rem; font-weight: 600; color: #d1d5db; margin-bottom: 6px;">LLM Provider</label>
+                <select id="llm_provider" name="llm_provider"
+                    style="width: 100%; padding: 12px 14px; background: #1a1a24; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: white; font-size: 0.9rem;">
+                    <option value="auto">Auto (recommended)</option>
+                    <option value="perplexity">Perplexity</option>
+                    <option value="openai">OpenAI</option>
+                    <option value="anthropic">Anthropic</option>
+                    <option value="google">Google</option>
+                    <option value="groq">Groq</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Submit -->
+        <button type="submit" id="submit-btn"
+            style="width: 100%; padding: 14px; background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%); border: none; border-radius: 10px; color: white; font-size: 1rem; font-weight: 600; cursor: pointer; transition: opacity 0.2s;">
+            Start Build
+        </button>
+        <p id="form-error" style="color: #ef4444; font-size: 0.85rem; display: none;"></p>
+    </form>
+</div>
+
+<script>
+document.getElementById('build-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const btn = document.getElementById('submit-btn');
+    const errEl = document.getElementById('form-error');
+    errEl.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = 'Starting…';
+
+    const payload = {
+        idea: document.getElementById('idea').value,
+        target_users: document.getElementById('target_users').value || null,
+        features: document.getElementById('features').value || null,
+        monetization: document.getElementById('monetization').value || null,
+        theme: document.getElementById('theme').value,
+        llm_provider: document.getElementById('llm_provider').value,
+    };
+
+    try {
+        const res = await fetch('/api/build', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || 'Build creation failed');
+        }
+        const data = await res.json();
+        window.location.href = '/build/' + data.build_id;
+    } catch (err) {
+        errEl.textContent = err.message;
+        errEl.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Start Build';
+    }
+});
+</script>
+{% endblock %}

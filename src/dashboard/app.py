@@ -18,7 +18,7 @@ from src.middleware.csrf import CSRFProtectMiddleware, COOKIE_NAME as CSRF_COOKI
 from ..auth.web_routes import router as auth_router
 from ..billing.routes import create_billing_router
 from ..demo.routes import router as demo_router
-from .api import create_api_router
+from .api import create_api_router, create_build_router
 from .routes import create_dashboard_router
 
 # Import API versioning
@@ -320,6 +320,9 @@ and authentication requirements.
 
     # API routes with /v1/ prefix for versioning
     app.include_router(create_api_router(), prefix="/api/v1")
+
+    # Build pipeline API (at /api, no version prefix for SSE compatibility)
+    app.include_router(create_build_router(), prefix="/api")
     
     # Include analytics router
     if analytics_router:

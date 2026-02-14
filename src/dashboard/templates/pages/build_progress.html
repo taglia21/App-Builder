@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}Build Progress - Valeric{% endblock %}
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto;">
+    <h1 style="font-size: 1.75rem; font-weight: 700; color: white; margin-bottom: 4px;">Build Progress</h1>
+    <p style="color: #9ca3af; margin-bottom: 2rem;">Build ID: <span style="font-family: monospace;">{{ build_id }}</span></p>
+
+    <!-- Status Banner -->
+    <div id="status-banner" style="display: none; padding: 16px 20px; border-radius: 12px; margin-bottom: 1.5rem; font-weight: 600;"></div>
+
+    <!-- Progress Bar -->
+    <div style="background: rgba(255,255,255,0.06); border-radius: 999px; height: 24px; overflow: hidden; margin-bottom: 2rem; position: relative;">
+        <div id="progress-bar"
+            style="height: 100%; background: linear-gradient(90deg, #a855f7, #6366f1); border-radius: 999px; transition: width 0.5s ease; width: 0%;"></div>
+        <span id="progress-text" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 0.75rem; font-weight: 700; color: white;">0%</span>
+    </div>
+
+    <!-- Elapsed -->
+    <p style="color: #9ca3af; font-size: 0.85rem; margin-bottom: 1.5rem;">Elapsed: <span id="elapsed">0s</span></p>
+
+    <!-- Stage Checklist -->
+    <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 20px 24px; margin-bottom: 1.5rem;">
+        <h3 style="color: #d1d5db; font-size: 0.95rem; font-weight: 600; margin-bottom: 12px;">Stages</h3>
+        <ul id="stage-list" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;">
+            <li data-stage="intelligence" class="stage-item" style="display: flex; align-items: center; gap: 10px; color: #6b7280; font-size: 0.9rem;">
+                <span class="stage-icon" style="width: 22px; text-align: center;">○</span> Intelligence Gathering
+            </li>
+            <li data-stage="ideas" class="stage-item" style="display: flex; align-items: center; gap: 10px; color: #6b7280; font-size: 0.9rem;">
+                <span class="stage-icon" style="width: 22px; text-align: center;">○</span> Idea Generation
+            </li>
+            <li data-stage="scoring" class="stage-item" style="display: flex; align-items: center; gap: 10px; color: #6b7280; font-size: 0.9rem;">
+                <span class="stage-icon" style="width: 22px; text-align: center;">○</span> Scoring &amp; Ranking
+            </li>
+            <li data-stage="prompts" class="stage-item" style="display: flex; align-items: center; gap: 10px; color: #6b7280; font-size: 0.9rem;">
+                <span class="stage-icon" style="width: 22px; text-align: center;">○</span> Prompt Engineering
+            </li>
+            <li data-stage="refinement" class="stage-item" style="display: flex; align-items: center; gap: 10px; color: #6b7280; font-size: 0.9rem;">
+                <span class="stage-icon" style="width: 22px; text-align: center;">○</span> Refinement
+            </li>
+            <li data-stage="code_gen" class="stage-item" style="display: flex; align-items: center; gap: 10px; color: #6b7280; font-size: 0.9rem;">
+                <span class="stage-icon" style="width: 22px; text-align: center;">○</span> Code Generation
+            </li>
+            <li data-stage="qa" class="stage-item" style="display: flex; align-items: center; gap: 10px; color: #6b7280; font-size: 0.9rem;">
+                <span class="stage-icon" style="width: 22px; text-align: center;">○</span> Quality Assurance
+            </li>
+        </ul>
+    </div>
+
+    <!-- Message Log -->
+    <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 20px 24px;">
+        <h3 style="color: #d1d5db; font-size: 0.95rem; font-weight: 600; margin-bottom: 12px;">Log</h3>
+        <div id="log" style="max-height: 250px; overflow-y: auto; font-family: monospace; font-size: 0.82rem; color: #9ca3af; line-height: 1.8;"></div>
+    </div>
+
+    <!-- Download button (hidden until complete) -->
+    <div id="download-section" style="display: none; margin-top: 1.5rem; text-align: center;">
+        <a id="download-link" href="#"
+            style="display: inline-block; padding: 14px 28px; background: linear-gradient(135deg, #22c55e, #16a34a); border-radius: 10px; color: white; font-weight: 600; text-decoration: none; font-size: 1rem;">
+            Download Output
+        </a>
+    </div>
+</div>
+
+<script>
+(function() {
+    const buildId = "{{ build_id }}";
+    const startTime = Date.now();
+    const stageOrder = ['intelligence', 'ideas', 'scoring', 'prompts', 'refinement', 'code_gen', 'qa', 'complete'];
+    let completedStages = new Set();
+
+    // Elapsed timer
+    const elapsedEl = document.getElementById('elapsed');
+    setInterval(function() {
+        const s = Math.floor((Date.now() - startTime) / 1000);
+        const m = Math.floor(s / 60);
+        elapsedEl.textContent = m > 0 ? m + 'm ' + (s % 60) + 's' : s + 's';
+    }, 1000);
+
+    function setProgress(pct) {
+        document.getElementById('progress-bar').style.width = pct + '%';
+        document.getElementById('progress-text').textContent = pct + '%';
+    }
+
+    function markStage(stage) {
+        if (stage === 'complete') return;
+        // Mark all stages up to and including this one
+        const idx = stageOrder.indexOf(stage);
+        for (let i = 0; i <= idx; i++) {
+            const s = stageOrder[i];
+            if (s === 'complete') continue;
+            const li = document.querySelector('[data-stage="' + s + '"]');
+            if (li && !completedStages.has(s)) {
+                completedStages.add(s);
+                li.querySelector('.stage-icon').textContent = '✓';
+                li.style.color = '#22c55e';
+            }
+        }
+    }
+
+    function addLog(msg) {
+        const log = document.getElementById('log');
+        const line = document.createElement('div');
+        line.textContent = new Date().toLocaleTimeString() + '  ' + msg;
+        log.appendChild(line);
+        log.scrollTop = log.scrollHeight;
+    }
+
+    function showBanner(type, msg) {
+        const banner = document.getElementById('status-banner');
+        banner.style.display = 'block';
+        if (type === 'success') {
+            banner.style.background = 'rgba(34,197,94,0.12)';
+            banner.style.border = '1px solid rgba(34,197,94,0.3)';
+            banner.style.color = '#22c55e';
+        } else {
+            banner.style.background = 'rgba(239,68,68,0.12)';
+            banner.style.border = '1px solid rgba(239,68,68,0.3)';
+            banner.style.color = '#ef4444';
+        }
+        banner.textContent = msg;
+    }
+
+    // SSE
+    const source = new EventSource('/api/build/' + buildId + '/stream');
+    source.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+
+        if (data.progress !== undefined) setProgress(data.progress);
+        if (data.stage) markStage(data.stage);
+        if (data.message) addLog(data.message);
+
+        if (data.type === 'complete') {
+            source.close();
+            showBanner('success', 'Build completed successfully!');
+            const dl = document.getElementById('download-section');
+            dl.style.display = 'block';
+            document.getElementById('download-link').href = '/api/build/' + buildId + '/download';
+        }
+
+        if (data.type === 'failed') {
+            source.close();
+            showBanner('error', 'Build failed: ' + (data.message || 'Unknown error'));
+        }
+    };
+
+    source.onerror = function() {
+        source.close();
+        addLog('Connection lost');
+    };
+})();
+</script>
+{% endblock %}
