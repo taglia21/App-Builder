@@ -121,23 +121,23 @@ class StripeClient:
         # Configure Stripe
         stripe.max_network_retries = 3
 
-    def _handle_stripe_error(self, e: stripe.StripeError) -> None:
+    def _handle_stripe_error(self, e: stripe.error.StripeError) -> None:
         """Convert Stripe errors to our custom errors."""
         error_code = getattr(e, 'code', None)
         param = getattr(e, 'param', None)
         message = str(e)
 
-        if isinstance(e, stripe.CardError):
+        if isinstance(e, stripe.error.CardError):
             raise PaymentError(message, error_code, param)
-        elif isinstance(e, stripe.InvalidRequestError):
+        elif isinstance(e, stripe.error.InvalidRequestError):
             if 'customer' in message.lower():
                 raise CustomerError(message, error_code, param)
             elif 'subscription' in message.lower():
                 raise SubscriptionError(message, error_code, param)
             raise StripeError(message, error_code, param)
-        elif isinstance(e, stripe.AuthenticationError):
+        elif isinstance(e, stripe.error.AuthenticationError):
             raise StripeError("Invalid Stripe API key", "authentication_error")
-        elif isinstance(e, stripe.RateLimitError):
+        elif isinstance(e, stripe.error.RateLimitError):
             raise StripeError("Too many requests to Stripe", "rate_limit")
         else:
             raise StripeError(message, error_code, param)
@@ -191,7 +191,7 @@ class StripeClient:
                 metadata=dict(customer.metadata) if customer.metadata else {},
             )
 
-        except stripe.StripeError as e:
+        except stripe.error.StripeError as e:
             logger.error(f"Failed to create customer: {e}")
             self._handle_stripe_error(e)
 
@@ -217,7 +217,7 @@ class StripeClient:
                 metadata=dict(customer.metadata) if customer.metadata else {},
             )
 
-        except stripe.StripeError as e:
+        except stripe.error.StripeError as e:
             logger.error(f"Failed to get customer {customer_id}: {e}")
             self._handle_stripe_error(e)
 
@@ -269,7 +269,7 @@ class StripeClient:
                 metadata=dict(customer.metadata) if customer.metadata else {},
             )
 
-        except stripe.StripeError as e:
+        except stripe.error.StripeError as e:
             logger.error(f"Failed to update customer {customer_id}: {e}")
             self._handle_stripe_error(e)
 
@@ -288,7 +288,7 @@ class StripeClient:
             logger.info(f"Deleted Stripe customer: {customer_id}")
             return True
 
-        except stripe.StripeError as e:
+        except stripe.error.StripeError as e:
             logger.error(f"Failed to delete customer {customer_id}: {e}")
             self._handle_stripe_error(e)
 
@@ -333,7 +333,7 @@ class StripeClient:
 
             return self._parse_subscription(subscription)
 
-        except stripe.StripeError as e:
+        except stripe.error.StripeError as e:
             logger.error(f"Failed to create subscription: {e}")
             self._handle_stripe_error(e)
 
@@ -351,7 +351,7 @@ class StripeClient:
             subscription = stripe.Subscription.retrieve(subscription_id)
             return self._parse_subscription(subscription)
 
-        except stripe.StripeError as e:
+        except stripe.error.StripeError as e:
             logger.error(f"Failed to get subscription {subscription_id}: {e}")
             self._handle_stripe_error(e)
 
@@ -398,7 +398,7 @@ class StripeClient:
 
             return self._parse_subscription(subscription)
 
-        except stripe.StripeError as e:
+        except stripe.error.StripeError as e:
             logger.error(f"Failed to update subscription {subscription_id}: {e}")
             self._handle_stripe_error(e)
 
@@ -430,7 +430,7 @@ class StripeClient:
 
             return self._parse_subscription(subscription)
 
-        except stripe.StripeError as e:
+        except stripe.error.StripeError as e:
             logger.error(f"Failed to cancel subscription {subscription_id}: {e}")
             self._handle_stripe_error(e)
 
@@ -464,7 +464,7 @@ class StripeClient:
 
             return [self._parse_subscription(sub) for sub in subscriptions.data]
 
-        except stripe.StripeError as e:
+        except stripe.error.StripeError as e:
             logger.error(f"Failed to list subscriptions for {customer_id}: {e}")
             self._handle_stripe_error(e)
 
@@ -539,7 +539,7 @@ class StripeClient:
                 payment_method_id=intent.payment_method,
             )
 
-        except stripe.StripeError as e:
+        except stripe.error.StripeError as e:
             logger.error(f"Failed to create payment intent: {e}")
             self._handle_stripe_error(e)
 
@@ -578,7 +578,7 @@ class StripeClient:
                 payment_method_id=intent.payment_method,
             )
 
-        except stripe.StripeError as e:
+        except stripe.error.StripeError as e:
             logger.error(f"Failed to confirm payment intent {payment_intent_id}: {e}")
             self._handle_stripe_error(e)
 
@@ -598,7 +598,7 @@ class StripeClient:
             invoice = stripe.Invoice.retrieve(invoice_id)
             return self._parse_invoice(invoice)
 
-        except stripe.StripeError as e:
+        except stripe.error.StripeError as e:
             logger.error(f"Failed to get invoice {invoice_id}: {e}")
             self._handle_stripe_error(e)
 
@@ -632,7 +632,7 @@ class StripeClient:
 
             return [self._parse_invoice(inv) for inv in invoices.data]
 
-        except stripe.StripeError as e:
+        except stripe.error.StripeError as e:
             logger.error(f"Failed to list invoices for {customer_id}: {e}")
             self._handle_stripe_error(e)
 
@@ -674,7 +674,7 @@ class StripeClient:
 
             return self._parse_invoice(invoice)
 
-        except stripe.StripeError as e:
+        except stripe.error.StripeError as e:
             logger.error(f"Failed to create invoice: {e}")
             self._handle_stripe_error(e)
 
@@ -693,7 +693,7 @@ class StripeClient:
             logger.info(f"Finalized invoice: {invoice_id}")
             return self._parse_invoice(invoice)
 
-        except stripe.StripeError as e:
+        except stripe.error.StripeError as e:
             logger.error(f"Failed to finalize invoice {invoice_id}: {e}")
             self._handle_stripe_error(e)
 
@@ -712,7 +712,7 @@ class StripeClient:
             logger.info(f"Paid invoice: {invoice_id}")
             return self._parse_invoice(invoice)
 
-        except stripe.StripeError as e:
+        except stripe.error.StripeError as e:
             logger.error(f"Failed to pay invoice {invoice_id}: {e}")
             self._handle_stripe_error(e)
 
@@ -767,7 +767,7 @@ class StripeClient:
                 } if payment_method.card else None,
             }
 
-        except stripe.StripeError as e:
+        except stripe.error.StripeError as e:
             logger.error(f"Failed to attach payment method: {e}")
             self._handle_stripe_error(e)
 
@@ -786,7 +786,7 @@ class StripeClient:
             logger.info(f"Detached payment method: {payment_method_id}")
             return True
 
-        except stripe.StripeError as e:
+        except stripe.error.StripeError as e:
             logger.error(f"Failed to detach payment method {payment_method_id}: {e}")
             self._handle_stripe_error(e)
 
@@ -828,7 +828,7 @@ class StripeClient:
                 for pm in payment_methods.data
             ]
 
-        except stripe.StripeError as e:
+        except stripe.error.StripeError as e:
             logger.error(f"Failed to list payment methods for {customer_id}: {e}")
             self._handle_stripe_error(e)
 
@@ -872,7 +872,7 @@ class StripeClient:
                 "status": setup_intent.status,
             }
 
-        except stripe.StripeError as e:
+        except stripe.error.StripeError as e:
             logger.error(f"Failed to create setup intent: {e}")
             self._handle_stripe_error(e)
 
@@ -936,7 +936,7 @@ class StripeClient:
                 "subscription_id": session.subscription,
             }
 
-        except stripe.StripeError as e:
+        except stripe.error.StripeError as e:
             logger.error(f"Failed to create checkout session: {e}")
             self._handle_stripe_error(e)
 
@@ -970,7 +970,7 @@ class StripeClient:
                 "url": session.url,
             }
 
-        except stripe.StripeError as e:
+        except stripe.error.StripeError as e:
             logger.error(f"Failed to create portal session: {e}")
             self._handle_stripe_error(e)
 
