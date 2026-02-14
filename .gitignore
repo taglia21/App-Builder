@@ -59,3 +59,7 @@ htmlcov/
 
 # Node modules (for any JS tools)
 node_modules/
+
+# Credentials
+*.credentials.json
+.valeric_admin_credentials.json

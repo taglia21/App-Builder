@@ -61,3 +61,6 @@ sentry-sdk>=1.39.0
 
 # Optional: caching (lazy import)
 diskcache>=5.6.0
+
+# Deployment
+PyGithub>=2.1.0

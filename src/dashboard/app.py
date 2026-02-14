@@ -191,33 +191,19 @@ and authentication requirements.
     app.add_middleware(GZipMiddleware, minimum_size=1000)
 
     # CORS - Configure for production
-    allowed_origins = os.getenv("CORS_ORIGINS", "").split(",")
-    allowed_origins = [o.strip() for o in allowed_origins if o.strip()]
-    if not allowed_origins:
-        allowed_origins = [
-            "http://localhost:3000",
-            "http://localhost:8000",
-            "http://localhost:8080",
-        ]
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=allowed_origins,
+        allow_origins=["http://localhost:3000", "http://localhost:8080"],
+        allow_origin_regex=r"https://.*\.vercel\.app|https://.*\.render\.com|https://.*\.railway\.app",
         allow_credentials=True,
-        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        allow_headers=["Authorization", "Content-Type", "X-Requested-With", "HX-Request"],
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
 
     # Trusted Host Middleware — restrict to known hosts
-    allowed_hosts = os.getenv("ALLOWED_HOSTS", "").split(",")
-    allowed_hosts = [h.strip() for h in allowed_hosts if h.strip()]
-    if not allowed_hosts:
-        allowed_hosts = ["localhost", "127.0.0.1", "*.valeric.dev"]
-    # Allow "testserver" for FastAPI TestClient in tests
-    if "testserver" not in allowed_hosts:
-        allowed_hosts.append("testserver")
     app.add_middleware(
         TrustedHostMiddleware,
-        allowed_hosts=allowed_hosts,
+        allowed_hosts=["*"] if os.getenv("ENVIRONMENT", "development") != "production" else ["localhost", ".vercel.app", ".render.com", ".railway.app"],
     )
 
 
@@ -257,13 +243,15 @@ and authentication requirements.
         )
 
         if not is_public:
-            from src.auth.web_routes import verify_session_cookie
-            # Check signed session cookie first, then legacy
-            session_cookie = request.cookies.get("session")
-            user_id = verify_session_cookie(session_cookie) if session_cookie else None
-            if not user_id:
-                user_id = request.cookies.get("user_id")
-            if not user_id:
+            session_token = request.cookies.get("session_token")
+            if not session_token:
+                return StarletteRedirect(url="/login", status_code=303)
+            try:
+                from src.auth.jwt import verify_token, TokenType
+                payload = verify_token(session_token, expected_type=TokenType.ACCESS)
+                request.state.user_id = payload.get("sub")
+                request.state.user_email = payload.get("email")
+            except Exception:
                 return StarletteRedirect(url="/login", status_code=303)
 
         response = await call_next(request)

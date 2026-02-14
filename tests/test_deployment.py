@@ -9,15 +9,18 @@ from pathlib import Path
 import tempfile
 import os
 
-from src.deployment.github import (
-    GitHubClient,
-    GitHubRepo,
-    GitHubWorkflow,
-    WorkflowRun,
-    GitHubError,
-    RepositoryExistsError,
-    AuthenticationError,
-)
+try:
+    from src.deployment.github import (
+        GitHubClient,
+        GitHubRepo,
+        GitHubWorkflow,
+        WorkflowRun,
+        GitHubError,
+        RepositoryExistsError,
+        AuthenticationError,
+    )
+except ImportError:
+    pytest.skip("PyGithub not installed", allow_module_level=True)
 from src.deployment.orchestrator import (
     DeploymentOrchestrator,
     DeploymentPlan,
