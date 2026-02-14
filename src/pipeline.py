@@ -390,7 +390,7 @@ class StartupGenerationPipeline:
 
 def run_on_schedule(config: PipelineConfig, cron_expression: str) -> None:
     """Run pipeline on a cron schedule.
-    
+
     Args:
         config: Pipeline configuration
         cron_expression: Cron expression (e.g., "0 6 * * 1" for Monday 6am)
