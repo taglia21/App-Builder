@@ -81,7 +81,7 @@ fi
 
 # Test root endpoint
 ROOT_RESPONSE=$(curl -s http://localhost:$PORT/)
-if echo "$ROOT_RESPONSE" | grep -q "status\|LaunchForge"; then
+if echo "$ROOT_RESPONSE" | grep -q "status\|Valeric"; then
     echo -e "${GREEN}✓ Root endpoint: $ROOT_RESPONSE${NC}"
 else
     echo -e "${YELLOW}⚠ Root endpoint returned: $ROOT_RESPONSE${NC}"

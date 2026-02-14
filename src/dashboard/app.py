@@ -154,7 +154,7 @@ and authentication requirements.
         redoc_url="/redoc",
         contact={
             "name": "Valeric Team",
-            "url": "https://github.com/yourusername/App-Builder",
+            "url": "https://github.com/taglia21/App-Builder",
         },
         license_info={
             "name": "MIT",
@@ -267,14 +267,12 @@ and authentication requirements.
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
-            "script-src 'self' 'nonce-htmx' https://unpkg.com https://cdn.jsdelivr.net; "
-            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.tailwindcss.com https://fonts.googleapis.com; "
+            "script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.tailwindcss.com https://cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.tailwindcss.com; "
             "img-src 'self' data: https:; "
             "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; "
             "connect-src 'self' https:; "
-            "frame-ancestors 'none'; "
-            "base-uri 'self'; "
-            "form-action 'self';"
+            "frame-ancestors 'none';"
         )
         return response
 

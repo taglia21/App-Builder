@@ -1,4 +1,4 @@
--- Database initialization script for LaunchForge
+-- Database initialization script for Valeric
 -- Run on fresh PostgreSQL installation
 
 -- Create extensions
@@ -6,17 +6,17 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- Create schema
-CREATE SCHEMA IF NOT EXISTS launchforge;
+CREATE SCHEMA IF NOT EXISTS valeric;
 
 -- Grant permissions
-GRANT ALL PRIVILEGES ON SCHEMA launchforge TO launchforge;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA launchforge TO launchforge;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA launchforge TO launchforge;
+GRANT ALL PRIVILEGES ON SCHEMA valeric TO valeric;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA valeric TO valeric;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA valeric TO valeric;
 
 -- Set search path
-ALTER DATABASE launchforge SET search_path TO launchforge, public;
+ALTER DATABASE valeric SET search_path TO valeric, public;
 
 -- Create indexes for performance (applied by Alembic migrations)
 -- This is a placeholder for any initial setup
 
-SELECT 'LaunchForge database initialized successfully' AS status;
+SELECT 'Valeric database initialized successfully' AS status;

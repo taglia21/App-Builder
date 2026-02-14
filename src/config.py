@@ -144,8 +144,8 @@ class PipelineConfig(BaseSettings):
 
     # Email configuration
     resend_api_key: Optional[str] = None
-    from_email: str = "noreply@valeric.app"
-    support_email: str = "support@valeric.app"
+    from_email: str = "noreply@valeric.dev"
+    support_email: str = "support@valeric.dev"
 
     # Sub-configurations
     intelligence: Optional[IntelligenceConfig] = None

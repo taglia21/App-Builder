@@ -71,8 +71,14 @@ def get_secret_key() -> str:
                 "in non-development environments. "
                 "Generate a strong random key: python -c 'import secrets; print(secrets.token_urlsafe(48))'"
             )
-    if env.lower() in ("production", "prod") and len(key) < 32:
+    if env.lower() in ("production", "prod", "staging") and len(key) < 32:
         raise ValueError("SECRET_KEY must be at least 32 characters in production.")
+    if key in _INSECURE_SECRET_KEYS:
+        import warnings
+        warnings.warn(
+            "Using insecure default SECRET_KEY. Set SECRET_KEY env var for any non-local environment.",
+            UserWarning, stacklevel=2,
+        )
     return key
 
 
@@ -223,9 +229,12 @@ def create_password_reset_token(
     return jwt.encode(payload, get_secret_key(), algorithm=ALGORITHM)
 
 
-def decode_token(token: str) -> Dict[str, Any]:
+def decode_token_unverified(token: str) -> Dict[str, Any]:
     """
-    Decode a JWT token without verification.
+    Decode a JWT token WITHOUT verifying expiry.
+
+    WARNING: This skips expiry verification. Use verify_token() for auth checks.
+    Only use this for token inspection (e.g., reading claims from expired tokens).
 
     Args:
         token: Encoded JWT token
@@ -246,6 +255,22 @@ def decode_token(token: str) -> Dict[str, Any]:
         )
     except jwt.InvalidTokenError as e:
         raise InvalidTokenError(f"Invalid token: {str(e)}")
+
+
+def decode_token(token: str) -> Dict[str, Any]:
+    """
+    Decode a JWT token without expiry verification.
+
+    .. deprecated::
+        Use verify_token() for auth checks or decode_token_unverified() for inspection.
+    """
+    import warnings
+    warnings.warn(
+        "decode_token() is deprecated. Use verify_token() for auth checks "
+        "or decode_token_unverified() for inspection.",
+        DeprecationWarning, stacklevel=2,
+    )
+    return decode_token_unverified(token)
 
 
 def verify_token(
@@ -300,7 +325,7 @@ def get_token_expiry(token: str) -> Optional[datetime]:
         datetime: Expiration time or None if not set
     """
     try:
-        payload = decode_token(token)
+        payload = decode_token_unverified(token)
         exp = payload.get("exp")
         if exp:
             return datetime.fromtimestamp(exp, tz=timezone.utc)
@@ -336,7 +361,7 @@ def get_user_id_from_token(token: str) -> Optional[str]:
         str: User ID or None if extraction fails
     """
     try:
-        payload = decode_token(token)
+        payload = decode_token_unverified(token)
         return payload.get("sub")
     except InvalidTokenError:
         return None

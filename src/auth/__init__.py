@@ -17,6 +17,7 @@ from src.auth.jwt import (
     create_access_token,
     create_refresh_token,
     decode_token,
+    decode_token_unverified,
     verify_token,
 )
 from src.auth.password import (
@@ -53,6 +54,7 @@ __all__ = [
     "create_refresh_token",
     "verify_token",
     "decode_token",
+    "decode_token_unverified",
     "TokenType",
     "TokenError",
     "TokenExpiredError",
