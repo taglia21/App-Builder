@@ -1,4 +1,8 @@
 # Versions pinned with ~= (compatible release). Use pip-compile for a full lock file.
+# To generate a locked requirements file:
+#   pip install pip-tools
+#   pip-compile requirements-prod.txt -o requirements-prod.lock
+#   Then use requirements-prod.lock in Dockerfile for reproducible builds.
 # Production requirements for Railway deployment
 # Only includes packages actually needed by the dashboard app
 # Full development dependencies are in requirements.txt

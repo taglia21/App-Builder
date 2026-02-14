@@ -129,7 +129,7 @@ class PipelineConfig(BaseSettings):
     newsapi_key: Optional[str] = None
     youtube_api_key: Optional[str] = None
     github_token: Optional[str] = None
-    database_url: str = "sqlite:///./startup_generator.db"
+    database_url: str = "sqlite+aiosqlite:///./app.db"
     redis_url: str = "redis://localhost:6379/0"
     slack_webhook_url: Optional[str] = None
     notification_email: Optional[str] = None

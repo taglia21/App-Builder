@@ -27,6 +27,10 @@ from .refinement import RefinementEngine
 from .scoring import ScoringEngine
 
 
+# ARCHITECTURE NOTE: This pipeline is declared async but LLM clients (src/llm/client.py)
+# use synchronous HTTP calls via provider SDKs (openai, anthropic, groq).
+# The async wrapper exists for future migration to httpx.AsyncClient.
+# TODO: Migrate LLM clients to true async for non-blocking I/O in dashboard context.
 class StartupGenerationPipeline:
     """Main pipeline for automated startup generation."""
 
@@ -353,7 +357,12 @@ class StartupGenerationPipeline:
 
 
 def run_on_schedule(config: PipelineConfig, cron_expression: str) -> None:
-    """Run pipeline on a schedule."""
+    """Run pipeline on a cron schedule.
+    
+    Args:
+        config: Pipeline configuration
+        cron_expression: Cron expression (e.g., "0 6 * * 1" for Monday 6am)
+    """
     import time
 
     import schedule
@@ -362,11 +371,17 @@ def run_on_schedule(config: PipelineConfig, cron_expression: str) -> None:
         pipeline = StartupGenerationPipeline(config)
         asyncio.run(pipeline.run())
 
-    # Parse cron and set up schedule
-    # Simplified: assume daily at specific time
-    schedule.every().day.at("06:00").do(job)
+    # Parse cron: "minute hour day_of_month month day_of_week"
+    parts = cron_expression.split()
+    if len(parts) >= 2:
+        minute = parts[0] if parts[0] != "*" else "00"
+        hour = parts[1] if parts[1] != "*" else "06"
+        time_str = f"{hour.zfill(2)}:{minute.zfill(2)}"
+    else:
+        time_str = "06:00"
 
-    logger.info(f"Pipeline scheduled with cron: {cron_expression}")
+    logger.info(f"Pipeline scheduled daily at {time_str} (from cron: {cron_expression})")
+    schedule.every().day.at(time_str).do(job)
 
     while True:
         schedule.run_pending()

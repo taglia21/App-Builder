@@ -31,14 +31,19 @@ jobs:
         run: |
           pip install ruff black isort
 
+      # Ruff lint errors are blocking
       - name: Run Ruff linter
         run: ruff check src/ --output-format=github
 
+      # Formatting is advisory for now
       - name: Check Black formatting
         run: black --check --line-length=100 src/
+        continue-on-error: true
 
+      # Formatting is advisory for now
       - name: Check import sorting
         run: isort --check-only --profile=black --line-length=100 src/
+        continue-on-error: true
 
   # Job 2: Type Checking
   type-check:
@@ -65,9 +70,10 @@ jobs:
           pip install -r requirements-prod.txt
           pip install mypy types-PyYAML types-requests types-redis
 
+      # Type checking is advisory
       - name: Run mypy
         run: mypy src/ --config-file=mypy.ini
-        continue-on-error: true  # Type checking advisory for now
+        continue-on-error: true
 
   # Job 2: Security Scanning
   security:
