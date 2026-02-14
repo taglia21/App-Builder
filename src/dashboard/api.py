@@ -574,12 +574,22 @@ def _run_pipeline_thread(
 ) -> None:
     """Run the pipeline in a daemon thread, updating the build manager."""
     import asyncio
+    import time as _time
 
     from src.config import load_config
+    from src.notifications.dispatcher import dispatcher as notify
     from src.pipeline import StartupGenerationPipeline
+    from src.plugins.registry import plugin_registry
     from src.services.build_manager import build_manager
 
+    _stage_start = _time.monotonic()
+
     def _progress_cb(stage: str, percent: int, message: str) -> None:
+        nonlocal _stage_start
+        now = _time.monotonic()
+        duration_ms = (now - _stage_start) * 1000
+        _stage_start = now
+
         build_manager.update_build(
             build_id,
             current_stage=stage,
@@ -592,6 +602,10 @@ def _run_pipeline_thread(
             "progress": percent,
             "message": message,
         })
+        notify.dispatch("build.stage_changed", build_id, {"stage": stage, "progress": percent})
+        plugin_registry.call_hook("on_stage_complete", build_id=build_id, stage=stage, duration_ms=duration_ms)
+
+    pipeline_start = _time.monotonic()
 
     try:
         build_manager.update_build(build_id, status="running")
@@ -599,6 +613,8 @@ def _run_pipeline_thread(
             "type": "started",
             "message": "Pipeline started",
         })
+        notify.dispatch("build.started", build_id, {"idea": idea})
+        plugin_registry.call_hook("on_pipeline_start", build_id=build_id, config={"idea": idea, "llm_provider": llm_provider, "theme": theme})
 
         config = load_config("config.yml")
         pipeline = StartupGenerationPipeline(config, llm_provider=llm_provider)
@@ -632,6 +648,9 @@ def _run_pipeline_thread(
             "message": "Build completed successfully",
             "output_path": output_path,
         })
+        notify.dispatch("build.completed", build_id, {"idea": idea, "provider": llm_provider, "output_path": output_path})
+        total_ms = (_time.monotonic() - pipeline_start) * 1000
+        plugin_registry.call_hook("on_pipeline_complete", build_id=build_id, output_path=output_path, total_duration_ms=total_ms)
 
     except Exception as exc:
         logger.exception("Pipeline build %s failed", build_id)
@@ -646,6 +665,8 @@ def _run_pipeline_thread(
             "type": "failed",
             "message": str(exc),
         })
+        notify.dispatch("build.failed", build_id, {"idea": idea, "error": str(exc)})
+        plugin_registry.call_hook("on_error", build_id=build_id, error=exc)
 
 
 async def api_create_build(data: BuildRequest) -> BuildResponse:

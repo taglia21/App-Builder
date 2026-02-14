@@ -637,6 +637,25 @@ A: Yes! Perfect for indie hackers, MVPs, and side hustles.
 
 ---
 
+## 🖥️ Web Dashboard
+
+The built-in dashboard at `/build` lets you start pipeline builds from the browser. Progress is streamed in real-time via SSE — no page refreshes needed. Visit `/builds` to view history and download previous outputs.
+
+```
+uvicorn src.dashboard.app:app --reload
+# then open http://localhost:8000/build
+```
+
+## 🔔 Notifications
+
+Set `WEBHOOK_URL` or `DISCORD_WEBHOOK_URL` in your environment to receive build lifecycle events (started, stage changes, completed, failed). Webhook payloads are signed with HMAC-SHA256 via `WEBHOOK_SECRET`. See `.env.example` for all options.
+
+## 🔌 Plugins
+
+Extend the pipeline by subclassing `PluginBase` and decorating with `@register_plugin`. Hooks: `on_pipeline_start`, `on_stage_complete`, `on_pipeline_complete`, `on_error`. See `src/plugins/example_plugin.py` for a working example. Plugins are error-isolated — one failure never blocks others.
+
+---
+
 ## 🎉 Next Steps
 
 1. **Set your API key** (Perplexity or Groq)

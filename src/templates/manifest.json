@@ -1,0 +1,24 @@
+{
+  "templates": [
+    {
+      "name": "Modern",
+      "version": "1.0.0",
+      "description": "Clean, contemporary design with gradient accents and card-based layouts."
+    },
+    {
+      "name": "Minimalist",
+      "version": "1.0.0",
+      "description": "Stripped-back aesthetic with generous whitespace and subtle typography."
+    },
+    {
+      "name": "Cyberpunk",
+      "version": "1.0.0",
+      "description": "Neon-accented dark theme with glitch effects and futuristic UI elements."
+    },
+    {
+      "name": "Corporate",
+      "version": "1.0.0",
+      "description": "Professional, enterprise-grade look with structured grids and muted colours."
+    }
+  ]
+}

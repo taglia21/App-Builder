@@ -739,5 +739,31 @@ def build(output, llm_provider, verbose):
         raise click.Abort()
 
 
+@cli.command(name="templates")
+@click.option("--list", "list_all", is_flag=True, help="List all available templates")
+@click.option("--info", "info_name", default=None, help="Show details for a specific template")
+def templates_cmd(list_all: bool, info_name: str | None) -> None:
+    """Manage app templates and themes."""
+    from src.templates.versioning import get_template_info, list_templates
+
+    if info_name:
+        tmpl = get_template_info(info_name)
+        if tmpl is None:
+            click.secho(f"Template '{info_name}' not found.", fg="red")
+            raise click.Abort()
+        click.echo(f"Name:        {tmpl.name}")
+        click.echo(f"Version:     {tmpl.version}")
+        click.echo(f"Description: {tmpl.description}")
+        return
+
+    # Default: list all
+    tmpls = list_templates()
+    if not tmpls:
+        click.echo("No templates found.")
+        return
+    for t in tmpls:
+        click.echo(f"  {t.name} (v{t.version}) — {t.description}")
+
+
 if __name__ == "__main__":
     cli()
