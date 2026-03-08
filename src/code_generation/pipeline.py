@@ -22,6 +22,7 @@ from typing import AsyncGenerator, List, Optional
 from pydantic import BaseModel, Field
 
 from src.code_generation.architect import SystemArchitect, SystemSpec
+from src.code_generation.critic_integration import CriticPanel, CriticReport
 from src.code_generation.engine_v2 import CodeGeneratorV2, GenerationResult
 from src.code_generation.quality import AutoFixer, CodeQualityPipeline, QualityReport
 
@@ -44,18 +45,20 @@ class PipelineResult(BaseModel):
     total_time_seconds: float = 0.0
     # "success" | "success_with_warnings" | "failed"
     status: str = "success"
+    critic_report: Optional[dict] = None
 
 
 class PipelineProgress(BaseModel):
     """Real-time progress event yielded by run_with_progress."""
 
-    # "architect" | "generate" | "validate" | "fix" | "complete"
+    # "architect" | "generate" | "validate" | "critics" | "fix" | "complete"
     phase: str
     step: str
     progress: int = Field(ge=0, le=100)
     message: str = ""
     files_generated: int = 0
     total_files: int = 0
+    critic_report: Optional[dict] = None
 
 
 # =============================================================================
@@ -84,6 +87,7 @@ class GenerationPipeline:
         self.generator = CodeGeneratorV2()
         self.quality = CodeQualityPipeline()
         self.fixer = AutoFixer()
+        self.critic_panel = CriticPanel()
         self.output_base_dir = Path(output_base_dir)
 
     # ------------------------------------------------------------------
@@ -165,6 +169,25 @@ class GenerationPipeline:
             raise RuntimeError(f"Quality validation failed: {exc}") from exc
 
         # ----------------------------------------------------------------
+        # Step 3.5: Critic Panel
+        # ----------------------------------------------------------------
+        critic_report_dict: Optional[dict] = None
+        try:
+            logger.info("[pipeline] Step 3.5/4 — Multi-agent critic panel")
+            critic_report = await self.critic_panel.run(
+                output_dir=str(output_dir),
+                spec=spec,
+            )
+            critic_report_dict = critic_report.to_dict()
+            logger.info(
+                "[pipeline] Critic panel complete — overall_score=%d, critical_issues=%d",
+                critic_report.overall_score,
+                len(critic_report.critical_issues),
+            )
+        except Exception as exc:
+            logger.warning("[pipeline] Critic panel failed (non-blocking): %s", exc)
+
+        # ----------------------------------------------------------------
         # Step 4: Auto-Fix loop
         # ----------------------------------------------------------------
         fixes_applied_total = 0
@@ -216,6 +239,7 @@ class GenerationPipeline:
             output_path=str(output_dir.resolve()),
             total_time_seconds=total_time,
             status=status,
+            critic_report=critic_report_dict,
         )
 
         logger.info(
@@ -269,7 +293,7 @@ class GenerationPipeline:
         )
 
         entity_count = len(spec.entities) if spec.entities else 0
-        route_count = len(spec.routes) if spec.routes else 0
+        route_count = len(spec.api_routes) if spec.api_routes else 0
 
         yield PipelineProgress(
             phase="architect",
@@ -351,7 +375,7 @@ class GenerationPipeline:
         )
 
         # ----------------------------------------------------------------
-        # Phase: validate (70–85 %)
+        # Phase: validate (70–82 %)
         # ----------------------------------------------------------------
         yield PipelineProgress(
             phase="validate",
@@ -370,21 +394,59 @@ class GenerationPipeline:
         yield PipelineProgress(
             phase="validate",
             step="Quality validation complete",
-            progress=85,
+            progress=82,
             message=quality_report.summary,
             files_generated=generation.total_files,
             total_files=generation.total_files,
         )
 
         # ----------------------------------------------------------------
-        # Phase: fix (85–97 %)
+        # Phase: critics (82–90 %)
+        # ----------------------------------------------------------------
+        yield PipelineProgress(
+            phase="critics",
+            step="Running multi-agent critic panel",
+            progress=83,
+            message="Code, security, performance, and UX critics reviewing…",
+            files_generated=generation.total_files,
+            total_files=generation.total_files,
+        )
+
+        _critic_report_holder: List[Optional[dict]] = [None]
+        try:
+            _cr = await self.critic_panel.run(
+                output_dir=str(output_dir),
+                spec=spec,
+            )
+            _critic_report_holder[0] = _cr.to_dict()
+            logger.info(
+                "[pipeline] Critic panel complete — overall_score=%d, critical_issues=%d",
+                _cr.overall_score,
+                len(_cr.critical_issues),
+            )
+            _critic_summary = _cr.summary
+        except Exception as _exc:
+            logger.warning("[pipeline] Critic panel failed (non-blocking): %s", _exc)
+            _critic_summary = "Critic panel unavailable"
+
+        yield PipelineProgress(
+            phase="critics",
+            step="Critic panel complete",
+            progress=90,
+            message=_critic_summary,
+            files_generated=generation.total_files,
+            total_files=generation.total_files,
+        )
+
+        # ----------------------------------------------------------------
+        # Phase: fix (90–97 %)
         # ----------------------------------------------------------------
         fixes_total = 0
         for round_num in range(1, max_fix_rounds + 1):
             if quality_report.passed:
                 break
 
-            fix_progress = 85 + int((round_num / max_fix_rounds) * 12)
+            fix_progress = 90 + int((round_num / max_fix_rounds) * 7)
             yield PipelineProgress(
                 phase="fix",
                 step=f"Auto-fix round {round_num}",
@@ -430,6 +492,7 @@ class GenerationPipeline:
             ),
             files_generated=generation.total_files,
             total_files=generation.total_files,
+            critic_report=_critic_report_holder[0],
         )
 
     # ------------------------------------------------------------------

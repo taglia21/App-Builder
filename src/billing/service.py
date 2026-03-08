@@ -1,23 +1,30 @@
-"""Stripe billing service for subscription management."""
+"""Stripe billing service for subscription management.
+
+Uses synchronous SQLAlchemy sessions (the project uses sync SQLAlchemy, not async).
+Works in Stripe test mode — all stripe.api_key values beginning with 'sk_test_'
+will hit the Stripe test environment automatically.
+"""
 import logging
 import os
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from uuid import uuid4
 
 import stripe
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
 # Stripe configuration
+# ---------------------------------------------------------------------------
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
-# Unified price IDs — tier names match SubscriptionTier enum values
-# No hardcoded fallbacks: if the env vars are not set, price IDs will be None,
-# and create_checkout_session will raise a clear error rather than sending
-# a bogus ID to Stripe.
+# Unified price IDs — tier names match SubscriptionTier enum values.
+# No hardcoded fallbacks: if env vars are not set the price IDs will be None,
+# and create_checkout_session will raise a clear error rather than sending a
+# bogus ID to Stripe.
 PRICE_IDS = {
     "starter": os.getenv("STRIPE_PRICE_STARTER"),
     "pro": os.getenv("STRIPE_PRICE_PRO"),
@@ -32,75 +39,107 @@ TIER_LIMITS = {
 }
 
 
+def _stripe_configured() -> bool:
+    """Return True if a Stripe secret key is present."""
+    return bool(stripe.api_key)
+
+
 class BillingService:
-    """Service for handling Stripe billing operations."""
+    """Service for handling Stripe billing operations.
 
-    def __init__(self, db_session: AsyncSession):
-        self.db = db_session
+    The ``db_session`` argument should be a synchronous SQLAlchemy
+    ``Session`` (not ``AsyncSession``).  Pass ``None`` if the DB is not
+    available — the service will still work for Stripe-only operations.
+    """
 
-    async def create_customer(self, user_id: str, email: str, name: str = None) -> str:
+    def __init__(self, db_session: Optional[Session] = None):
+        self.db: Optional[Session] = db_session
+
+    # ------------------------------------------------------------------
+    # Customer
+    # ------------------------------------------------------------------
+
+    def create_customer(self, user_id: str, email: str, name: str = None) -> str:
         """Create a Stripe customer for a user."""
-        if not stripe.api_key:
-            raise ValueError("Stripe is not configured. Set STRIPE_SECRET_KEY to enable payments.")
+        if not _stripe_configured():
+            raise ValueError(
+                "Stripe is not configured. Set STRIPE_SECRET_KEY to enable payments."
+            )
         try:
             customer = stripe.Customer.create(
                 email=email,
                 name=name,
-                metadata={"user_id": str(user_id)}
+                metadata={"user_id": str(user_id)},
             )
             return customer.id
         except stripe.error.StripeError as e:
             logger.error(f"Failed to create Stripe customer: {e}")
             raise
 
-    async def create_checkout_session(
+    # ------------------------------------------------------------------
+    # Checkout
+    # ------------------------------------------------------------------
+
+    def create_checkout_session(
         self,
         user_id: str,
         tier: str,
         success_url: str,
         cancel_url: str,
-        customer_id: str = None
+        customer_id: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Create a Stripe checkout session for subscription."""
-        if not stripe.api_key:
-            raise ValueError("Stripe is not configured. Set STRIPE_SECRET_KEY to enable payments.")
+        """Create a Stripe Checkout session for a subscription.
+
+        Works in test mode when ``STRIPE_SECRET_KEY`` begins with ``sk_test_``.
+        Returns ``{"session_id": ..., "url": ...}`` on success.
+        """
+        if not _stripe_configured():
+            raise ValueError(
+                "Stripe is not configured. Set STRIPE_SECRET_KEY to enable payments."
+            )
         if tier not in PRICE_IDS:
-            raise ValueError(f"Invalid tier: {tier}")
+            raise ValueError(f"Invalid tier: {tier}. Valid tiers: {list(PRICE_IDS)}")
+
+        price_id = PRICE_IDS.get(tier)
+        if not price_id:
+            raise ValueError(
+                f"Price ID for tier '{tier}' is not configured. "
+                f"Set STRIPE_PRICE_{tier.upper()} in your environment."
+            )
 
         try:
-            session_params = {
+            session_params: Dict[str, Any] = {
                 "mode": "subscription",
                 "payment_method_types": ["card"],
-                "line_items": [{
-                    "price": PRICE_IDS[tier],
-                    "quantity": 1,
-                }],
+                "line_items": [{"price": price_id, "quantity": 1}],
                 "success_url": success_url,
                 "cancel_url": cancel_url,
                 "metadata": {
                     "user_id": str(user_id),
-                    "tier": tier
+                    "tier": tier,
                 },
+                "allow_promotion_codes": True,
             }
 
             if customer_id:
                 session_params["customer"] = customer_id
 
             session = stripe.checkout.Session.create(**session_params)
-            return {
-                "session_id": session.id,
-                "url": session.url
-            }
+            return {"session_id": session.id, "url": session.url}
         except stripe.error.StripeError as e:
             logger.error(f"Failed to create checkout session: {e}")
             raise
 
-    async def create_portal_session(
-        self,
-        customer_id: str,
-        return_url: str
-    ) -> str:
-        """Create a Stripe customer portal session for managing subscription."""
+    # ------------------------------------------------------------------
+    # Portal
+    # ------------------------------------------------------------------
+
+    def create_portal_session(self, customer_id: str, return_url: str) -> str:
+        """Create a Stripe Customer Portal session for managing subscription."""
+        if not _stripe_configured():
+            raise ValueError(
+                "Stripe is not configured. Set STRIPE_SECRET_KEY to enable payments."
+            )
         try:
             session = stripe.billing_portal.Session.create(
                 customer=customer_id,
@@ -111,18 +150,23 @@ class BillingService:
             logger.error(f"Failed to create portal session: {e}")
             raise
 
-    async def handle_webhook(self, payload: bytes, sig_header: str) -> Dict[str, Any]:
-        """Handle Stripe webhook events with idempotency."""
-        webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
+    # ------------------------------------------------------------------
+    # Webhook
+    # ------------------------------------------------------------------
 
+    def handle_webhook(self, payload: bytes, sig_header: str) -> Dict[str, Any]:
+        """Handle Stripe webhook events with idempotency.
+
+        Uses a sync DB session (``self.db``) throughout.  If no DB session is
+        available the event is still verified and dispatched but not persisted.
+        """
+        webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
         if not webhook_secret:
             logger.error("STRIPE_WEBHOOK_SECRET not configured — rejecting webhook")
             raise ValueError("Webhook secret not configured")
 
         try:
-            event = stripe.Webhook.construct_event(
-                payload, sig_header, webhook_secret
-            )
+            event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
         except ValueError as e:
             logger.error(f"Invalid webhook payload: {e}")
             raise
@@ -130,12 +174,23 @@ class BillingService:
             logger.error(f"Invalid webhook signature: {e}")
             raise
 
-        # Idempotency: check if we've already processed this event
-        from src.database.models import WebhookEvent
-        existing = await self.db.execute(
-            select(WebhookEvent).where(WebhookEvent.stripe_event_id == event["id"])
+        if self.db is not None:
+            return self._handle_webhook_with_db(event)
+
+        # No DB — just dispatch without persistence
+        return self._dispatch_event(event)
+
+    def _handle_webhook_with_db(self, event) -> Dict[str, Any]:
+        """Idempotent webhook handling backed by the sync SQLAlchemy session."""
+        from src.database.models import WebhookEvent  # lazy import
+
+        existing = (
+            self.db.execute(
+                select(WebhookEvent).where(WebhookEvent.stripe_event_id == event["id"])
+            )
+            .scalar_one_or_none()
         )
-        if existing.scalar_one_or_none():
+        if existing:
             logger.info(f"Duplicate webhook event {event['id']} — skipping")
             return {"status": "duplicate", "event_type": event["type"]}
 
@@ -148,73 +203,98 @@ class BillingService:
         )
         self.db.add(webhook_record)
 
-        # Handle specific events
         try:
-            if event["type"] == "checkout.session.completed":
-                session = event["data"]["object"]
-                await self._handle_checkout_completed(session)
-            elif event["type"] == "customer.subscription.updated":
-                subscription = event["data"]["object"]
-                await self._handle_subscription_updated(subscription)
-            elif event["type"] == "customer.subscription.deleted":
-                subscription = event["data"]["object"]
-                await self._handle_subscription_deleted(subscription)
-            elif event["type"] == "invoice.payment_failed":
-                invoice = event["data"]["object"]
-                await self._handle_payment_failed(invoice)
-
+            self._dispatch_event(event)
             webhook_record.processed = True
         except Exception as e:
             webhook_record.error_message = str(e)
             logger.error(f"Error processing webhook {event['id']}: {e}")
 
-        await self.db.commit()
+        self.db.commit()
         return {"status": "success", "event_type": event["type"]}
 
-    async def _handle_checkout_completed(self, session: Dict):
-        """Handle successful checkout."""
-        user_id = session["metadata"]["user_id"]
-        tier = session["metadata"]["tier"]
-        customer_id = session["customer"]
-        subscription_id = session["subscription"]
+    def _dispatch_event(self, event) -> Dict[str, Any]:
+        """Route a verified Stripe event to the appropriate handler."""
+        event_type = event["type"]
+        if event_type == "checkout.session.completed":
+            self._handle_checkout_completed(event["data"]["object"])
+        elif event_type == "customer.subscription.updated":
+            self._handle_subscription_updated(event["data"]["object"])
+        elif event_type == "customer.subscription.deleted":
+            self._handle_subscription_deleted(event["data"]["object"])
+        elif event_type == "invoice.payment_failed":
+            self._handle_payment_failed(event["data"]["object"])
+        return {"status": "success", "event_type": event_type}
 
-        # Update user's subscription in database
-        from src.database.models import Subscription, SubscriptionStatus, SubscriptionTier
+    # ------------------------------------------------------------------
+    # Private event handlers (sync)
+    # ------------------------------------------------------------------
 
-        # Get or create subscription record
-        result = await self.db.execute(
+    def _handle_checkout_completed(self, session: Dict):
+        """Handle successful checkout — provision/update subscription in DB."""
+        if self.db is None:
+            return
+
+        user_id = session.get("metadata", {}).get("user_id")
+        tier = session.get("metadata", {}).get("tier", "pro")
+        customer_id = session.get("customer")
+        subscription_id = session.get("subscription")
+
+        if not user_id:
+            logger.warning("checkout.session.completed has no user_id in metadata")
+            return
+
+        from src.database.models import (  # lazy import to avoid circular deps
+            Subscription,
+            SubscriptionStatus,
+            SubscriptionTier,
+        )
+
+        result = self.db.execute(
             select(Subscription).where(Subscription.user_id == user_id)
         )
         subscription = result.scalar_one_or_none()
 
+        tier_enum = (
+            SubscriptionTier(tier)
+            if tier in [t.value for t in SubscriptionTier]
+            else SubscriptionTier.PRO
+        )
+
         if subscription:
             subscription.stripe_customer_id = customer_id
             subscription.stripe_subscription_id = subscription_id
-            subscription.tier = SubscriptionTier(tier)
+            subscription.tier = tier_enum
             subscription.status = SubscriptionStatus.ACTIVE
-            subscription.app_generations_limit = TIER_LIMITS[tier]["app_generations"]
-            subscription.app_generations_used = 0
+            subscription.app_generations_limit = TIER_LIMITS.get(tier, {}).get(
+                "app_generations", 25
+            )
         else:
             subscription = Subscription(
+                id=str(uuid4()),
                 user_id=user_id,
                 stripe_customer_id=customer_id,
                 stripe_subscription_id=subscription_id,
-                tier=SubscriptionTier(tier),
+                tier=tier_enum,
                 status=SubscriptionStatus.ACTIVE,
-                app_generations_limit=TIER_LIMITS[tier]["app_generations"],
-                app_generations_used=0
+                app_generations_limit=TIER_LIMITS.get(tier, {}).get(
+                    "app_generations", 25
+                ),
             )
             self.db.add(subscription)
 
-        await self.db.commit()
+        self.db.commit()
         logger.info(f"Subscription activated for user {user_id}: {tier}")
 
-    async def _handle_subscription_updated(self, subscription: Dict):
-        """Handle subscription updates."""
-        from src.database.models import Subscription, SubscriptionStatus
+    def _handle_subscription_updated(self, subscription: Dict):
+        """Handle subscription status/period changes."""
+        if self.db is None:
+            return
+
+        from src.database.models import Subscription, SubscriptionStatus  # lazy
 
         stripe_sub_id = subscription["id"]
-        result = await self.db.execute(
+        result = self.db.execute(
             select(Subscription).where(
                 Subscription.stripe_subscription_id == stripe_sub_id
             )
@@ -241,14 +321,17 @@ class BillingService:
                     subscription["current_period_end"], tz=timezone.utc
                 )
 
-            await self.db.commit()
+            self.db.commit()
 
-    async def _handle_subscription_deleted(self, subscription: Dict):
-        """Handle subscription cancellation."""
-        from src.database.models import Subscription, SubscriptionStatus, SubscriptionTier
+    def _handle_subscription_deleted(self, subscription: Dict):
+        """Handle subscription cancellation — downgrade user to free tier."""
+        if self.db is None:
+            return
+
+        from src.database.models import Subscription, SubscriptionStatus, SubscriptionTier  # lazy
 
         stripe_sub_id = subscription["id"]
-        result = await self.db.execute(
+        result = self.db.execute(
             select(Subscription).where(
                 Subscription.stripe_subscription_id == stripe_sub_id
             )
@@ -258,15 +341,18 @@ class BillingService:
         if sub:
             sub.status = SubscriptionStatus.CANCELED
             sub.tier = SubscriptionTier.FREE
-            sub.app_generations_limit = 0
-            await self.db.commit()
+            sub.app_generations_limit = TIER_LIMITS["free"]["app_generations"]
+            self.db.commit()
 
-    async def _handle_payment_failed(self, invoice: Dict):
-        """Handle failed payment."""
-        from src.database.models import Subscription, SubscriptionStatus
+    def _handle_payment_failed(self, invoice: Dict):
+        """Handle failed payment — mark subscription as past due."""
+        if self.db is None:
+            return
+
+        from src.database.models import Subscription, SubscriptionStatus  # lazy
 
         customer_id = invoice["customer"]
-        result = await self.db.execute(
+        result = self.db.execute(
             select(Subscription).where(
                 Subscription.stripe_customer_id == customer_id
             )
@@ -275,11 +361,8 @@ class BillingService:
 
         if sub:
             sub.status = SubscriptionStatus.PAST_DUE
-            await self.db.commit()
+            self.db.commit()
             logger.warning(
                 f"Payment failed for customer {customer_id}, "
-                f"subscription {sub.stripe_subscription_id}, user {sub.user_id}. "
-                f"Marked as PAST_DUE."
+                f"subscription {sub.stripe_subscription_id}. Marked PAST_DUE."
             )
-            # TODO: integrate with email service to notify user
-            # await email_service.send_payment_failed_email(user_email=..., ...)

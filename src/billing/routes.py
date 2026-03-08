@@ -57,7 +57,8 @@ def create_billing_router(templates):
 
     @router.get("/plans", response_class=HTMLResponse)
     async def pricing_page(request: Request):
-        """Display the pricing page."""
+        """Display the pricing/plans page."""
+        stripe_configured = HAS_STRIPE and bool(stripe.api_key)
         plans = []
         for key, details in PLAN_DETAILS.items():
             plans.append({
@@ -68,8 +69,12 @@ def create_billing_router(templates):
                 "price_id": PRICE_IDS.get(key)
             })
         return templates.TemplateResponse(
-            "pages/pricing.html",
-            {"request": request, "plans": plans}
+            "billing/plans.html",
+            {
+                "request": request,
+                "plans": plans,
+                "stripe_configured": stripe_configured,
+            }
         )
 
     @router.post("/create-checkout-session")

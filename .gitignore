@@ -65,3 +65,4 @@ node_modules/
 # Credentials
 *.credentials.json
 .valeric_admin_credentials.json
+generated_projects/

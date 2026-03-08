@@ -1,194 +1,606 @@
 {% extends "base.html" %}
 {% block title %}Register Your Business - Ignara{% endblock %}
+
 {% block content %}
 <style>
-    .biz-container { max-width: 800px; margin: 0 auto; }
-    .step-indicator { display: flex; justify-content: space-between; margin-bottom: 40px; position: relative; }
-    .step-indicator::before { content: ''; position: absolute; top: 20px; left: 40px; right: 40px; height: 2px; background: var(--nexus-border); }
-    .step { text-align: center; position: relative; z-index: 1; }
-    .step-circle { width: 40px; height: 40px; background: var(--nexus-dark); border: 2px solid var(--nexus-border); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; font-weight: 600; }
-    .step.active .step-circle { background: var(--nexus-purple); border-color: var(--nexus-purple); }
-    .step.completed .step-circle { background: #22c55e; border-color: #22c55e; }
-    .step-label { font-size: 0.85rem; color: var(--nexus-text); }
-    .form-card { background: var(--nexus-card); border: 1px solid var(--nexus-border); border-radius: 12px; padding: 32px; }
-    .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
-    .form-field { margin-bottom: 20px; }
-    .form-field label { display: block; font-size: 0.9rem; margin-bottom: 8px; }
-    .form-field input, .form-field select { width: 100%; padding: 12px; background: var(--nexus-dark); border: 1px solid var(--nexus-border); border-radius: 8px; color: white; font-size: 0.95rem; }
-    .form-field.full-width { grid-column: 1 / -1; }
-    .package-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
-    .package-card { background: var(--nexus-dark); border: 2px solid var(--nexus-border); border-radius: 12px; padding: 20px; cursor: pointer; transition: all 0.2s; }
-    .package-card:hover { border-color: var(--nexus-purple); }
-    .package-card.selected { border-color: var(--nexus-purple); background: rgba(139, 92, 246, 0.1); }
-    .package-card h3 { font-size: 1.1rem; margin-bottom: 4px; }
-    .package-card .price { font-size: 1.5rem; font-weight: 700; color: var(--nexus-purple); margin: 12px 0; }
-    .package-card ul { list-style: none; padding: 0; font-size: 0.85rem; color: var(--nexus-text); }
-    .package-card li { padding: 4px 0; }
-    .package-card li::before { content: '✓ '; color: #22c55e; }
-    .btn-submit { width: 100%; padding: 16px; background: var(--nexus-purple); color: white; border: none; border-radius: 10px; font-size: 1.1rem; font-weight: 600; cursor: pointer; margin-top: 24px; }
+  /* ---- Variables ---- */
+  :root {
+    --f-card: rgba(255,255,255,0.02);
+    --f-border: rgba(255,255,255,0.08);
+    --f-purple: #8b5cf6;
+    --f-green: #22c55e;
+    --f-muted: #9ca3af;
+    --f-input-bg: #111827;
+    --f-radius: 12px;
+  }
+
+  /* ---- Layout ---- */
+  .biz-wrap { max-width: 760px; margin: 0 auto; }
+
+  /* ---- Step indicator ---- */
+  .step-track {
+    display: flex; align-items: flex-start; gap: 0;
+    margin-bottom: 40px; position: relative;
+  }
+  .step-track::before {
+    content: ''; position: absolute; top: 20px; left: 20px; right: 20px;
+    height: 2px; background: var(--f-border); z-index: 0;
+  }
+  .step-item {
+    flex: 1; text-align: center; position: relative; z-index: 1;
+  }
+  .step-circle {
+    width: 40px; height: 40px; border-radius: 50%;
+    border: 2px solid var(--f-border);
+    background: #0f172a;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 8px; font-weight: 700; font-size: 0.9rem;
+    transition: all 0.25s ease;
+  }
+  .step-item.active .step-circle   { background: var(--f-purple); border-color: var(--f-purple); color: white; }
+  .step-item.completed .step-circle { background: var(--f-green);  border-color: var(--f-green);  color: white; }
+  .step-label { font-size: 0.78rem; color: var(--f-muted); font-weight: 500; }
+  .step-item.active .step-label    { color: var(--f-purple); }
+  .step-item.completed .step-label { color: var(--f-green); }
+
+  /* ---- Cards ---- */
+  .form-card {
+    background: var(--f-card);
+    border: 1px solid var(--f-border);
+    border-radius: var(--f-radius);
+    padding: 32px;
+  }
+  .form-card + .form-card { margin-top: 16px; }
+
+  /* ---- Grid ---- */
+  .fg { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .fg .full { grid-column: 1 / -1; }
+
+  /* ---- Fields ---- */
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 0.85rem; font-weight: 500; color: #d1d5db; }
+  .field input, .field select, .field textarea {
+    padding: 11px 14px;
+    background: var(--f-input-bg);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    color: white;
+    font-size: 0.9rem;
+    transition: border-color 0.2s;
+    outline: none;
+  }
+  .field input:focus, .field select:focus { border-color: var(--f-purple); }
+  .field input::placeholder { color: #4b5563; }
+  .field .hint { font-size: 0.78rem; color: var(--f-muted); }
+
+  /* ---- Buttons ---- */
+  .btn-row { display: flex; gap: 12px; margin-top: 28px; }
+  .btn-primary {
+    flex: 1; padding: 13px 24px;
+    background: var(--f-purple); color: white;
+    border: none; border-radius: 9px;
+    font-size: 0.95rem; font-weight: 600;
+    cursor: pointer; transition: background 0.2s;
+  }
+  .btn-primary:hover { background: #7c3aed; }
+  .btn-secondary {
+    padding: 13px 20px;
+    background: transparent; color: #9ca3af;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 9px; font-size: 0.9rem;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .btn-secondary:hover { background: rgba(255,255,255,0.04); color: white; }
+
+  /* ---- Status tracker ---- */
+  .tracker {
+    background: var(--f-card);
+    border: 1px solid var(--f-border);
+    border-radius: var(--f-radius);
+    padding: 28px;
+  }
+  .tracker-step {
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--f-border);
+  }
+  .tracker-step:last-child { border-bottom: none; }
+  .tracker-icon {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; font-size: 1rem;
+  }
+  .tracker-icon.done    { background: rgba(34,197,94,0.15); color: var(--f-green); }
+  .tracker-icon.pending { background: rgba(255,255,255,0.04); color: var(--f-muted); }
+  .tracker-icon.active  { background: rgba(139,92,246,0.15); color: var(--f-purple); }
+  .tracker-label { font-size: 0.9rem; font-weight: 500; }
+  .tracker-sublabel { font-size: 0.8rem; color: var(--f-muted); }
+
+  /* ---- Review rows ---- */
+  .review-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 10px 0; border-bottom: 1px solid var(--f-border);
+    font-size: 0.9rem;
+  }
+  .review-row:last-child { border-bottom: none; }
+  .review-key { color: var(--f-muted); }
+  .review-val { color: white; font-weight: 500; }
+
+  /* ---- Step panels (show/hide) ---- */
+  .step-panel { display: none; }
+  .step-panel.active { display: block; }
+
+  /* ---- Flash ---- */
+  .flash { padding: 14px 18px; border-radius: 9px; margin-bottom: 20px; font-size: 0.9rem; }
+  .flash.success { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); color: #86efac; }
+  .flash.error   { background: rgba(239,68,68,0.1);  border: 1px solid rgba(239,68,68,0.3);  color: #fca5a5; }
+
+  @media (max-width: 600px) {
+    .fg { grid-template-columns: 1fr; }
+    .fg .full { grid-column: auto; }
+    .form-card { padding: 20px; }
+  }
 </style>
 
-<div class="biz-container">
-    <h1 style="font-size: 2rem; font-weight: 700; margin-bottom: 8px;">Register Your Business</h1>
-    <p style="color: var(--nexus-text); margin-bottom: 32px;">Form your LLC and get your EIN in minutes.</p>
+<div class="biz-wrap">
+  <h1 style="font-size:2rem;font-weight:700;margin-bottom:6px;">Register Your Business</h1>
+  <p style="color:var(--f-muted);margin-bottom:32px;">Form your LLC or corporation in minutes.</p>
 
-    <div class="step-indicator">
-        <div class="step active">
-            <div class="step-circle">1</div>
-            <div class="step-label">Business Info</div>
-        </div>
-        <div class="step">
-            <div class="step-circle">2</div>
-            <div class="step-label">Choose Package</div>
-        </div>
-        <div class="step">
-            <div class="step-circle">3</div>
-            <div class="step-label">Review</div>
-        </div>
-        <div class="step">
-            <div class="step-circle">4</div>
-            <div class="step-label">Complete</div>
-        </div>
+  <!-- ── STATUS TRACKER (shown if formation already in progress) ── -->
+  {% if existing_formation %}
+  <div class="tracker" style="margin-bottom:28px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <h2 style="font-size:1.1rem;font-weight:600;">Formation in Progress</h2>
+      <span style="font-size:0.8rem;padding:4px 10px;border-radius:20px;
+                   background:rgba(139,92,246,0.15);color:#c4b5fd;">
+        {{ existing_formation.status | title }}
+      </span>
     </div>
 
+    <div class="tracker-step">
+      <div class="tracker-icon {% if existing_formation.status in ['submitted','processing','approved','completed'] %}done{% elif existing_formation.status == 'pending' %}active{% else %}pending{% endif %}">
+        {% if existing_formation.status in ['submitted','processing','approved','completed'] %}✓{% else %}1{% endif %}
+      </div>
+      <div>
+        <div class="tracker-label">Formation Filed</div>
+        <div class="tracker-sublabel">{{ existing_formation.business_name }} · {{ existing_formation.business_type | upper }} · {{ existing_formation.state | upper }}</div>
+      </div>
+    </div>
+
+    <div class="tracker-step">
+      <div class="tracker-icon {% if existing_formation.ein_number %}done{% elif existing_formation.status in ['approved','completed'] %}active{% else %}pending{% endif %}">
+        {% if existing_formation.ein_number %}✓{% else %}2{% endif %}
+      </div>
+      <div>
+        <div class="tracker-label">EIN Application</div>
+        <div class="tracker-sublabel">{% if existing_formation.ein_number %}EIN: {{ existing_formation.ein_number }}{% else %}Waiting for formation approval{% endif %}</div>
+      </div>
+    </div>
+
+    <div class="tracker-step">
+      <div class="tracker-icon {% if existing_formation.status == 'completed' %}done{% else %}pending{% endif %}">
+        {% if existing_formation.status == 'completed' %}✓{% else %}3{% endif %}
+      </div>
+      <div>
+        <div class="tracker-label">Certificate Issued</div>
+        <div class="tracker-sublabel">
+          {% if existing_formation.status == 'completed' %}Formation complete{% else %}Estimated: 3–7 business days{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p style="font-size:0.875rem;color:var(--f-muted);margin-bottom:28px;">
+    A formation is already in progress. You can start a new one below.
+  </p>
+  {% endif %}
+
+  <!-- ── STEP INDICATOR ── -->
+  <div class="step-track">
+    <div class="step-item active" id="si-1">
+      <div class="step-circle">1</div>
+      <div class="step-label">Business Info</div>
+    </div>
+    <div class="step-item" id="si-2">
+      <div class="step-circle">2</div>
+      <div class="step-label">Registered Agent</div>
+    </div>
+    <div class="step-item" id="si-3">
+      <div class="step-circle">3</div>
+      <div class="step-label">Review & Submit</div>
+    </div>
+  </div>
+
+  <!-- ── FLASH MESSAGES ── -->
+  <div id="flash-area"></div>
+
+  <!-- ══════════════════════════════════
+       STEP 1 — Business Info
+  ══════════════════════════════════ -->
+  <div class="step-panel active" id="panel-1">
     <div class="form-card">
-        <h2 style="font-size: 1.25rem; margin-bottom: 24px;">Business Information</h2>
-        <div class="form-grid">
-            <div class="form-field">
-                <label>Business Name</label>
-                <input type="text" placeholder="Your Company LLC">
-            </div>
-            <div class="form-field">
-                <label>Business Type</label>
-                <select>
-                    <option>LLC (Recommended)</option>
-                    <option>Corporation (C-Corp)</option>
-                    <option>S-Corporation</option>
-                    <option>Sole Proprietorship</option>
-                </select>
-            </div>
-            <div class="form-field">
-                <label>State of Formation</label>
-                <select>
-                    <option>Delaware (Recommended)</option>
-                    <option>Wyoming</option>
-                    <option>Nevada</option>
-                    <option>California</option>
-                    <option>New York</option>
-                    <option>Texas</option>
-                    <option>Florida</option>
-                </select>
-            </div>
-            <div class="form-field">
-                <label>Industry</label>
-                <select>
-                    <option>Technology / Software</option>
-                    <option>Consulting</option>
-                    <option>E-commerce</option>
-                    <option>Other</option>
-                </select>
-            </div>
-            <div class="form-field full-width">
-                <label>Business Address</label>
-                <input type="text" placeholder="123 Main St, City, State ZIP">
-            </div>
+      <h2 style="font-size:1.15rem;font-weight:600;margin-bottom:22px;">Business Details</h2>
+      <div class="fg">
+        <div class="field">
+          <label>Business Name <span style="color:#ef4444">*</span></label>
+          <input type="text" id="biz_name" placeholder="Acme Ventures LLC" required>
+          <span class="hint">Include LLC, Inc., Corp., etc. in the name</span>
         </div>
-
-        <h2 style="font-size: 1.25rem; margin: 32px 0 24px;">Select Package</h2>
-        <div class="package-grid">
-            <div class="package-card">
-                <h3>Basic</h3>
-                <div class="price">$149</div>
-                <ul>
-                    <li>LLC Formation</li>
-                    <li>Operating Agreement</li>
-                    <li>EIN Application</li>
-                </ul>
-            </div>
-            <div class="package-card selected">
-                <h3>Standard</h3>
-                <div class="price">$299</div>
-                <ul>
-                    <li>Everything in Basic</li>
-                    <li>Registered Agent (1yr)</li>
-                    <li>Banking Resolution</li>
-                    <li>Business License Guide</li>
-                </ul>
-            </div>
-            <div class="package-card">
-                <h3>Premium</h3>
-                <div class="price">$499</div>
-                <ul>
-                    <li>Everything in Standard</li>
-                    <li>Business Bank Account</li>
-                    <li>Tax ID Numbers</li>
-                    <li>Annual Report Filing</li>
-                </ul>
-            </div>
+        <div class="field">
+          <label>Business Type <span style="color:#ef4444">*</span></label>
+          <select id="biz_type">
+            <option value="llc">LLC (Recommended)</option>
+            <option value="corporation">C-Corporation</option>
+            <option value="s_corp">S-Corporation</option>
+            <option value="sole_proprietorship">Sole Proprietorship</option>
+            <option value="partnership">Partnership</option>
+            <option value="nonprofit">Nonprofit</option>
+          </select>
         </div>
-            <!-- Domain Registration -->
-            <div style="margin-top: 24px; padding: 24px; background: #111827; border-radius: 12px; border: 1px solid #374151;">
-                <h3 style="font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
-                    <i data-lucide="globe" style="width: 20px; height: 20px; color: #8b5cf6;"></i>
-                    Domain Registration
-                </h3>
-                <p style="color: #9ca3af; margin-bottom: 16px; font-size: 14px;">Get a professional domain for your business</p>
-                
-                <div style="display: flex; gap: 12px; margin-bottom: 16px;">
-                    <input type="text" id="domain-name" placeholder="yourcompany" 
-                           style="flex: 1; padding: 12px 16px; background: #1f2937; border: 1px solid #374151; border-radius: 8px; color: white;">
-                    <select id="domain-ext" style="padding: 12px 16px; background: #1f2937; border: 1px solid #374151; border-radius: 8px; color: white;">
-                        <option value=".com">.com ($12/yr)</option>
-                        <option value=".io">.io ($39/yr)</option>
-                        <option value=".co">.co ($25/yr)</option>
-                        <option value=".app">.app ($14/yr)</option>
-                        <option value=".dev">.dev ($12/yr)</option>
-                    </select>
-                    <button onclick="checkDomainAvailability()" style="padding: 12px 24px; background: #374151; border: none; border-radius: 8px; color: white; cursor: pointer;">Check</button>
-                </div>
-                
-                <div id="domain-result" style="display: none; padding: 12px; border-radius: 8px; margin-bottom: 16px;"></div>
-                
-                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                    <input type="checkbox" id="include-domain" style="width: 18px; height: 18px;">
-                    <span>Include domain registration with my business package</span>
-                </label>
-            </div>
+        <div class="field">
+          <label>State of Formation <span style="color:#ef4444">*</span></label>
+          <select id="biz_state">
+            <option value="DE">Delaware (Recommended — tax-friendly)</option>
+            <option value="WY">Wyoming (Low cost)</option>
+            <option value="NV">Nevada (Privacy-friendly)</option>
+            <option value="CA">California</option>
+            <option value="NY">New York</option>
+            <option value="TX">Texas</option>
+            <option value="FL">Florida</option>
+            <option value="WA">Washington</option>
+            <option value="CO">Colorado</option>
+            <option value="AZ">Arizona</option>
+            <option value="GA">Georgia</option>
+            <option value="IL">Illinois</option>
+            <option value="MA">Massachusetts</option>
+            <option value="NJ">New Jersey</option>
+            <option value="PA">Pennsylvania</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Industry</label>
+          <select id="biz_industry">
+            <option value="technology">Technology / Software</option>
+            <option value="consulting">Consulting</option>
+            <option value="ecommerce">E-commerce</option>
+            <option value="finance">Finance / Fintech</option>
+            <option value="healthcare">Healthcare</option>
+            <option value="real_estate">Real Estate</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="field full">
+          <label>Business Description</label>
+          <input type="text" id="biz_description" placeholder="Brief description of your business purpose">
+          <span class="hint">Used for formation documents (optional)</span>
+        </div>
+      </div>
 
+      <h2 style="font-size:1.1rem;font-weight:600;margin:28px 0 18px;">Owner / Contact Information</h2>
+      <div class="fg">
+        <div class="field">
+          <label>Full Name <span style="color:#ef4444">*</span></label>
+          <input type="text" id="owner_name" placeholder="Jane Smith">
+        </div>
+        <div class="field">
+          <label>Email <span style="color:#ef4444">*</span></label>
+          <input type="email" id="owner_email" placeholder="jane@example.com">
+        </div>
+        <div class="field full">
+          <label>Street Address <span style="color:#ef4444">*</span></label>
+          <input type="text" id="owner_street" placeholder="123 Main St">
+        </div>
+        <div class="field">
+          <label>City <span style="color:#ef4444">*</span></label>
+          <input type="text" id="owner_city" placeholder="San Francisco">
+        </div>
+        <div class="field">
+          <label>ZIP Code <span style="color:#ef4444">*</span></label>
+          <input type="text" id="owner_zip" placeholder="94105">
+        </div>
+      </div>
 
-        <button class="btn-submit">🏢 Continue to Review</button>
+      <div class="btn-row">
+        <button class="btn-primary" onclick="goToStep(2)">Continue to Registered Agent →</button>
+      </div>
     </div>
-</div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       STEP 2 — Registered Agent
+  ══════════════════════════════════ -->
+  <div class="step-panel" id="panel-2">
+    <div class="form-card">
+      <h2 style="font-size:1.15rem;font-weight:600;margin-bottom:6px;">Registered Agent</h2>
+      <p style="color:var(--f-muted);font-size:0.875rem;margin-bottom:24px;">
+        A registered agent is required in your state of formation. They receive legal documents on behalf of your business.
+      </p>
+
+      <!-- Agent type toggle -->
+      <div style="display:flex;gap:12px;margin-bottom:24px;" id="agent-type-toggle">
+        <button onclick="setAgentType('service')" id="btn-agent-service"
+                class="agent-tab active-tab"
+                style="flex:1;padding:12px;border-radius:9px;border:2px solid var(--f-purple);background:rgba(139,92,246,0.1);color:white;font-size:0.9rem;font-weight:600;cursor:pointer;">
+          Use a Registered Agent Service
+        </button>
+        <button onclick="setAgentType('self')" id="btn-agent-self"
+                class="agent-tab"
+                style="flex:1;padding:12px;border-radius:9px;border:2px solid rgba(255,255,255,0.08);background:transparent;color:#9ca3af;font-size:0.9rem;cursor:pointer;">
+          Act as My Own Agent
+        </button>
+      </div>
+
+      <!-- Service panel -->
+      <div id="agent-service-panel">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;">
+
+          <label style="display:flex;align-items:flex-start;gap:12px;padding:16px;border-radius:10px;border:2px solid var(--f-purple);background:rgba(139,92,246,0.08);cursor:pointer;">
+            <input type="radio" name="agent_service" value="zenbusiness" checked style="margin-top:2px;accent-color:var(--f-purple);">
+            <div>
+              <div style="font-weight:600;font-size:0.9rem;">ZenBusiness</div>
+              <div style="color:var(--f-muted);font-size:0.8rem;">From $49/yr · Recommended</div>
+            </div>
+          </label>
+
+          <label style="display:flex;align-items:flex-start;gap:12px;padding:16px;border-radius:10px;border:2px solid rgba(255,255,255,0.08);background:transparent;cursor:pointer;">
+            <input type="radio" name="agent_service" value="stripe_atlas" style="margin-top:2px;accent-color:var(--f-purple);">
+            <div>
+              <div style="font-weight:600;font-size:0.9rem;">Stripe Atlas</div>
+              <div style="color:var(--f-muted);font-size:0.8rem;">$500 flat (includes bank acct)</div>
+            </div>
+          </label>
+
+        </div>
+        <p style="font-size:0.8rem;color:var(--f-muted);">
+          You'll complete the agent registration on the provider's website. We save your formation details so you can pick up where you left off.
+        </p>
+      </div>
+
+      <!-- Self panel -->
+      <div id="agent-self-panel" style="display:none;">
+        <div class="fg">
+          <div class="field">
+            <label>Agent Full Name <span style="color:#ef4444">*</span></label>
+            <input type="text" id="agent_name" placeholder="Jane Smith">
+          </div>
+          <div class="field">
+            <label>Agent Email</label>
+            <input type="email" id="agent_email" placeholder="agent@example.com">
+          </div>
+          <div class="field full">
+            <label>Registered Street Address <span style="color:#ef4444">*</span></label>
+            <input type="text" id="agent_street" placeholder="123 Main St (must be physical, not PO box)">
+          </div>
+          <div class="field">
+            <label>City <span style="color:#ef4444">*</span></label>
+            <input type="text" id="agent_city" placeholder="Wilmington">
+          </div>
+          <div class="field">
+            <label>ZIP <span style="color:#ef4444">*</span></label>
+            <input type="text" id="agent_zip" placeholder="19801">
+          </div>
+        </div>
+        <p style="font-size:0.8rem;color:#f59e0b;margin-top:12px;">
+          ⚠ Self-registration requires you to be physically available at this address during business hours to receive legal documents.
+        </p>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn-secondary" onclick="goToStep(1)">← Back</button>
+        <button class="btn-primary" onclick="goToStep(3)">Review & Submit →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       STEP 3 — Review + Submit
+  ══════════════════════════════════ -->
+  <div class="step-panel" id="panel-3">
+    <div class="form-card">
+      <h2 style="font-size:1.15rem;font-weight:600;margin-bottom:20px;">Review Your Information</h2>
+
+      <h3 style="font-size:0.85rem;font-weight:600;color:var(--f-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px;">Business Details</h3>
+      <div id="review-biz"></div>
+
+      <h3 style="font-size:0.85rem;font-weight:600;color:var(--f-muted);text-transform:uppercase;letter-spacing:0.05em;margin:20px 0 12px;">Registered Agent</h3>
+      <div id="review-agent"></div>
+
+      <!-- Options -->
+      <h3 style="font-size:0.85rem;font-weight:600;color:var(--f-muted);text-transform:uppercase;letter-spacing:0.05em;margin:20px 0 14px;">Extras</h3>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:8px;">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.9rem;">
+          <input type="checkbox" id="opt_operating" checked style="accent-color:var(--f-purple);width:16px;height:16px;">
+          Operating Agreement (included)
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.9rem;">
+          <input type="checkbox" id="opt_expedited" style="accent-color:var(--f-purple);width:16px;height:16px;">
+          Expedited Processing (+$50, 2–3 days)
+        </label>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn-secondary" onclick="goToStep(2)">← Back</button>
+        <button class="btn-primary" onclick="submitFormation()" id="btn-submit">
+          🏢 Submit Formation
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /.biz-wrap -->
 
 <script>
-document.querySelectorAll('.package-card').forEach(card => {
-    card.addEventListener('click', function() {
-        document.querySelectorAll('.package-card').forEach(c => c.classList.remove('selected'));
-        this.classList.add('selected');
+  // ── State ──
+  let currentStep = 1;
+  let agentType = 'service';
+
+  // ── Step navigation ──
+  function goToStep(n) {
+    if (n > currentStep && !validateStep(currentStep)) return;
+
+    // Update panels
+    document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('panel-' + n).classList.add('active');
+
+    // Update step indicator
+    [1, 2, 3].forEach(i => {
+      const si = document.getElementById('si-' + i);
+      si.classList.remove('active', 'completed');
+      if (i < n) si.classList.add('completed');
+      else if (i === n) si.classList.add('active');
     });
-});
+
+    currentStep = n;
+    if (n === 3) populateReview();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ── Validation ──
+  function validateStep(step) {
+    const required = {
+      1: ['biz_name', 'owner_name', 'owner_email', 'owner_street', 'owner_city', 'owner_zip'],
+      2: agentType === 'self' ? ['agent_name', 'agent_street', 'agent_city', 'agent_zip'] : []
+    };
+    const fields = required[step] || [];
+    let ok = true;
+    fields.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (!el.value.trim()) {
+        el.style.borderColor = '#ef4444';
+        el.addEventListener('input', () => { el.style.borderColor = ''; }, { once: true });
+        ok = false;
+      }
+    });
+    if (!ok) flash('Please fill in all required fields.', 'error');
+    return ok;
+  }
+
+  // ── Agent type toggle ──
+  function setAgentType(type) {
+    agentType = type;
+    const servicePanel = document.getElementById('agent-service-panel');
+    const selfPanel    = document.getElementById('agent-self-panel');
+    const btnService   = document.getElementById('btn-agent-service');
+    const btnSelf      = document.getElementById('btn-agent-self');
+
+    if (type === 'service') {
+      servicePanel.style.display = 'block';
+      selfPanel.style.display    = 'none';
+      btnService.style.borderColor = 'var(--f-purple)';
+      btnService.style.background  = 'rgba(139,92,246,0.1)';
+      btnService.style.color       = 'white';
+      btnSelf.style.borderColor    = 'rgba(255,255,255,0.08)';
+      btnSelf.style.background     = 'transparent';
+      btnSelf.style.color          = '#9ca3af';
+    } else {
+      servicePanel.style.display = 'none';
+      selfPanel.style.display    = 'block';
+      btnSelf.style.borderColor  = 'var(--f-purple)';
+      btnSelf.style.background   = 'rgba(139,92,246,0.1)';
+      btnSelf.style.color        = 'white';
+      btnService.style.borderColor = 'rgba(255,255,255,0.08)';
+      btnService.style.background  = 'transparent';
+      btnService.style.color       = '#9ca3af';
+    }
+  }
+
+  // ── Populate review ──
+  function populateReview() {
+    const bizMap = [
+      ['Business Name',  document.getElementById('biz_name').value],
+      ['Type',           document.getElementById('biz_type').options[document.getElementById('biz_type').selectedIndex].text],
+      ['State',          document.getElementById('biz_state').options[document.getElementById('biz_state').selectedIndex].text],
+      ['Owner Name',     document.getElementById('owner_name').value],
+      ['Owner Email',    document.getElementById('owner_email').value],
+      ['Address',        [document.getElementById('owner_street').value, document.getElementById('owner_city').value, document.getElementById('owner_zip').value].filter(Boolean).join(', ')],
+    ];
+    document.getElementById('review-biz').innerHTML = bizMap.map(([k, v]) =>
+      `<div class="review-row"><span class="review-key">${k}</span><span class="review-val">${v || '—'}</span></div>`
+    ).join('');
+
+    let agentText;
+    if (agentType === 'service') {
+      const sel = document.querySelector('input[name="agent_service"]:checked');
+      agentText = sel ? sel.value === 'zenbusiness' ? 'ZenBusiness (recommended)' : 'Stripe Atlas' : '—';
+    } else {
+      agentText = [document.getElementById('agent_name').value, document.getElementById('agent_street').value, document.getElementById('agent_city').value].filter(Boolean).join(', ') || '—';
+    }
+    const agentMap = [
+      ['Type',    agentType === 'service' ? 'Registered Agent Service' : 'Self (individual)'],
+      ['Details', agentText],
+    ];
+    document.getElementById('review-agent').innerHTML = agentMap.map(([k, v]) =>
+      `<div class="review-row"><span class="review-key">${k}</span><span class="review-val">${v}</span></div>`
+    ).join('');
+  }
+
+  // ── Submit formation ──
+  async function submitFormation() {
+    const btn = document.getElementById('btn-submit');
+    btn.disabled = true;
+    btn.textContent = 'Submitting…';
+
+    const agentServiceSel = document.querySelector('input[name="agent_service"]:checked');
+    const provider = agentType === 'service' ? (agentServiceSel ? agentServiceSel.value : 'zenbusiness') : 'self';
+
+    const payload = {
+      business_name:   document.getElementById('biz_name').value.trim(),
+      business_type:   document.getElementById('biz_type').value,
+      state:           document.getElementById('biz_state').value,
+      industry:        document.getElementById('biz_industry').value,
+      description:     document.getElementById('biz_description').value.trim(),
+      owner_name:      document.getElementById('owner_name').value.trim(),
+      owner_email:     document.getElementById('owner_email').value.trim(),
+      street_address:  document.getElementById('owner_street').value.trim(),
+      city:            document.getElementById('owner_city').value.trim(),
+      zip_code:        document.getElementById('owner_zip').value.trim(),
+      agent_type:      agentType,
+      agent_provider:  provider,
+      agent_name:      agentType === 'self' ? document.getElementById('agent_name').value.trim() : null,
+      agent_street:    agentType === 'self' ? document.getElementById('agent_street').value.trim() : null,
+      agent_city:      agentType === 'self' ? document.getElementById('agent_city').value.trim() : null,
+      agent_zip:       agentType === 'self' ? document.getElementById('agent_zip').value.trim() : null,
+      opt_operating:   document.getElementById('opt_operating').checked,
+      opt_expedited:   document.getElementById('opt_expedited').checked,
+      project_id:      '{{ project.id if project else "" }}',
+    };
+
+    try {
+      const resp = await fetch('/business-formation/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await resp.json();
+
+      if (resp.ok && data.success) {
+        flash(data.message || 'Formation submitted successfully! Check your email for next steps.', 'success');
+        btn.textContent = '✅ Submitted';
+        // Redirect to status page after a short delay
+        if (data.redirect_url) {
+          setTimeout(() => { window.location.href = data.redirect_url; }, 2500);
+        }
+      } else {
+        flash(data.detail || data.error || 'Submission failed. Please try again.', 'error');
+        btn.disabled = false;
+        btn.textContent = '🏢 Submit Formation';
+      }
+    } catch (err) {
+      flash('Network error: ' + err.message, 'error');
+      btn.disabled = false;
+      btn.textContent = '🏢 Submit Formation';
+    }
+  }
+
+  // ── Flash helper ──
+  function flash(msg, type) {
+    const area = document.getElementById('flash-area');
+    area.innerHTML = `<div class="flash ${type}">${msg}</div>`;
+    area.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    if (type === 'success') {
+      setTimeout(() => { area.innerHTML = ''; }, 6000);
+    }
+  }
 </script>
 {% endblock %}
-<script>
-function checkDomainAvailability() {
-    const domain = document.getElementById('domain-name').value;
-    const ext = document.getElementById('domain-ext').value;
-    const result = document.getElementById('domain-result');
-    
-    if (!domain) {
-        result.style.display = 'block';
-        result.style.background = '#7f1d1d';
-        result.innerHTML = 'Please enter a domain name';
-        return;
-    }
-    
-    const fullDomain = domain + ext;
-    
-    // Simulate availability check
-    result.style.display = 'block';
-    result.style.background = '#064e3b';
-    result.innerHTML = '<span style="color: #10b981;">\u2713 ' + fullDomain + ' is available!</span>';
-    
-    document.getElementById('include-domain').checked = true;
-}
-</script>

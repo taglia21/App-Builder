@@ -50,7 +50,13 @@ class BuildManager:
                     started_at     TEXT NOT NULL,
                     completed_at   TEXT,
                     output_path    TEXT,
-                    error_message  TEXT
+                    error_message  TEXT,
+                    quality_score  INTEGER,
+                    total_files    INTEGER DEFAULT 0,
+                    total_lines    INTEGER DEFAULT 0,
+                    target_users   TEXT,
+                    features       TEXT,
+                    monetization   TEXT
                 )
                 """
             )
@@ -61,6 +67,9 @@ class BuildManager:
         idea: str,
         llm_provider: str = "auto",
         theme: str = "Modern",
+        target_users: str = "",
+        features: str = "",
+        monetization: str = "",
     ) -> str:
         """Create a new build record and return its id."""
         build_id = str(uuid.uuid4())
@@ -70,10 +79,10 @@ class BuildManager:
                 """
                 INSERT INTO builds
                     (build_id, idea, status, current_stage, progress,
-                     llm_provider, theme, started_at)
-                VALUES (?, ?, 'pending', '', 0, ?, ?, ?)
+                     llm_provider, theme, started_at, target_users, features, monetization)
+                VALUES (?, ?, 'pending', '', 0, ?, ?, ?, ?, ?, ?)
                 """,
-                (build_id, idea, llm_provider, theme, now),
+                (build_id, idea, llm_provider, theme, now, target_users, features, monetization),
             )
         # Initialise event buffer
         with self._lock:

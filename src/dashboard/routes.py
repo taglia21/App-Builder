@@ -373,11 +373,34 @@ class DashboardRoutes:
         return self.render(request, "pages/privacy.html", {"active": "privacy"})
 
     async def business_formation_page(self, request: Request) -> HTMLResponse:
-        """Business Formation page."""
+        """Business Formation page — shows existing formation status if available."""
         user = get_current_user(request)
         if not user:
             return RedirectResponse(url="/login", status_code=303)
-        return self.render(request, "pages/business_formation.html", {"active": "business-formation", "user": user})
+
+        existing_formation = None
+        try:
+            from src.database.db import get_db
+            from src.database.models import BusinessFormation
+            db = get_db()
+            with db.session() as session:
+                existing_formation = (
+                    session.query(BusinessFormation)
+                    .filter(BusinessFormation.user_id == str(user.id))
+                    .order_by(BusinessFormation.created_at.desc())
+                    .first()
+                )
+                # Detach from session so it can be passed to template
+                if existing_formation:
+                    session.expunge(existing_formation)
+        except Exception as e:
+            logger.debug(f"Could not load existing formation: {e}")
+
+        return self.render(request, "pages/business_formation.html", {
+            "active": "business-formation",
+            "user": user,
+            "existing_formation": existing_formation,
+        })
 
     async def new_project_page(self, request: Request) -> HTMLResponse:
         """Create new project page."""
@@ -406,6 +429,119 @@ class DashboardRoutes:
         if not user:
             return RedirectResponse(url="/login", status_code=303)
         return self.render(request, "pages/builds.html", {"active": "builds", "user": user})
+
+    async def quality_dashboard_page(
+        self,
+        request: Request,
+        project_id: str,
+    ) -> HTMLResponse:
+        """Quality metrics dashboard for a generated project."""
+        user = get_current_user(request)
+        if not user:
+            return RedirectResponse(url="/login", status_code=303)
+
+        project = None
+        quality_data: dict = {}
+
+        try:
+            from src.database.db import get_db
+            from src.database.models import Project
+            db = get_db()
+            with db.session() as session:
+                db_project = (
+                    session.query(Project)
+                    .filter(
+                        Project.id == project_id,
+                        Project.user_id == user.id,
+                        Project.is_deleted == False,
+                    )
+                    .first()
+                )
+                if db_project:
+                    config = db_project.config or {}
+                    project = {
+                        "id": db_project.id,
+                        "name": db_project.name,
+                        "description": db_project.description or "",
+                        "status": db_project.status.value if hasattr(db_project.status, "value") else str(db_project.status),
+                        "output_path": config.get("output_path"),
+                        "created_at": db_project.created_at.strftime("%b %d, %Y") if db_project.created_at else "",
+                    }
+                    # Pull quality data from config if stored
+                    quality_data = config.get("quality", {})
+        except Exception as e:
+            logger.warning(f"Could not load project {project_id} for quality dashboard: {e}")
+
+        if not project:
+            return RedirectResponse(url="/projects", status_code=303)
+
+        # Attempt to load latest quality result from in-memory job store
+        if not quality_data:
+            try:
+                from src.code_generation.routes import _jobs
+                for job in _jobs.values():
+                    if job.result and str(getattr(job.request, 'project_id', '')) == str(project_id):
+                        result = job.result
+                        quality_data = {
+                            "score":    result.quality.score,
+                            "passed":   int(result.quality.passed),
+                            "errors":   result.quality.errors,
+                            "warnings": result.quality.warnings,
+                            "summary":  result.quality.summary,
+                        }
+                        break
+            except Exception:
+                pass
+
+        return self.render(request, "pages/quality_dashboard.html", {
+            "project": project,
+            "quality_data": quality_data,
+        })
+
+    async def refine_page(
+        self,
+        request: Request,
+        project_id: str,
+    ) -> HTMLResponse:
+        """AI code refinement chat page for a generated project."""
+        user = get_current_user(request)
+        if not user:
+            return RedirectResponse(url="/login", status_code=303)
+
+        project = None
+        try:
+            from src.database.db import get_db
+            from src.database.models import Project
+            db = get_db()
+            with db.session() as session:
+                db_project = (
+                    session.query(Project)
+                    .filter(
+                        Project.id == project_id,
+                        Project.user_id == user.id,
+                        Project.is_deleted == False,
+                    )
+                    .first()
+                )
+                if db_project:
+                    config = db_project.config or {}
+                    project = {
+                        "id": db_project.id,
+                        "name": db_project.name,
+                        "description": db_project.description or "",
+                        "status": db_project.status.value if hasattr(db_project.status, "value") else str(db_project.status),
+                        "output_path": config.get("output_path", ""),
+                        "created_at": db_project.created_at.strftime("%b %d, %Y") if db_project.created_at else "",
+                    }
+        except Exception as e:
+            logger.warning(f"Could not load project {project_id} for refine page: {e}")
+
+        if not project:
+            return RedirectResponse(url="/projects", status_code=303)
+
+        return self.render(request, "pages/refine.html", {
+            "project": project,
+        })
 
     # ==================== HTMX Partial Routes ====================
 
@@ -914,12 +1050,17 @@ def create_dashboard_router(templates: Jinja2Templates) -> APIRouter:
     router.add_api_route("/terms", routes.terms_page, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/privacy", routes.privacy_page, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/business-formation", routes.business_formation_page, methods=["GET"], response_class=HTMLResponse)
+    router.add_api_route("/business-formation/submit", business_formation_submit, methods=["POST"])
     router.add_api_route("/new-project", routes.new_project_page, methods=["GET"], response_class=HTMLResponse)
 
     # Build pipeline page routes
     router.add_api_route("/build", routes.build_page, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/build/{build_id}", routes.build_progress_page, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/builds", routes.builds_page, methods=["GET"], response_class=HTMLResponse)
+
+    # Quality dashboard and AI refinement pages
+    router.add_api_route("/projects/{project_id}/quality", routes.quality_dashboard_page, methods=["GET"], response_class=HTMLResponse)
+    router.add_api_route("/projects/{project_id}/refine", routes.refine_page, methods=["GET"], response_class=HTMLResponse)
 
 
     # Admin routes
@@ -994,24 +1135,228 @@ async def pricing_page(request: Request) -> HTMLResponse:
     return _render(request, "pages/pricing.html", {})
 
 async def business_formation(request: Request) -> HTMLResponse:
-    """Business formation page for LLC registration."""
+    """Business formation page for LLC registration (project-scoped)."""
     project_id = request.path_params.get('project_id')
 
     project = _projects_store.get(project_id)
     if not project:
         return RedirectResponse(url="/dashboard", status_code=302)
 
-    return _render(request, "pages/business_formation.html", {"project": project})
+    existing_formation = None
+    user = get_current_user(request)
+    if user:
+        try:
+            from src.database.db import get_db
+            from src.database.models import BusinessFormation
+            db = get_db()
+            with db.session() as session:
+                existing_formation = (
+                    session.query(BusinessFormation)
+                    .filter(
+                        BusinessFormation.user_id == str(user.id),
+                        BusinessFormation.project_id == str(project_id),
+                    )
+                    .order_by(BusinessFormation.created_at.desc())
+                    .first()
+                )
+                if existing_formation:
+                    session.expunge(existing_formation)
+        except Exception as e:
+            logger.debug(f"Could not load existing formation: {e}")
+
+    return _render(request, "pages/business_formation.html", {
+        "project": project,
+        "existing_formation": existing_formation,
+    })
+
+
+async def business_formation_submit(request: Request) -> JSONResponse:
+    """POST /business-formation/submit — Create a BusinessFormation record in the DB.
+
+    Accepts a JSON body with business details, writes a BusinessFormation row,
+    and optionally kicks off the formation provider flow.
+    """
+    user = get_current_user(request)
+    if not user:
+        return JSONResponse(
+            {"success": False, "error": "Authentication required."},
+            status_code=401,
+        )
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse(
+            {"success": False, "error": "Invalid JSON body."},
+            status_code=400,
+        )
+
+    # Validate required fields
+    required = ["business_name", "business_type", "state", "owner_name", "owner_email"]
+    missing = [f for f in required if not body.get(f, "").strip()]
+    if missing:
+        return JSONResponse(
+            {"success": False, "error": f"Missing required fields: {', '.join(missing)}"},
+            status_code=422,
+        )
+
+    business_name = body["business_name"].strip()
+    business_type = body["business_type"]
+    state         = body["state"]
+    project_id    = body.get("project_id") or None
+    expedited     = body.get("opt_expedited", False)
+    provider_name = body.get("agent_provider", "zenbusiness")
+
+    # Normalise provider name
+    if provider_name not in ("zenbusiness", "stripe_atlas", "mock"):
+        provider_name = "zenbusiness"
+
+    # ── Persist to DB ──
+    formation_id = str(uuid.uuid4())
+    try:
+        from src.database.db import get_db
+        from src.database.models import BusinessFormation
+        db = get_db()
+        with db.session() as session:
+            # Require a valid project_id if provided
+            if project_id:
+                from src.database.models import Project
+                proj = session.query(Project).filter(
+                    Project.id == project_id,
+                    Project.user_id == str(user.id),
+                ).first()
+                if not proj:
+                    project_id = None  # Clear invalid project_id
+
+            formation = BusinessFormation(
+                id=formation_id,
+                user_id=str(user.id),
+                project_id=project_id or str(user.id),  # fallback to user id if no project
+                business_name=business_name,
+                business_type=business_type,
+                state=state[:2],  # Store 2-letter state code
+                status="pending",
+            )
+            session.add(formation)
+            session.commit()
+            logger.info(
+                f"BusinessFormation {formation_id} created for user {user.id}: "
+                f"{business_name} ({business_type}, {state})"
+            )
+    except Exception as db_err:
+        logger.error(f"Failed to save formation to DB: {db_err}")
+        # Don't block the user — continue with provider flow even if DB save failed
+
+    # ── Provider flow (async-safe) ──
+    provider_ref = None
+    provider_message = None
+    try:
+        from src.business.models import (
+            BusinessType, FormationRequest, FormationState,
+        )
+        from src.business.formation import FormationService
+
+        # Map string -> enum safely
+        try:
+            biz_type_enum = BusinessType(business_type)
+        except ValueError:
+            biz_type_enum = BusinessType.LLC
+
+        # FormationState values are 2-letter codes
+        state_code = state[:2].upper()
+        try:
+            state_enum = FormationState(state_code)
+        except ValueError:
+            state_enum = FormationState.DELAWARE
+
+        formation_req = FormationRequest(
+            business_name=business_name,
+            business_type=biz_type_enum,
+            state=state_enum,
+            owner_name=body.get("owner_name", ""),
+            owner_email=body.get("owner_email", ""),
+            street_address=body.get("street_address", ""),
+            city=body.get("city", ""),
+            state_address=state_code,
+            zip_code=body.get("zip_code", ""),
+            description=body.get("description", ""),
+            expedited=expedited,
+            registered_agent=(body.get("agent_type") != "self"),
+            user_id=str(user.id),
+            project_id=project_id,
+        )
+
+        service = FormationService(default_provider=provider_name)
+        result = await service.provider.submit_formation(formation_req)
+        provider_ref = result.provider_reference
+        provider_message = result.message
+
+        # Update DB with provider reference
+        try:
+            from src.database.db import get_db
+            from src.database.models import BusinessFormation
+            db2 = get_db()
+            with db2.session() as s2:
+                rec = s2.query(BusinessFormation).filter(
+                    BusinessFormation.id == formation_id
+                ).first()
+                if rec:
+                    rec.status = "submitted"
+                    rec.external_order_id = provider_ref
+                    s2.commit()
+        except Exception:
+            pass
+
+    except Exception as prov_err:
+        logger.error(f"Formation provider error: {prov_err}")
+        provider_message = (
+            f"Your formation details have been saved. "
+            f"Please complete the process manually. Error: {prov_err}"
+        )
+
+    # Build response message
+    if provider_ref and provider_message:
+        message = (
+            f"Formation submitted for {business_name}! "
+            f"{provider_message[:200]}. "
+            f"Track status at /business-formation."
+        )
+    else:
+        message = (
+            f"Formation details saved for {business_name}! "
+            "Check your email and the provider's website to complete the process. "
+            "You can track status at /business-formation."
+        )
+
+    return JSONResponse({
+        "success": True,
+        "formation_id": formation_id,
+        "provider_reference": provider_ref,
+        "message": message,
+        "redirect_url": "/business-formation",
+    })
 
 async def deploy_page(request: Request) -> HTMLResponse:
     """Deploy page for one-click deployment."""
+    import os
     project_id = request.path_params.get('project_id')
 
     project = _projects_store.get(project_id)
     if not project:
         return RedirectResponse(url="/dashboard", status_code=302)
 
-    return _render(request, "pages/deploy.html", {"project": project})
+    # Determine which providers are configured so the template can show status
+    provider_status = {
+        "vercel": bool(os.getenv("VERCEL_TOKEN")),
+        "render": bool(os.getenv("RENDER_API_KEY") or os.getenv("RENDER_DEPLOY_HOOK_URL")),
+        "railway": bool(os.getenv("RAILWAY_TOKEN")),
+        "fly": bool(os.getenv("FLY_API_TOKEN")),
+    }
+
+    return _render(request, "pages/deploy.html", {
+        "project": project,
+        "provider_status": provider_status,
+    })
 
 async def agent_workspace(request: Request) -> HTMLResponse:
     """Agent workspace for customizing generated apps."""

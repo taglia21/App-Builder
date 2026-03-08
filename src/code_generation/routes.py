@@ -15,6 +15,14 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, WebSocket, WebSoc
 from pydantic import BaseModel, Field
 
 from src.code_generation.pipeline import GenerationPipeline, PipelineProgress, PipelineResult
+from src.code_generation.refinement import (
+    RefinementEngine,
+    RefinementHistory,
+    RefinementRequest,
+    RefinementResult,
+    refinement_engine,
+    refinement_history,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -363,4 +371,328 @@ async def get_job_spec(job_id: str) -> SpecResponse:
     return SpecResponse(
         job_id=job_id,
         spec=job.result.spec.model_dump(),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Refinement schemas
+# ---------------------------------------------------------------------------
+
+
+class RefineRequest(BaseModel):
+    """Request body for POST /api/v2/refine."""
+
+    project_path: str = Field(..., description="Absolute or relative path to the generated project root.")
+    instruction: str  = Field(..., min_length=1, max_length=4000, description="Natural-language change instruction.")
+    scope: Optional[str]          = Field(default=None, description="'backend', 'frontend', 'full', or None to auto-detect.")
+    context: Optional[Dict[str, Any]] = Field(default=None, description="Additional context (e.g. SystemSpec).")
+    undo: bool = Field(default=False, description="If true, revert the most recent refinement instead of applying a new one.")
+    project_id: Optional[str]     = Field(default=None, description="Optional dashboard project ID for linkback.")
+
+
+class RefineResponse(BaseModel):
+    """Response body for POST /api/v2/refine."""
+
+    files_modified: List[Dict[str, Any]] = []
+    files_created:  List[Dict[str, Any]] = []
+    files_deleted:  List[Dict[str, Any]] = []
+    explanation: str
+    warnings:    List[str] = []
+    undone:      bool = False
+
+
+class HistoryResponse(BaseModel):
+    """Response body for GET /api/v2/refine/{project_path}/history."""
+
+    project_path: str
+    history: List[Dict[str, Any]]
+
+
+# ---------------------------------------------------------------------------
+# Refinement routes
+# ---------------------------------------------------------------------------
+
+
+@router.post("/refine", response_model=RefineResponse, status_code=200)
+async def refine_project(req: RefineRequest) -> RefineResponse:
+    """Apply a natural-language refinement instruction to a generated project.
+
+    Set ``undo=true`` to revert the most recent refinement instead of applying
+    a new one.
+
+    Returns:
+        A :class:`RefineResponse` describing files changed and an explanation.
+
+    Raises:
+        400: If the project path is invalid.
+        500: If the LLM call or file operations fail.
+    """
+    import os
+
+    if req.undo:
+        # Undo the last refinement for this project
+        reverted = refinement_history.undo_last(req.project_path)
+        if reverted is None:
+            raise HTTPException(
+                status_code=409,
+                detail="No refinement history found to undo, or backup directory is missing.",
+            )
+        return RefineResponse(
+            files_modified=reverted.get("files_modified", []),
+            files_created=[],
+            files_deleted=reverted.get("files_deleted", []),
+            explanation=f"Reverted: {reverted.get('instruction', 'last refinement')}",
+            warnings=reverted.get("warnings", []),
+            undone=True,
+        )
+
+    # Validate project path early for a friendlier error
+    project_path = os.path.abspath(req.project_path)
+    if not os.path.isdir(project_path):
+        raise HTTPException(
+            status_code=400,
+            detail=f"project_path does not exist or is not a directory: {req.project_path}",
+        )
+
+    try:
+        result: RefinementResult = await refinement_engine.refine(
+            RefinementRequest(
+                instruction=req.instruction,
+                project_path=req.project_path,
+                scope=req.scope,
+                context=req.context,
+            )
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        logger.exception("Refinement pipeline error: %s", exc)
+        raise HTTPException(status_code=500, detail=f"Refinement failed: {exc}")
+
+    return RefineResponse(
+        files_modified=[fc.model_dump() for fc in result.files_modified],
+        files_created=[fc.model_dump()  for fc in result.files_created],
+        files_deleted=[fc.model_dump()  for fc in result.files_deleted],
+        explanation=result.explanation,
+        warnings=result.warnings,
+        undone=False,
+    )
+
+
+@router.get("/refine/{project_path:path}/history", response_model=HistoryResponse)
+async def get_refinement_history(project_path: str) -> HistoryResponse:
+    """Return the list of past refinements for a project.
+
+    The ``project_path`` path parameter is the URL-encoded absolute or relative
+    path to the project root.  History is read from the project's
+    ``.ignara_backups/history.json`` file.
+
+    Raises:
+        404: If the project directory does not exist.
+    """
+    import os
+
+    abs_path = os.path.abspath(project_path)
+    if not os.path.isdir(abs_path):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Project directory not found: {project_path}",
+        )
+
+    history = refinement_history.get_history(abs_path)
+    return HistoryResponse(project_path=abs_path, history=history)
+
+
+# ---------------------------------------------------------------------------
+# GitHub integration schemas
+# ---------------------------------------------------------------------------
+
+
+class GitHubPushRequest(BaseModel):
+    """Request body for POST /api/v2/generate/{job_id}/github."""
+
+    repo_name: Optional[str] = Field(
+        default=None,
+        description=(
+            "Repository name to create. Defaults to the sanitised idea_name of the job. "
+            "If the repo already exists the endpoint returns its URL without re-pushing."
+        ),
+    )
+    private: bool = Field(
+        default=True,
+        description="Whether to create a private repository.",
+    )
+    description: Optional[str] = Field(
+        default=None,
+        description="Repository description (defaults to the job's idea description).",
+    )
+
+
+class GitHubPushResponse(BaseModel):
+    """Response body for POST /api/v2/generate/{job_id}/github."""
+
+    repo_url: str
+    repo_name: str
+    full_name: str
+    private: bool
+    files_uploaded: int
+    errors: List[str] = []
+    message: str
+
+
+# ---------------------------------------------------------------------------
+# GitHub endpoint
+# ---------------------------------------------------------------------------
+
+
+@router.post("/generate/{job_id}/github", response_model=GitHubPushResponse)
+async def push_job_to_github(job_id: str, req: GitHubPushRequest = None) -> GitHubPushResponse:
+    """Create a GitHub repository and push all generated files for a completed job.
+
+    Environment variable required:
+    - ``GITHUB_TOKEN`` — personal access token with ``repo`` scope.
+
+    Optional:
+    - ``req.repo_name`` — custom repo name (defaults to the sanitised idea name).
+    - ``req.private`` — whether to make the repo private (default ``true``).
+
+    Raises:
+        400: Job not completed or output directory missing.
+        404: Job not found.
+        422: GITHUB_TOKEN not set.
+        409: Repository name already exists.
+        500: Upload or API failure.
+    """
+    import os
+    import re
+
+    # ------------------------------------------------------------------
+    # 1. Validate job
+    # ------------------------------------------------------------------
+    if req is None:
+        req = GitHubPushRequest()
+
+    job = _jobs.get(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail=f"Job '{job_id}' not found.")
+
+    if job.status != "completed" or job.result is None:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Job '{job_id}' is not yet completed (status={job.status}). "
+                   "Wait for completion before pushing to GitHub.",
+        )
+
+    output_path = Path(job.result.output_path)
+    if not output_path.exists():
+        raise HTTPException(
+            status_code=500,
+            detail=f"Output directory not found: {output_path}. Cannot push to GitHub.",
+        )
+
+    # ------------------------------------------------------------------
+    # 2. Require GITHUB_TOKEN
+    # ------------------------------------------------------------------
+    github_token = os.getenv("GITHUB_TOKEN")
+    if not github_token:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "GITHUB_TOKEN environment variable is not set. "
+                "Create a GitHub personal access token with 'repo' scope and set it "
+                "as GITHUB_TOKEN to enable repository creation."
+            ),
+        )
+
+    # ------------------------------------------------------------------
+    # 3. Derive repo name
+    # ------------------------------------------------------------------
+    if req.repo_name:
+        repo_name = re.sub(r"[^a-zA-Z0-9._-]", "-", req.repo_name).strip("-") or "generated-app"
+    else:
+        # Sanitise the idea name
+        raw = job.request.idea_name
+        repo_name = re.sub(r"[^a-zA-Z0-9._-]", "-", raw).strip("-") or "generated-app"
+        # Ensure it's unique-ish by appending job ID prefix
+        repo_name = f"{repo_name[:40]}-{job_id[:8]}"
+
+    description = req.description or job.request.description[:255]
+
+    # ------------------------------------------------------------------
+    # 4. Create GitHub repo and push files
+    # ------------------------------------------------------------------
+    try:
+        from src.deployment.github import (
+            AuthenticationError,
+            GitHubClient,
+            GitHubError,
+            RepositoryExistsError,
+        )
+    except ImportError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"GitHub integration not available: {exc}",
+        )
+
+    try:
+        client = GitHubClient(token=github_token)
+    except AuthenticationError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=f"GitHub authentication failed: {exc}. Check your GITHUB_TOKEN.",
+        )
+
+    # Create repo (or use existing if the same name is already ours)
+    try:
+        repo = client.create_repository(
+            name=repo_name,
+            description=description,
+            private=req.private,
+            auto_init=False,
+        )
+        logger.info("[job %s] Created GitHub repo: %s", job_id, repo.full_name)
+    except RepositoryExistsError:
+        # Repo already exists — fetch it to get the URL
+        try:
+            repo = client.get_repository(f"{client.username}/{repo_name}")
+            logger.info("[job %s] GitHub repo already exists: %s", job_id, repo.full_name)
+        except GitHubError as exc:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Repository '{repo_name}' already exists but could not be fetched: {exc}",
+            )
+    except GitHubError as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to create GitHub repository: {exc}")
+
+    # Push all generated files
+    try:
+        upload_result = client.upload_directory(
+            repo_name=repo.full_name,
+            local_path=output_path,
+            message=f"Initial commit — generated by Ignara (job {job_id})",
+        )
+        logger.info(
+            "[job %s] Pushed %d files to %s (%d errors)",
+            job_id,
+            upload_result["uploaded"],
+            repo.full_name,
+            len(upload_result["errors"]),
+        )
+    except GitHubError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Repository created at {repo.html_url} but file upload failed: {exc}",
+        )
+
+    return GitHubPushResponse(
+        repo_url=repo.html_url,
+        repo_name=repo.name,
+        full_name=repo.full_name,
+        private=repo.private,
+        files_uploaded=upload_result["uploaded"],
+        errors=upload_result.get("errors", []),
+        message=(
+            f"Successfully pushed {upload_result['uploaded']} files to {repo.full_name}. "
+            + (f"{len(upload_result['errors'])} files had errors." if upload_result.get("errors") else "")
+        ),
     )

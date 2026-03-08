@@ -1,136 +1,225 @@
 {% extends "base.html" %}
 
-{% block title %}Pricing - Ignara{% endblock %}
+{% block title %}Pricing Plans - Ignara{% endblock %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto px-6 py-8">
-    <!-- Header -->
-    <div class="text-center mb-12">
-        <h1 class="text-4xl font-bold text-white mb-4">Simple, Transparent Pricing</h1>
-        <p class="text-xl text-gray-400">Choose the plan that fits your needs. All plans include a 14-day free trial.</p>
+<div class="max-w-5xl mx-auto px-6 py-10">
+
+  <!-- Header -->
+  <div class="text-center mb-12">
+    <h1 class="text-4xl font-bold text-white mb-3">Simple, Transparent Pricing</h1>
+    <p class="text-lg text-gray-400">Build apps faster. Scale without limits.</p>
+  </div>
+
+  {% if not stripe_configured %}
+  <!-- No Stripe key — informational banner -->
+  <div class="mb-10 rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-6 py-5 flex items-start gap-4">
+    <svg class="w-6 h-6 text-yellow-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+    </svg>
+    <div>
+      <p class="text-yellow-300 font-semibold">Payments not yet configured</p>
+      <p class="text-yellow-200/80 text-sm mt-1">
+        Set <code class="bg-yellow-900/40 px-1 rounded">STRIPE_SECRET_KEY</code> and price ID environment variables to enable checkout.
+        Contact your administrator or <a href="/contact" class="underline hover:text-yellow-100">reach out to us</a> for access.
+      </p>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Pricing Cards -->
+  <div class="grid md:grid-cols-3 gap-6 mb-14">
+
+    <!-- Free -->
+    <div class="relative rounded-2xl border border-gray-700/60 bg-gray-800/40 p-8 flex flex-col">
+      <div class="mb-6">
+        <h3 class="text-xl font-bold text-white mb-1">Free</h3>
+        <p class="text-sm text-gray-400">Try it out, no card required</p>
+      </div>
+      <div class="mb-6">
+        <span class="text-5xl font-bold text-white">$0</span>
+        <span class="text-gray-400 text-sm ml-1">/month</span>
+      </div>
+      <ul class="space-y-3 mb-8 flex-1">
+        <li class="flex items-start gap-2 text-sm text-gray-300">
+          <svg class="w-4 h-4 text-green-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+          1 app generation / month
+        </li>
+        <li class="flex items-start gap-2 text-sm text-gray-300">
+          <svg class="w-4 h-4 text-green-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+          Basic templates
+        </li>
+        <li class="flex items-start gap-2 text-sm text-gray-300">
+          <svg class="w-4 h-4 text-green-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+          ZIP export
+        </li>
+        <li class="flex items-start gap-2 text-sm text-gray-400">
+          <svg class="w-4 h-4 text-gray-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+          GitHub push
+        </li>
+        <li class="flex items-start gap-2 text-sm text-gray-400">
+          <svg class="w-4 h-4 text-gray-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+          One-click deploy
+        </li>
+      </ul>
+      <a href="/dashboard" class="block text-center rounded-lg border border-gray-600 py-3 text-sm font-semibold text-gray-300 hover:bg-gray-700/60 transition-colors">
+        Current Plan
+      </a>
     </div>
 
-    <!-- Pricing Cards -->
-    <div class="grid md:grid-cols-3 gap-8 mb-12">
-        <!-- Starter Plan -->
-        <div class="card p-8 hover:border-blue-500 transition-all">
-            <h3 class="text-2xl font-bold text-gray-900 mb-4">Starter</h3>
-            <div class="mb-6">
-                <span class="text-5xl font-bold text-gray-900">$9</span>
-                <span class="text-gray-400">/month</span>
-            </div>
-            <ul class="space-y-3 mb-8">
-                <li class="flex items-start text-gray-300">
-                    <span class="text-green-500 mr-2">✓</span>
-                    <span>5 apps/month</span>
-                </li>
-                <li class="flex items-start text-gray-300">
-                    <span class="text-green-500 mr-2">✓</span>
-                    <span>Basic templates</span>
-                </li>
-                <li class="flex items-start text-gray-300">
-                    <span class="text-green-500 mr-2">✓</span>
-                    <span>Email support</span>
-                </li>
-            </ul>
-            <button onclick="checkout('starter')" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg transition-colors">
-                Get Started
-            </button>
-        </div>
-
-        <!-- Growth Plan (Popular) -->
-        <div class="card p-8 border-purple-500 transform scale-105 relative">
-            <div class="absolute top-0 right-0 bg-purple-600 text-white px-4 py-1 rounded-bl-lg rounded-tr-lg text-sm font-semibold">
-                Most Popular
-            </div>
-            <h3 class="text-2xl font-bold text-gray-900 mb-4">Growth</h3>
-            <div class="mb-6">
-                <span class="text-5xl font-bold text-gray-900">$49</span>
-                <span class="text-gray-400">/month</span>
-            </div>
-            <ul class="space-y-3 mb-8">
-                <li class="flex items-start text-gray-300">
-                    <span class="text-green-500 mr-2">✓</span>
-                    <span>25 apps/month</span>
-                </li>
-                <li class="flex items-start text-gray-300">
-                    <span class="text-green-500 mr-2">✓</span>
-                    <span>All templates</span>
-                </li>
-                <li class="flex items-start text-gray-300">
-                    <span class="text-green-500 mr-2">✓</span>
-                    <span>Priority support</span>
-                </li>
-                <li class="flex items-start text-gray-300">
-                    <span class="text-green-500 mr-2">✓</span>
-                    <span>Custom domains</span>
-                </li>
-            </ul>
-            <button onclick="checkout('growth')" class="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 px-6 rounded-lg transition-colors">
-                Get Started
-            </button>
-        </div>
-
-        <!-- Pro Plan -->
-        <div class="card p-8 hover:border-blue-500 transition-all">
-            <h3 class="text-2xl font-bold text-gray-900 mb-4">Pro</h3>
-            <div class="mb-6">
-                <span class="text-5xl font-bold text-gray-900">$99</span>
-                <span class="text-gray-400">/month</span>
-            </div>
-            <ul class="space-y-3 mb-8">
-                <li class="flex items-start text-gray-300">
-                    <span class="text-green-500 mr-2">✓</span>
-                    <span>Unlimited apps</span>
-                </li>
-                <li class="flex items-start text-gray-300">
-                    <span class="text-green-500 mr-2">✓</span>
-                    <span>All features</span>
-                </li>
-                <li class="flex items-start text-gray-300">
-                    <span class="text-green-500 mr-2">✓</span>
-                    <span>24/7 support</span>
-                </li>
-                <li class="flex items-start text-gray-300">
-                    <span class="text-green-500 mr-2">✓</span>
-                    <span>White-label</span>
-                </li>
-                <li class="flex items-start text-gray-300">
-                    <span class="text-green-500 mr-2">✓</span>
-                    <span>API access</span>
-                </li>
-            </ul>
-            <button onclick="checkout('pro')" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg transition-colors">
-                Get Started
-            </button>
-        </div>
+    <!-- Pro — highlighted -->
+    <div class="relative rounded-2xl border-2 border-purple-500 bg-gray-900 p-8 flex flex-col shadow-lg shadow-purple-900/20">
+      <div class="absolute -top-3.5 left-1/2 -translate-x-1/2">
+        <span class="bg-purple-600 text-white text-xs font-bold px-4 py-1 rounded-full tracking-wide uppercase">Most Popular</span>
+      </div>
+      <div class="mb-6">
+        <h3 class="text-xl font-bold text-white mb-1">Pro</h3>
+        <p class="text-sm text-gray-400">For serious builders</p>
+      </div>
+      <div class="mb-6">
+        <span class="text-5xl font-bold text-white">$29</span>
+        <span class="text-gray-400 text-sm ml-1">/month</span>
+      </div>
+      <ul class="space-y-3 mb-8 flex-1">
+        <li class="flex items-start gap-2 text-sm text-gray-300">
+          <svg class="w-4 h-4 text-green-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+          25 app generations / month
+        </li>
+        <li class="flex items-start gap-2 text-sm text-gray-300">
+          <svg class="w-4 h-4 text-green-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+          All templates
+        </li>
+        <li class="flex items-start gap-2 text-sm text-gray-300">
+          <svg class="w-4 h-4 text-green-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+          GitHub repo push
+        </li>
+        <li class="flex items-start gap-2 text-sm text-gray-300">
+          <svg class="w-4 h-4 text-green-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+          One-click deploy (Vercel, Railway, Render)
+        </li>
+        <li class="flex items-start gap-2 text-sm text-gray-300">
+          <svg class="w-4 h-4 text-green-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+          Priority support
+        </li>
+        <li class="flex items-start gap-2 text-sm text-gray-300">
+          <svg class="w-4 h-4 text-green-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+          Custom domains
+        </li>
+      </ul>
+      {% if stripe_configured %}
+      <button
+        onclick="checkout('pro')"
+        id="btn-pro"
+        class="block w-full text-center rounded-lg bg-purple-600 hover:bg-purple-500 py-3 text-sm font-semibold text-white transition-colors disabled:opacity-50">
+        Get Started
+      </button>
+      {% else %}
+      <button disabled class="block w-full text-center rounded-lg bg-purple-600/40 py-3 text-sm font-semibold text-purple-300 cursor-not-allowed">
+        Payments Not Configured
+      </button>
+      {% endif %}
     </div>
 
-    <!-- Footer Info -->
-    <div class="text-center">
-        <p class="text-gray-400 mb-4">All plans include: SSL certificates, automatic backups, and 99.9% uptime SLA</p>
-        <p class="text-gray-400">Questions? <a href="/contact" class="text-blue-400 hover:text-blue-300">Contact our sales team</a></p>
+    <!-- Enterprise -->
+    <div class="relative rounded-2xl border border-gray-700/60 bg-gray-800/40 p-8 flex flex-col">
+      <div class="mb-6">
+        <h3 class="text-xl font-bold text-white mb-1">Enterprise</h3>
+        <p class="text-sm text-gray-400">Scale without limits</p>
+      </div>
+      <div class="mb-6">
+        <span class="text-5xl font-bold text-white">$99</span>
+        <span class="text-gray-400 text-sm ml-1">/month</span>
+      </div>
+      <ul class="space-y-3 mb-8 flex-1">
+        <li class="flex items-start gap-2 text-sm text-gray-300">
+          <svg class="w-4 h-4 text-green-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+          Unlimited app generations
+        </li>
+        <li class="flex items-start gap-2 text-sm text-gray-300">
+          <svg class="w-4 h-4 text-green-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+          Everything in Pro
+        </li>
+        <li class="flex items-start gap-2 text-sm text-gray-300">
+          <svg class="w-4 h-4 text-green-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+          White-label output
+        </li>
+        <li class="flex items-start gap-2 text-sm text-gray-300">
+          <svg class="w-4 h-4 text-green-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+          API access
+        </li>
+        <li class="flex items-start gap-2 text-sm text-gray-300">
+          <svg class="w-4 h-4 text-green-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+          SSO & team management
+        </li>
+        <li class="flex items-start gap-2 text-sm text-gray-300">
+          <svg class="w-4 h-4 text-green-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+          24/7 dedicated support
+        </li>
+      </ul>
+      {% if stripe_configured %}
+      <button
+        onclick="checkout('enterprise')"
+        id="btn-enterprise"
+        class="block w-full text-center rounded-lg border border-purple-500/60 py-3 text-sm font-semibold text-purple-300 hover:bg-purple-500/10 transition-colors">
+        Get Started
+      </button>
+      {% else %}
+      <button disabled class="block w-full text-center rounded-lg border border-gray-600 py-3 text-sm font-semibold text-gray-500 cursor-not-allowed">
+        Payments Not Configured
+      </button>
+      {% endif %}
     </div>
+
+  </div><!-- /grid -->
+
+  <!-- FAQ / assurance strip -->
+  <div class="text-center text-sm text-gray-500">
+    All plans include SSL certificates, automatic backups, and 99.9% uptime SLA.
+    Questions? <a href="/contact" class="text-purple-400 hover:text-purple-300 underline">Contact our team</a>.
+  </div>
+
+</div><!-- /container -->
+
+<!-- Checkout error banner (hidden by default) -->
+<div id="checkout-error" class="fixed bottom-6 left-1/2 -translate-x-1/2 hidden z-50">
+  <div class="flex items-center gap-3 rounded-xl bg-red-900/80 border border-red-600/60 px-5 py-4 shadow-xl backdrop-blur">
+    <svg class="w-5 h-5 text-red-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+    </svg>
+    <span id="checkout-error-msg" class="text-sm text-red-200"></span>
+    <button onclick="document.getElementById('checkout-error').classList.add('hidden')" class="ml-2 text-red-400 hover:text-red-200">✕</button>
+  </div>
 </div>
 
 <script>
-function checkout(plan) {
-    fetch('/billing/create-checkout-session', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ plan: plan })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.url) {
-            window.location.href = data.url;
-        }
-    })
-    .catch(error => console.error('Error:', error));
+async function checkout(plan) {
+  const btn = document.getElementById('btn-' + plan);
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Redirecting…';
+  }
+  try {
+    const response = await fetch('/billing/create-checkout-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan })
+    });
+    const data = await response.json();
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      showError(data.error || data.detail || 'Checkout failed. Please try again.');
+      if (btn) { btn.disabled = false; btn.textContent = 'Get Started'; }
+    }
+  } catch (err) {
+    showError('Network error. Please check your connection and try again.');
+    if (btn) { btn.disabled = false; btn.textContent = 'Get Started'; }
+  }
 }
 
-
+function showError(msg) {
+  document.getElementById('checkout-error-msg').textContent = msg;
+  document.getElementById('checkout-error').classList.remove('hidden');
+}
 </script>
 {% endblock %}
