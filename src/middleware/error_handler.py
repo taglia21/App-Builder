@@ -1,7 +1,6 @@
 """Error handler middleware for FastAPI."""
 import logging
 import os
-import traceback
 import uuid
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse

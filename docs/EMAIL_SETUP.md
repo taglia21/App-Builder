@@ -1,10 +1,10 @@
 # Email Setup Guide
 
-Valeric uses transactional email for user communications. This guide covers setting up email with Resend.com (recommended) or SMTP fallback.
+Ignara uses transactional email for user communications. This guide covers setting up email with Resend.com (recommended) or SMTP fallback.
 
 ## 📧 Email Types
 
-Valeric sends the following transactional emails:
+Ignara sends the following transactional emails:
 
 | Email Type | Trigger | Template |
 |------------|---------|----------|
@@ -58,11 +58,11 @@ Value: "p=MIGfMA0GCSqGSIb3DQEB..."
 
 1. Go to **API Keys**
 2. Click **"Create API Key"**
-3. Name it (e.g., "Valeric Production")
+3. Name it (e.g., "Ignara Production")
 4. Select permissions: **"Full Access"** or **"Sending access"**
 5. Copy the key (starts with `re_`)
 
-### Step 4: Configure Valeric
+### Step 4: Configure Ignara
 
 Add to your `.env` file:
 

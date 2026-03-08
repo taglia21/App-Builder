@@ -259,9 +259,19 @@ Respond with JSON only:
     "suggestions": ["how to fix each issue"]
 }"""
 
+        MAX_SPEC_LENGTH = 6000
+        spec_json = json.dumps(content, indent=2)
+        if len(spec_json) > MAX_SPEC_LENGTH:
+            logger.warning(
+                "Spec truncated from %d to %d chars for consistency check",
+                len(spec_json),
+                MAX_SPEC_LENGTH,
+            )
+            spec_json = spec_json[:MAX_SPEC_LENGTH]
+
         user_prompt = f"""Check this product specification for internal consistency:
 
-{json.dumps(content, indent=2)[:6000]}
+{spec_json}
 
 Identify any contradictions between sections."""
 
@@ -392,9 +402,13 @@ Identify any contradictions between sections."""
                     issues.append("No SSL/TLS configuration specified")
                     suggestions.append("Configure TLS 1.3 with proper certificate management")
 
-        # Security issues are warnings, not blockers for MVP
+        # Security issues should never be silently passed
+        if issues and len(issues) > 0:
+            result_passed = False
+        else:
+            result_passed = True
         return {
-            "passed": len(issues) <= 2,  # Allow up to 2 security warnings
+            "passed": result_passed,
             "issues": issues,
             "severity": "medium" if issues else "none",
             "suggestions": suggestions
@@ -465,9 +479,9 @@ Identify any contradictions between sections."""
         except (json.JSONDecodeError, ValidationError) as e:
             logger.warning(f"Failed to parse check response: {e}")
             return {
-                "passed": True,  # Default to pass on parse error
-                "issues": [],
-                "severity": "none",
+                "passed": False,
+                "issues": ["LLM response was not valid JSON — manual review required"],
+                "severity": "high",
                 "suggestions": []
             }
 
@@ -510,8 +524,18 @@ IMPORTANT:
 
 Respond with the COMPLETE fixed JSON specification only, no explanations."""
 
+        MAX_FIX_SPEC_LENGTH = 5000
+        spec_json_for_fix = json.dumps(content, indent=2)
+        if len(spec_json_for_fix) > MAX_FIX_SPEC_LENGTH:
+            logger.warning(
+                "Spec truncated from %d to %d chars for _fix_issues LLM call",
+                len(spec_json_for_fix),
+                MAX_FIX_SPEC_LENGTH,
+            )
+            spec_json_for_fix = spec_json_for_fix[:MAX_FIX_SPEC_LENGTH]
+
         user_prompt = f"""Current product specification:
-{json.dumps(content, indent=2)[:5000]}
+{spec_json_for_fix}
 
 Issues to fix:
 {chr(10).join(f"- {issue}" for issue in all_issues[:10])}

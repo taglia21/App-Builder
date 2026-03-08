@@ -1,8 +1,8 @@
-# 🏗️ Valeric Architecture
+# 🏗️ Ignara Architecture
 
 ## Overview
 
-Valeric is a modular, AI-powered application builder designed for scalability, extensibility, and production readiness.
+Ignara is a modular, AI-powered application builder designed for scalability, extensibility, and production readiness.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -31,7 +31,7 @@ Valeric is a modular, AI-powered application builder designed for scalability, e
 
 ### 1. CLI Interface (`src/cli.py`)
 
-The command-line interface provides access to all Valeric features.
+The command-line interface provides access to all Ignara features.
 
 **Key Commands:**
 - `build` - Interactive AI assistant for building apps
@@ -439,7 +439,7 @@ SLACK_WEBHOOK_URL=https://hooks.slack.com/...
 ```yaml
 # config.yml
 app:
-  name: Valeric
+  name: Ignara
   version: 1.0.0
   environment: production
 

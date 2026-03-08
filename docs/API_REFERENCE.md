@@ -1,6 +1,6 @@
-# 📖 Valeric API Reference
+# 📖 Ignara API Reference
 
-Complete API documentation for all Valeric modules.
+Complete API documentation for all Ignara modules.
 
 ---
 
@@ -17,7 +17,7 @@ Complete API documentation for all Valeric modules.
 
 ## Authentication
 
-Valeric uses JWT-based authentication with optional OAuth2 providers.
+Ignara uses JWT-based authentication with optional OAuth2 providers.
 
 ### Endpoints
 
@@ -481,9 +481,9 @@ X-RateLimit-Reset: 1705315800
 ### Python
 
 ```python
-from valeric import Valeric
+from valeric import Ignara
 
-client = Valeric(api_key="sk_...")
+client = Ignara(api_key="sk_...")
 
 # Create a project
 project = client.projects.create(
@@ -502,9 +502,9 @@ deployment = client.deploy.production(
 ### JavaScript/TypeScript
 
 ```typescript
-import { Valeric } from '@valeric/sdk';
+import { Ignara } from '@valeric/sdk';
 
-const client = new Valeric({ apiKey: 'sk_...' });
+const client = new Ignara({ apiKey: 'sk_...' });
 
 // Create a project
 const project = await client.projects.create({
@@ -547,7 +547,7 @@ curl -X POST "http://localhost:8000/api/webhooks" \
 All webhook payloads include a signature header:
 
 ```
-X-Valeric-Signature: sha256=abc123...
+X-Ignara-Signature: sha256=abc123...
 ```
 
 Verify using:

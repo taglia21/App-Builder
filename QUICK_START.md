@@ -1,4 +1,4 @@
-## 🚀 Valeric Quick Reference
+## 🚀 Ignara Quick Reference
 
 ### The Killer Feature: Interactive Build Mode
 
@@ -6,7 +6,7 @@
 python main.py build
 ```
 
-This is the recommended way to use Valeric. Users describe their idea, and Valeric:
+This is the recommended way to use Ignara. Users describe their idea, and Ignara:
 1. Researches the market (Perplexity AI)
 2. Asks smart follow-up questions
 3. Generates a complete startup profile
@@ -153,4 +153,4 @@ Ready to deploy immediately!
 
 ---
 
-**Made with ❤️ by Valeric**
+**Made with ❤️ by Ignara**

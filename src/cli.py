@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Valeric - AI-Powered Startup Builder
+"""Ignara - AI-Powered Startup Builder
 
 Command-line interface for generating and deploying startup applications.
 """
@@ -23,18 +23,18 @@ from .utils.ui import UI
 
 @click.group(invoke_without_command=True)
 @click.pass_context
-@click.version_option(VERSION, prog_name="Valeric")
+@click.version_option(VERSION, prog_name="Ignara")
 def cli(ctx):
-    """Valeric - AI-Powered Startup Builder
+    """Ignara - AI-Powered Startup Builder
 
     Generate validated startup ideas and production-ready apps
     using AI with real-time market intelligence.
 
     \b
     QUICK START:
-      valeric build                  # 🚀 Interactive AI assistant (recommended!)
-      valeric generate --demo        # Try with sample data
-      valeric generate               # Use real AI providers
+      ignara build                  # 🚀 Interactive AI assistant (recommended!)
+      ignara generate --demo        # Try with sample data
+      ignara generate               # Use real AI providers
 
     \b
     API KEYS:
@@ -45,8 +45,8 @@ def cli(ctx):
         # Show welcome banner if no command given
         console = Console()
         print_welcome(console)
-        console.print("[bold cyan]🚀 Quick Start:[/bold cyan] Run [bold]valeric build[/bold] to describe your idea and get code!\n")
-        console.print("[dim]Run [bold]valeric --help[/bold] for all commands[/dim]\n")
+        console.print("[bold cyan]🚀 Quick Start:[/bold cyan] Run [bold]ignara build[/bold] to describe your idea and get code!\n")
+        console.print("[dim]Run [bold]ignara --help[/bold] for all commands[/dim]\n")
 
 
 @cli.command()
@@ -112,7 +112,7 @@ def generate(config, output, demo, skip_refinement, skip_code_gen, llm_provider,
     print_banner(console)
     console.print()
 
-    UI.header("Valeric", "Generating Your Startup")
+    UI.header("Ignara", "Generating Your Startup")
 
     if demo:
         UI.warning("MODE: Demo (using sample data - no API calls)")
@@ -184,19 +184,19 @@ def generate(config, output, demo, skip_refinement, skip_code_gen, llm_provider,
 @click.option(
     "--output",
     "-o",
-    default="./valeric-demo",
+    default="./ignara-demo",
     help="Output directory for demo app",
 )
 def demo(output):
-    """🎮 Generate a sample app to see Valeric in action.
+    """🎮 Generate a sample app to see Ignara in action.
 
     Creates a complete demo startup app using sample data.
-    No API keys required - perfect for trying out Valeric!
+    No API keys required - perfect for trying out Ignara!
 
     \b
     Example:
       python main.py demo
-      cd valeric-demo/backend
+      cd ignara-demo/backend
       pip install -r requirements.txt
       uvicorn main:app --reload
     """
@@ -204,7 +204,7 @@ def demo(output):
     print_banner(console)
     console.print()
 
-    UI.header("Valeric Demo", "Generating Sample Startup App")
+    UI.header("Ignara Demo", "Generating Sample Startup App")
     UI.info("This demo uses sample data - no API keys required!")
     console.print()
 
@@ -424,7 +424,7 @@ def providers():
         }
     }
 
-    table = Table(title="⚡ Valeric LLM Providers", show_header=True, header_style="bold cyan")
+    table = Table(title="⚡ Ignara LLM Providers", show_header=True, header_style="bold cyan")
     table.add_column("Status", style="dim", width=10)
     table.add_column("Provider", style="cyan")
     table.add_column("Type", style="magenta")
@@ -455,7 +455,7 @@ def providers():
         console.print("   [dim]Get key: https://console.groq.com/keys[/dim]")
         console.print()
 
-    console.print("[dim]Use: valeric generate --llm-provider <name>[/dim]")
+    console.print("[dim]Use: ignara generate --llm-provider <name>[/dim]")
 
 
 @cli.command(name="list-providers", hidden=True)
@@ -712,7 +712,7 @@ def build(output, llm_provider, verbose):
     """🚀 Interactive AI assistant - describe your idea, get working code!
 
     This is the killer feature - just describe your startup in plain English
-    and Valeric will:
+    and Ignara will:
 
     \b
     1. Research the market using real-time web intelligence
@@ -721,9 +721,9 @@ def build(output, llm_provider, verbose):
 
     \b
     Example:
-      valeric build
+      ignara build
       > Describe your idea: An AI tool that helps developers write better tests
-      ... Valeric researches, asks questions, and builds your app!
+      ... Ignara researches, asks questions, and builds your app!
 
     No complex configuration needed - just your idea and we handle the rest.
     """

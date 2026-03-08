@@ -1,5 +1,5 @@
 """
-Valeric Database Utilities
+Ignara Database Utilities
 
 Connection management, session handling, and database operations.
 Provides a production-ready database layer with connection pooling,
@@ -60,8 +60,8 @@ def get_database_url() -> str:
     # Build from components
     db_host = os.getenv("DB_HOST", "localhost")
     db_port = os.getenv("DB_PORT", "5432")
-    db_name = os.getenv("DB_NAME", "valeric")
-    db_user = os.getenv("DB_USER", "valeric")
+    db_name = os.getenv("DB_NAME", "ignara")
+    db_user = os.getenv("DB_USER", "ignara")
     db_password = os.getenv("DB_PASSWORD", "")
 
     if db_password:
@@ -69,7 +69,7 @@ def get_database_url() -> str:
 
     # Fallback to SQLite for development
     logger.warning("No PostgreSQL configuration found. Using SQLite for development.")
-    return "sqlite:////tmp/valeric_dev.db"
+    return "sqlite:////tmp/ignara_dev.db"
 
 
 class DatabaseError(Exception):
@@ -399,6 +399,11 @@ def init_db(
         try:
             _db_manager = DatabaseManager(database_url=resolved_url, **kwargs)
             if create_tables:
+                import warnings
+                warnings.warn(
+                    "create_tables=True bypasses Alembic migrations. Use 'alembic upgrade head' in production.",
+                    stacklevel=2,
+                )
                 _db_manager.create_tables()
             logger.info(f"Database initialized successfully ({backend_label})")
             return _db_manager
@@ -438,12 +443,23 @@ def get_db() -> DatabaseManager:
     return _db_manager
 
 
-# @contextmanager
+# NOTE: Do NOT add @contextmanager here. This function intentionally uses
+# `yield` (making it a generator) so that FastAPI's Depends(get_session)
+# correctly handles the session lifecycle (setup → yield → teardown).
+# Adding @contextmanager would wrap it in a context-manager object and break
+# FastAPI dependency injection.
 def get_session() -> Generator[Session, None, None]:
     """
-    Convenience function for getting a database session.
+    Generator-based FastAPI dependency for database sessions.
 
-    Works as a FastAPI dependency via Depends(get_session).
+    Using yield (not return) ensures FastAPI runs the teardown (commit/close)
+    after the route handler finishes, even on exceptions. This is the correct
+    pattern for FastAPI Depends() usage.
+
+    Usage:
+        @router.get("/items")
+        def get_items(db: Session = Depends(get_session)):
+            return db.query(Item).all()
 
     Yields:
         Session: SQLAlchemy session instance

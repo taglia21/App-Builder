@@ -1,12 +1,12 @@
 """
-Valeric Authentication Service
+Ignara Authentication Service
 
 Core authentication logic connecting all auth components.
 Handles user registration, login, token management, and OAuth.
 """
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Tuple
 from uuid import uuid4
 
@@ -69,7 +69,7 @@ class EmailNotVerifiedError(AuthError):
 
 class AuthService:
     """
-    Authentication service for Valeric.
+    Authentication service for Ignara.
 
     Handles all authentication operations including registration,
     login, token management, and password reset.
@@ -131,6 +131,7 @@ class AuthService:
             credits_remaining=100,
             email_verified=False,
             verification_token=verification_token,
+            verification_token_expires=datetime.now(timezone.utc) + timedelta(hours=24),
         )
 
         if name:
@@ -263,6 +264,10 @@ class AuthService:
         if not user:
             raise InvalidTokenError("Invalid or expired verification token")
 
+        # Check if verification token has expired
+        if user.verification_token_expires and user.verification_token_expires < datetime.now(timezone.utc):
+            return None  # Token expired
+
         if user.email_verified:
             # Already verified, just return
             return user
@@ -270,6 +275,7 @@ class AuthService:
         # Mark as verified
         user.email_verified = True
         user.verification_token = None
+        user.verification_token_expires = None
         self.session.flush()
 
         logger.info(f"Email verified: {user.email}")

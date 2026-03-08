@@ -15,10 +15,13 @@ logger = logging.getLogger(__name__)
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
 # Unified price IDs — tier names match SubscriptionTier enum values
+# No hardcoded fallbacks: if the env vars are not set, price IDs will be None,
+# and create_checkout_session will raise a clear error rather than sending
+# a bogus ID to Stripe.
 PRICE_IDS = {
-    "starter": os.getenv("STRIPE_PRICE_STARTER", "price_starter"),
-    "pro": os.getenv("STRIPE_PRICE_PRO", "price_pro"),
-    "enterprise": os.getenv("STRIPE_PRICE_ENTERPRISE", "price_enterprise"),
+    "starter": os.getenv("STRIPE_PRICE_STARTER"),
+    "pro": os.getenv("STRIPE_PRICE_PRO"),
+    "enterprise": os.getenv("STRIPE_PRICE_ENTERPRISE"),
 }
 
 TIER_LIMITS = {
@@ -37,6 +40,8 @@ class BillingService:
 
     async def create_customer(self, user_id: str, email: str, name: str = None) -> str:
         """Create a Stripe customer for a user."""
+        if not stripe.api_key:
+            raise ValueError("Stripe is not configured. Set STRIPE_SECRET_KEY to enable payments.")
         try:
             customer = stripe.Customer.create(
                 email=email,
@@ -57,6 +62,8 @@ class BillingService:
         customer_id: str = None
     ) -> Dict[str, Any]:
         """Create a Stripe checkout session for subscription."""
+        if not stripe.api_key:
+            raise ValueError("Stripe is not configured. Set STRIPE_SECRET_KEY to enable payments.")
         if tier not in PRICE_IDS:
             raise ValueError(f"Invalid tier: {tier}")
 

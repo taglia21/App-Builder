@@ -1,4 +1,4 @@
-"""Configuration package for Valeric."""
+"""Configuration package for Ignara."""
 
 import importlib.util
 from pathlib import Path

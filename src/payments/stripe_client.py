@@ -1,7 +1,7 @@
 """
 Stripe API Client
 
-Production-ready Stripe integration for Valeric.
+Production-ready Stripe integration for Ignara.
 """
 
 import logging

@@ -1,5 +1,5 @@
 """
-Valeric Database CRUD Operations
+Ignara Database CRUD Operations
 
 Repository pattern implementation for database operations.
 Provides type-safe, reusable CRUD operations for all models.

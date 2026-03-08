@@ -34,7 +34,10 @@ def get_client_ip(request: Request) -> str:
     Returns:
         Client IP address
     """
-    # Check for X-Forwarded-For header (behind proxy/load balancer)
+    # WARNING: X-Forwarded-For is trusted as-is. In production, ensure this app
+    # runs behind a reverse proxy (nginx, Cloudflare, etc.) that strips/overrides
+    # this header before it reaches the application. Do NOT expose this app directly
+    # to the internet without a trusted proxy — an attacker could spoof any IP.
     forwarded_for = request.headers.get("X-Forwarded-For")
     if forwarded_for:
         # Get the first IP in the chain (original client)

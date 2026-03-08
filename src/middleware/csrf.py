@@ -42,14 +42,37 @@ def _get_csrf_secret() -> str:
 
 
 def _sign_token(token: str) -> str:
-    """Create an HMAC signature for a CSRF token."""
+    """Create an HMAC-SHA256 signature for a CSRF token."""
     secret = _get_csrf_secret()
     return hmac.new(secret.encode(), token.encode(), hashlib.sha256).hexdigest()
 
 
 def generate_csrf_token() -> str:
-    """Generate a new CSRF token."""
-    return secrets.token_hex(32)
+    """Generate a new HMAC-signed CSRF token.
+
+    Format: ``<random_hex>.<hmac_signature>``
+
+    The HMAC signature ties the token to the server secret, making it
+    impossible for an attacker to forge a valid token without knowing the
+    secret — even if they can observe tokens in transit.
+    """
+    raw = secrets.token_hex(16)
+    signature = _sign_token(raw)
+    return f"{raw}.{signature}"
+
+
+def verify_csrf_token_signature(token: str) -> bool:
+    """Return True if the token carries a valid HMAC signature.
+
+    Tokens generated before this change (plain hex, no dot) are accepted
+    without signature verification to avoid breaking existing sessions.
+    """
+    if "." not in token:
+        # Legacy plain token — accept but do not verify signature
+        return len(token) >= 32
+    raw, _, sig = token.partition(".")
+    expected = _sign_token(raw)
+    return hmac.compare_digest(sig, expected)
 
 
 class CSRFProtectMiddleware(BaseHTTPMiddleware):
@@ -102,9 +125,14 @@ class CSRFProtectMiddleware(BaseHTTPMiddleware):
             logger.warning("CSRF: No token submitted on %s %s", request.method, request.url.path)
             return self._reject(request)
 
-        # Constant-time comparison
+        # Constant-time comparison of submitted token against cookie
         if not hmac.compare_digest(cookie_token, submitted_token):
             logger.warning("CSRF: Token mismatch on %s %s", request.method, request.url.path)
+            return self._reject(request)
+
+        # Additional HMAC signature verification for signed tokens
+        if not verify_csrf_token_signature(cookie_token):
+            logger.warning("CSRF: Invalid token signature on %s %s", request.method, request.url.path)
             return self._reject(request)
 
         response = await call_next(request)

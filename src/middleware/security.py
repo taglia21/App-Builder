@@ -1,4 +1,4 @@
-"""Security middleware for Valeric.
+"""Security middleware for Ignara.
 
 Provides:
 - Rate limiting per IP (Redis-backed when available, in-memory fallback)
@@ -10,7 +10,7 @@ import logging
 import time
 from collections import defaultdict
 from typing import Dict, List, Optional
-from fastapi import FastAPI, Request, Response, status
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware

@@ -2,12 +2,15 @@
 Configuration management for the Startup Generator pipeline.
 """
 
+import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import yaml
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+logger = logging.getLogger(__name__)
 
 
 class DataSourceConfig(BaseSettings):
@@ -144,8 +147,8 @@ class PipelineConfig(BaseSettings):
 
     # Email configuration
     resend_api_key: Optional[str] = None
-    from_email: str = "noreply@valeric.dev"
-    support_email: str = "support@valeric.dev"
+    from_email: str = "noreply@ignara.dev"
+    support_email: str = "support@ignara.dev"
 
     # Sub-configurations
     intelligence: Optional[IntelligenceConfig] = None
@@ -215,8 +218,38 @@ class PipelineConfig(BaseSettings):
 
 
 def load_config(config_path: str = "config.yml") -> PipelineConfig:
-    """Load pipeline configuration."""
-    return PipelineConfig.from_yaml(config_path)
+    """Load pipeline configuration.
+
+    Falls back to environment-based defaults if the YAML file is missing.
+    """
+    config_file = Path(config_path)
+    if config_file.exists():
+        return PipelineConfig.from_yaml(config_path)
+
+    # Fall back to defaults from environment variables
+    logger.info(f"Config file {config_path} not found, using defaults from environment")
+    config = PipelineConfig()
+    # Set sensible defaults for sub-configs
+    if config.intelligence is None:
+        config.intelligence = IntelligenceConfig(min_pain_points=10, data_sources=[])
+    if config.idea_generation is None:
+        config.idea_generation = IdeaGenerationConfig(min_ideas=10)
+    if config.scoring is None:
+        config.scoring = ScoringConfig(
+            weights={
+                "market_demand": 0.15, "urgency": 0.10, "enterprise_value": 0.15,
+                "recurring_revenue": 0.12, "time_to_mvp": 0.10, "technical_complexity": 0.08,
+                "competition": 0.10, "uniqueness": 0.10, "automation_potential": 0.10,
+            },
+            min_total_score=50.0,
+        )
+    if config.prompt_engineering is None:
+        config.prompt_engineering = PromptEngineeringConfig()
+    if config.refinement is None:
+        config.refinement = RefinementConfig()
+    if config.code_generation is None:
+        config.code_generation = CodeGenerationConfig()
+    return config
 
 
 # Cached settings singleton

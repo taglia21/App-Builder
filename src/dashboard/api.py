@@ -1,18 +1,23 @@
 """
 API Routes
 
-JSON API endpoints for the Valeric platform.
+JSON API endpoints for the Ignara platform.
 """
 
 import logging
+import os
 import zipfile
 from datetime import datetime, timezone
 from enum import Enum
 from io import BytesIO
 from typing import Any, Dict, List, Optional
 
+from concurrent.futures import ThreadPoolExecutor
+
 from fastapi import APIRouter, Body
 from pydantic import BaseModel, Field
+
+_build_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="build-pipeline")
 
 logger = logging.getLogger(__name__)
 
@@ -175,7 +180,7 @@ class APIRoutes:
     """
     JSON API endpoints.
 
-    Provides programmatic access to Valeric features.
+    Provides programmatic access to Ignara features.
     """
 
     # ==================== Projects ====================
@@ -572,10 +577,11 @@ def _run_pipeline_thread(
     llm_provider: str,
     theme: str,
 ) -> None:
-    """Run the pipeline in a daemon thread, updating the build manager."""
+    """Run the pipeline in a worker thread, updating the build manager."""
     import asyncio
     import time as _time
 
+    # Local imports to avoid circular dependencies at module level
     from src.config import load_config
     from src.notifications.dispatcher import dispatcher as notify
     from src.pipeline import StartupGenerationPipeline
@@ -620,9 +626,10 @@ def _run_pipeline_thread(
         pipeline = StartupGenerationPipeline(config, llm_provider=llm_provider)
 
         output_dir = f"./output/{build_id}"
+        # asyncio.run() is safe here: ThreadPoolExecutor threads have no event loop
         result = asyncio.run(
             pipeline.run(
-                demo_mode=True,
+                demo_mode=os.environ.get("DEMO_MODE", "false").lower() == "true",
                 output_dir=output_dir,
                 theme=theme,
                 progress_callback=_progress_cb,
@@ -671,8 +678,6 @@ def _run_pipeline_thread(
 
 async def api_create_build(data: BuildRequest) -> BuildResponse:
     """POST /api/build — start a pipeline build."""
-    import threading
-
     from src.services.build_manager import build_manager
 
     build_id = build_manager.create_build(
@@ -681,12 +686,7 @@ async def api_create_build(data: BuildRequest) -> BuildResponse:
         theme=data.theme,
     )
 
-    t = threading.Thread(
-        target=_run_pipeline_thread,
-        args=(build_id, data.idea, data.llm_provider, data.theme),
-        daemon=True,
-    )
-    t.start()
+    _build_executor.submit(_run_pipeline_thread, build_id, data.idea, data.llm_provider, data.theme)
 
     return BuildResponse(
         build_id=build_id,

@@ -1,4 +1,4 @@
-"""Middleware package for Valeric."""
+"""Middleware package for Ignara."""
 
 from .error_handler import (
     add_exception_handlers,

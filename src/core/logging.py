@@ -1,4 +1,4 @@
-"""Logging configuration for Valeric."""
+"""Logging configuration for Ignara."""
 import logging
 import sys
 from typing import Optional

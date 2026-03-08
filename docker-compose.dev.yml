@@ -6,7 +6,7 @@ version: '3.9'
 services:
   app:
     build: .
-    container_name: valeric-dev
+    container_name: ignara-dev
     volumes:
       - ./output:/app/output
       - ./generated_projects:/app/generated_projects
@@ -25,35 +25,35 @@ services:
       - FROM_EMAIL=noreply@localhost
       # For Resend testing, comment above and use:
       # - RESEND_API_KEY=${RESEND_API_KEY}
-      # - FROM_EMAIL=noreply@valeric.dev
+      # - FROM_EMAIL=noreply@ignara.dev
     ports:
       - "8000:8000"
     depends_on:
       - db
       - redis
       - mailhog
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn src.dashboard.app:app --host 0.0.0.0 --port 8000 --reload
 
   db:
     image: postgres:15
-    container_name: valeric-db-dev
+    container_name: ignara-db-dev
     environment:
-      - POSTGRES_USER=valeric
-      - POSTGRES_PASSWORD=valeric_dev_password
-      - POSTGRES_DB=valeric_dev
+      - POSTGRES_USER=ignara
+      - POSTGRES_PASSWORD=ignara_dev_password
+      - POSTGRES_DB=ignara_dev
     volumes:
       - postgres_dev_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U valeric -d valeric_dev"]
+      test: ["CMD-SHELL", "pg_isready -U ignara -d ignara_dev"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   redis:
     image: redis:7-alpine
-    container_name: valeric-redis-dev
+    container_name: ignara-redis-dev
     volumes:
       - redis_dev_data:/data
     ports:
@@ -76,7 +76,7 @@ services:
   # ============================================
   mailhog:
     image: mailhog/mailhog:v1.0.1
-    container_name: valeric-mailhog
+    container_name: ignara-mailhog
     ports:
       - "1025:1025"  # SMTP server
       - "8025:8025"  # Web UI
@@ -86,9 +86,9 @@ services:
   # Optional: pgAdmin for database management
   pgadmin:
     image: dpage/pgadmin4:latest
-    container_name: valeric-pgadmin
+    container_name: ignara-pgadmin
     environment:
-      - PGADMIN_DEFAULT_EMAIL=admin@valeric.dev
+      - PGADMIN_DEFAULT_EMAIL=admin@ignara.dev
       - PGADMIN_DEFAULT_PASSWORD=admin
       - PGADMIN_CONFIG_SERVER_MODE=False
     ports:
@@ -101,7 +101,7 @@ services:
   # Optional: Redis Commander for Redis management
   redis-commander:
     image: rediscommander/redis-commander:latest
-    container_name: valeric-redis-commander
+    container_name: ignara-redis-commander
     environment:
       - REDIS_HOSTS=local:redis:6379
     ports:

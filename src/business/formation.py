@@ -12,8 +12,6 @@ from abc import ABC, abstractmethod
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 
-import httpx
-
 from src.business.models import (
     EXPEDITED_FEE,
     FORMATION_PRICES,
@@ -86,11 +84,17 @@ class FormationProvider(ABC):
 
 class StripeAtlasProvider(FormationProvider):
     """
-    Stripe Atlas integration for business formation.
+    Stripe Atlas guided flow for business formation.
 
-    Note: Stripe Atlas requires manual approval and has specific
-    requirements. This provider uses their API for status tracking.
+    NOTE: Stripe Atlas does NOT have a public API for submitting formation
+    applications — it is a manual web form at https://stripe.com/atlas.
+    This provider is a guided flow: it returns the signup URL and instructs
+    the user to complete the application there. No HTTP requests are made
+    to any Stripe Atlas endpoint.
     """
+
+    # Internal store for tracking guided-flow references keyed by request_id
+    _pending: Dict[str, FormationResult] = {}
 
     def __init__(
         self,
@@ -101,7 +105,6 @@ class StripeAtlasProvider(FormationProvider):
         self.api_key = api_key or os.getenv("STRIPE_ATLAS_API_KEY")
         self.webhook_secret = webhook_secret or os.getenv("STRIPE_ATLAS_WEBHOOK_SECRET")
         self.sandbox = sandbox
-        self.base_url = "https://api.stripe.com/v1/atlas" if not sandbox else "https://api.stripe.com/v1/atlas"
 
         # Stripe Atlas pricing (as of 2024)
         self.base_price = 50000  # $500
@@ -115,106 +118,71 @@ class StripeAtlasProvider(FormationProvider):
         self, request: FormationRequest
     ) -> FormationResult:
         """
-        Submit to Stripe Atlas.
+        Guided flow for Stripe Atlas business formation.
 
-        Note: In production, this would create an Atlas application
-        and return a link for the user to complete.
+        Stripe Atlas does not expose a public API for submitting formation
+        applications. This is a guided flow — no HTTP requests are made.
+        The user must complete the application manually at stripe.com/atlas.
         """
-        if not self.api_key:
-            raise FormationError("Stripe Atlas API key not configured")
-
         request_id = str(uuid.uuid4())
+        atlas_url = "https://stripe.com/atlas"
 
-        # In reality, Stripe Atlas requires manual application
-        # This simulates creating an application link
-        logger.info(f"Creating Stripe Atlas application for {request.business_name}")
+        logger.info(
+            f"Stripe Atlas guided flow initiated for {request.business_name}. "
+            f"User must complete application manually at {atlas_url}."
+        )
 
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    f"{self.base_url}/applications",
-                    headers={"Authorization": f"Bearer {self.api_key}"},
-                    json={
-                        "company_name": request.business_name,
-                        "type": request.business_type.value,
-                        "state": request.state.value,
-                        "owner": {
-                            "name": request.owner_name,
-                            "email": request.owner_email,
-                        },
-                        "metadata": {
-                            "user_id": request.user_id,
-                            "project_id": request.project_id,
-                        },
-                    },
-                    timeout=30.0,
-                )
+        result = FormationResult(
+            request_id=request_id,
+            status=FormationStatus.PENDING,
+            business_name=request.business_name,
+            business_type=request.business_type,
+            state=request.state,
+            provider=self.name,
+            provider_reference=atlas_url,
+            message=(
+                "Stripe Atlas does not have a public API for submitting formation "
+                "applications. Please complete your application manually at "
+                f"{atlas_url}. Stripe Atlas includes Delaware LLC formation, EIN, "
+                "a Mercury bank account, and one year of registered agent service for $500."
+            ),
+            estimated_completion=datetime.now(timezone.utc) + timedelta(days=5),
+        )
 
-                if response.status_code == 200:
-                    data = response.json()
-                    return FormationResult(
-                        request_id=data.get("id", request_id),
-                        status=FormationStatus.PENDING,
-                        business_name=request.business_name,
-                        business_type=request.business_type,
-                        state=request.state,
-                        provider=self.name,
-                        provider_reference=data.get("application_url"),
-                        message="Complete your Stripe Atlas application at the provided URL",
-                        estimated_completion=datetime.now(timezone.utc) + timedelta(days=5),
-                    )
-                else:
-                    raise FormationError(f"Stripe Atlas error: {response.text}")
-
-        except httpx.RequestError as e:
-            logger.error(f"Stripe Atlas request failed: {e}")
-            raise FormationError(f"Request failed: {e}")
+        # Store locally so status checks can return a helpful response
+        StripeAtlasProvider._pending[request_id] = result
+        return result
 
     async def get_formation_status(
         self, request_id: str
     ) -> FormationResult:
-        """Get Stripe Atlas application status."""
-        if not self.api_key:
-            raise FormationError("Stripe Atlas API key not configured")
+        """
+        Return status for a Stripe Atlas guided flow.
 
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.get(
-                    f"{self.base_url}/applications/{request_id}",
-                    headers={"Authorization": f"Bearer {self.api_key}"},
-                    timeout=30.0,
-                )
+        Stripe Atlas does not have a public status API. Formation status must
+        be checked manually at stripe.com/atlas. If the request_id was created
+        by this provider, the original pending result is returned; otherwise a
+        helpful placeholder is returned.
+        """
+        atlas_url = "https://stripe.com/atlas"
 
-                if response.status_code == 200:
-                    data = response.json()
+        if request_id in StripeAtlasProvider._pending:
+            return StripeAtlasProvider._pending[request_id]
 
-                    # Map Stripe Atlas status to our status
-                    status_map = {
-                        "pending": FormationStatus.PENDING,
-                        "submitted": FormationStatus.SUBMITTED,
-                        "in_review": FormationStatus.PROCESSING,
-                        "approved": FormationStatus.APPROVED,
-                        "rejected": FormationStatus.REJECTED,
-                        "completed": FormationStatus.COMPLETED,
-                    }
-
-                    return FormationResult(
-                        request_id=request_id,
-                        status=status_map.get(data.get("status"), FormationStatus.PENDING),
-                        business_name=data.get("company_name", ""),
-                        business_type=BusinessType(data.get("type", "llc")),
-                        state=FormationState(data.get("state", "DE")),
-                        ein=data.get("ein"),
-                        formation_date=datetime.fromisoformat(data["formation_date"]) if data.get("formation_date") else None,
-                        certificate_url=data.get("certificate_url"),
-                        provider=self.name,
-                        provider_reference=request_id,
-                    )
-                else:
-                    raise FormationError(f"Failed to get status: {response.text}")
-
-        except httpx.RequestError as e:
-            raise FormationError(f"Request failed: {e}")
+        # Unknown request_id — return an honest fallback
+        return FormationResult(
+            request_id=request_id,
+            status=FormationStatus.PENDING,
+            business_name="",
+            business_type=BusinessType.LLC,
+            state=FormationState.DE,
+            provider=self.name,
+            provider_reference=atlas_url,
+            message=(
+                "Stripe Atlas does not provide a status API. "
+                f"Please check the status of your application at {atlas_url}."
+            ),
+        )
 
     async def submit_ein_application(
         self, request: EINRequest
@@ -236,8 +204,12 @@ class StripeAtlasProvider(FormationProvider):
     async def get_ein_status(
         self, request_id: str
     ) -> EINResult:
-        """Get EIN status from Atlas."""
-        # Get formation status which includes EIN
+        """
+        Return EIN status for a Stripe Atlas guided flow.
+
+        EIN is included in the Stripe Atlas package and is obtained as part of
+        the formation process at stripe.com/atlas. No API call is made.
+        """
         formation = await self.get_formation_status(request_id)
 
         return EINResult(
@@ -246,6 +218,10 @@ class StripeAtlasProvider(FormationProvider):
             ein=formation.ein,
             business_name=formation.business_name,
             provider=self.name,
+            message=(
+                "EIN is included with Stripe Atlas formation. "
+                "Check your EIN status at https://stripe.com/atlas."
+            ),
         )
 
     def get_pricing(
@@ -266,10 +242,19 @@ class StripeAtlasProvider(FormationProvider):
 
 class ZenBusinessProvider(FormationProvider):
     """
-    ZenBusiness integration for business formation.
+    ZenBusiness guided flow for business formation.
+
+    NOTE: ZenBusiness does not expose a public API for programmatic formation
+    submissions. This provider is a guided flow — it returns the signup URL
+    and instructs the user to complete the application at zenbusiness.com.
+    No HTTP requests are made to any ZenBusiness endpoint.
 
     More flexible pricing than Stripe Atlas.
     """
+
+    # Internal store for guided-flow references keyed by request_id
+    _pending: Dict[str, FormationResult] = {}
+    _eins: Dict[str, EINResult] = {}
 
     def __init__(
         self,
@@ -278,7 +263,6 @@ class ZenBusinessProvider(FormationProvider):
     ):
         self.api_key = api_key or os.getenv("ZENBUSINESS_API_KEY")
         self.sandbox = sandbox
-        self.base_url = "https://api.zenbusiness.com/v1" if not sandbox else "https://sandbox.api.zenbusiness.com/v1"
 
     @property
     def name(self) -> str:
@@ -287,202 +271,131 @@ class ZenBusinessProvider(FormationProvider):
     async def submit_formation(
         self, request: FormationRequest
     ) -> FormationResult:
-        """Submit formation to ZenBusiness."""
-        if not self.api_key:
-            raise FormationError("ZenBusiness API key not configured")
+        """
+        Guided flow for ZenBusiness business formation.
 
+        ZenBusiness does not provide a public API for programmatic formation
+        submissions. This is a guided flow — no HTTP requests are made.
+        The user must complete the application manually at zenbusiness.com.
+        """
         request_id = str(uuid.uuid4())
+        zenbusiness_url = "https://www.zenbusiness.com/form-an-llc/"
 
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    f"{self.base_url}/formations",
-                    headers={
-                        "Authorization": f"Bearer {self.api_key}",
-                        "Content-Type": "application/json",
-                    },
-                    json={
-                        "company_name": request.business_name,
-                        "entity_type": request.business_type.value,
-                        "state": request.state.value,
-                        "contact": {
-                            "first_name": request.owner_name.split()[0],
-                            "last_name": " ".join(request.owner_name.split()[1:]) or request.owner_name,
-                            "email": request.owner_email,
-                            "phone": request.owner_phone,
-                        },
-                        "address": {
-                            "street": request.street_address,
-                            "city": request.city,
-                            "state": request.state_address,
-                            "zip": request.zip_code,
-                            "country": request.country,
-                        },
-                        "purpose": request.purpose,
-                        "registered_agent": request.registered_agent,
-                        "operating_agreement": request.operating_agreement,
-                        "expedited": request.expedited,
-                    },
-                    timeout=30.0,
-                )
+        logger.info(
+            f"ZenBusiness guided flow initiated for {request.business_name}. "
+            f"User must complete application manually at {zenbusiness_url}."
+        )
 
-                if response.status_code in (200, 201):
-                    data = response.json()
-                    return FormationResult(
-                        request_id=data.get("order_id", request_id),
-                        status=FormationStatus.SUBMITTED,
-                        business_name=request.business_name,
-                        business_type=request.business_type,
-                        state=request.state,
-                        provider=self.name,
-                        provider_reference=data.get("order_id"),
-                        message="Formation submitted successfully",
-                        estimated_completion=datetime.now(timezone.utc) + timedelta(days=3 if request.expedited else 7),
-                    )
-                else:
-                    raise FormationError(f"ZenBusiness error: {response.text}")
+        result = FormationResult(
+            request_id=request_id,
+            status=FormationStatus.PENDING,
+            business_name=request.business_name,
+            business_type=request.business_type,
+            state=request.state,
+            provider=self.name,
+            provider_reference=zenbusiness_url,
+            message=(
+                "ZenBusiness does not provide a public API for formation submissions. "
+                "Please complete your formation application manually at "
+                f"{zenbusiness_url}. ZenBusiness handles state filing, registered agent "
+                "service, and operating agreement preparation."
+            ),
+            estimated_completion=datetime.now(timezone.utc) + timedelta(days=3 if request.expedited else 7),
+        )
 
-        except httpx.RequestError as e:
-            logger.error(f"ZenBusiness request failed: {e}")
-            raise FormationError(f"Request failed: {e}")
+        ZenBusinessProvider._pending[request_id] = result
+        return result
 
     async def get_formation_status(
         self, request_id: str
     ) -> FormationResult:
-        """Get ZenBusiness formation status."""
-        if not self.api_key:
-            raise FormationError("ZenBusiness API key not configured")
+        """
+        Return status for a ZenBusiness guided flow.
 
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.get(
-                    f"{self.base_url}/formations/{request_id}",
-                    headers={"Authorization": f"Bearer {self.api_key}"},
-                    timeout=30.0,
-                )
+        ZenBusiness does not provide a public status API. Formation status must
+        be checked manually at zenbusiness.com. If the request_id was created
+        by this provider, the original pending result is returned; otherwise a
+        helpful placeholder is returned.
+        """
+        zenbusiness_url = "https://www.zenbusiness.com"
 
-                if response.status_code == 200:
-                    data = response.json()
+        if request_id in ZenBusinessProvider._pending:
+            return ZenBusinessProvider._pending[request_id]
 
-                    status_map = {
-                        "pending": FormationStatus.PENDING,
-                        "processing": FormationStatus.PROCESSING,
-                        "filed": FormationStatus.APPROVED,
-                        "completed": FormationStatus.COMPLETED,
-                        "rejected": FormationStatus.REJECTED,
-                    }
-
-                    return FormationResult(
-                        request_id=request_id,
-                        status=status_map.get(data.get("status"), FormationStatus.PENDING),
-                        business_name=data.get("company_name", ""),
-                        business_type=BusinessType(data.get("entity_type", "llc")),
-                        state=FormationState(data.get("state", "DE")),
-                        ein=data.get("ein"),
-                        formation_date=datetime.fromisoformat(data["filed_date"]) if data.get("filed_date") else None,
-                        certificate_url=data.get("documents", {}).get("certificate"),
-                        operating_agreement_url=data.get("documents", {}).get("operating_agreement"),
-                        provider=self.name,
-                        provider_reference=request_id,
-                    )
-                else:
-                    raise FormationError(f"Failed to get status: {response.text}")
-
-        except httpx.RequestError as e:
-            raise FormationError(f"Request failed: {e}")
+        return FormationResult(
+            request_id=request_id,
+            status=FormationStatus.PENDING,
+            business_name="",
+            business_type=BusinessType.LLC,
+            state=FormationState.DE,
+            provider=self.name,
+            provider_reference=zenbusiness_url,
+            message=(
+                "ZenBusiness does not provide a status API. "
+                f"Please check the status of your order at {zenbusiness_url}."
+            ),
+        )
 
     async def submit_ein_application(
         self, request: EINRequest
     ) -> EINResult:
-        """Submit EIN application through ZenBusiness."""
-        if not self.api_key:
-            raise FormationError("ZenBusiness API key not configured")
+        """
+        Guided flow for EIN application through ZenBusiness.
 
+        ZenBusiness does not provide a public API for EIN applications.
+        This is a guided flow — no HTTP requests are made. The user must
+        request EIN service as part of their ZenBusiness order at zenbusiness.com.
+        """
         request_id = str(uuid.uuid4())
+        zenbusiness_ein_url = "https://www.zenbusiness.com/ein/"
 
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    f"{self.base_url}/ein",
-                    headers={
-                        "Authorization": f"Bearer {self.api_key}",
-                        "Content-Type": "application/json",
-                    },
-                    json={
-                        "company_name": request.business_name,
-                        "entity_type": request.business_type.value,
-                        "state": request.state.value,
-                        "responsible_party": {
-                            "name": request.responsible_party_name,
-                            "ssn_last4": request.responsible_party_ssn[-4:] if request.responsible_party_ssn else None,
-                        },
-                        "address": {
-                            "street": request.street_address,
-                            "city": request.city,
-                            "state": request.state_address,
-                            "zip": request.zip_code,
-                        },
-                        "principal_activity": request.principal_activity,
-                        "expected_employees": request.expected_employees,
-                    },
-                    timeout=30.0,
-                )
+        logger.info(
+            f"ZenBusiness EIN guided flow initiated for {request.business_name}. "
+            f"User must complete EIN request at {zenbusiness_ein_url}."
+        )
 
-                if response.status_code in (200, 201):
-                    data = response.json()
-                    return EINResult(
-                        request_id=data.get("application_id", request_id),
-                        status=EINStatus.SUBMITTED,
-                        business_name=request.business_name,
-                        message="EIN application submitted",
-                        provider=self.name,
-                        provider_reference=data.get("application_id"),
-                    )
-                else:
-                    raise FormationError(f"EIN application failed: {response.text}")
+        result = EINResult(
+            request_id=request_id,
+            status=EINStatus.PENDING,
+            business_name=request.business_name,
+            message=(
+                "ZenBusiness does not provide a public API for EIN applications. "
+                "Please request EIN service as part of your ZenBusiness formation order at "
+                f"{zenbusiness_ein_url}."
+            ),
+            provider=self.name,
+            provider_reference=zenbusiness_ein_url,
+        )
 
-        except httpx.RequestError as e:
-            raise FormationError(f"Request failed: {e}")
+        ZenBusinessProvider._eins[request_id] = result
+        return result
 
     async def get_ein_status(
         self, request_id: str
     ) -> EINResult:
-        """Get EIN status from ZenBusiness."""
-        if not self.api_key:
-            raise FormationError("ZenBusiness API key not configured")
+        """
+        Return EIN status for a ZenBusiness guided flow.
 
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.get(
-                    f"{self.base_url}/ein/{request_id}",
-                    headers={"Authorization": f"Bearer {self.api_key}"},
-                    timeout=30.0,
-                )
+        ZenBusiness does not provide a public EIN status API. Status must be
+        checked at zenbusiness.com. If the request_id was created by this
+        provider, the stored result is returned; otherwise a helpful placeholder.
+        """
+        zenbusiness_url = "https://www.zenbusiness.com"
 
-                if response.status_code == 200:
-                    data = response.json()
+        if request_id in ZenBusinessProvider._eins:
+            return ZenBusinessProvider._eins[request_id]
 
-                    status_map = {
-                        "pending": EINStatus.PENDING,
-                        "submitted": EINStatus.SUBMITTED,
-                        "received": EINStatus.RECEIVED,
-                        "failed": EINStatus.FAILED,
-                    }
-
-                    return EINResult(
-                        request_id=request_id,
-                        status=status_map.get(data.get("status"), EINStatus.PENDING),
-                        ein=data.get("ein"),
-                        business_name=data.get("company_name", ""),
-                        confirmation_letter_url=data.get("confirmation_letter_url"),
-                        provider=self.name,
-                        provider_reference=request_id,
-                    )
-                else:
-                    raise FormationError(f"Failed to get EIN status: {response.text}")
-
-        except httpx.RequestError as e:
-            raise FormationError(f"Request failed: {e}")
+        return EINResult(
+            request_id=request_id,
+            status=EINStatus.PENDING,
+            business_name="",
+            provider=self.name,
+            provider_reference=zenbusiness_url,
+            message=(
+                "ZenBusiness does not provide a public EIN status API. "
+                f"Please check the status of your EIN request at {zenbusiness_url}."
+            ),
+        )
 
     def get_pricing(
         self,
@@ -562,7 +475,7 @@ class MockFormationProvider(FormationProvider):
         result.status = FormationStatus.COMPLETED
         result.ein = ein
         result.formation_date = datetime.now(timezone.utc)
-        result.certificate_url = f"https://mock.valeric.app/certs/{request_id}"
+        result.certificate_url = f"https://mock.ignara.app/certs/{request_id}"
         result.updated_at = datetime.now(timezone.utc)
 
         return result
@@ -603,7 +516,7 @@ class MockFormationProvider(FormationProvider):
         result = self._eins[request_id]
         result.status = EINStatus.RECEIVED
         result.ein = ein
-        result.confirmation_letter_url = f"https://mock.valeric.app/ein/{request_id}"
+        result.confirmation_letter_url = f"https://mock.ignara.app/ein/{request_id}"
         result.updated_at = datetime.now(timezone.utc)
 
         return result

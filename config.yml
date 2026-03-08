@@ -1,0 +1,84 @@
+# Ignara Pipeline Configuration
+# Environment variables override these settings
+
+intelligence:
+  lookback_period: 30
+  min_pain_points: 10  # Lowered from 100 for realistic operation
+  data_sources: []  # Add API-based sources when keys are available
+  # Example sources (enable when API keys are configured):
+  # - type: reddit
+  #   enabled: false
+  #   client_id: ${REDDIT_CLIENT_ID}
+  #   client_secret: ${REDDIT_CLIENT_SECRET}
+  # - type: twitter
+  #   enabled: false
+  #   bearer_token: ${TWITTER_BEARER_TOKEN}
+  # - type: newsapi
+  #   enabled: false
+  #   api_key: ${NEWSAPI_KEY}
+
+idea_generation:
+  min_ideas: 10  # Lowered from 50 for realistic LLM-powered generation
+  filters:
+    b2b_only: false
+    prefer_recurring_revenue: true
+
+scoring:
+  weights:
+    market_demand: 0.15
+    urgency: 0.10
+    enterprise_value: 0.15
+    recurring_revenue: 0.12
+    time_to_mvp: 0.10
+    technical_complexity: 0.08
+    competition: 0.10
+    uniqueness: 0.10
+    automation_potential: 0.10
+  min_total_score: 50.0  # Lowered from 70 to allow more ideas through
+
+prompt_engineering:
+  template_path: "./templates/product_prompt.md"
+  include_sections:
+    - overview
+    - features
+    - architecture
+    - user_flows
+    - ui_design
+  min_core_features: 5
+  min_secondary_features: 3
+  min_ai_modules: 2
+  min_user_flows: 4
+  min_screens: 10
+  min_components: 15
+
+refinement:
+  max_iterations: 5
+  checks:
+    - completeness
+    - consistency
+    - feasibility
+  llm_provider: "auto"
+  model: "gpt-4-turbo-preview"
+
+code_generation:
+  backend:
+    framework: "fastapi"
+    language: "python"
+  frontend:
+    framework: "react"
+    language: "typescript"
+  infrastructure:
+    containerization: "docker"
+    ci_cd: "github_actions"
+  output_directory: "./generated_projects"
+  llm_provider: "auto"
+  model: "gpt-4-turbo-preview"
+
+execution:
+  schedule: "0 6 * * 1"  # Monday 6am
+  notifications:
+    slack_enabled: "false"
+    email_enabled: "false"
+  logging:
+    level: "INFO"
+    format: "json"

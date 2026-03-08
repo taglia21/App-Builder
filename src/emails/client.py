@@ -1,5 +1,5 @@
 """
-Email client for Valeric using Resend.com API.
+Email client for Ignara using Resend.com API.
 
 Provides transactional email functionality for:
 - Email verification
@@ -92,7 +92,7 @@ class EmailClient:
         self,
         api_key: Optional[str] = None,
         from_email: Optional[str] = None,
-        from_name: str = "Valeric"
+        from_name: str = "Ignara"
     ):
         """
         Initialize email client.
@@ -107,7 +107,7 @@ class EmailClient:
         """
         settings = get_settings()
         self.api_key = api_key or getattr(settings, 'resend_api_key', None)
-        self.from_email = from_email or getattr(settings, 'email_from', 'noreply@valeric.app')
+        self.from_email = from_email or getattr(settings, 'email_from', 'noreply@ignara.app')
         self.from_name = from_name
 
         # Set up Jinja2 template environment
@@ -456,7 +456,7 @@ async def send_verification_email(
 
     return await client.send_email(
         to=email,
-        subject="Verify your Valeric email",
+        subject="Verify your Ignara email",
         html=html,
         tags={"type": "verification"}
     )
@@ -472,13 +472,13 @@ async def send_welcome_email(
     html = client.render_template(
         "welcome.html",
         name=name or "there",
-        dashboard_url="https://valeric.app/dashboard",
+        dashboard_url="https://ignara.app/dashboard",
         year=2026
     )
 
     return await client.send_email(
         to=email,
-        subject="Welcome to Valeric! 🚀",
+        subject="Welcome to Ignara! 🚀",
         html=html,
         tags={"type": "welcome"}
     )
@@ -501,7 +501,7 @@ async def send_password_reset_email(
 
     return await client.send_email(
         to=email,
-        subject="Reset your Valeric password",
+        subject="Reset your Ignara password",
         html=html,
         tags={"type": "password_reset"}
     )

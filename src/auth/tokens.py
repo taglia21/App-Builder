@@ -1,5 +1,5 @@
 """
-Valeric Token Utilities
+Ignara Token Utilities
 
 Generation and verification of various tokens:
 - Email verification tokens

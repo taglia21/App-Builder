@@ -6,7 +6,7 @@ and response compression for production deployments.
 
 import logging
 import os
-from typing import Dict, Optional
+from typing import Dict
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.gzip import GZipMiddleware

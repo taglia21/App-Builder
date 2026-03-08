@@ -32,6 +32,8 @@ from .retry_cache import (
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_TIMEOUT = 60
+
 
 @dataclass
 class LLMResponse:
@@ -297,6 +299,7 @@ class PerplexityClient(BaseLLMClient):
             "temperature": temperature,
         }
 
+        kwargs["timeout"] = DEFAULT_TIMEOUT
         response = self.client.chat.completions.create(**kwargs)
 
         latency_ms = (time.time() - start_time) * 1000
@@ -440,6 +443,8 @@ class OpenAIClient(BaseLLMClient):
         if json_mode:
             kwargs["response_format"] = {"type": "json_object"}
 
+        kwargs["timeout"] = DEFAULT_TIMEOUT
+
         try:
             response = self.client.chat.completions.create(**kwargs)
             latency_ms = (time.time() - start) * 1000
@@ -527,6 +532,8 @@ class AnthropicClient(BaseLLMClient):
 
         if system_prompt:
             kwargs["system"] = system_prompt
+
+        kwargs["timeout"] = DEFAULT_TIMEOUT
 
         try:
             response = self.client.messages.create(**kwargs)
@@ -627,6 +634,7 @@ class GoogleClient(BaseLLMClient):
                 config=types.GenerateContentConfig(
                     temperature=temperature,
                     max_output_tokens=max_tokens,
+                    http_options=types.HttpOptions(timeout=DEFAULT_TIMEOUT * 1000),
                 ),
             )
             latency_ms = (time.time() - start) * 1000
@@ -721,6 +729,7 @@ class GroqClient(BaseLLMClient):
         if json_mode:
             kwargs["response_format"] = {"type": "json_object"}
 
+        kwargs["timeout"] = DEFAULT_TIMEOUT
         response = self.client.chat.completions.create(**kwargs)
 
         latency_ms = (time.time() - start_time) * 1000
@@ -983,7 +992,8 @@ class MultiProviderClient(BaseLLMClient):
         json_mode: bool = False
     ) -> LLMResponse:
         # This won't be called directly since we override complete()
-        pass
+        # But if somehow invoked without any providers succeeding, raise explicitly.
+        raise RuntimeError("All LLM providers failed — no response received")
 
     def complete(
         self,
@@ -1002,11 +1012,15 @@ class MultiProviderClient(BaseLLMClient):
                 logger.info(f"Success with provider: {provider.provider_name}")
                 return response
             except Exception as e:
+                # TODO: Differentiate error types:
+                # - RateLimitError → retry after delay
+                # - AuthenticationError → skip provider permanently
+                # - TimeoutError → retry once, then skip
                 logger.warning(f"Provider {provider.provider_name} failed: {e}")
                 last_error = e
                 continue
 
-        raise Exception(f"All providers failed. Last error: {last_error}")
+        raise RuntimeError("All LLM providers failed — no response received")
 
 
 def get_llm_client(
@@ -1042,34 +1056,54 @@ def get_llm_client(
         return MockLLMClient()
 
     if provider == "openai":
-        return OpenAIClient(
-            api_key=api_key,
-            model=model or os.getenv("OPENAI_MODEL", "gpt-4o")
-        )
+        try:
+            return OpenAIClient(
+                api_key=api_key,
+                model=model or os.getenv("OPENAI_MODEL", "gpt-4o")
+            )
+        except (ValueError, ImportError) as e:
+            logger.warning(f"Requested provider 'openai' unavailable ({e}), falling back to next available provider")
+            return get_llm_client("auto", api_key=None, model=model)
 
     if provider == "anthropic":
-        return AnthropicClient(
-            api_key=api_key,
-            model=model or os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022")
-        )
+        try:
+            return AnthropicClient(
+                api_key=api_key,
+                model=model or os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022")
+            )
+        except (ValueError, ImportError) as e:
+            logger.warning(f"Requested provider 'anthropic' unavailable ({e}), falling back to next available provider")
+            return get_llm_client("auto", api_key=None, model=model)
 
     if provider == "google":
-        return GoogleClient(
-            api_key=api_key,
-            model=model or os.getenv("GOOGLE_MODEL", "gemini-1.5-pro")
-        )
+        try:
+            return GoogleClient(
+                api_key=api_key,
+                model=model or os.getenv("GOOGLE_MODEL", "gemini-1.5-pro")
+            )
+        except (ValueError, ImportError) as e:
+            logger.warning(f"Requested provider 'google' unavailable ({e}), falling back to next available provider")
+            return get_llm_client("auto", api_key=None, model=model)
 
     if provider == "perplexity":
-        return PerplexityClient(
-            api_key=api_key,
-            model=model or os.getenv("PERPLEXITY_MODEL", "sonar-pro")
-        )
+        try:
+            return PerplexityClient(
+                api_key=api_key,
+                model=model or os.getenv("PERPLEXITY_MODEL", "sonar-pro")
+            )
+        except (ValueError, ImportError) as e:
+            logger.warning(f"Requested provider 'perplexity' unavailable ({e}), falling back to next available provider")
+            return get_llm_client("auto", api_key=None, model=model)
 
     if provider == "groq":
-        return GroqClient(
-            api_key=api_key,
-            model=model or os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
-        )
+        try:
+            return GroqClient(
+                api_key=api_key,
+                model=model or os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+            )
+        except (ValueError, ImportError) as e:
+            logger.warning(f"Requested provider 'groq' unavailable ({e}), falling back to next available provider")
+            return get_llm_client("auto", api_key=None, model=model)
 
     if provider == "multi":
         return MultiProviderClient()

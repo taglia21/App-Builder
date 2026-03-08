@@ -49,7 +49,7 @@ class PlausibleClient:
         Initialize Plausible client.
 
         Args:
-            domain: Plausible site domain (e.g., 'valeric.app')
+            domain: Plausible site domain (e.g., 'ignara.app')
             api_key: Optional API key for stats access
         """
         settings = get_settings()
@@ -102,7 +102,7 @@ class PlausibleClient:
 
         headers = {
             "Content-Type": "application/json",
-            "User-Agent": user_agent or "Valeric/1.0",
+            "User-Agent": user_agent or "Ignara/1.0",
         }
 
         if ip_address:
@@ -156,9 +156,9 @@ class PlausibleClient:
         )
 
 
-# Pre-defined events for Valeric
+# Pre-defined events for Ignara
 class Events:
-    """Standard Valeric analytics events."""
+    """Standard Ignara analytics events."""
 
     # User events
     SIGNUP = "Signup"

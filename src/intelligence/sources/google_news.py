@@ -52,6 +52,15 @@ class GoogleNewsSource(DataSource):
             else:
                 logger.warning("Google News source not enabled")
 
+    async def gather(self) -> List[Dict[str, Any]]:
+        """Implement abstract gather() by delegating to collect()."""
+        return await self.collect()
+
+    def get_source_type(self):
+        """Return the source type identifier."""
+        from ..models import SourceType
+        return SourceType.NEWS
+
     async def collect(self) -> List[Dict[str, Any]]:
         """Collect news articles from Google News."""
         if not self.enabled or self.gn is None:

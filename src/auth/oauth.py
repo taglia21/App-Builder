@@ -1,5 +1,5 @@
 """
-Valeric OAuth Module
+Ignara OAuth Module
 
 OAuth2 integration for third-party authentication providers.
 Currently supports Google OAuth2.

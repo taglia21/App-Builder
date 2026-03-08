@@ -1,5 +1,5 @@
 """
-Valeric Password Security Module
+Ignara Password Security Module
 
 Secure password hashing using bcrypt with strength validation.
 """

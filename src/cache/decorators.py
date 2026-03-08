@@ -3,7 +3,7 @@ import functools
 import hashlib
 import json
 import logging
-from typing import Any, Callable, Optional
+from typing import Callable, Optional
 
 from src.cache.redis_client import get_cache, RedisClient
 

@@ -56,7 +56,7 @@ class WebhookNotifier:
                 payload.encode(),
                 hashlib.sha256,
             ).hexdigest()
-            headers["X-Valeric-Signature"] = signature
+            headers["X-Ignara-Signature"] = signature
 
         try:
             requests.post(

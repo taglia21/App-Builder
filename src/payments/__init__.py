@@ -1,5 +1,5 @@
 """
-Valeric Payments Module
+Ignara Payments Module
 
 Stripe integration for subscription management, payments, and billing.
 """

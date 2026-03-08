@@ -1,5 +1,5 @@
 """
-Valeric - AI-Powered Startup Builder
+Ignara - AI-Powered Startup Builder
 Professional branding and CLI presentation.
 """
 
@@ -21,13 +21,13 @@ BRAND_SUCCESS = "green"
 
 # ASCII Art Logo - Clean, professional
 LOGO_ASCII = """
-╦  ┌─┐┬ ┬┌┐┌┌─┐┬ ┬╔═╗┌─┐┬─┐┌─┐┌─┐
-║  ├─┤│ │││││  ├─┤╠╣ │ │├┬┘│ ┬├┤
-╩═╝┴ ┴└─┘┘└┘└─┘┴ ┴╚  └─┘┴└─└─┘└─┘
+╦┌─┐┌┐┌┌─┐┬─┐┌─┐
+║│ ┬│││├─┤├┬┘├─┤
+╩└─┘┘└┘┴ ┴┴└─┴ ┴
 """
 
 # Alternative compact logo
-LOGO_COMPACT = "⚡ Valeric"
+LOGO_COMPACT = "⚡ Ignara"
 
 # Taglines
 TAGLINE = "AI-Powered Startup Builder"
@@ -35,7 +35,7 @@ TAGLINE_FULL = "From idea to deployed app in minutes, not months."
 
 # Product description
 DESCRIPTION = """
-Valeric uses AI with real-time web intelligence to:
+Ignara uses AI with real-time web intelligence to:
 • Discover validated market opportunities
 • Generate production-ready applications
 • Deploy to cloud with one command
@@ -155,13 +155,13 @@ def get_cli_help_text() -> str:
 {TAGLINE_FULL}
 
 QUICK START:
-  valeric generate --demo           # Try with sample data
-  valeric generate --llm-provider perplexity  # Use real AI
+  ignara generate --demo           # Try with sample data
+  ignara generate --llm-provider perplexity  # Use real AI
 
 EXAMPLES:
-  valeric generate -o ./my-startup  # Custom output directory
-  valeric generate --deploy         # Generate and deploy
-  valeric providers                 # List available AI providers
+  ignara generate -o ./my-startup  # Custom output directory
+  ignara generate --deploy         # Generate and deploy
+  ignara providers                 # List available AI providers
 
 API KEYS:
   PERPLEXITY_API_KEY  - Primary (real-time web search)

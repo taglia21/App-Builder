@@ -284,7 +284,7 @@ class DeploymentOrchestrator:
             # Create repository
             repo = self.github.create_repository(
                 name=plan.project_name,
-                description=f"Valeric project: {plan.project_name}",
+                description=f"Ignara project: {plan.project_name}",
                 private=plan.github_private,
                 auto_init=True,
                 gitignore_template="Node",

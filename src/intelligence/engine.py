@@ -121,7 +121,9 @@ class IntelligenceGatheringEngine:
         )
 
         # Create competitor analysis (simplified for now)
+        # TODO: Implement competitor extraction from gathered data
         competitor_analysis = []
+        logger.info("Competitor analysis not yet implemented — returning empty set")
 
         intelligence = IntelligenceData(
             extraction_timestamp=datetime.now(timezone.utc),

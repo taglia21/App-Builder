@@ -1,7 +1,7 @@
 """
 Plugin Base Class
 
-Abstract base class for Valeric pipeline plugins.  All hooks have default
+Abstract base class for Ignara pipeline plugins.  All hooks have default
 no-op implementations so plugins can override only what they need.
 """
 

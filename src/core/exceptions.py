@@ -1,4 +1,4 @@
-"""Custom exceptions for Valeric."""
+"""Custom exceptions for Ignara."""
 
 
 class AppError(Exception):

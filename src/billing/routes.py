@@ -1,5 +1,4 @@
 """Billing routes for subscription management with Stripe Checkout."""
-import json
 import logging
 import os
 
@@ -36,6 +35,26 @@ def create_billing_router(templates):
     """Create billing router with templates."""
     router = APIRouter(tags=["billing"])
 
+    @router.get("/status")
+    async def billing_status(request: Request):
+        """Return the current billing/Stripe configuration status.
+
+        Always returns JSON — never raises an exception — so the frontend
+        can safely poll this endpoint even when Stripe is unconfigured.
+        """
+        stripe_configured = HAS_STRIPE and bool(stripe.api_key)
+        price_ids_configured = stripe_configured and all(PRICE_IDS.values())
+        return JSONResponse({
+            "stripe_configured": stripe_configured,
+            "price_ids_configured": price_ids_configured,
+            "plans_available": list(PLAN_DETAILS.keys()),
+            "message": (
+                "Payments are active."
+                if stripe_configured
+                else "Payments are not yet configured. Please contact us for access."
+            ),
+        })
+
     @router.get("/plans", response_class=HTMLResponse)
     async def pricing_page(request: Request):
         """Display the pricing page."""
@@ -56,13 +75,18 @@ def create_billing_router(templates):
     @router.post("/create-checkout-session")
     async def create_checkout_session(request: Request):
         """Create a Stripe Checkout session for subscription."""
+        if not HAS_STRIPE or not stripe.api_key:
+            return JSONResponse(
+                {"error": "Payments are not yet configured. Please contact us for access."},
+                status_code=503,
+            )
         try:
             data = await request.json()
             plan = data.get("plan", "starter")
             price_id = PRICE_IDS.get(plan)
 
             if not price_id:
-                raise HTTPException(status_code=400, detail="Invalid plan")
+                raise HTTPException(status_code=400, detail="Invalid plan. Available: starter, pro, enterprise")
 
             base_url = str(request.base_url).rstrip("/")
 
@@ -76,6 +100,7 @@ def create_billing_router(templates):
             )
             return JSONResponse({"url": checkout_session.url})
         except stripe.error.StripeError as e:
+            logger.error(f"Stripe checkout error: {e}")
             raise HTTPException(status_code=400, detail=str(e))
 
     @router.get("/success", response_class=HTMLResponse)
@@ -89,6 +114,12 @@ def create_billing_router(templates):
     @router.get("/portal")
     async def customer_portal(request: Request):
         """Redirect to Stripe Customer Portal for subscription management."""
+        if not HAS_STRIPE or not stripe.api_key:
+            return JSONResponse(
+                {"error": "Payments are not yet configured. Please contact us for access."},
+                status_code=503,
+            )
+
         # In production, get customer_id from logged-in user
         customer_id = request.query_params.get("customer_id")
         if not customer_id:

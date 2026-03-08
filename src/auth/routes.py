@@ -1,5 +1,5 @@
 """
-Valeric Authentication API Routes
+Ignara Authentication API Routes
 
 REST API endpoints for authentication operations.
 Designed for use with FastAPI or similar frameworks.
@@ -58,11 +58,25 @@ class OAuthStateStore:
         except Exception:
             self._redis = None
 
+    def _cleanup_expired(self) -> None:
+        """Remove expired states from in-memory store to prevent unbounded growth."""
+        now = time.time()
+        expired_keys = [
+            k for k, v in list(self._memory.items())
+            if v.get("_expires", 0) < now
+        ]
+        for k in expired_keys:
+            self._memory.pop(k, None)
+        if expired_keys:
+            logger.debug("OAuth state store: cleaned up %d expired entries", len(expired_keys))
+
     def set(self, state: str, data: Dict[str, Any]) -> None:
         if self._redis:
             import json
             self._redis.setex(f"oauth_state:{state}", self.TTL_SECONDS, json.dumps(data))
         else:
+            # Clean up stale entries before adding new ones
+            self._cleanup_expired()
             data["_expires"] = time.time() + self.TTL_SECONDS
             self._memory[state] = data
 
@@ -76,8 +90,11 @@ class OAuthStateStore:
                 return json.loads(raw)
             return None
         data = self._memory.pop(state, None)
-        if data and data.get("_expires", 0) < time.time():
-            return None  # Expired
+        if data is None:
+            return None
+        # Check expiry: _expires stores the absolute expiry timestamp
+        if data.get("_expires", 0) < time.time():
+            return None  # Expired — discard
         return data
 
 import time
@@ -312,7 +329,7 @@ class AuthRoutes:
         with db.session() as session:
             auth_service = AuthService(session)
 
-            reset_token = auth_service.request_password_reset(request.email)
+            auth_service.request_password_reset(request.email)
             session.commit()
 
             # Always return success to prevent email enumeration

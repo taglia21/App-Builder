@@ -1,4 +1,4 @@
-"""Database connection pooling for Valeric.
+"""Database connection pooling for Ignara.
 
 Provides async SQLAlchemy engine with connection pooling,
 health checks, and graceful shutdown.

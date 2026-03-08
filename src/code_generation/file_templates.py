@@ -450,7 +450,9 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         return db_obj
 
     def delete(self, db: Session, *, id: UUID) -> ModelType:
-        obj = db.query(self.model).get(id)
+        obj = db.get(self.model, id)
+        if obj is None:
+            raise ValueError(f"{self.model.__name__} with id {id} not found")
         db.delete(obj)
         db.commit()
         return obj
@@ -458,7 +460,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
 BACKEND_AUTH_PY = '''"""Authentication utilities."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Union
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -1115,31 +1117,50 @@ def email_task(email: str, subject: str, body: str):
 
 BACKEND_AI_SERVICE_PY = '''"""AI Service wrapper."""
 
-import openai
+import os
+import json
 from typing import Optional, List, Dict, Any
-from app.core.config import settings
+
+try:
+    import openai
+    _openai_available = True
+except ImportError:
+    _openai_available = False
+
 
 class AIService:
     def __init__(self):
-        # self.api_key = settings.OPENAI_API_KEY
-        # self.client = openai.OpenAI(api_key=self.api_key)
-        self.default_model = "gpt-3.5-turbo"
+        self.api_key = os.getenv("OPENAI_API_KEY")
+        self.default_model = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
+        self._client = None
+
+    @property
+    def client(self):
+        """Lazily initialise OpenAI client."""
+        if self._client is None:
+            if not _openai_available:
+                raise RuntimeError("openai package not installed. Run: pip install openai")
+            if not self.api_key:
+                raise RuntimeError(
+                    "OPENAI_API_KEY is not set. Set it in your environment or .env file."
+                )
+            self._client = openai.OpenAI(api_key=self.api_key)
+        return self._client
 
     def generate_text(self, prompt: str, system_prompt: Optional[str] = None) -> str:
         """Generate text using OpenAI."""
-        # messages = []
-        # if system_prompt:
-        #     messages.append({"role": "system", "content": system_prompt})
-        # messages.append({"role": "user", "content": prompt})
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
 
         try:
-            # response = self.client.chat.completions.create(
-            #     model=self.default_model,
-            #     messages=messages,
-            #     temperature=0.7,
-            # )
-            # return response.choices[0].message.content
-            return "This is a mock AI response. Configure OPENAI_API_KEY to enable real responses."
+            response = self.client.chat.completions.create(
+                model=self.default_model,
+                messages=messages,
+                temperature=0.7,
+            )
+            return response.choices[0].message.content
         except Exception as e:
             print(f"Error calling OpenAI: {e}")
             return ""
@@ -1147,12 +1168,15 @@ class AIService:
     def generate_json(self, prompt: str, schema: Dict[str, Any]) -> Dict[str, Any]:
         """Generate JSON response (simplified wrapper)."""
         system_prompt = "You are a JSON generator. Respond with valid JSON only."
-        text = self.generate_text(prompt + "\\n\\nRespond with JSON matching this schema: " + str(schema), system_prompt)
-        import json
+        text = self.generate_text(
+            prompt + "\\n\\nRespond with JSON matching this schema: " + str(schema),
+            system_prompt,
+        )
         try:
             return json.loads(text)
         except json.JSONDecodeError:
             return {}
+
 
 ai_service = AIService()
 '''
@@ -1198,8 +1222,7 @@ class EmailService:
             subtype=MessageType.html
         )
 
-        # await self.fastmail.send_message(message)
-        print(f"Mock sending email to {recipients}: {subject}")
+        await self.fastmail.send_message(message)
 
 email_service = EmailService()
 '''

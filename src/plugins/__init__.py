@@ -1,1 +1,1 @@
-"""Plugin architecture for extending the Valeric pipeline."""
+"""Plugin architecture for extending the Ignara pipeline."""

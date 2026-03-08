@@ -1,5 +1,4 @@
 """Centralized configuration using Pydantic Settings."""
-import os
 from typing import Optional, Dict, Literal
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -16,7 +15,7 @@ class Settings(BaseSettings):
     )
     
     # Application Settings
-    APP_NAME: str = "Valeric"
+    APP_NAME: str = "Ignara"
     APP_VERSION: str = "1.0.0"
     ENVIRONMENT: Literal["development", "production", "testing"] = "development"
     DEBUG: bool = Field(default=False)
@@ -41,7 +40,7 @@ class Settings(BaseSettings):
     
     # Demo Mode
     DEMO_MODE: bool = False
-    DEMO_EMAIL: str = "demo@valeric.dev"
+    DEMO_EMAIL: str = "demo@ignara.dev"
     DEMO_PASSWORD: str = ""  # MUST be set via DEMO_PASSWORD env variable
     DEMO_TOKEN: Optional[str] = None  # Optional magic token for /demo?token=xxx URL
     

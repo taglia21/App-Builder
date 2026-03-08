@@ -56,9 +56,18 @@ class LLMIdeaGenerationEngine:
 
     def _parse_llm_response(self, response: str) -> List[Dict]:
         """Parse LLM response into idea dictionaries."""
-        # Try to extract JSON from response
+        import re
+
+        # Try to find JSON array in the response using regex (handles nested content)
+        json_match = re.search(r'\[.*\]', response, re.DOTALL)
+        if json_match:
+            try:
+                return json.loads(json_match.group())
+            except json.JSONDecodeError:
+                pass
+
+        # Fallback: simple bracket-index scan for array
         try:
-            # Look for JSON array in response
             start = response.find('[')
             end = response.rfind(']') + 1
             if start != -1 and end > start:
@@ -67,7 +76,7 @@ class LLMIdeaGenerationEngine:
         except json.JSONDecodeError:
             pass
 
-        # Try to find JSON objects
+        # Try to find JSON objects (multiple bare objects)
         try:
             start = response.find('{')
             end = response.rfind('}') + 1
@@ -191,5 +200,22 @@ class LLMIdeaGenerationEngine:
         return IdeaCatalog(ideas=ideas)
 
     def generate(self, intelligence: IntelligenceData) -> IdeaCatalog:
-        """Generate ideas (sync wrapper)."""
-        return asyncio.run(self.generate_async(intelligence))
+        """Generate ideas synchronously.
+        
+        Note: generate_async already makes synchronous LLM calls internally,
+        so we call its logic directly here to avoid nested asyncio.run() which
+        would crash with RuntimeError when called from within pipeline.run()
+        (which itself runs inside asyncio.run() from api.py).
+        """
+        try:
+            loop = asyncio.get_running_loop()
+            # We're inside an event loop — cannot use asyncio.run().
+            # Since generate_async's LLM calls are sync anyway, run it
+            # via the loop's thread executor to avoid blocking.
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                future = pool.submit(asyncio.run, self.generate_async(intelligence))
+                return future.result(timeout=300)
+        except RuntimeError:
+            # No running loop — safe to use asyncio.run()
+            return asyncio.run(self.generate_async(intelligence))

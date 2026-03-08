@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Pricing - Valeric{% endblock %}
+{% block title %}Pricing - Ignara{% endblock %}
 {% block content %}
 <div class="max-w-6xl mx-auto py-12">
     {% block extra_css %}
@@ -70,6 +70,13 @@ async function checkout(plan) {
         const data = await response.json();
         if (data.url) {
             window.location.href = data.url;
+        } else if (data.error) {
+            // Payments not yet configured
+            button.textContent = 'Coming Soon';
+            const notice = document.createElement('p');
+            notice.className = 'text-sm text-amber-600 mt-2 text-center';
+            notice.textContent = data.error;
+            button.parentNode.appendChild(notice);
         } else {
             alert('Error creating checkout session');
             button.disabled = false;
@@ -77,9 +84,11 @@ async function checkout(plan) {
         }
     } catch (error) {
         console.error('Error:', error);
-        alert('Error processing request');
-        button.disabled = false;
-        button.textContent = 'Get Started';
+        button.textContent = 'Coming Soon';
+        const notice = document.createElement('p');
+        notice.className = 'text-sm text-amber-600 mt-2 text-center';
+        notice.textContent = 'Payments coming soon. Contact us for early access.';
+        button.parentNode.appendChild(notice);
     }
 }
 </script>

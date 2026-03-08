@@ -3,14 +3,14 @@ import logging
 from functools import lru_cache
 from typing import Optional
 
-from pydantic import Field, model_validator
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
 
 _INSECURE_SECRET_KEYS = {
     "change-me-in-production",
-    "valeric-dev-secret-key-change-in-production",
+    "ignara-dev-secret-key-change-in-production",
     "secret",
     "password",
 }

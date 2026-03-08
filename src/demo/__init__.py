@@ -1,4 +1,4 @@
-"""Demo mode functionality for Valeric."""
+"""Demo mode functionality for Ignara."""
 
 from .manager import DemoManager
 from .sample_projects import get_sample_project, list_sample_projects, SAMPLE_PROJECTS

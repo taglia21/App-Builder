@@ -20,7 +20,7 @@
     var rejectBtn = document.getElementById('cookie-reject');
     
     // Check if user has already made a choice
-    var consent = localStorage.getItem('valeric_cookies');
+    var consent = localStorage.getItem('ignara_cookies');
     
     if (!consent) {
         // Show banner if no choice made
@@ -29,14 +29,14 @@
     
     if (acceptBtn) {
         acceptBtn.onclick = function() {
-            localStorage.setItem('valeric_cookies', 'accepted');
+            localStorage.setItem('ignara_cookies', 'accepted');
             banner.style.display = 'none';
         };
     }
     
     if (rejectBtn) {
         rejectBtn.onclick = function() {
-            localStorage.setItem('valeric_cookies', 'rejected');
+            localStorage.setItem('ignara_cookies', 'rejected');
             banner.style.display = 'none';
         };
     }

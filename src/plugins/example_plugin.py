@@ -1,7 +1,7 @@
 """
 Example Plugin
 
-Demonstrates how to write a Valeric pipeline plugin.
+Demonstrates how to write a Ignara pipeline plugin.
 Logs lifecycle events — intended as living documentation.
 """
 

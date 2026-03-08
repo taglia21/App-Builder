@@ -1,11 +1,12 @@
 from fastapi import Header
 
 """
-Valeric Authentication Middleware
+Ignara Authentication Middleware
 
 JWT verification middleware for protecting API routes.
 """
 
+import functools
 import logging
 from functools import wraps
 from typing import Any, Callable, Optional
@@ -174,8 +175,8 @@ def require_subscription_tier(required_tier: str):
     tier_hierarchy = ["free", "starter", "pro", "enterprise"]
 
     def decorator(func: Callable) -> Callable:
-        @wraps(func)
-        def wrapper(*args, auth_header: Optional[str] = None, **kwargs) -> Any:
+        @functools.wraps(func)
+        async def wrapper(*args, auth_header: Optional[str] = None, **kwargs) -> Any:
             token = extract_token_from_header(auth_header)
 
             if not token:
@@ -186,7 +187,7 @@ def require_subscription_tier(required_tier: str):
 
                 # Demo/admin users bypass tier checks
                 if _user_bypasses_billing(payload):
-                    return func(*args, **kwargs)
+                    return await func(*args, **kwargs)
 
                 user_tier = payload.get("tier", "free")
 
@@ -199,7 +200,7 @@ def require_subscription_tier(required_tier: str):
                         status_code=403
                     )
 
-                return func(*args, **kwargs)
+                return await func(*args, **kwargs)
 
             except TokenError as e:
                 raise AuthenticationError(f"Token error: {e}")
@@ -324,6 +325,6 @@ async def get_optional_current_user(auth_header: Optional[str] = Header(None, al
     if not auth_header:
         return None
     try:
-        return await get_current_user(auth_header)
+        return get_current_user(auth_header)
     except (ValueError, KeyError, Exception):
         return None

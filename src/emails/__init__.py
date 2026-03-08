@@ -1,5 +1,5 @@
 """
-Valeric Email Module
+Ignara Email Module
 
 Provides transactional email functionality via Resend.com.
 """

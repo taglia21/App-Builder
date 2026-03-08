@@ -41,7 +41,7 @@ class TestWebhookSend:
         headers = mock_post.call_args.kwargs["headers"]
         payload = mock_post.call_args.kwargs["data"]
         expected_sig = hmac.new(secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
-        assert headers["X-Valeric-Signature"] == expected_sig
+        assert headers["X-Ignara-Signature"] == expected_sig
 
 
 class TestWebhookTimeout:

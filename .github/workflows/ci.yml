@@ -113,9 +113,9 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_USER: valeric
-          POSTGRES_PASSWORD: valeric_test
-          POSTGRES_DB: valeric_test
+          POSTGRES_USER: ignara
+          POSTGRES_PASSWORD: ignara_test
+          POSTGRES_DB: ignara_test
         ports:
           - 5432:5432
         options: >-
@@ -124,7 +124,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
-      DATABASE_URL: postgresql://valeric:valeric_test@localhost:5432/valeric_test
+      DATABASE_URL: postgresql://ignara:ignara_test@localhost:5432/ignara_test
       APP_ENV: testing
       SECRET_KEY: ci-test-secret-key-not-for-production
       COOKIE_SECRET: ci-test-cookie-secret

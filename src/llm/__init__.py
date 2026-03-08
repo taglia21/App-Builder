@@ -2,9 +2,12 @@
 LLM Client Module - Streamlined
 Provides unified access to LLM providers with retry and caching.
 
-Supported Providers:
-- Perplexity: PRIMARY - Real-time web search (sonar-pro, sonar-deep-research, sonar-reasoning)
-- Groq: BACKUP - Ultra-fast inference
+Supported Providers (fallback order):
+1. OpenAI: PRIMARY - GPT models (most popular, reliable)
+2. Anthropic: SECONDARY - Claude models (high quality)
+3. Google: TERTIARY - Gemini models
+4. Perplexity: QUATERNARY - Real-time web search (sonar-pro, sonar-deep-research, sonar-reasoning)
+5. Groq: QUINARY - Ultra-fast inference
 - Mock: Testing without API calls
 """
 

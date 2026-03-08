@@ -1,5 +1,5 @@
 """
-Demo access routes for Valeric.
+Demo access routes for Ignara.
 
 Provides a /demo URL that auto-authenticates users with the demo account,
 and a /demo/info endpoint that returns demo credentials as JSON.

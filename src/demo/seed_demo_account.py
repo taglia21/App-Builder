@@ -1,5 +1,5 @@
 """
-Demo Account Seeder for Valeric.
+Demo Account Seeder for Ignara.
 
 Creates or updates a demo user account with admin/demo privileges
 that bypasses billing and subscription checks.
@@ -13,19 +13,17 @@ Usage:
     seed_demo_user()
 
 Environment variables:
-    DEMO_EMAIL    - Demo account email (default: demo@valeric.dev)
-    DEMO_PASSWORD - Demo account password (default: Valeric-Demo-2026!)
+    DEMO_EMAIL    - Demo account email (default: demo@ignara.dev)
+    DEMO_PASSWORD - Demo account password (default: Ignara-Demo-2026!)
 """
 
 import logging
 import os
-import sys
-from uuid import uuid4
 
 logger = logging.getLogger(__name__)
 
 # Demo account defaults
-DEFAULT_DEMO_EMAIL = "demo@valeric.dev"
+DEFAULT_DEMO_EMAIL = "demo@ignara.dev"
 DEMO_USER_ID = "demo-00000000-0000-0000-0000-000000000001"
 
 
@@ -54,7 +52,7 @@ def seed_demo_user(database_url: str | None = None) -> dict:
     Returns:
         dict with demo account info (email, password, user_id)
     """
-    from sqlalchemy import create_engine, text
+    from sqlalchemy import create_engine
     from sqlalchemy.orm import Session
 
     from src.auth.password import hash_password
@@ -133,7 +131,7 @@ def print_demo_info():
     base_url = os.environ.get("BASE_URL", "http://localhost:8000")
 
     print("\n" + "=" * 60)
-    print("  Valeric Demo Account")
+    print("  Ignara Demo Account")
     print("=" * 60)
     print(f"  Email:    {email}")
     print(f"  Password: {password}")

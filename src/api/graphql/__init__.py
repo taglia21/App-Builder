@@ -41,7 +41,7 @@ class Query:
     @strawberry.field
     def hello(self) -> str:
         """Simple hello world query."""
-        return "Hello from Valeric GraphQL!"
+        return "Hello from Ignara GraphQL!"
 
     @strawberry.field
     def health(self) -> HealthStatus:

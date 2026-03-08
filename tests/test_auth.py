@@ -1,5 +1,5 @@
 """
-Valeric Authentication Tests
+Ignara Authentication Tests
 
 Comprehensive tests for authentication system:
 - Password hashing and validation

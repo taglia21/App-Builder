@@ -1,5 +1,5 @@
 """
-Valeric Analytics Module
+Ignara Analytics Module
 
 Privacy-friendly analytics using Plausible.io and internal metrics tracking.
 """

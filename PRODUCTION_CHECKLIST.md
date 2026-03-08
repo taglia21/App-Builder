@@ -1,4 +1,4 @@
-# Valeric Production Checklist
+# Ignara Production Checklist
 
 ## Phase 1-2: Core Infrastructure ✅
 - [x] Database models and repositories

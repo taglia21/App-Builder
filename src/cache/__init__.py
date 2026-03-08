@@ -1,4 +1,4 @@
-"""Cache package for Valeric."""
+"""Cache package for Ignara."""
 
 from .redis_client import RedisClient, get_cache
 from .decorators import cached, invalidate_cache, get_cache_key

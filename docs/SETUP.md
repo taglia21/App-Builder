@@ -1,6 +1,6 @@
-# Valeric Setup Guide
+# Ignara Setup Guide
 
-This guide covers installation, configuration, and initial setup for Valeric.
+This guide covers installation, configuration, and initial setup for Ignara.
 
 ## Prerequisites
 
@@ -41,7 +41,7 @@ pip install -r requirements-dev.txt
 
 ### Environment Variables
 
-Valeric uses environment variables for configuration. Copy the example file:
+Ignara uses environment variables for configuration. Copy the example file:
 
 ```bash
 cp .env.example .env
@@ -51,7 +51,7 @@ Edit `.env` with your settings:
 
 ```bash
 # Application Settings
-APP_NAME=Valeric
+APP_NAME=Ignara
 ENVIRONMENT=development  # development, production, or testing
 DEBUG=true
 
@@ -81,7 +81,7 @@ DEMO_MODE=false
 
 #### LLM Providers
 
-Valeric supports multiple LLM providers. Configure at least one:
+Ignara supports multiple LLM providers. Configure at least one:
 
 - **OpenAI**: Best for general-purpose generation
   - Get key: https://platform.openai.com/api-keys
@@ -105,7 +105,7 @@ Valeric supports multiple LLM providers. Configure at least one:
 
 #### Demo Mode
 
-To try Valeric without API keys:
+To try Ignara without API keys:
 
 ```bash
 DEMO_MODE=true

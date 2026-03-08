@@ -1,4 +1,4 @@
-# ⚡ Valeric
+# ⚡ Ignara
 
 ### AI-Powered Startup Builder
 
@@ -9,16 +9,19 @@
 [![Tests](https://img.shields.io/badge/tests-4%2F4-brightgreen.svg)]()
 
 ```
-╦  ┌─┐┬ ┬┌┐┌┌─┐┬ ┬╔═╗┌─┐┬─┐┌─┐┌─┐
-║  ├─┤│ │││││  ├─┤╠╣ │ │├┬┘│ ┬├┤ 
-╩═╝┴ ┴└─┘┘└┘└─┘┴ ┴╚  └─┘┴└─└─┘└─┘
+ ██╗ ██████╗ ███╗   ██╗ █████╗ ██████╗  █████╗ 
+ ██║██╔════╝ ████╗  ██║██╔══██╗██╔══██╗██╔══██╗
+ ██║██║  ███╗██╔██╗ ██║███████║██████╔╝███████║
+ ██║██║   ██║██║╚██╗██║██╔══██║██╔══██╗██╔══██║
+ ██║╚██████╔╝██║ ╚████║██║  ██║██║  ██║██║  ██║
+ ╚═╝ ╚═════╝ ╚═╝  ╚═══╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝
 ```
 
 ---
 
-## 🎯 What is Valeric?
+## 🎯 What is Ignara?
 
-Valeric is a **no-code AI startup builder** that transforms your ideas into working applications. Just describe what you want to build, and let AI handle the rest.
+Ignara is a **no-code AI startup builder** that transforms your ideas into working applications. Just describe what you want to build, and let AI handle the rest.
 
 ### Core Features
 
@@ -32,7 +35,7 @@ Valeric is a **no-code AI startup builder** that transforms your ideas into work
 
 ### Production Features
 
-Valeric includes enterprise-grade infrastructure:
+Ignara includes enterprise-grade infrastructure:
 
 | Feature | Description |
 |---------|-------------|
@@ -114,7 +117,7 @@ python main.py build
 
 **What happens:**
 1. Describe your startup idea in plain English
-2. Valeric researches the market using real-time web intelligence
+2. Ignara researches the market using real-time web intelligence
 3. AI asks targeted follow-up questions (target users, features, monetization)
 4. Your idea is converted into a complete startup profile
 5. A production-ready full-stack app is generated
@@ -417,7 +420,7 @@ docker push registry.example.com/my-startup:latest
 ## 📈 Project Structure
 
 ```
-Valeric/
+Ignara/
 ├── src/
 │   ├── assistant.py           # Interactive build mode ✨
 │   ├── cli.py                 # Command-line interface
@@ -450,7 +453,7 @@ $ python main.py build
   An AI tool that analyzes code and generates comprehensive unit tests 
   using advanced static analysis and machine learning.
 
-[Valeric researches...]
+[Ignara researches...]
 
 ? Who is your target user?
   Junior developers and small teams
@@ -617,7 +620,7 @@ A: Typically 2-5 minutes depending on app complexity.
 **Q: Can I customize the generated code?**
 A: Absolutely! Generated code is yours to modify, deploy, sell.
 
-**Q: What if I don't like the idea Valeric suggests?**
+**Q: What if I don't like the idea Ignara suggests?**
 A: Use `build` mode to describe exactly what you want instead.
 
 **Q: Is the generated code production-ready?**
@@ -670,7 +673,7 @@ Extend the pipeline by subclassing `PluginBase` and decorating with `@register_p
 
 <div align="center">
 
-Made with ❤️ by the Valeric team
+Made with ❤️ by the Ignara team
 
 [Star on GitHub](https://github.com/taglia21/App-Builder) · [Get Perplexity Key](https://www.perplexity.ai/settings/api) · [Read Docs](docs/API_REFERENCE.md)
 

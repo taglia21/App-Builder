@@ -2,7 +2,7 @@
 
 ## Overview
 
-Valeric uses pytest for testing with comprehensive coverage across all modules.
+Ignara uses pytest for testing with comprehensive coverage across all modules.
 
 ---
 

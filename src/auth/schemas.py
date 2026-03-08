@@ -1,5 +1,5 @@
 """
-Valeric Authentication Schemas
+Ignara Authentication Schemas
 
 Pydantic models for request/response validation in auth endpoints.
 """

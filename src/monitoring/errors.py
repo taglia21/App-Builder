@@ -61,7 +61,7 @@ class ErrorContext:
 
     # Environment
     environment: str = "development"
-    service: str = "valeric"
+    service: str = "ignara"
     version: Optional[str] = None
     hostname: Optional[str] = None
 
@@ -303,7 +303,7 @@ class WebhookReporter(ErrorReporter):
                 "title": f"🚨 {error.severity.value.upper()}: {error.message[:100]}",
                 "text": error.message,
                 "fields": fields,
-                "footer": "Valeric Error Monitor",
+                "footer": "Ignara Error Monitor",
                 "ts": int(error.timestamp.timestamp()),
             }]
         }

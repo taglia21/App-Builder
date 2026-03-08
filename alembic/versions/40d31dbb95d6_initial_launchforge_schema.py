@@ -1,4 +1,4 @@
-"""Initial Valeric schema
+"""Initial Ignara schema
 
 Revision ID: 40d31dbb95d6
 Revises: 
@@ -35,7 +35,7 @@ def upgrade() -> None:
     op.create_table('users',
     sa.Column('id', sa.String(36), nullable=False),  # UUID as string for cross-DB compatibility
     sa.Column('email', sa.String(length=255), nullable=False),
-    sa.Column('password_hash', sa.String(length=255), nullable=False),
+    sa.Column('password_hash', sa.String(length=255), nullable=True),  # OAuth users have no password
     sa.Column('subscription_tier', sa.Enum('FREE', 'STARTER', 'PRO', 'ENTERPRISE', name='subscriptiontier'), nullable=False),
     sa.Column('credits_remaining', sa.Integer(), nullable=False),
     sa.Column('email_verified', sa.Boolean(), nullable=False),

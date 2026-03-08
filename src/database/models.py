@@ -1,5 +1,5 @@
 """
-Valeric Database Models
+Ignara Database Models
 
 SQLAlchemy ORM models for PostgreSQL/SQLite database.
 Includes users, projects, generations, and deployments.
@@ -125,7 +125,7 @@ class SoftDeleteMixin:
 
 class User(Base, TimestampMixin, SoftDeleteMixin):
     """
-    User model for Valeric accounts.
+    User model for Ignara accounts.
 
     Attributes:
         id: Unique user identifier (UUID)
@@ -182,6 +182,10 @@ class User(Base, TimestampMixin, SoftDeleteMixin):
         String(128),
         nullable=True
     )
+    verification_token_expires: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
     reset_token: Mapped[Optional[str]] = mapped_column(
         String(128),
         nullable=True
@@ -220,7 +224,7 @@ class User(Base, TimestampMixin, SoftDeleteMixin):
         "Project",
         back_populates="user",
         cascade="all, delete-orphan",
-        lazy="dynamic"
+        lazy="select"
     )
 
     # Subscription relationship
@@ -236,7 +240,7 @@ class User(Base, TimestampMixin, SoftDeleteMixin):
         "APIKey",
         back_populates="user",
         cascade="all, delete-orphan",
-        lazy="dynamic"
+        lazy="select"
     )
 
     # Business Formations relationship
@@ -244,7 +248,22 @@ class User(Base, TimestampMixin, SoftDeleteMixin):
         "BusinessFormation",
         back_populates="user",
         cascade="all, delete-orphan",
-        lazy="dynamic"
+        lazy="select"
+    )
+
+    # Feedback relationship
+    feedback: Mapped[List["Feedback"]] = relationship(
+        "Feedback",
+        back_populates="user",
+        lazy="select"
+    )
+
+    # Onboarding relationship
+    onboarding: Mapped[Optional["OnboardingStatus"]] = relationship(
+        "OnboardingStatus",
+        back_populates="user",
+        uselist=False,
+        lazy="select"
     )
 
     # Indexes
@@ -351,14 +370,14 @@ class Project(Base, TimestampMixin, SoftDeleteMixin):
         "Generation",
         back_populates="project",
         cascade="all, delete-orphan",
-        lazy="dynamic",
+        lazy="select",
         order_by="desc(Generation.created_at)"
     )
     deployments: Mapped[List["Deployment"]] = relationship(
         "Deployment",
         back_populates="project",
         cascade="all, delete-orphan",
-        lazy="dynamic",
+        lazy="select",
         order_by="desc(Deployment.created_at)"
     )
 
@@ -612,7 +631,7 @@ class Feedback(Base, TimestampMixin):
     )
 
     # Relationships
-    user: Mapped[Optional["User"]] = relationship("User", backref="feedback")
+    user: Mapped[Optional["User"]] = relationship("User", back_populates="feedback")
 
     # Indexes
     __table_args__ = (
@@ -724,7 +743,7 @@ class OnboardingStatus(Base, TimestampMixin):
     )
 
     # Relationships
-    user: Mapped["User"] = relationship("User", backref="onboarding")
+    user: Mapped["User"] = relationship("User", back_populates="onboarding")
 
     def __repr__(self) -> str:
         return f"<OnboardingStatus(user_id={self.user_id}, completed={self.completed_at is not None})>"

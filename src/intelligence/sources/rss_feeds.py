@@ -61,6 +61,15 @@ class RSSFeedSource(DataSource):
             logger.warning("feedparser package not installed. Install with: pip install feedparser")
             self.enabled = False
 
+    async def gather(self) -> List[Dict[str, Any]]:
+        """Implement abstract gather() by delegating to collect()."""
+        return await self.collect()
+
+    def get_source_type(self):
+        """Return the source type identifier."""
+        from ..models import SourceType
+        return SourceType.NEWS
+
     async def collect(self) -> List[Dict[str, Any]]:
         """Collect articles from RSS feeds."""
         if not self.enabled or feedparser is None:

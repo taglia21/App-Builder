@@ -1,4 +1,4 @@
-"""Web authentication routes for Valeric dashboard."""
+"""Web authentication routes for Ignara dashboard."""
 
 import hashlib
 import hmac
@@ -13,10 +13,15 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from src.auth.password import hash_password, validate_password_strength, verify_password
+from src.dashboard.rate_limiter import rate_limit_auth
 from src.database.db import get_session
-from src.database.models import User
+from src.database.models import User, SubscriptionTier
 
 logger = logging.getLogger(__name__)
+
+# --- Session expiry (configurable via env var) --------------------------------
+# Default: 7 days. Override with SESSION_MAX_AGE_DAYS environment variable.
+SESSION_MAX_AGE = int(os.getenv("SESSION_MAX_AGE_DAYS", "7")) * 86400
 
 # --- Signed cookie helpers ---------------------------------------------------
 _COOKIE_SECRET: str | None = None
@@ -36,7 +41,7 @@ def _get_cookie_secret() -> str:
                 "COOKIE_SECRET (or SECRET_KEY) must be at least 32 characters in production."
             )
         if not _COOKIE_SECRET:
-            _COOKIE_SECRET = "valeric-dev-cookie-secret-change-in-production"
+            _COOKIE_SECRET = "ignara-dev-cookie-secret-change-in-production"
     return _COOKIE_SECRET
 
 
@@ -44,13 +49,13 @@ def sign_session_cookie(user_id: str) -> str:
     """Create a signed session value: ``user_id.timestamp.signature``."""
     ts = str(int(time.time()))
     payload = f"{user_id}.{ts}"
-    sig = hmac.new(
+    sig = hmac.HMAC(
         _get_cookie_secret().encode(), payload.encode(), hashlib.sha256
     ).hexdigest()
     return f"{payload}.{sig}"
 
 
-def verify_session_cookie(cookie_value: str, max_age: int = 2592000) -> str | None:
+def verify_session_cookie(cookie_value: str, max_age: int = SESSION_MAX_AGE) -> str | None:
     """Verify a signed session cookie and return the user_id, or None."""
     if not cookie_value:
         return None
@@ -66,7 +71,7 @@ def verify_session_cookie(cookie_value: str, max_age: int = 2592000) -> str | No
     if time.time() - ts > max_age:
         return None
     # Verify signature
-    expected_sig = hmac.new(
+    expected_sig = hmac.HMAC(
         _get_cookie_secret().encode(), f"{user_id}.{ts_str}".encode(), hashlib.sha256
     ).hexdigest()
     if not hmac.compare_digest(sig, expected_sig):
@@ -80,6 +85,8 @@ templates = Jinja2Templates(directory=str(templates_path))
 router = APIRouter()
 
 # --- Brute-force protection ---------------------------------------------------
+# NOTE: Login attempt tracking is process-local. For multi-worker deployments,
+# move to Redis or a DB-backed counter. Acceptable for single-worker MVP.
 _MAX_FAILED_ATTEMPTS = 5
 _LOCKOUT_DURATION = 900  # 15 minutes
 _failed_attempts: dict[str, list[float]] = {}  # email -> [timestamps]
@@ -113,6 +120,7 @@ async def login_page(request: Request):
 
 
 @router.post("/auth/login")
+@rate_limit_auth
 async def login(
     request: Request,
     email: str = Form(...),
@@ -120,7 +128,12 @@ async def login(
     remember: bool = Form(False),
     db: Session = Depends(get_session)
 ):
-    """Process login form."""
+    """Process login form.
+
+    CSRF protection is enforced by CSRFProtectMiddleware (double-submit cookie
+    pattern). The middleware validates the 'csrf_token' form field or the
+    'X-CSRFToken' header against the 'csrftoken' cookie on every POST request.
+    """
     try:
         normalized_email = email.lower().strip()
 
@@ -150,7 +163,7 @@ async def login(
         _clear_failed_attempts(normalized_email)
 
         # Set signed session cookie
-        max_age = 2592000 if remember else 86400  # 30 days or 1 day
+        max_age = SESSION_MAX_AGE if remember else 86400  # Configurable (default 7 days) or 1 day
         response = RedirectResponse(url="/projects", status_code=303)
         response.set_cookie(
             key="session",
@@ -182,6 +195,7 @@ async def register_page(request: Request):
 
 
 @router.post("/auth/register")
+@rate_limit_auth
 async def register(
     request: Request,
     name: str = Form(...),
@@ -190,7 +204,12 @@ async def register(
     terms: bool = Form(False),
     db: Session = Depends(get_session)
 ):
-    """Process registration form."""
+    """Process registration form.
+
+    CSRF protection is enforced by CSRFProtectMiddleware (double-submit cookie
+    pattern). The middleware validates the 'csrf_token' form field or the
+    'X-CSRFToken' header against the 'csrftoken' cookie on every POST request.
+    """
     try:
         # Validate
         if not terms:
@@ -219,8 +238,8 @@ async def register(
             name=name,
             email=email.lower(),
             password_hash=hash_password(password),
-            subscription_tier="FREE",
-            credits_remaining=100,  # Free tier credits (consistent with API)
+            subscription_tier=SubscriptionTier.FREE,
+            credits_remaining=100,  # Free tier credits
             email_verified=False
         )
 
@@ -238,7 +257,7 @@ async def register(
             httponly=True,
             secure=os.getenv("ENVIRONMENT", "development") == "production",
             samesite="lax",
-            max_age=2592000,  # 30 days
+            max_age=SESSION_MAX_AGE,  # Configurable via SESSION_MAX_AGE_DAYS (default 7 days)
         )
         return response
 

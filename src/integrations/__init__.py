@@ -1,4 +1,4 @@
-"""Valeric Integrations Module - All Real Service Integrations"""
+"""Ignara Integrations Module - All Real Service Integrations"""
 
 from .business_formation import BusinessFormationService
 from .deployment_service import DeploymentService

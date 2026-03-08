@@ -2,7 +2,7 @@
 
 ## Overview
 
-Valeric uses a combination of environment variables and a YAML configuration file for settings. This guide covers all configuration options.
+Ignara uses a combination of environment variables and a YAML configuration file for settings. This guide covers all configuration options.
 
 ---
 
@@ -95,11 +95,11 @@ The primary configuration file located at the project root.
 ### Full Example
 
 ```yaml
-# Valeric Configuration
+# Ignara Configuration
 # Copy to config.yml and customize
 
 app:
-  name: "Valeric"
+  name: "Ignara"
   version: "1.0.0"
   environment: "development"  # development, staging, production
   debug: true
@@ -401,7 +401,7 @@ data:
 
 ## Validation
 
-Valeric validates configuration on startup:
+Ignara validates configuration on startup:
 
 ```python
 from pydantic import BaseSettings, validator
@@ -428,7 +428,7 @@ $ python main.py build
 ✗ Stripe: Not configured (payments disabled)
 ✗ Sentry: Not configured (monitoring limited)
 
-Starting Valeric...
+Starting Ignara...
 ```
 
 ---

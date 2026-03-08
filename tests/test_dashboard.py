@@ -416,7 +416,7 @@ class TestDashboardApp:
         from src.dashboard.app import DashboardApp
         
         app = DashboardApp()
-        assert app.title == "Valeric"
+        assert app.title == "Ignara"
         assert app.app is not None
     
     def test_dashboard_app_with_custom_title(self):

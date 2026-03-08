@@ -1,5 +1,5 @@
 """
-Valeric JWT Token Module
+Ignara JWT Token Module
 
 JWT token generation and verification for authentication.
 Supports access tokens (short-lived) and refresh tokens (long-lived).
@@ -37,13 +37,13 @@ class InvalidTokenError(TokenError):
 
 
 # Token configuration
-DEFAULT_SECRET_KEY = "valeric-dev-secret-key-change-in-production"
-
 _INSECURE_SECRET_KEYS = {
     "change-me-in-production",
-    "valeric-dev-secret-key-change-in-production",
+    "ignara-dev-secret-key-change-in-production",
+    "valeric-dev-secret-key-change-in-production",  # legacy (pre-rebrand)
     "secret",
     "password",
+    "change-me-to-a-secure-random-string-at-least-32-chars",
 }
 
 ACCESS_TOKEN_EXPIRE_MINUTES = 15
@@ -52,33 +52,52 @@ EMAIL_VERIFICATION_EXPIRE_HOURS = 24
 PASSWORD_RESET_EXPIRE_HOURS = 1
 
 ALGORITHM = "HS256"
-JWT_ISSUER = "valeric"
-JWT_AUDIENCE = "valeric-api"
+JWT_ISSUER = "ignara"
+JWT_AUDIENCE = "ignara-api"
+
+# Runtime-generated fallback key (changes on every restart — forces re-login,
+# which is safer than a known hardcoded value).
+_RUNTIME_SECRET_KEY: str | None = None
 
 
 def get_secret_key() -> str:
-    """Get the JWT secret key from environment or default.
-    
-    Raises ValueError if using an insecure default key in ANY non-development environment,
-    or if the key is too short.
+    """Get the JWT secret key from environment or a per-process random fallback.
+
+    Resolution order:
+      1. ``JWT_SECRET_KEY`` env var
+      2. ``SECRET_KEY`` env var
+      3. Warn + generate a cryptographically-random key for this process
+
+    In production / staging the key MUST be provided via env var — a random
+    key means all existing tokens are invalidated on every restart.
+    In non-production environments the random fallback is acceptable for
+    local development without any configuration.
+
+    Raises:
+        ValueError: If the key is too short in a production environment.
     """
-    key = os.getenv("JWT_SECRET_KEY", os.getenv("SECRET_KEY", DEFAULT_SECRET_KEY))
+    global _RUNTIME_SECRET_KEY
+
+    key = os.getenv("JWT_SECRET_KEY", os.getenv("SECRET_KEY", ""))
     env = os.getenv("APP_ENV", os.getenv("ENVIRONMENT", "development"))
-    if key in _INSECURE_SECRET_KEYS:
-        if env.lower() not in ("development", "dev", "test", "testing"):
-            raise ValueError(
-                "SECRET_KEY / JWT_SECRET_KEY must be changed from its default value "
-                "in non-development environments. "
-                "Generate a strong random key: python -c 'import secrets; print(secrets.token_urlsafe(48))'"
-            )
+
+    if not key or key in _INSECURE_SECRET_KEYS:
+        import warnings
+        import secrets
+        warnings.warn(
+            "JWT_SECRET_KEY not set — using insecure random key. "
+            "Set JWT_SECRET_KEY in production!",
+            UserWarning,
+            stacklevel=2,
+        )
+        # Re-use the same random key for the lifetime of this process
+        if _RUNTIME_SECRET_KEY is None:
+            _RUNTIME_SECRET_KEY = secrets.token_hex(32)
+        return _RUNTIME_SECRET_KEY
+
     if env.lower() in ("production", "prod", "staging") and len(key) < 32:
         raise ValueError("SECRET_KEY must be at least 32 characters in production.")
-    if key in _INSECURE_SECRET_KEYS:
-        import warnings
-        warnings.warn(
-            "Using insecure default SECRET_KEY. Set SECRET_KEY env var for any non-local environment.",
-            UserWarning, stacklevel=2,
-        )
+
     return key
 
 

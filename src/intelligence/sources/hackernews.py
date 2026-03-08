@@ -36,6 +36,17 @@ class HackerNewsSource(DataSource):
         if requests is None:
             logger.warning("requests package not installed. Install with: pip install requests")
             self.enabled = False
+        # Connection pool — reuse TCP connections across all per-story requests
+        self._session: requests.Session | None = None
+
+    async def gather(self) -> List[Dict[str, Any]]:
+        """Implement abstract gather() by delegating to collect()."""
+        return await self.collect()
+
+    def get_source_type(self):
+        """Return the source type identifier."""
+        from ..models import SourceType
+        return SourceType.NEWS
 
     async def collect(self) -> List[Dict[str, Any]]:
         """Collect stories and comments from Hacker News."""
@@ -46,19 +57,28 @@ class HackerNewsSource(DataSource):
         results = []
         logger.info("Collecting Hacker News stories and discussions...")
 
+        # Cap max stories per type to avoid excessive HTTP requests
+        _MAX_STORIES_PER_TYPE = 30
+
+        # Use a single Session so TCP connections are reused across all requests
+        session = self._session
+        if session is None:
+            session = requests.Session()
+            self._session = session
+
         try:
             # Collect stories from different categories
             for story_type in self.story_types:
                 try:
                     # Get story IDs
-                    response = requests.get(f"{self.base_url}/{story_type}stories.json", timeout=10)
+                    response = session.get(f"{self.base_url}/{story_type}stories.json", timeout=10)
                     response.raise_for_status()
                     story_ids = response.json()[:self.max_stories]
 
-                    for story_id in story_ids[:50]:  # Process top 50 per type
+                    for story_id in story_ids[:_MAX_STORIES_PER_TYPE]:  # Cap per type
                         try:
                             # Get story details
-                            story_response = requests.get(f"{self.base_url}/item/{story_id}.json", timeout=10)
+                            story_response = session.get(f"{self.base_url}/item/{story_id}.json", timeout=10)
                             story_response.raise_for_status()
                             story = story_response.json()
 
@@ -100,7 +120,7 @@ class HackerNewsSource(DataSource):
                                 comment_ids = story['kids'][:10]  # Top 10 comments
                                 for comment_id in comment_ids:
                                     try:
-                                        comment_response = requests.get(
+                                        comment_response = session.get(
                                             f"{self.base_url}/item/{comment_id}.json",
                                             timeout=5
                                         )

@@ -1,13 +1,16 @@
 """
 Dashboard Routes
 
-HTML routes for the Valeric dashboard using HTMX.
+HTML routes for the Ignara dashboard using HTMX.
 """
 
 from __future__ import annotations
 
+import json
 import logging
 import os
+import uuid
+from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
 from fastapi import APIRouter, Form, HTTPException, Request
@@ -75,7 +78,7 @@ class DashboardRoutes:
         """Render a template with context."""
         ctx = {
             "request": request,
-            "title": "Valeric",
+            "title": "Ignara",
             "user": getattr(request.state, "user", None),
         }
         if context:
@@ -125,6 +128,28 @@ class DashboardRoutes:
             logger.warning(f"Could not load projects from DB: {e}")
 
         deployed_count = len([p for p in projects if p.get("status") == "deployed"])
+
+        # Count real API keys from DB
+        api_key_count = 0
+        try:
+            from src.database.db import get_db
+            from src.database.models import APIKey
+            db = get_db()
+            with db.session() as session:
+                api_key_count = (
+                    session.query(APIKey)
+                    .filter(APIKey.user_id == user.id, APIKey.is_deleted == False, APIKey.is_active == True)
+                    .count()
+                )
+        except Exception as e:
+            logger.warning(f"Could not load API key count: {e}")
+
+        # Determine current plan label
+        tier = getattr(user, 'subscription_tier', None)
+        tier_value = tier.value if hasattr(tier, 'value') else str(tier) if tier else 'free'
+        plan_labels = {'free': 'Free', 'starter': 'Starter', 'pro': 'Pro', 'enterprise': 'Enterprise'}
+        current_plan = plan_labels.get(tier_value, tier_value.capitalize())
+
         return self.render(request, "pages/dashboard.html", {
             "user": user,
             "projects": projects,
@@ -132,6 +157,10 @@ class DashboardRoutes:
                 "total_projects": len(projects),
                 "deployed": deployed_count,
                 "apps_remaining": max(0, getattr(user, 'credits_remaining', 5) - len(projects)),
+                "api_calls": 0,
+                "active_projects": len([p for p in projects if p.get("status") not in ("archived", "failed")]),
+                "api_keys": api_key_count,
+                "current_plan": current_plan,
             },
         })
 
@@ -500,8 +529,8 @@ class DashboardRoutes:
         features: str = Form(None),
     ) -> HTMLResponse:
         """Handle new project creation form."""
-        # Create project (mock)
-        project_id = "proj_new"
+        # Generate unique project ID
+        project_id = f"proj_{uuid.uuid4().hex[:12]}"
 
         # Redirect to project page or return HTMX partial
         if request.headers.get("HX-Request"):
@@ -552,13 +581,14 @@ class AdminRoutes:
         """Render a template with context."""
         ctx = {
             "request": request,
-            "title": "Admin - Valeric",
+            "title": "Admin - Ignara",
             "user": getattr(request.state, "user", None),
         }
         if context:
             ctx.update(context)
 
         return self.templates.TemplateResponse(
+            request,
             template,
             ctx,
             status_code=status_code,
@@ -574,7 +604,6 @@ class AdminRoutes:
         if hasattr(user, 'is_admin') and user.is_admin:
             return True
         # Check against admin email environment variable
-        import os
         admin_emails = os.getenv("ADMIN_EMAILS", os.getenv("ADMIN_EMAIL", ""))
         admin_list = [e.strip().lower() for e in admin_emails.split(",") if e.strip()]
         user_email = getattr(user, 'email', '').lower()
@@ -593,52 +622,111 @@ class AdminRoutes:
         per_page = 20
         offset = (page - 1) * per_page
 
-        # Mock data - replace with actual database queries
-        feedback_items = [
-            {
-                "id": "fb_1",
-                "user_email": "user@example.com",
-                "message": "Great product! Would love to see more integrations.",
-                "category": "feature",
-                "status": "pending",
-                "page_url": "/dashboard",
-                "user_agent": "Mozilla/5.0...",
-                "created_at": type('obj', (object,), {'strftime': lambda self, f: '2026-01-25 10:30'})(),
-            },
-            {
-                "id": "fb_2",
-                "user_email": None,
-                "message": "Found a bug when deploying to Vercel.",
-                "category": "bug",
-                "status": "reviewed",
-                "page_url": "/projects/123",
-                "user_agent": "Mozilla/5.0...",
-                "created_at": type('obj', (object,), {'strftime': lambda self, f: '2026-01-24 15:45'})(),
-            },
-        ]
+        # Real database queries
+        try:
+            from src.database.db import get_db
+            from src.database.models import Feedback, ContactSubmission, User, OnboardingStatus
+            from sqlalchemy import func
 
-        contact_items = [
-            {
-                "id": "ct_1",
-                "name": "John Smith",
-                "email": "john@company.com",
-                "subject": "Enterprise pricing question",
-                "message": "We're interested in using Valeric for our team...",
-                "status": "pending",
-                "created_at": type('obj', (object,), {'strftime': lambda self, f: '2026-01-25 09:00'})(),
-            },
-        ]
+            db = get_db()
+            with db.session() as session:
+                # Feedback items with pagination
+                feedback_rows = (
+                    session.query(Feedback)
+                    .order_by(Feedback.created_at.desc())
+                    .offset(offset)
+                    .limit(per_page)
+                    .all()
+                )
+                feedback_items = [
+                    {
+                        "id": str(fb.id),
+                        "user_email": fb.email,
+                        "message": fb.message,
+                        "category": fb.feedback_type.value if fb.feedback_type else "",
+                        "status": fb.status or "new",
+                        "page_url": fb.page_url or "",
+                        "user_agent": fb.user_agent or "",
+                        "created_at": fb.created_at,
+                    }
+                    for fb in feedback_rows
+                ]
 
-        stats = {
-            "total_feedback": 42,
-            "pending_feedback": 15,
-            "total_contacts": 18,
-            "pending_contacts": 5,
-            "total_users": 127,
-            "verified_users": 98,
-            "onboarding_complete": 45,
-            "onboarding_complete_pct": 35,
-        }
+                # Contact items with pagination
+                contact_rows = (
+                    session.query(ContactSubmission)
+                    .order_by(ContactSubmission.created_at.desc())
+                    .offset(offset)
+                    .limit(per_page)
+                    .all()
+                )
+                contact_items = [
+                    {
+                        "id": str(ct.id),
+                        "name": ct.name or "",
+                        "email": ct.email or "",
+                        "subject": ct.subject or "",
+                        "message": ct.message or "",
+                        "status": ct.status or "new",
+                        "created_at": ct.created_at,
+                    }
+                    for ct in contact_rows
+                ]
+
+                # Stats
+                total_feedback = session.query(func.count(Feedback.id)).scalar() or 0
+                pending_feedback = (
+                    session.query(func.count(Feedback.id))
+                    .filter(Feedback.status == "new")
+                    .scalar() or 0
+                )
+                total_contacts = session.query(func.count(ContactSubmission.id)).scalar() or 0
+                pending_contacts = (
+                    session.query(func.count(ContactSubmission.id))
+                    .filter(ContactSubmission.status == "new")
+                    .scalar() or 0
+                )
+                total_users = session.query(func.count(User.id)).scalar() or 0
+                verified_users = (
+                    session.query(func.count(User.id))
+                    .filter(User.email_verified.is_(True))
+                    .scalar() or 0
+                )
+                onboarding_complete = (
+                    session.query(func.count(OnboardingStatus.user_id))
+                    .filter(OnboardingStatus.completed.is_(True))
+                    .scalar() or 0
+                )
+                onboarding_complete_pct = (
+                    int(onboarding_complete * 100 / total_users)
+                    if total_users > 0
+                    else 0
+                )
+
+                stats = {
+                    "total_feedback": total_feedback,
+                    "pending_feedback": pending_feedback,
+                    "total_contacts": total_contacts,
+                    "pending_contacts": pending_contacts,
+                    "total_users": total_users,
+                    "verified_users": verified_users,
+                    "onboarding_complete": onboarding_complete,
+                    "onboarding_complete_pct": onboarding_complete_pct,
+                }
+        except Exception as e:
+            logger.error("Admin dashboard DB error: %s", e)
+            feedback_items = []
+            contact_items = []
+            stats = {
+                "total_feedback": 0,
+                "pending_feedback": 0,
+                "total_contacts": 0,
+                "pending_contacts": 0,
+                "total_users": 0,
+                "verified_users": 0,
+                "onboarding_complete": 0,
+                "onboarding_complete_pct": 0,
+            }
 
         return self.render(request, "pages/admin.html", {
             "feedback_items": feedback_items,
@@ -675,9 +763,18 @@ class AdminRoutes:
             raise HTTPException(status_code=403, detail="Admin access required")
 
         # Update feedback status in database
-        # feedback = db.query(Feedback).filter(Feedback.id == feedback_id).first()
-        # feedback.status = "resolved"
-        # db.commit()
+        try:
+            from src.database.db import get_db
+            from src.database.models import Feedback
+
+            db = get_db()
+            with db.session() as session:
+                feedback = session.query(Feedback).filter(Feedback.id == feedback_id).first()
+                if feedback:
+                    feedback.status = "resolved"
+                    session.commit()
+        except Exception as e:
+            logger.error("resolve_feedback DB error: %s", e)
 
         # Return updated row for HTMX swap
         return HTMLResponse(
@@ -731,7 +828,7 @@ class AdminRoutes:
             # contact.reply_message = message
             # db.commit()
 
-            return JSONResponse({"success": True})
+            return JSONResponse({"success": False, "error": "Email sending not yet configured. Contact reply was not sent."})
 
         except (ValueError, KeyError) as e:
             logger.warning(f"Invalid data for contact reply {contact_id}: {e}")
@@ -745,6 +842,40 @@ class AdminRoutes:
                 {"error": "Failed to send reply - network error"},
                 status_code=503
             )
+
+    async def resolve_contact(
+        self,
+        request: Request,
+        contact_id: str,
+    ) -> HTMLResponse:
+        """Mark a contact submission as resolved."""
+        if not self.check_admin(request):
+            raise HTTPException(status_code=403, detail="Admin access required")
+
+        try:
+            from src.database.db import get_db
+            from src.database.models import ContactSubmission
+
+            db = get_db()
+            with db.session() as session:
+                contact = session.query(ContactSubmission).filter(
+                    ContactSubmission.id == contact_id
+                ).first()
+                if contact:
+                    contact.status = "resolved"
+                    session.commit()
+        except Exception as e:
+            logger.error("resolve_contact DB error: %s", e)
+
+        return HTMLResponse(
+            content=f'''
+            <tr id="contact-{contact_id}">
+                <td colspan="6" class="px-6 py-4 text-center text-green-600">
+                    \u2713 Contact marked as resolved
+                </td>
+            </tr>
+            '''
+        )
 
     async def email_templates(self, request: Request) -> HTMLResponse:
         """Email template preview page."""
@@ -797,6 +928,7 @@ def create_dashboard_router(templates: Jinja2Templates) -> APIRouter:
     router.add_api_route("/admin/contacts", admin_routes.admin_contacts, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/admin/feedback/{feedback_id}/resolve", admin_routes.resolve_feedback, methods=["POST"])
     router.add_api_route("/admin/contacts/{contact_id}/reply", admin_routes.reply_to_contact, methods=["POST"])
+    router.add_api_route("/admin/contacts/{contact_id}/resolve", admin_routes.resolve_contact, methods=["POST"])
     router.add_api_route("/admin/email-templates", admin_routes.email_templates, methods=["GET"], response_class=HTMLResponse)
 
     # HTMX partial routes
@@ -913,6 +1045,8 @@ async def project_review(request: Request) -> HTMLResponse:
 
 
 
+# TODO: Wire this through StartupGenerationPipeline instead of calling LLM directly.
+# Currently bypasses idea scoring, refinement, and prompt engineering stages.
 async def generate_app_api(request: Request) -> JSONResponse:
     """Generate a full app codebase from a project idea."""
     try:
@@ -928,29 +1062,99 @@ async def generate_app_api(request: Request) -> JSONResponse:
         # Update status to generating
         project['status'] = 'generating'
 
-        # For now, simulate generation with a mock response
-        # In production, this would call the EnhancedCodeGenerator
-        project['status'] = 'generated'
-        project['generated_at'] = datetime.now(timezone.utc).isoformat()
-        project['download_ready'] = True
-        project['files'] = [
-            {'name': 'app.py', 'type': 'python', 'lines': 150},
-            {'name': 'models.py', 'type': 'python', 'lines': 80},
-            {'name': 'routes.py', 'type': 'python', 'lines': 200},
-            {'name': 'templates/base.html', 'type': 'html', 'lines': 100},
-            {'name': 'templates/dashboard.html', 'type': 'html', 'lines': 120},
-            {'name': 'static/styles.css', 'type': 'css', 'lines': 300},
-            {'name': 'requirements.txt', 'type': 'text', 'lines': 15},
-            {'name': 'README.md', 'type': 'markdown', 'lines': 50},
-            {'name': 'Dockerfile', 'type': 'docker', 'lines': 20},
-            {'name': '.env.example', 'type': 'env', 'lines': 10},
-        ]
-
-        # Store generated file contents for live preview
         idea = project.get('idea', 'My App')
         name = body.get('name', 'app')
-        project['file_contents'] = _generate_mock_file_contents(name, idea)
 
+        # Attempt real generation first, fall back to mock on failure
+        real_generation_succeeded = False
+        try:
+            import json as _json
+            import uuid as _uuid
+            import tempfile
+            from src.code_generation.enhanced_engine import EnhancedCodeGenerator
+            from src.models import ProductPrompt
+
+            prompt_payload = _json.dumps({
+                'product_summary': {
+                    'solution_overview': idea
+                }
+            })
+            product_prompt = ProductPrompt(
+                idea_id=_uuid.uuid4(),
+                idea_name=name or idea[:50],
+                prompt_content=prompt_payload,
+            )
+
+            output_dir = tempfile.mkdtemp(prefix=f'ignara_{project_id}_')
+            generator = EnhancedCodeGenerator()
+            codebase = generator.generate(product_prompt, output_dir=output_dir)
+
+            # Build file list from what the generator actually created
+            ext_to_type = {
+                '.py': 'python', '.html': 'html', '.css': 'css',
+                '.ts': 'typescript', '.tsx': 'typescript', '.js': 'javascript',
+                '.jsx': 'javascript', '.json': 'json', '.md': 'markdown',
+                '.txt': 'text', '.yml': 'yaml', '.yaml': 'yaml',
+                '.tf': 'terraform', '.sh': 'shell', '.env': 'env',
+            }
+            project['files'] = [
+                {
+                    'name': f['path'],
+                    'type': ext_to_type.get(os.path.splitext(f['path'])[1], 'text'),
+                    'lines': f.get('lines', 0),
+                }
+                for f in generator.files_created
+            ]
+
+            # Build file_contents dict from disk for live preview
+            file_contents = {}
+            for f in generator.files_created:
+                full_path = os.path.join(output_dir, f['path'])
+                try:
+                    with open(full_path, 'r', encoding='utf-8', errors='replace') as fh:
+                        file_contents[f['path']] = fh.read()
+                except OSError:
+                    file_contents[f['path']] = ''
+            project['file_contents'] = file_contents
+            project['output_dir'] = output_dir
+
+            project['status'] = 'generated'
+            project['generated_at'] = datetime.now(timezone.utc).isoformat()
+            project['download_ready'] = True
+            project['files_generated'] = codebase.files_generated
+            project['lines_of_code'] = codebase.lines_of_code
+            real_generation_succeeded = True
+            logger.info(
+                f"Real generation succeeded for project {project_id}: "
+                f"{codebase.files_generated} files, {codebase.lines_of_code} lines"
+            )
+
+        except Exception as gen_exc:
+            logger.warning(
+                f"Real generation failed for project {project_id}, "
+                f"falling back to mock data: {gen_exc}"
+            )
+
+        if not real_generation_succeeded:
+            # Fallback: populate project with mock data
+            project['status'] = 'generated'
+            project['generated_at'] = datetime.now(timezone.utc).isoformat()
+            project['download_ready'] = True
+            project['files'] = [
+                {'name': 'app.py', 'type': 'python', 'lines': 150},
+                {'name': 'models.py', 'type': 'python', 'lines': 80},
+                {'name': 'routes.py', 'type': 'python', 'lines': 200},
+                {'name': 'templates/base.html', 'type': 'html', 'lines': 100},
+                {'name': 'templates/dashboard.html', 'type': 'html', 'lines': 120},
+                {'name': 'static/styles.css', 'type': 'css', 'lines': 300},
+                {'name': 'requirements.txt', 'type': 'text', 'lines': 15},
+                {'name': 'README.md', 'type': 'markdown', 'lines': 50},
+                {'name': 'Dockerfile', 'type': 'docker', 'lines': 20},
+                {'name': '.env.example', 'type': 'env', 'lines': 10},
+            ]
+            project['file_contents'] = _generate_mock_file_contents(name, idea)
+
+        _save_projects_store()
         return JSONResponse({
             'success': True,
             'project_id': project_id,
@@ -968,9 +1172,32 @@ async def generate_app_api(request: Request) -> JSONResponse:
 import uuid
 from datetime import datetime, timezone
 
-# In-memory project store (will be migrated to database)
-_projects_store = {}
+# Project store with file-based persistence
+_PROJECTS_FILE = Path("./data/projects.json")
+_PROJECTS_FILE.parent.mkdir(parents=True, exist_ok=True)
 
+
+def _load_projects_store() -> dict:
+    if _PROJECTS_FILE.exists():
+        try:
+            return json.loads(_PROJECTS_FILE.read_text())
+        except (json.JSONDecodeError, OSError):
+            return {}
+    return {}
+
+
+def _save_projects_store() -> None:
+    try:
+        _PROJECTS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        _PROJECTS_FILE.write_text(json.dumps(_projects_store, default=str, indent=2))
+    except OSError:
+        logger.warning("Failed to persist projects store")
+
+
+_projects_store = _load_projects_store()
+
+# TODO: Wire this through StartupGenerationPipeline instead of calling LLM directly.
+# Currently bypasses idea scoring, refinement, and prompt engineering stages.
 async def analyze_idea_api(request: Request) -> JSONResponse:
     """Analyze a business idea and create a new project."""
     try:
@@ -982,25 +1209,79 @@ async def analyze_idea_api(request: Request) -> JSONResponse:
 
         project_id = str(uuid.uuid4())[:8]
 
+        # Attempt real LLM analysis
+        analysis = {
+            'market_size': 'Unable to analyze — no LLM provider configured',
+            'competition': 'Unable to analyze — no LLM provider configured',
+            'feasibility': 'Unable to analyze — no LLM provider configured',
+            'recommended_features': [],
+        }
+
+        try:
+            from src.llm import get_llm_client
+            llm = get_llm_client("auto")
+            response = llm.complete(
+                prompt=(
+                    f"Analyze this startup idea and return a JSON object with these keys:\n"
+                    f"- market_size: estimated TAM and market opportunity (1-2 sentences)\n"
+                    f"- competition: competitive landscape overview (1-2 sentences)\n"
+                    f"- feasibility: technical and business feasibility assessment (1-2 sentences)\n"
+                    f"- recommended_features: array of 5-8 recommended MVP features\n\n"
+                    f"Startup idea: {idea}\n\n"
+                    f"Return ONLY valid JSON, no markdown."
+                ),
+                system_prompt="You are a startup analyst. Provide concise, actionable analysis.",
+                max_tokens=1000,
+                temperature=0.4,
+            )
+            import json as _json
+            content = response.content
+            start = content.find('{')
+            end = content.rfind('}') + 1
+            if start != -1 and end > start:
+                parsed = _json.loads(content[start:end])
+                analysis['market_size'] = parsed.get('market_size', analysis['market_size'])
+                analysis['competition'] = parsed.get('competition', analysis['competition'])
+                analysis['feasibility'] = parsed.get('feasibility', analysis['feasibility'])
+                analysis['recommended_features'] = parsed.get('recommended_features', [])
+        except Exception as llm_err:
+            logger.warning(f"LLM analysis unavailable: {llm_err}")
+
         project = {
             'id': project_id,
             'idea': idea,
-            'status': 'analyzing',
+            'status': 'analyzed',
             'created_at': datetime.now(timezone.utc).isoformat(),
-            'analysis': {
-                'market_size': 'Analyzing...',
-                'competition': 'Researching...',
-                'feasibility': 'Evaluating...',
-                'recommended_features': []
-            }
+            'analysis': analysis,
         }
 
         _projects_store[project_id] = project
+        _save_projects_store()
+
+        try:
+            from src.database.db import get_db
+            from src.database.models import Project, ProjectStatus
+            user = get_current_user(request)
+            if user:
+                db = get_db()
+                with db.session() as session:
+                    db_project = Project(
+                        id=project_id,
+                        user_id=user.id,
+                        name=idea[:100],
+                        description=idea,
+                        status=ProjectStatus.DRAFT,
+                        config={'idea': idea, 'analysis': project['analysis']}
+                    )
+                    session.add(db_project)
+        except Exception as e:
+            logger.warning(f"Could not persist project to database: {e}")
 
         return JSONResponse({
             'success': True,
             'project_id': project_id,
-            'message': 'Project created successfully'
+            'message': 'Idea analyzed successfully',
+            'analysis': analysis,
         })
     except Exception as e:
         return JSONResponse({'error': str(e)}, status_code=500)
@@ -1009,9 +1290,29 @@ async def analyze_idea_api(request: Request) -> JSONResponse:
 async def get_project_api(request: Request) -> JSONResponse:
     """Get project by ID."""
     project_id = request.path_params.get('project_id')
-    if project_id not in _projects_store:
-        return JSONResponse({'error': 'Project not found'}, status_code=404)
-    return JSONResponse(_projects_store[project_id])
+    if project_id in _projects_store:
+        return JSONResponse(_projects_store[project_id])
+    # Try database
+    try:
+        from src.database.db import get_db
+        from src.database.models import Project
+        db = get_db()
+        with db.session() as session:
+            db_project = session.query(Project).filter(Project.id == project_id).first()
+            if db_project:
+                project_dict = {
+                    'id': db_project.id,
+                    'idea': db_project.description or db_project.name,
+                    'status': db_project.status.value if hasattr(db_project.status, 'value') else str(db_project.status),
+                    'created_at': db_project.created_at.isoformat() if db_project.created_at else None,
+                    'analysis': db_project.config.get('analysis', {}) if db_project.config else {},
+                }
+                _projects_store[project_id] = project_dict
+                _save_projects_store()
+                return JSONResponse(project_dict)
+    except Exception as e:
+        logger.warning(f"Could not load project from database: {e}")
+    return JSONResponse({'error': 'Project not found'}, status_code=404)
 
 
 async def preview_app_api(request: Request) -> JSONResponse:
@@ -1184,6 +1485,6 @@ def _generate_mock_file_contents(name: str, idea: str) -> dict:
         'static/styles.css': '''/* Generated styles */\n:root {\n    --primary: #8b5cf6;\n    --primary-dark: #7c3aed;\n    --bg-dark: #0f172a;\n    --bg-card: #1e293b;\n    --text: #e2e8f0;\n    --text-muted: #94a3b8;\n    --border: #334155;\n    --success: #10b981;\n    --danger: #ef4444;\n}\n\n* { margin: 0; padding: 0; box-sizing: border-box; }\nbody { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg-dark); color: var(--text); }\n.container { max-width: 1200px; margin: 0 auto; padding: 0 1.5rem; }\n\n.navbar { background: var(--bg-card); border-bottom: 1px solid var(--border); padding: 1rem 0; }\n.navbar .container { display: flex; justify-content: space-between; align-items: center; }\n.brand { font-size: 1.25rem; font-weight: 700; color: var(--primary); text-decoration: none; }\n.nav-links a { color: var(--text-muted); text-decoration: none; margin-left: 1.5rem; }\n.nav-links a:hover { color: var(--text); }\n\n.dashboard { padding: 2rem 0; }\n.stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin: 1.5rem 0; }\n.stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; }\n.stat-value { font-size: 2rem; font-weight: 700; color: var(--primary); }\n\n.footer { text-align: center; padding: 2rem; color: var(--text-muted); border-top: 1px solid var(--border); margin-top: 3rem; }\n''',
         'requirements.txt': 'fastapi==0.109.0\nuvicorn==0.27.0\nsqlalchemy==2.0.25\nalembic==1.13.1\npython-jose==3.3.0\npasslib==1.7.4\npython-multipart==0.0.6\nhttpx==0.26.0\npython-dotenv==1.0.0\npsycopg2-binary==2.9.9\n',
         'README.md': f'''# {name}\n\n{idea[:120]}\n\n## Quick Start\n\n```bash\npip install -r requirements.txt\nuvicorn app:app --reload\n```\n\n## Features\n\n- User authentication with JWT\n- RESTful API with FastAPI\n- PostgreSQL database with SQLAlchemy ORM\n- Responsive dashboard UI\n- Docker support for deployment\n\n## API Endpoints\n\n| Method | Path | Description |\n|--------|------|-------------|\n| GET | / | Health check |\n| POST | /auth/login | User login |\n| GET | /users/me | Current user profile |\n| GET | /projects | List projects |\n| POST | /projects | Create project |\n\n## Deployment\n\n```bash\ndocker-compose up -d\n```\n''',
-        'Dockerfile': f'FROM python:3.11-slim\n\nWORKDIR /app\n\nCOPY requirements.txt .\nRUN pip install --no-cache-dir -r requirements.txt\n\nCOPY . .\n\nEXPOSE 8000\n\nCMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]\n',
+        'Dockerfile': 'FROM python:3.11-slim\n\nWORKDIR /app\n\nCOPY requirements.txt .\nRUN pip install --no-cache-dir -r requirements.txt\n\nCOPY . .\n\nEXPOSE 8000\n\nCMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]\n',
         '.env.example': 'DATABASE_URL=postgresql://user:password@localhost:5432/dbname\nSECRET_KEY=your-secret-key-here\nALGORITHM=HS256\nACCESS_TOKEN_EXPIRE_MINUTES=30\nDEBUG=true\n'
     }

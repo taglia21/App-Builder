@@ -42,7 +42,7 @@ class Alert:
     severity: AlertSeverity
 
     # Source
-    source: str = "valeric"
+    source: str = "ignara"
     component: Optional[str] = None
 
     # Context
@@ -102,7 +102,7 @@ class SlackAlerter(Alerter):
         self,
         webhook_url: Optional[str] = None,
         channel: Optional[str] = None,
-        username: str = "Valeric Alerts",
+        username: str = "Ignara Alerts",
         min_severity: AlertSeverity = AlertSeverity.WARNING,
     ):
         self.webhook_url = webhook_url or os.getenv("SLACK_ALERT_WEBHOOK_URL")
@@ -221,7 +221,7 @@ class EmailAlerter(Alerter):
         self.smtp_port = int(os.getenv("SMTP_PORT", str(smtp_port)))
         self.smtp_user = smtp_user or os.getenv("SMTP_USER")
         self.smtp_password = smtp_password or os.getenv("SMTP_PASSWORD")
-        self.from_email = from_email or os.getenv("ALERT_FROM_EMAIL", "alerts@valeric.app")
+        self.from_email = from_email or os.getenv("ALERT_FROM_EMAIL", "alerts@ignara.app")
 
         to_env = os.getenv("ALERT_TO_EMAILS", "")
         self.to_emails = to_emails or [e.strip() for e in to_env.split(",") if e.strip()]

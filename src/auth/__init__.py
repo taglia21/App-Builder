@@ -1,5 +1,5 @@
 """
-Valeric Authentication Module
+Ignara Authentication Module
 
 Production-ready authentication system with:
 - Password hashing (bcrypt)

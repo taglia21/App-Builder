@@ -12,8 +12,6 @@ from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from typing import Dict, Optional
 
-import httpx
-
 from src.business.models import (
     BankAccountType,
     BankingRequest,
@@ -62,10 +60,18 @@ class BankingProvider(ABC):
 
 class MercuryProvider(BankingProvider):
     """
-    Mercury Bank API integration.
+    Mercury Bank guided flow for business bank account setup.
+
+    NOTE: Mercury does not expose a public API for onboarding new business
+    accounts. This provider is a guided flow — it returns the signup URL
+    and instructs the user to apply at mercury.com. No HTTP requests are
+    made to any Mercury endpoint.
 
     Mercury is popular for startups and tech companies.
     """
+
+    # Internal store for guided-flow references keyed by request_id
+    _applications: Dict[str, BankingResult] = {}
 
     def __init__(
         self,
@@ -74,11 +80,6 @@ class MercuryProvider(BankingProvider):
     ):
         self.api_key = api_key or os.getenv("MERCURY_API_KEY")
         self.sandbox = sandbox
-        self.base_url = (
-            "https://api.mercury.com/api/v1"
-            if not sandbox
-            else "https://api.sandbox.mercury.com/api/v1"
-        )
 
     @property
     def name(self) -> str:
@@ -94,145 +95,116 @@ class MercuryProvider(BankingProvider):
     async def submit_application(
         self, request: BankingRequest
     ) -> BankingResult:
-        """Submit Mercury bank account application."""
-        if not self.api_key:
-            raise BankingError("Mercury API key not configured")
+        """
+        Guided flow for Mercury business bank account application.
 
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    f"{self.base_url}/onboarding/applications",
-                    headers=self._get_headers(),
-                    json={
-                        "companyName": request.business_name,
-                        "ein": request.ein,
-                        "entityType": request.business_type.value,
-                        "stateOfFormation": request.state.value,
-                        "formationDate": request.formation_date.isoformat(),
-                        "primaryContact": {
-                            "name": request.owner_name,
-                            "email": request.owner_email,
-                            "phone": request.owner_phone,
-                        },
-                        "address": {
-                            "street": request.street_address,
-                            "city": request.city,
-                            "state": request.state_address,
-                            "postalCode": request.zip_code,
-                            "country": "US",
-                        },
-                        "expectedMonthlyRevenue": request.estimated_monthly_revenue or 0,
-                        "accountType": request.account_type.value,
-                    },
-                    timeout=60.0,
-                )
+        Mercury does not expose a public API for onboarding new business bank
+        accounts. This is a guided flow — no HTTP requests are made. The user
+        must complete the application manually at mercury.com.
+        """
+        request_id = str(uuid.uuid4())
+        mercury_url = "https://mercury.com/sign-up"
 
-                if response.status_code in (200, 201):
-                    data = response.json()
-                    return BankingResult(
-                        request_id=data.get("applicationId", str(uuid.uuid4())),
-                        status=BankingStatus.APPLICATION_PENDING,
-                        bank_name="Mercury",
-                        account_type=request.account_type,
-                        provider=self.name,
-                        provider_reference=data.get("applicationId"),
-                        dashboard_url=data.get("onboardingUrl"),
-                        message="Application submitted. Complete verification at the provided URL.",
-                        verification_steps=["Email verification", "Identity verification", "Business documentation"],
-                    )
-                else:
-                    raise BankingError(f"Mercury API error: {response.text}")
+        logger.info(
+            f"Mercury guided flow initiated for {request.business_name}. "
+            f"User must complete application manually at {mercury_url}."
+        )
 
-        except httpx.RequestError as e:
-            raise BankingError(f"Request failed: {e}")
+        result = BankingResult(
+            request_id=request_id,
+            status=BankingStatus.APPLICATION_PENDING,
+            bank_name="Mercury",
+            account_type=request.account_type,
+            provider=self.name,
+            provider_reference=mercury_url,
+            dashboard_url=mercury_url,
+            message=(
+                "Mercury does not provide a public API for new account onboarding. "
+                "Please complete your business bank account application manually at "
+                f"{mercury_url}. You will need your EIN, formation documents, and "
+                "owner identification to apply."
+            ),
+            verification_steps=[
+                "Create a Mercury account at mercury.com/sign-up",
+                "Provide your EIN and business formation documents",
+                "Complete identity verification",
+                "Submit business documentation for review",
+            ],
+        )
+
+        MercuryProvider._applications[request_id] = result
+        return result
 
     async def get_application_status(
         self, request_id: str
     ) -> BankingResult:
-        """Get Mercury application status."""
-        if not self.api_key:
-            raise BankingError("Mercury API key not configured")
+        """
+        Return status for a Mercury guided flow application.
 
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.get(
-                    f"{self.base_url}/onboarding/applications/{request_id}",
-                    headers=self._get_headers(),
-                    timeout=30.0,
-                )
+        Mercury does not provide a public onboarding status API. Application
+        status must be checked at app.mercury.com. If the request_id was
+        created by this provider, the stored result is returned; otherwise a
+        helpful placeholder is returned.
+        """
+        mercury_dashboard = "https://app.mercury.com"
 
-                if response.status_code == 200:
-                    data = response.json()
+        if request_id in MercuryProvider._applications:
+            return MercuryProvider._applications[request_id]
 
-                    status_map = {
-                        "pending": BankingStatus.APPLICATION_PENDING,
-                        "verification_required": BankingStatus.VERIFICATION_REQUIRED,
-                        "approved": BankingStatus.APPROVED,
-                        "active": BankingStatus.ACTIVE,
-                        "rejected": BankingStatus.REJECTED,
-                    }
-
-                    return BankingResult(
-                        request_id=request_id,
-                        status=status_map.get(data.get("status"), BankingStatus.APPLICATION_PENDING),
-                        bank_name="Mercury",
-                        account_type=BankAccountType(data.get("accountType", "checking")),
-                        account_number=data.get("accountNumber"),  # Will be masked
-                        routing_number=data.get("routingNumber"),
-                        dashboard_url=data.get("dashboardUrl"),
-                        provider=self.name,
-                        provider_reference=request_id,
-                        message=data.get("statusMessage"),
-                        verification_steps=data.get("pendingSteps", []),
-                    )
-                else:
-                    raise BankingError(f"Failed to get application status: {response.text}")
-
-        except httpx.RequestError as e:
-            raise BankingError(f"Request failed: {e}")
+        return BankingResult(
+            request_id=request_id,
+            status=BankingStatus.APPLICATION_PENDING,
+            bank_name="Mercury",
+            account_type=BankAccountType.CHECKING,
+            provider=self.name,
+            provider_reference=mercury_dashboard,
+            dashboard_url=mercury_dashboard,
+            message=(
+                "Mercury does not provide a public application status API. "
+                f"Please check the status of your application at {mercury_dashboard}."
+            ),
+        )
 
     async def get_account_info(
         self, account_id: str
     ) -> BankingResult:
-        """Get Mercury account information."""
-        if not self.api_key:
-            raise BankingError("Mercury API key not configured")
+        """
+        Return account info for a Mercury account.
 
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.get(
-                    f"{self.base_url}/accounts/{account_id}",
-                    headers=self._get_headers(),
-                    timeout=30.0,
-                )
+        Mercury does not provide a public account info API for third-party
+        applications. Account details are available directly at app.mercury.com.
+        """
+        mercury_dashboard = "https://app.mercury.com"
 
-                if response.status_code == 200:
-                    data = response.json()
-
-                    return BankingResult(
-                        request_id=account_id,
-                        status=BankingStatus.ACTIVE,
-                        bank_name="Mercury",
-                        account_type=BankAccountType(data.get("type", "checking")),
-                        account_number=data.get("accountNumber"),
-                        routing_number=data.get("routingNumber"),
-                        dashboard_url="https://app.mercury.com",
-                        provider=self.name,
-                        provider_reference=account_id,
-                    )
-                else:
-                    raise BankingError(f"Failed to get account info: {response.text}")
-
-        except httpx.RequestError as e:
-            raise BankingError(f"Request failed: {e}")
+        return BankingResult(
+            request_id=account_id,
+            status=BankingStatus.ACTIVE,
+            bank_name="Mercury",
+            account_type=BankAccountType.CHECKING,
+            dashboard_url=mercury_dashboard,
+            provider=self.name,
+            provider_reference=account_id,
+            message=(
+                "Mercury account details are available at your Mercury dashboard. "
+                f"Please visit {mercury_dashboard} to view your account information."
+            ),
+        )
 
 
 class RelayProvider(BankingProvider):
     """
-    Relay Bank API integration.
+    Relay Bank guided flow for business bank account setup.
+
+    NOTE: Relay does not expose a public API for onboarding new business
+    accounts. This provider is a guided flow — it returns the signup URL
+    and instructs the user to apply at relayfi.com. No HTTP requests are
+    made to any Relay endpoint.
 
     Relay is another popular choice for startups.
     """
+
+    # Internal store for guided-flow references keyed by request_id
+    _applications: Dict[str, BankingResult] = {}
 
     def __init__(
         self,
@@ -241,11 +213,6 @@ class RelayProvider(BankingProvider):
     ):
         self.api_key = api_key or os.getenv("RELAY_API_KEY")
         self.sandbox = sandbox
-        self.base_url = (
-            "https://api.relay.com/v1"
-            if not sandbox
-            else "https://sandbox.api.relay.com/v1"
-        )
 
     @property
     def name(self) -> str:
@@ -261,135 +228,100 @@ class RelayProvider(BankingProvider):
     async def submit_application(
         self, request: BankingRequest
     ) -> BankingResult:
-        """Submit Relay bank account application."""
-        if not self.api_key:
-            raise BankingError("Relay API key not configured")
+        """
+        Guided flow for Relay business bank account application.
 
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    f"{self.base_url}/applications",
-                    headers=self._get_headers(),
-                    json={
-                        "business": {
-                            "name": request.business_name,
-                            "ein": request.ein,
-                            "type": request.business_type.value,
-                            "stateOfFormation": request.state.value,
-                            "formationDate": request.formation_date.isoformat(),
-                            "address": {
-                                "line1": request.street_address,
-                                "city": request.city,
-                                "state": request.state_address,
-                                "postalCode": request.zip_code,
-                            },
-                        },
-                        "owner": {
-                            "name": request.owner_name,
-                            "email": request.owner_email,
-                            "phone": request.owner_phone,
-                        },
-                        "accountType": request.account_type.value,
-                    },
-                    timeout=60.0,
-                )
+        Relay does not expose a public API for onboarding new business bank
+        accounts. This is a guided flow — no HTTP requests are made. The user
+        must complete the application manually at relayfi.com.
+        """
+        request_id = str(uuid.uuid4())
+        relay_url = "https://relayfi.com/sign-up"
 
-                if response.status_code in (200, 201):
-                    data = response.json()
-                    return BankingResult(
-                        request_id=data.get("id", str(uuid.uuid4())),
-                        status=BankingStatus.APPLICATION_PENDING,
-                        bank_name="Relay",
-                        account_type=request.account_type,
-                        provider=self.name,
-                        provider_reference=data.get("id"),
-                        dashboard_url=data.get("signupUrl"),
-                        message="Application submitted. Complete verification steps.",
-                        verification_steps=["Identity verification", "Business verification"],
-                    )
-                else:
-                    raise BankingError(f"Relay API error: {response.text}")
+        logger.info(
+            f"Relay guided flow initiated for {request.business_name}. "
+            f"User must complete application manually at {relay_url}."
+        )
 
-        except httpx.RequestError as e:
-            raise BankingError(f"Request failed: {e}")
+        result = BankingResult(
+            request_id=request_id,
+            status=BankingStatus.APPLICATION_PENDING,
+            bank_name="Relay",
+            account_type=request.account_type,
+            provider=self.name,
+            provider_reference=relay_url,
+            dashboard_url=relay_url,
+            message=(
+                "Relay does not provide a public API for new account onboarding. "
+                "Please complete your business bank account application manually at "
+                f"{relay_url}. You will need your EIN, formation documents, and "
+                "owner identification to apply."
+            ),
+            verification_steps=[
+                "Create a Relay account at relayfi.com/sign-up",
+                "Provide your EIN and business formation documents",
+                "Complete identity verification",
+                "Submit business documentation for review",
+            ],
+        )
+
+        RelayProvider._applications[request_id] = result
+        return result
 
     async def get_application_status(
         self, request_id: str
     ) -> BankingResult:
-        """Get Relay application status."""
-        if not self.api_key:
-            raise BankingError("Relay API key not configured")
+        """
+        Return status for a Relay guided flow application.
 
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.get(
-                    f"{self.base_url}/applications/{request_id}",
-                    headers=self._get_headers(),
-                    timeout=30.0,
-                )
+        Relay does not provide a public onboarding status API. Application
+        status must be checked at app.relayfi.com. If the request_id was
+        created by this provider, the stored result is returned; otherwise a
+        helpful placeholder is returned.
+        """
+        relay_dashboard = "https://app.relayfi.com"
 
-                if response.status_code == 200:
-                    data = response.json()
+        if request_id in RelayProvider._applications:
+            return RelayProvider._applications[request_id]
 
-                    status_map = {
-                        "pending": BankingStatus.APPLICATION_PENDING,
-                        "needs_info": BankingStatus.VERIFICATION_REQUIRED,
-                        "approved": BankingStatus.APPROVED,
-                        "active": BankingStatus.ACTIVE,
-                        "declined": BankingStatus.REJECTED,
-                    }
-
-                    return BankingResult(
-                        request_id=request_id,
-                        status=status_map.get(data.get("status"), BankingStatus.APPLICATION_PENDING),
-                        bank_name="Relay",
-                        account_type=BankAccountType(data.get("accountType", "checking")),
-                        account_number=data.get("accountNumber"),
-                        routing_number=data.get("routingNumber"),
-                        dashboard_url=data.get("dashboardUrl", "https://app.relay.com"),
-                        provider=self.name,
-                        provider_reference=request_id,
-                    )
-                else:
-                    raise BankingError(f"Failed to get application status: {response.text}")
-
-        except httpx.RequestError as e:
-            raise BankingError(f"Request failed: {e}")
+        return BankingResult(
+            request_id=request_id,
+            status=BankingStatus.APPLICATION_PENDING,
+            bank_name="Relay",
+            account_type=BankAccountType.CHECKING,
+            provider=self.name,
+            provider_reference=relay_dashboard,
+            dashboard_url=relay_dashboard,
+            message=(
+                "Relay does not provide a public application status API. "
+                f"Please check the status of your application at {relay_dashboard}."
+            ),
+        )
 
     async def get_account_info(
         self, account_id: str
     ) -> BankingResult:
-        """Get Relay account information."""
-        if not self.api_key:
-            raise BankingError("Relay API key not configured")
+        """
+        Return account info for a Relay account.
 
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.get(
-                    f"{self.base_url}/accounts/{account_id}",
-                    headers=self._get_headers(),
-                    timeout=30.0,
-                )
+        Relay does not provide a public account info API for third-party
+        applications. Account details are available directly at app.relayfi.com.
+        """
+        relay_dashboard = "https://app.relayfi.com"
 
-                if response.status_code == 200:
-                    data = response.json()
-
-                    return BankingResult(
-                        request_id=account_id,
-                        status=BankingStatus.ACTIVE,
-                        bank_name="Relay",
-                        account_type=BankAccountType(data.get("type", "checking")),
-                        account_number=data.get("accountNumber"),
-                        routing_number=data.get("routingNumber"),
-                        dashboard_url="https://app.relay.com",
-                        provider=self.name,
-                        provider_reference=account_id,
-                    )
-                else:
-                    raise BankingError(f"Failed to get account info: {response.text}")
-
-        except httpx.RequestError as e:
-            raise BankingError(f"Request failed: {e}")
+        return BankingResult(
+            request_id=account_id,
+            status=BankingStatus.ACTIVE,
+            bank_name="Relay",
+            account_type=BankAccountType.CHECKING,
+            dashboard_url=relay_dashboard,
+            provider=self.name,
+            provider_reference=account_id,
+            message=(
+                "Relay account details are available at your Relay dashboard. "
+                f"Please visit {relay_dashboard} to view your account information."
+            ),
+        )
 
 
 class MockBankingProvider(BankingProvider):

@@ -16,7 +16,7 @@ from typing import Any, Optional
 logger = logging.getLogger(__name__)
 
 # Database file location
-_DB_PATH = Path("valeric_builds.db")
+_DB_PATH = Path("ignara_builds.db")
 
 
 class BuildManager:

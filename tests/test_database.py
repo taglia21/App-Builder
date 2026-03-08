@@ -1,5 +1,5 @@
 """
-Valeric Database Tests
+Ignara Database Tests
 
 Comprehensive tests for database models, repositories, and operations.
 Uses SQLite in-memory for fast testing without PostgreSQL dependency.

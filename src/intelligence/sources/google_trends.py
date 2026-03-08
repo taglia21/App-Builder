@@ -50,6 +50,15 @@ class GoogleTrendsSource(DataSource):
             else:
                 logger.warning("Google Trends source not enabled")
 
+    async def gather(self) -> List[Dict[str, Any]]:
+        """Implement abstract gather() by delegating to collect()."""
+        return await self.collect()
+
+    def get_source_type(self):
+        """Return the source type identifier."""
+        from ..models import SourceType
+        return SourceType.GOOGLE
+
     async def collect(self) -> List[Dict[str, Any]]:
         """Collect trending search data from Google Trends."""
         if not self.enabled or self.pytrends is None:

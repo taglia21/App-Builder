@@ -1,10 +1,7 @@
 """API Versioning Module - Provides version routing and middleware."""
-from typing import Optional
-
 from fastapi import FastAPI, Request
 from fastapi.routing import APIRouter
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import JSONResponse
 
 
 class APIVersionMiddleware(BaseHTTPMiddleware):
@@ -72,7 +69,7 @@ class VersionNotSupportedError(Exception):
     pass
 
 
-from fastapi import Depends, HTTPException
+from fastapi import HTTPException
 
 
 def check_api_version(supported_versions: list[str]):

@@ -785,7 +785,7 @@ async def health_check():
     """
     return {
         "status": "healthy",
-        "service": "valeric",
+        "service": "ignara",
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 

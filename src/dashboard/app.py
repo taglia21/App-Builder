@@ -3,7 +3,6 @@ from starlette.requests import Request
 """FastAPI Dashboard Application with Security."""
 import logging
 import os
-import secrets
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -13,7 +12,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from src.middleware.csrf import CSRFProtectMiddleware, COOKIE_NAME as CSRF_COOKIE_NAME
+from src.middleware.csrf import CSRFProtectMiddleware
 
 from ..auth.web_routes import router as auth_router
 from ..billing.routes import create_billing_router
@@ -127,13 +126,14 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     """Create and configure FastAPI application."""
+    _is_dev = os.getenv("ENVIRONMENT", "development").lower() in ("development", "dev", "local")
     app = FastAPI(
-        title="Valeric Dashboard",
+        title="Ignara Dashboard",
         lifespan=lifespan,
         description="""
-# Valeric - AI-Powered Startup Builder
+# Ignara - AI-Powered Startup Builder
 
-Valeric is an advanced platform that leverages multiple AI providers to generate,
+Ignara is an advanced platform that leverages multiple AI providers to generate,
 refine, and validate startup ideas using intelligent pipelines.
 
 ## Features
@@ -150,10 +150,10 @@ This documentation provides details on all available endpoints, request/response
 and authentication requirements.
         """.strip(),
         version="1.0.0",
-        docs_url="/docs",
-        redoc_url="/redoc",
+        docs_url="/docs" if _is_dev else None,
+        redoc_url="/redoc" if _is_dev else None,
         contact={
-            "name": "Valeric Team",
+            "name": "Ignara Team",
             "url": "https://github.com/taglia21/App-Builder",
         },
         license_info={
@@ -191,10 +191,15 @@ and authentication requirements.
     app.add_middleware(GZipMiddleware, minimum_size=1000)
 
     # CORS - Configure for production
+    # Production: set CORS_ALLOWED_ORIGIN env var to your domain
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:3000", "http://localhost:8080"],
-        allow_origin_regex=r"https://.*\.vercel\.app|https://.*\.render\.com|https://.*\.railway\.app",
+        allow_origins=[
+            "http://localhost:3000",
+            "http://localhost:8000",
+            "http://localhost:8080",
+            os.getenv("CORS_ALLOWED_ORIGIN", ""),  # Set in production
+        ],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -208,13 +213,6 @@ and authentication requirements.
 
 
     # --- Auth-guard middleware -------------------------------------------------
-    # Public paths that do NOT require a logged-in user.
-    PUBLIC_PATH_PREFIXES = (
-        "/login", "/register", "/auth/", "/logout",
-        "/health", "/docs", "/redoc", "/openapi.json",
-        "/static/", "/favicon.ico",
-        "/",  # landing page
-    )
     # Paths that are public but must match exactly (not as prefix)
     PUBLIC_EXACT_PATHS = {
         "/", "/about", "/terms", "/privacy", "/contact",
@@ -243,16 +241,37 @@ and authentication requirements.
         )
 
         if not is_public:
-            session_token = request.cookies.get("session_token")
-            if not session_token:
+            # Try signed session cookie (set by web_routes login)
+            from src.auth.web_routes import verify_session_cookie
+            session_cookie = request.cookies.get("session")
+            user_id = verify_session_cookie(session_cookie) if session_cookie else None
+
+            # Legacy fallback: JWT-based session_token cookie
+            if not user_id:
+                jwt_token = request.cookies.get("session_token")
+                if jwt_token:
+                    try:
+                        from src.auth.jwt import verify_token, TokenType
+                        payload = verify_token(jwt_token, expected_type=TokenType.ACCESS)
+                        user_id = payload.get("sub")
+                        request.state.user_email = payload.get("email")
+                    except Exception:
+                        user_id = None
+
+            if not user_id:
                 return StarletteRedirect(url="/login", status_code=303)
+
+            request.state.user_id = user_id
+
             try:
-                from src.auth.jwt import verify_token, TokenType
-                payload = verify_token(session_token, expected_type=TokenType.ACCESS)
-                request.state.user_id = payload.get("sub")
-                request.state.user_email = payload.get("email")
+                from src.database.db import get_db
+                from src.database.models import User
+                db = get_db()
+                with db.session() as session:
+                    user_obj = session.query(User).filter(User.id == user_id).first()
+                    request.state.user = user_obj
             except Exception:
-                return StarletteRedirect(url="/login", status_code=303)
+                request.state.user = None
 
         response = await call_next(request)
         return response
@@ -285,7 +304,7 @@ and authentication requirements.
         from datetime import datetime, timezone
         return {
             "status": "ok",
-            "service": "valeric",
+            "service": "ignara",
             "version": "1.0.0",
             "timestamp": datetime.now(timezone.utc).isoformat() + "Z"
         }
@@ -339,12 +358,36 @@ and authentication requirements.
     # Include health router (keep at /api for backwards compatibility and K8s probes)
     if health_router:
         app.include_router(health_router, prefix="/api")
+
+    # Include v2 code generation pipeline routes
+    try:
+        from src.code_generation.routes import router as codegen_v2_router
+        app.include_router(codegen_v2_router)
+        logger.info("Registered v2 code generation pipeline routes")
+    except Exception as e:
+        logger.warning(f"Could not load v2 code generation routes: {e}")
     
     # Prometheus metrics endpoint
     @app.get("/metrics", include_in_schema=False)
-    async def prometheus_metrics():
-        """Prometheus-compatible metrics endpoint."""
+    async def prometheus_metrics(request: Request):
+        """Prometheus-compatible metrics endpoint.
+
+        Protected by Bearer token authentication. Set METRICS_API_KEY env var
+        to enable access. In development mode the endpoint is unrestricted.
+        """
+        from fastapi import HTTPException
         from starlette.responses import PlainTextResponse
+
+        # Gate behind API key check; relax in dev so local scraping works
+        if not _is_dev:
+            metrics_api_key = os.getenv("METRICS_API_KEY", "")
+            auth_header = request.headers.get("Authorization", "")
+            if not metrics_api_key or auth_header != f"Bearer {metrics_api_key}":
+                raise HTTPException(
+                    status_code=403,
+                    detail="Forbidden: valid Authorization: Bearer <METRICS_API_KEY> required",
+                )
+
         try:
             from src.monitoring.metrics import get_metrics
             body = get_metrics().export_prometheus()
@@ -378,7 +421,7 @@ and authentication requirements.
 class DashboardApp:
     """Dashboard application wrapper for compatibility."""
 
-    def __init__(self, title: str = "Valeric"):
+    def __init__(self, title: str = "Ignara"):
         self.title = title
         self.app = create_app()
         # Update app title if custom

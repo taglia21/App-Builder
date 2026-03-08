@@ -82,7 +82,18 @@ class CodeGenerationEngine:
         docs_path.mkdir(exist_ok=True)
         files_generated += self._generate_architecture_doc(prompt, docs_path)
 
-        logger.info(f"Generated {files_generated} files")
+        # Count actual lines of code generated (replaces the hardcoded 0)
+        import os as _os
+        _counted_extensions = ('.py', '.html', '.css', '.js', '.ts', '.tsx', '.yml', '.yaml', '.json', '.md', '.txt')
+        for root, dirs, files in _os.walk(str(output_path)):
+            for f in files:
+                if f.endswith(_counted_extensions):
+                    try:
+                        lines_of_code += sum(1 for _ in open(_os.path.join(root, f), encoding='utf-8', errors='ignore'))
+                    except (OSError, UnicodeDecodeError):
+                        pass
+
+        logger.info(f"Generated {files_generated} files ({lines_of_code} lines of code)")
 
         return GeneratedCodebase(
             idea_id=prompt.idea_id,
@@ -235,7 +246,11 @@ build/
         return 1
 
     def _generate_env_example(self, prompt: ProductPrompt, output_path: Path) -> int:
-        """Generate .env.example"""
+        """Generate .env.example with placeholder values only.
+
+        SECURITY: This method intentionally writes placeholder strings, never
+        real values from os.environ. Callers must not pass real secrets here.
+        """
         project_name = prompt.idea_name.lower().replace(" ", "_").replace("-", "_")
 
         content = f"""# Application

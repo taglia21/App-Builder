@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Valeric Interactive AI Assistant
+Ignara Interactive AI Assistant
 
 The killer feature - users describe their startup idea in plain English
 and get working, production-ready code in minutes.
@@ -125,7 +125,7 @@ class InteractiveAssistant:
         self.console.print()
 
         welcome_text = """
-[bold white]Welcome to Valeric Build Mode![/bold white]
+[bold white]Welcome to Ignara Build Mode![/bold white]
 
 I'm your AI startup builder. Describe your app idea in plain English,
 and I'll help you:
@@ -478,7 +478,7 @@ Return ONLY valid JSON. Make it compelling and market-ready.
 
         self.console.print()
         if not self._confirm("Does this capture your vision? Generate the app?"):
-            self.console.print("[yellow]You can restart with 'valeric build' to try again.[/yellow]")
+            self.console.print("[yellow]You can restart with 'ignara build' to try again.[/yellow]")
             return False
 
         return True
@@ -596,7 +596,7 @@ Return ONLY valid JSON. Make it compelling and market-ready.
   Then visit: [underline cyan]http://localhost:8000/docs[/underline cyan]
 
 [bold white]Deploy to Cloud:[/bold white]
-  [cyan]valeric deploy {output_path}[/cyan]
+  [cyan]ignara deploy {output_path}[/cyan]
 
 [dim]Your startup journey begins! 🚀[/dim]
 """
@@ -647,11 +647,11 @@ Return ONLY valid JSON. Make it compelling and market-ready.
             self.console.print()
             if self._confirm("Would you like to deploy your app now?"):
                 self.console.print()
-                self.console.print(f"[cyan]Run:[/cyan] valeric deploy {self.context.output_path}")
+                self.console.print(f"[cyan]Run:[/cyan] ignara deploy {self.context.output_path}")
                 self.console.print("[dim]Deployment will push to Vercel (frontend) + Render (backend)[/dim]")
 
             self.console.print()
-            self.console.print("[bold cyan]Thank you for using Valeric![/bold cyan]")
+            self.console.print("[bold cyan]Thank you for using Ignara![/bold cyan]")
             self.console.print("[dim]Build something amazing! 🚀[/dim]")
             self.console.print()
 

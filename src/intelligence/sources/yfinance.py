@@ -46,6 +46,15 @@ class YFinanceSource(DataSource):
             logger.warning("yfinance package not installed. Install with: pip install yfinance")
             self.enabled = False
 
+    async def gather(self) -> List[Dict[str, Any]]:
+        """Implement abstract gather() by delegating to collect()."""
+        return await self.collect()
+
+    def get_source_type(self):
+        """Return the source type identifier."""
+        from ..models import SourceType
+        return SourceType.NEWS
+
     async def collect(self) -> List[Dict[str, Any]]:
         """Collect market data from Yahoo Finance."""
         if not self.enabled or yf is None:

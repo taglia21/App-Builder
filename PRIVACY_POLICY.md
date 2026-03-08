@@ -1,12 +1,12 @@
 # Privacy Policy
 
-**Valeric - AI-Powered Startup Builder**
+**Ignara - AI-Powered Startup Builder**
 
 *Last Updated: January 25, 2026*
 
 ## 1. Introduction
 
-Valeric ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our AI-powered startup building platform.
+Ignara ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our AI-powered startup building platform.
 
 ## 2. Information We Collect
 
@@ -83,7 +83,7 @@ Data may be transferred to and processed in countries outside your residence. We
 
 ## 9. Children's Privacy
 
-Valeric is not intended for users under 16. We do not knowingly collect data from children. If you believe we have collected such data, contact us immediately.
+Ignara is not intended for users under 16. We do not knowingly collect data from children. If you believe we have collected such data, contact us immediately.
 
 ## 10. Cookies Policy
 
@@ -108,7 +108,7 @@ We may update this Privacy Policy periodically. We will notify you of material c
 
 For privacy-related inquiries:
 - **Email**: privacy@valeric.io
-- **Address**: Valeric Inc., [Your Address]
+- **Address**: Ignara Inc., [Your Address]
 - **Data Protection Officer**: dpo@valeric.io
 
 ## 14. Regulatory Compliance
@@ -121,4 +121,4 @@ California residents have additional rights under CCPA, including the right to k
 
 ---
 
-*By using Valeric, you acknowledge that you have read and understood this Privacy Policy.*
+*By using Ignara, you acknowledge that you have read and understood this Privacy Policy.*

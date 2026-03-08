@@ -45,8 +45,22 @@ class StartupGenerationPipeline:
 
         # Initialize all engines
         self.intelligence_engine = IntelligenceGatheringEngine(config)
-        self.idea_engine = IdeaGenerationEngine(config)
-        self.scoring_engine = ScoringEngine(config)
+        # Use LLM-powered idea generation when an LLM provider is available
+        try:
+            from .idea_generation.llm_engine import LLMIdeaGenerationEngine
+            self.idea_engine = LLMIdeaGenerationEngine(config, llm_provider=llm_provider)
+            logger.info("Using LLM-powered idea generation engine")
+        except Exception as e:
+            logger.warning(f"LLM idea engine unavailable ({e}), falling back to template engine")
+            self.idea_engine = IdeaGenerationEngine(config)
+        # Use LLM-powered scoring when an LLM provider is available
+        try:
+            from .scoring.llm_engine import LLMScoringEngine
+            self.scoring_engine = LLMScoringEngine(config, llm_provider=llm_provider)
+            logger.info("Using LLM-powered scoring engine")
+        except Exception as e:
+            logger.warning(f"LLM scoring engine unavailable ({e}), falling back to heuristic engine")
+            self.scoring_engine = ScoringEngine(config)
         self.qa_engine = QualityAssuranceEngine()
 
         # LLM-powered engines (initialized lazily)
@@ -143,19 +157,30 @@ class StartupGenerationPipeline:
             )
 
             if not selected_idea:
-                raise ValueError("Selected idea not found in idea catalog")
+                logger.warning(
+                    "Selected idea ID %s not found — falling back to first idea",
+                    evaluation.selected_idea_id,
+                )
+                if ideas.ideas:
+                    selected_idea = ideas.ideas[0]
+                else:
+                    raise ValueError("No ideas were generated — pipeline cannot continue")
 
             output.selected_idea = selected_idea
 
             logger.info(f"\nSelected Idea: {selected_idea.name}")
-            logger.info(f"Score: {evaluation.evaluated_ideas[0].total_score:.2f}")
+            if evaluation.evaluated_ideas:
+                logger.info(f"Score: {evaluation.evaluated_ideas[0].total_score:.2f}")
+            else:
+                logger.warning("No evaluated ideas returned by scoring engine")
 
             # Step 4: Generate Product Prompt
             logger.info("\n[STEP 4/6] Generating Product Prompt")
             self.metadata.current_stage = PipelineStage.PROMPT_ENGINEERING
             if progress_callback is not None:
                 progress_callback("prompts", 55, "Engineering product prompt")
-            product_prompt = self.prompt_engine.generate(selected_idea, intelligence_data)
+            loop = asyncio.get_event_loop()
+            product_prompt = await loop.run_in_executor(None, lambda: self.prompt_engine.generate(selected_idea, intelligence_data))
             self._save_intermediate(product_prompt, "prompt")
 
             # Step 5: Refine Prompt to Gold Standard (optional)
@@ -167,7 +192,7 @@ class StartupGenerationPipeline:
                 self.metadata.current_stage = PipelineStage.REFINEMENT
                 if progress_callback is not None:
                     progress_callback("refinement", 70, "Refining prompt to gold standard")
-                gold_standard_prompt = self.refinement_engine.refine(product_prompt)
+                gold_standard_prompt = await loop.run_in_executor(None, lambda: self.refinement_engine.refine(product_prompt))
                 output.gold_standard_prompt = gold_standard_prompt
                 self._save_intermediate(gold_standard_prompt, "gold_standard_prompt")
                 # Use the refined prompt for code generation
@@ -183,7 +208,10 @@ class StartupGenerationPipeline:
                 if progress_callback is not None:
                     progress_callback("code_gen", 85, "Generating codebase")
                 # Use final_prompt which is either refined or original based on skip_refinement flag
-                codebase = self.code_generator.generate(final_prompt, output_dir, theme=self.theme)
+                _final_prompt = final_prompt
+                _output_dir = output_dir
+                _theme = self.theme
+                codebase = await loop.run_in_executor(None, lambda: self.code_generator.generate(_final_prompt, _output_dir, theme=_theme))
 
                 # Run Quality Assurance
                 logger.info("Running Quality Assurance...")
@@ -305,14 +333,13 @@ class StartupGenerationPipeline:
             self.metadata.current_stage = PipelineStage.PROMPT_ENGINEERING
             if progress_callback is not None:
                 progress_callback("prompts", 55, "Engineering product prompt")
-            product_prompt = self.prompt_engine.generate(
-                idea, intelligence_data
-            )
+            loop = asyncio.get_event_loop()
+            product_prompt = await loop.run_in_executor(None, lambda: self.prompt_engine.generate(idea, intelligence_data))
 
             self.metadata.current_stage = PipelineStage.REFINEMENT
             if progress_callback is not None:
                 progress_callback("refinement", 70, "Refining prompt to gold standard")
-            gold_standard_prompt = self.refinement_engine.refine(product_prompt)
+            gold_standard_prompt = await loop.run_in_executor(None, lambda: self.refinement_engine.refine(product_prompt))
             output.gold_standard_prompt = gold_standard_prompt
             logger.info(f"Refinement complete: {gold_standard_prompt.certification.status.value}")
 
@@ -320,7 +347,10 @@ class StartupGenerationPipeline:
             if progress_callback is not None:
                 progress_callback("code_gen", 85, "Generating codebase")
             # Use the refined prompt's product_prompt for code generation
-            codebase = self.code_generator.generate(gold_standard_prompt.product_prompt, output_dir=self.output_dir, theme=self.theme)
+            _gs_prompt = gold_standard_prompt.product_prompt
+            _output_dir = self.output_dir
+            _theme = self.theme
+            codebase = await loop.run_in_executor(None, lambda: self.code_generator.generate(_gs_prompt, output_dir=_output_dir, theme=_theme))
 
             # Run Quality Assurance
             logger.info("Running Quality Assurance...")
