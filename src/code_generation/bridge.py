@@ -102,8 +102,12 @@ def run_v2_pipeline_thread(
             except Exception as e:
                 logger.warning("Could not set LLM provider '%s': %s", llm_provider, e)
 
-        # Run the async pipeline with progress streaming
+        # Run the async pipeline with progress streaming.
+        # The result is attached to the final "complete" event so we do NOT
+        # have to call pipeline.run() a second time (which would repeat all
+        # LLM calls).
         async def _run():
+            result = None
             async for progress in pipeline.run_with_progress(
                 idea_name=idea_name,
                 idea_description=full_description,
@@ -151,14 +155,12 @@ def run_v2_pipeline_thread(
                         "progress": progress.progress,
                     })
 
-            # Now get the final result
-            result = await pipeline.run(
-                idea_name=idea_name,
-                idea_description=full_description,
-                features=feature_list,
-                theme=theme,
-                max_fix_rounds=2,
-            )
+                # Grab the PipelineResult from the final event
+                if progress.phase == "complete":
+                    result = getattr(progress, "_pipeline_result", None)
+
+            if result is None:
+                raise RuntimeError("Pipeline completed without producing a result")
             return result
 
         # asyncio.run() is safe here — ThreadPoolExecutor threads have no event loop

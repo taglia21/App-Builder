@@ -1104,12 +1104,40 @@ Tech stack should be idiomatic for a modern SaaS — prefer the defaults unless 
         # ---- Description (prefer LLM summary, fall back to raw input) ----
         description = decomposition.get("summary") or idea_description
 
-        # ---- Guard: fall back to minimal spec if steps failed ----
+        # ---- Guard: fall back to minimal spec if steps produced too little ----
         if not entities and not routes and not pages:
             logger.warning(
                 "All LLM steps produced empty results — returning fallback spec"
             )
             return self._fallback_spec(idea_name, idea_description, features)
+
+        # Validate that the architect produced a usable spec.
+        # If entities have no fields, the code generator will produce empty models.
+        usable_entities = [e for e in entities if e.fields]
+        if not usable_entities:
+            logger.warning(
+                "Architect produced %d entities but none have fields — using fallback",
+                len(entities),
+            )
+            return self._fallback_spec(idea_name, idea_description, features)
+
+        # Ensure User entity exists (needed by auth system)
+        entity_names = {e.name.lower() for e in entities}
+        if "user" not in entity_names:
+            logger.info("Architect did not produce a User entity — adding a default one")
+            entities.insert(0, EntitySpec(
+                name="User",
+                description="Application user account.",
+                fields=[
+                    FieldSpec(name="email", type="string", required=True, description="Unique email address", validation_rules=["unique:true", "format:email"]),
+                    FieldSpec(name="full_name", type="string", required=True, description="Display name"),
+                    FieldSpec(name="role", type="string", required=True, description="User role", default="member"),
+                    FieldSpec(name="is_active", type="boolean", required=True, description="Whether the account is active", default="true"),
+                ],
+                relationships=[],
+                soft_delete=True,
+                timestamps=True,
+            ))
 
         return SystemSpec(
             app_name=idea_name,

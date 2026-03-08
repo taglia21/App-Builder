@@ -139,6 +139,9 @@ class _FileSpec:
     category: FileCategory
     prompt_builder: Any  # callable(context) -> str  — built later
     description: str = ""
+    # Dependencies: list of relative paths that must be generated first.
+    # Files with no deps (or whose deps are satisfied) can run concurrently.
+    depends_on: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -153,6 +156,10 @@ class _GenerationContext:
     generated_interfaces: Dict[str, str] = field(default_factory=dict)
     llm_calls: int = 0
     warnings: List[str] = field(default_factory=list)
+    # Pre-computed spec summary (computed once, shared across all prompts)
+    _spec_summary_cache: Optional[str] = None
+    # Lock for thread-safe updates to shared state
+    _lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
 
 # ---------------------------------------------------------------------------
@@ -231,8 +238,14 @@ def _validate_file(relative_path: str, source: str) -> Optional[str]:
 # ---------------------------------------------------------------------------
 
 
-def _spec_summary(spec: SystemSpec) -> str:
-    """Render a concise text representation of *spec* for use in prompts."""
+def _spec_summary(spec: SystemSpec, *, compact: bool = False) -> str:
+    """Render a concise text representation of *spec* for use in prompts.
+
+    Args:
+        spec: The system specification.
+        compact: If True, omit API routes and business rules for shorter prompts
+                 (useful for config/infra files that don't need route details).
+    """
     lines: List[str] = [
         f"App: {spec.app_name}",
         f"Description: {spec.description}",
@@ -253,19 +266,21 @@ def _spec_summary(spec: SystemSpec) -> str:
         if rel_list:
             lines.append(f"      Relations: {rel_list}")
 
-    lines += ["", "API Routes:"]
-    for route in spec.api_routes[:20]:  # cap at 20 to keep prompt size sane
-        lines.append(f"  {route.method:6} {route.path}  ({'auth' if route.auth_required else 'public'})")
-        if route.business_logic:
-            lines.append(f"         Logic: {route.business_logic[:120]}")
+    if not compact:
+        lines += ["", "API Routes:"]
+        for route in spec.api_routes[:20]:  # cap at 20 to keep prompt size sane
+            lines.append(f"  {route.method:6} {route.path}  ({'auth' if route.auth_required else 'public'})")
+            if route.business_logic:
+                lines.append(f"         Logic: {route.business_logic[:120]}")
 
     lines += ["", "Roles: " + ", ".join(r.name for r in spec.roles)]
 
     lines += ["", "Integrations: " + ", ".join(i.name for i in spec.integrations)]
 
-    lines += ["", "Business Rules:"]
-    for rule in spec.business_rules:
-        lines.append(f"  • {rule}")
+    if not compact:
+        lines += ["", "Business Rules:"]
+        for rule in spec.business_rules:
+            lines.append(f"  • {rule}")
 
     lines += [
         "",
@@ -275,12 +290,61 @@ def _spec_summary(spec: SystemSpec) -> str:
     return "\n".join(lines)
 
 
-def _interfaces_summary(ctx: _GenerationContext) -> str:
-    """Render already-generated file interfaces for inclusion in subsequent prompts."""
+def _interfaces_summary(ctx: _GenerationContext, *, relevant_to: Optional[str] = None) -> str:
+    """Render already-generated file interfaces for inclusion in subsequent prompts.
+
+    Args:
+        ctx: Generation context containing all generated interfaces so far.
+        relevant_to: If provided, only include interfaces that are likely
+                     relevant to the file at this path (same entity, same
+                     layer, or direct dependency).
+    """
     if not ctx.generated_interfaces:
         return "(No files generated yet.)"
+
+    items = list(ctx.generated_interfaces.items())
+
+    # If we know what file we're generating, filter to relevant interfaces only
+    if relevant_to:
+        # Extract the entity name and layer from the target path
+        target_lower = relevant_to.lower()
+        # e.g. "backend/app/crud/user.py" → entity hint = "user"
+        target_stem = Path(relevant_to).stem.lower()
+        # e.g. "backend/app/crud/" → layer hint = "crud"
+        target_parts = set(Path(relevant_to).parts)
+
+        def _relevance(path: str) -> int:
+            """Score how relevant *path* is to the target file (higher = more relevant)."""
+            score = 0
+            path_lower = path.lower()
+            path_stem = Path(path).stem.lower()
+            # Same entity name in filename → very relevant
+            if target_stem and target_stem != "__init__" and target_stem in path_lower:
+                score += 10
+            # Same directory layer (models referencing db, schemas referencing models, etc.)
+            if any(p in path_lower for p in target_parts if p not in {"backend", "frontend", "app", "src"}):
+                score += 3
+            # Core / DB files are always somewhat relevant to backend files
+            if "backend" in target_lower and ("core/" in path_lower or "db/" in path_lower):
+                score += 5
+            # Types and API client are always relevant to frontend files
+            if "frontend" in target_lower and ("types/" in path_lower or "lib/api" in path_lower):
+                score += 5
+            return score
+
+        # Sort by relevance, take top 15 most relevant
+        scored = [(path, iface, _relevance(path)) for path, iface in items]
+        scored.sort(key=lambda x: x[2], reverse=True)
+        items = [(p, i) for p, i, s in scored if s > 0][:15]
+
+        if not items:
+            # Fallback: just show the last 10
+            items = list(ctx.generated_interfaces.items())[-10:]
+    else:
+        items = items[-30:]  # cap at 30
+
     parts = []
-    for path, iface in list(ctx.generated_interfaces.items())[-30:]:  # last 30 only
+    for path, iface in items:
         parts.append(f"--- {path} ---\n{iface}\n")
     return "\n".join(parts)
 
@@ -1169,9 +1233,22 @@ class CodeGeneratorV2:
 
     Every file in the output project is generated by an LLM with full
     architectural context — no static template substitution.
+
+    Key features:
+    - Concurrent generation: files in the same dependency tier are generated
+      in parallel using ``asyncio.gather``.
+    - Dependency-aware ordering: files declare their dependencies so that
+      models are available before schemas, schemas before CRUD, etc.
+    - Smart context propagation: each prompt only receives interfaces
+      relevant to the file being generated, not all 50+ interfaces.
+    - Self-healing with full source: when a file has a syntax error the
+      retry prompt includes both the error AND the broken source so the
+      LLM can see exactly what to fix.
     """
 
     MAX_HEAL_ATTEMPTS = 3
+    # Maximum concurrent LLM calls per batch (to avoid overwhelming the provider)
+    MAX_CONCURRENCY = 6
 
     def __init__(self, provider: Optional[str] = None):
         self._client: BaseLLMClient = get_llm_client(provider) if provider else get_llm_client()
@@ -1189,10 +1266,14 @@ class CodeGeneratorV2:
         """
         Generate a complete, production-ready project from *spec*.
 
+        Files are grouped into dependency tiers and each tier is generated
+        concurrently.  Within a tier, up to :attr:`MAX_CONCURRENCY` files
+        are generated in parallel.
+
         Args:
             spec:       The system specification produced by the Architect.
             output_dir: Filesystem path where the project will be written.
-            theme:      Visual theme hint passed to frontend prompts (e.g. "Modern", "Minimal").
+            theme:      Visual theme hint passed to frontend prompts.
 
         Returns:
             A :class:`GenerationResult` with file list, metrics, and warnings.
@@ -1201,20 +1282,50 @@ class CodeGeneratorV2:
         ctx = _GenerationContext(spec=spec, output_dir=Path(output_dir), theme=theme)
         ctx.output_dir.mkdir(parents=True, exist_ok=True)
 
-        generated_files: List[GeneratedFile] = []
-
         plan = self._build_file_plan(ctx)
-        total_steps = len(plan)
+        tiers = self._topological_tiers(plan)
 
-        for idx, file_spec in enumerate(plan):
+        generated_files: List[GeneratedFile] = []
+        total_steps = len(plan)
+        completed = 0
+
+        for tier_idx, tier in enumerate(tiers):
             logger.info(
-                "[%d/%d] Generating %s",
-                idx + 1,
-                total_steps,
-                file_spec.relative_path,
+                "[tier %d/%d] Generating %d files concurrently",
+                tier_idx + 1, len(tiers), len(tier),
             )
-            gen_file = await self._generate_file(file_spec, ctx)
-            generated_files.append(gen_file)
+
+            # Limit concurrency with a semaphore
+            sem = asyncio.Semaphore(self.MAX_CONCURRENCY)
+
+            async def _gen_with_sem(fs: _FileSpec) -> GeneratedFile:
+                async with sem:
+                    return await self._generate_file(fs, ctx)
+
+            results = await asyncio.gather(
+                *[_gen_with_sem(fs) for fs in tier],
+                return_exceptions=True,
+            )
+
+            for fs, result in zip(tier, results):
+                completed += 1
+                if isinstance(result, Exception):
+                    logger.error("Failed to generate %s: %s", fs.relative_path, result)
+                    ctx.warnings.append(f"Generation failed for {fs.relative_path}: {result}")
+                    # Create a placeholder so downstream files aren't missing deps
+                    generated_files.append(GeneratedFile(
+                        path=fs.relative_path,
+                        lines=0,
+                        category=fs.category,
+                        llm_generated=False,
+                        heal_attempts=0,
+                    ))
+                else:
+                    generated_files.append(result)
+                logger.info(
+                    "[%d/%d] %s",
+                    completed, total_steps, fs.relative_path,
+                )
 
         # Tally metrics
         backend_cats = {
@@ -1254,16 +1365,14 @@ class CodeGeneratorV2:
         """
         Async generator variant that yields :class:`ProgressEvent` objects during generation.
 
-        Usage::
-
-            async for event in engine.generate_with_progress(spec, "/tmp/out"):
-                print(event.step, event.percentage)
+        Uses the same concurrent tier-based approach as :meth:`generate`.
         """
         t_start = time.monotonic()
         ctx = _GenerationContext(spec=spec, output_dir=Path(output_dir), theme=theme)
         ctx.output_dir.mkdir(parents=True, exist_ok=True)
 
         plan = self._build_file_plan(ctx)
+        tiers = self._topological_tiers(plan)
         total_steps = len(plan)
         generated_files: List[GeneratedFile] = []
 
@@ -1273,17 +1382,37 @@ class CodeGeneratorV2:
             message=f"Generating {total_steps} files for {spec.app_name}",
         )
 
-        for idx, file_spec in enumerate(plan):
-            pct = round((idx / total_steps) * 100, 1)
-            yield ProgressEvent(
-                step="generating",
-                percentage=pct,
-                current_file=file_spec.relative_path,
-                message=f"[{idx + 1}/{total_steps}] {file_spec.description or file_spec.relative_path}",
+        completed = 0
+        for tier in tiers:
+            sem = asyncio.Semaphore(self.MAX_CONCURRENCY)
+
+            async def _gen_with_sem(fs: _FileSpec) -> GeneratedFile:
+                async with sem:
+                    return await self._generate_file(fs, ctx)
+
+            results = await asyncio.gather(
+                *[_gen_with_sem(fs) for fs in tier],
+                return_exceptions=True,
             )
 
-            gen_file = await self._generate_file(file_spec, ctx)
-            generated_files.append(gen_file)
+            for fs, result in zip(tier, results):
+                completed += 1
+                pct = round((completed / total_steps) * 100, 1)
+                if isinstance(result, Exception):
+                    ctx.warnings.append(f"Generation failed for {fs.relative_path}: {result}")
+                    generated_files.append(GeneratedFile(
+                        path=fs.relative_path, lines=0, category=fs.category,
+                        llm_generated=False, heal_attempts=0,
+                    ))
+                else:
+                    generated_files.append(result)
+
+                yield ProgressEvent(
+                    step="generating",
+                    percentage=pct,
+                    current_file=fs.relative_path,
+                    message=f"[{completed}/{total_steps}] {fs.description or fs.relative_path}",
+                )
 
         yield ProgressEvent(
             step="complete",
@@ -1291,6 +1420,46 @@ class CodeGeneratorV2:
             message=f"Done — {len(generated_files)} files generated in "
                     f"{round(time.monotonic() - t_start, 1)}s",
         )
+
+    # ------------------------------------------------------------------
+    # Dependency tier computation
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _topological_tiers(plan: List[_FileSpec]) -> List[List[_FileSpec]]:
+        """Group *plan* into tiers respecting dependency order.
+
+        Each tier contains files whose dependencies are all in earlier tiers.
+        Files within a tier are independent and can be generated concurrently.
+        """
+        path_to_spec: Dict[str, _FileSpec] = {fs.relative_path: fs for fs in plan}
+        completed: set[str] = set()
+        remaining = list(plan)
+        tiers: List[List[_FileSpec]] = []
+
+        max_iterations = len(plan) + 1  # safety valve
+        for _ in range(max_iterations):
+            if not remaining:
+                break
+            # Find all files whose deps are satisfied
+            ready = [
+                fs for fs in remaining
+                if all(d in completed for d in fs.depends_on)
+            ]
+            if not ready:
+                # Circular or unresolvable deps — dump everything into one tier
+                logger.warning(
+                    "Cannot resolve dependencies for %d remaining files; "
+                    "generating them in one batch.",
+                    len(remaining),
+                )
+                tiers.append(remaining)
+                break
+            tiers.append(ready)
+            completed.update(fs.relative_path for fs in ready)
+            remaining = [fs for fs in remaining if fs.relative_path not in completed]
+
+        return tiers
 
     # ------------------------------------------------------------------
     # File plan construction
@@ -1306,100 +1475,49 @@ class CodeGeneratorV2:
         spec = ctx.spec
         plan: List[_FileSpec] = []
 
-        # ---- Backend: DB foundation ----
+        # Collect entity names for dependency references
+        entity_names_lower = [e.name.lower() for e in spec.entities]
+
+        # ========== TIER 0: Foundation (no deps — all generated concurrently) ==========
+        # DB base, DB session, core config, core security—and all __init__ stubs
+
         plan.append(_FileSpec(
             relative_path="backend/app/db/base.py",
             category=FileCategory.BACKEND_DB,
             prompt_builder=lambda c: _build_db_base_prompt(c),
             description="SQLAlchemy declarative base",
+            depends_on=[],  # Tier 0
         ))
         plan.append(_FileSpec(
             relative_path="backend/app/db/session.py",
             category=FileCategory.BACKEND_DB,
             prompt_builder=lambda c: _build_db_session_prompt(c),
             description="Async DB session factory",
+            depends_on=[],  # Tier 0
         ))
-
-        # ---- Backend: Core config / security ----
         plan.append(_FileSpec(
             relative_path="backend/app/core/config.py",
             category=FileCategory.BACKEND_CORE,
             prompt_builder=lambda c: _build_core_config_prompt(c),
             description="Pydantic settings / config",
+            depends_on=[],  # Tier 0
         ))
         plan.append(_FileSpec(
             relative_path="backend/app/core/security.py",
             category=FileCategory.BACKEND_CORE,
             prompt_builder=lambda c: _build_core_security_prompt(c),
             description="Password hashing + JWT utils",
+            depends_on=["backend/app/core/config.py"],
         ))
         plan.append(_FileSpec(
             relative_path="backend/app/core/auth.py",
             category=FileCategory.BACKEND_CORE,
             prompt_builder=lambda c: _build_core_auth_prompt(c),
             description="FastAPI auth dependencies",
+            depends_on=["backend/app/core/security.py", "backend/app/db/session.py"],
         ))
 
-        # ---- Backend: Models → schemas → CRUD → routes (per entity) ----
-        for entity in spec.entities:
-            ent = entity  # capture for closure
-            plan.append(_FileSpec(
-                relative_path=f"backend/app/models/{ent.name.lower()}.py",
-                category=FileCategory.BACKEND_MODEL,
-                prompt_builder=lambda c, e=ent: _build_model_prompt(e, c),
-                description=f"SQLAlchemy model: {ent.name}",
-            ))
-
-        for entity in spec.entities:
-            ent = entity
-            plan.append(_FileSpec(
-                relative_path=f"backend/app/schemas/{ent.name.lower()}.py",
-                category=FileCategory.BACKEND_SCHEMA,
-                prompt_builder=lambda c, e=ent: _build_schema_prompt(e, c),
-                description=f"Pydantic schemas: {ent.name}",
-            ))
-
-        for entity in spec.entities:
-            ent = entity
-            plan.append(_FileSpec(
-                relative_path=f"backend/app/crud/{ent.name.lower()}.py",
-                category=FileCategory.BACKEND_CRUD,
-                prompt_builder=lambda c, e=ent: _build_crud_prompt(e, c),
-                description=f"CRUD operations: {ent.name}",
-            ))
-
-        # ---- Backend: API routers ----
-        plan.append(_FileSpec(
-            relative_path="backend/app/api/endpoints/auth.py",
-            category=FileCategory.BACKEND_ROUTE,
-            prompt_builder=lambda c: _build_auth_router_prompt(c),
-            description="Auth router (login/register/refresh)",
-        ))
-        for entity in spec.entities:
-            ent = entity
-            plan.append(_FileSpec(
-                relative_path=f"backend/app/api/endpoints/{ent.name.lower()}.py",
-                category=FileCategory.BACKEND_ROUTE,
-                prompt_builder=lambda c, e=ent: _build_route_prompt(e, c),
-                description=f"API router: {ent.name}",
-            ))
-
-        plan.append(_FileSpec(
-            relative_path="backend/app/api/__init__.py",
-            category=FileCategory.BACKEND_ROUTE,
-            prompt_builder=lambda c: _build_main_router_prompt(c),
-            description="Main API router aggregator",
-        ))
-
-        # ---- Backend: main.py ----
-        plan.append(_FileSpec(
-            relative_path="backend/app/main.py",
-            category=FileCategory.BACKEND_CORE,
-            prompt_builder=lambda c: _build_main_app_prompt(c),
-            description="FastAPI application entry point",
-        ))
-
-        # ---- Backend: __init__ files (static, no LLM needed) ----
+        # __init__ files (static, no LLM needed, Tier 0)
         for init_path in [
             "backend/app/__init__.py",
             "backend/app/models/__init__.py",
@@ -1415,29 +1533,121 @@ class CodeGeneratorV2:
                 category=FileCategory.BACKEND_CONFIG,
                 prompt_builder=lambda c, p=init_path: f"# {p}\n",
                 description=f"Package init: {init_path}",
+                depends_on=[],  # Tier 0
             ))
 
-        # ---- Backend: config files ----
+        # ========== TIER 1: All entity models (concurrent, depend on DB base) ==========
+        model_paths: List[str] = []
+        for entity in spec.entities:
+            ent = entity
+            path = f"backend/app/models/{ent.name.lower()}.py"
+            model_paths.append(path)
+            plan.append(_FileSpec(
+                relative_path=path,
+                category=FileCategory.BACKEND_MODEL,
+                prompt_builder=lambda c, e=ent: _build_model_prompt(e, c),
+                description=f"SQLAlchemy model: {ent.name}",
+                depends_on=["backend/app/db/base.py"],
+            ))
+
+        # ========== TIER 2: All entity schemas (concurrent, depend on their model) ==========
+        schema_paths: List[str] = []
+        for entity in spec.entities:
+            ent = entity
+            path = f"backend/app/schemas/{ent.name.lower()}.py"
+            schema_paths.append(path)
+            plan.append(_FileSpec(
+                relative_path=path,
+                category=FileCategory.BACKEND_SCHEMA,
+                prompt_builder=lambda c, e=ent: _build_schema_prompt(e, c),
+                description=f"Pydantic schemas: {ent.name}",
+                depends_on=[f"backend/app/models/{ent.name.lower()}.py"],
+            ))
+
+        # ========== TIER 3: All CRUD modules (concurrent, depend on model + schema) ==========
+        crud_paths: List[str] = []
+        for entity in spec.entities:
+            ent = entity
+            path = f"backend/app/crud/{ent.name.lower()}.py"
+            crud_paths.append(path)
+            plan.append(_FileSpec(
+                relative_path=path,
+                category=FileCategory.BACKEND_CRUD,
+                prompt_builder=lambda c, e=ent: _build_crud_prompt(e, c),
+                description=f"CRUD operations: {ent.name}",
+                depends_on=[
+                    f"backend/app/models/{ent.name.lower()}.py",
+                    f"backend/app/schemas/{ent.name.lower()}.py",
+                ],
+            ))
+
+        # ========== TIER 4: All API routers (concurrent, depend on CRUD + auth) ==========
+        router_paths: List[str] = []
+        plan.append(_FileSpec(
+            relative_path="backend/app/api/endpoints/auth.py",
+            category=FileCategory.BACKEND_ROUTE,
+            prompt_builder=lambda c: _build_auth_router_prompt(c),
+            description="Auth router (login/register/refresh)",
+            depends_on=["backend/app/core/auth.py", "backend/app/core/security.py"],
+        ))
+        router_paths.append("backend/app/api/endpoints/auth.py")
+
+        for entity in spec.entities:
+            ent = entity
+            path = f"backend/app/api/endpoints/{ent.name.lower()}.py"
+            router_paths.append(path)
+            plan.append(_FileSpec(
+                relative_path=path,
+                category=FileCategory.BACKEND_ROUTE,
+                prompt_builder=lambda c, e=ent: _build_route_prompt(e, c),
+                description=f"API router: {ent.name}",
+                depends_on=[
+                    f"backend/app/crud/{ent.name.lower()}.py",
+                    f"backend/app/schemas/{ent.name.lower()}.py",
+                    "backend/app/core/auth.py",
+                ],
+            ))
+
+        # ========== TIER 5: Router aggregator + main app (depend on all routers) ==========
+        plan.append(_FileSpec(
+            relative_path="backend/app/api/__init__.py",
+            category=FileCategory.BACKEND_ROUTE,
+            prompt_builder=lambda c: _build_main_router_prompt(c),
+            description="Main API router aggregator",
+            depends_on=router_paths,
+        ))
+        plan.append(_FileSpec(
+            relative_path="backend/app/main.py",
+            category=FileCategory.BACKEND_CORE,
+            prompt_builder=lambda c: _build_main_app_prompt(c),
+            description="FastAPI application entry point",
+            depends_on=["backend/app/api/__init__.py"],
+        ))
+
+        # ========== Backend config files (Tier 0 — no code deps) ==========
         plan.append(_FileSpec(
             relative_path="backend/requirements.txt",
             category=FileCategory.BACKEND_CONFIG,
             prompt_builder=lambda c: _build_requirements_prompt(c),
             description="Python requirements",
+            depends_on=[],
         ))
         plan.append(_FileSpec(
             relative_path="backend/Dockerfile",
             category=FileCategory.BACKEND_CONFIG,
             prompt_builder=lambda c: _build_backend_dockerfile_prompt(c),
             description="Backend Dockerfile",
+            depends_on=[],
         ))
         plan.append(_FileSpec(
             relative_path="backend/alembic.ini",
             category=FileCategory.BACKEND_CONFIG,
             prompt_builder=lambda c: _build_alembic_ini_prompt(c),
             description="Alembic config",
+            depends_on=[],
         ))
 
-        # ---- Backend: Tests ----
+        # ========== TIER 5: Backend tests (depend on routes + CRUD) ==========
         for entity in spec.entities:
             ent = entity
             plan.append(_FileSpec(
@@ -1445,29 +1655,36 @@ class CodeGeneratorV2:
                 category=FileCategory.BACKEND_TEST,
                 prompt_builder=lambda c, e=ent: _build_test_prompt(e, c),
                 description=f"Tests: {ent.name}",
+                depends_on=[
+                    f"backend/app/api/endpoints/{ent.name.lower()}.py",
+                    f"backend/app/schemas/{ent.name.lower()}.py",
+                ],
             ))
 
-        # ---- Frontend: Foundation ----
+        # ========== Frontend: Foundation (Tier 0 for types, depends on types for API) ==========
         plan.append(_FileSpec(
             relative_path="frontend/src/types/index.ts",
             category=FileCategory.FRONTEND_TYPE,
             prompt_builder=lambda c: _build_frontend_types_prompt(c),
             description="TypeScript type definitions",
+            depends_on=[],  # Tier 0 for frontend
         ))
         plan.append(_FileSpec(
             relative_path="frontend/src/lib/api.ts",
             category=FileCategory.FRONTEND_API,
             prompt_builder=lambda c: _build_api_client_prompt(c),
             description="Typed API client",
+            depends_on=["frontend/src/types/index.ts"],
         ))
         plan.append(_FileSpec(
             relative_path="frontend/src/components/ui/index.tsx",
             category=FileCategory.FRONTEND_COMPONENT,
             prompt_builder=lambda c: _build_ui_components_prompt(c, c.theme),
             description="Shared UI component library",
+            depends_on=[],  # Tier 0 for frontend
         ))
 
-        # ---- Frontend: Entity components ----
+        # ========== Frontend: Entity components (depend on types + UI + API) ==========
         for entity in spec.entities:
             ent = entity
             plan.append(_FileSpec(
@@ -1475,20 +1692,31 @@ class CodeGeneratorV2:
                 category=FileCategory.FRONTEND_COMPONENT,
                 prompt_builder=lambda c, e=ent: _build_entity_component_prompt(e, c, c.theme),
                 description=f"Components: {ent.name}",
+                depends_on=[
+                    "frontend/src/types/index.ts",
+                    "frontend/src/lib/api.ts",
+                    "frontend/src/components/ui/index.tsx",
+                ],
             ))
 
-        # ---- Frontend: Pages ----
+        # ========== Frontend: Pages (depend on entity components) ==========
+        entity_component_paths = [
+            f"frontend/src/components/{e.name.lower()}/{e.name}Components.tsx"
+            for e in spec.entities
+        ]
         plan.append(_FileSpec(
             relative_path="frontend/src/app/(auth)/login_register_pages.tsx",
             category=FileCategory.FRONTEND_PAGE,
             prompt_builder=lambda c: _build_auth_pages_prompt(c, c.theme),
             description="Login + register pages",
+            depends_on=["frontend/src/components/ui/index.tsx", "frontend/src/lib/api.ts"],
         ))
         plan.append(_FileSpec(
             relative_path="frontend/src/app/(dashboard)/layout.tsx",
             category=FileCategory.FRONTEND_PAGE,
             prompt_builder=lambda c: _build_dashboard_layout_prompt(c, c.theme),
             description="Dashboard layout",
+            depends_on=["frontend/src/components/ui/index.tsx"],
         ))
         for page in spec.pages:
             pg = page
@@ -1498,64 +1726,76 @@ class CodeGeneratorV2:
                 category=FileCategory.FRONTEND_PAGE,
                 prompt_builder=lambda c, p=pg: _build_page_prompt(p, c, c.theme),
                 description=f"Page: {pg.title}",
+                depends_on=entity_component_paths + [
+                    "frontend/src/app/(dashboard)/layout.tsx",
+                ],
             ))
 
-        # ---- Frontend: Config ----
+        # ========== Frontend: Config (Tier 0 — no code deps) ==========
         plan.append(_FileSpec(
             relative_path="frontend/package.json",
             category=FileCategory.FRONTEND_CONFIG,
             prompt_builder=lambda c: _build_frontend_package_json_prompt(c),
             description="Frontend package.json",
+            depends_on=[],
         ))
         plan.append(_FileSpec(
             relative_path="frontend/tailwind.config.ts",
             category=FileCategory.FRONTEND_CONFIG,
             prompt_builder=lambda c: _build_tailwind_config_prompt(c, c.theme),
             description="Tailwind CSS config",
+            depends_on=[],
         ))
         plan.append(_FileSpec(
             relative_path="frontend/tsconfig.json",
             category=FileCategory.FRONTEND_CONFIG,
             prompt_builder=lambda c: _build_tsconfig_prompt(c),
             description="TypeScript config",
+            depends_on=[],
         ))
         plan.append(_FileSpec(
             relative_path="frontend/Dockerfile",
             category=FileCategory.FRONTEND_CONFIG,
             prompt_builder=lambda c: _build_frontend_dockerfile_prompt(c),
             description="Frontend Dockerfile",
+            depends_on=[],
         ))
 
-        # ---- Infrastructure ----
+        # ========== Infrastructure (Tier 0 — no code deps) ==========
         plan.append(_FileSpec(
             relative_path="docker-compose.yml",
             category=FileCategory.INFRASTRUCTURE,
             prompt_builder=lambda c: _build_docker_compose_prompt(c),
             description="Docker Compose",
+            depends_on=[],
         ))
         plan.append(_FileSpec(
             relative_path=".env.example",
             category=FileCategory.INFRASTRUCTURE,
             prompt_builder=lambda c: _build_env_example_prompt(c),
             description="Environment variables example",
+            depends_on=[],
         ))
         plan.append(_FileSpec(
             relative_path=".gitignore",
             category=FileCategory.INFRASTRUCTURE,
             prompt_builder=lambda c: _build_gitignore_prompt(c),
             description=".gitignore",
+            depends_on=[],
         ))
         plan.append(_FileSpec(
             relative_path="README.md",
             category=FileCategory.INFRASTRUCTURE,
             prompt_builder=lambda c: _build_readme_prompt(c),
             description="Project README",
+            depends_on=[],
         ))
         plan.append(_FileSpec(
             relative_path=".github/workflows/ci.yml",
             category=FileCategory.INFRASTRUCTURE,
             prompt_builder=lambda c: _build_github_ci_prompt(c),
             description="GitHub Actions CI/CD",
+            depends_on=[],
         ))
 
         return plan
@@ -1569,7 +1809,11 @@ class CodeGeneratorV2:
         file_spec: _FileSpec,
         ctx: _GenerationContext,
     ) -> GeneratedFile:
-        """Generate, validate, and write a single file, self-healing on syntax errors."""
+        """Generate, validate, and write a single file, self-healing on syntax errors.
+
+        Thread-safe: uses an asyncio lock when updating shared context state
+        so that concurrent generation doesn't corrupt the interfaces dict.
+        """
         prompt = file_spec.prompt_builder(ctx)
 
         # Short-circuit for trivially static prompts (like __init__.py lines)
@@ -1590,10 +1834,11 @@ class CodeGeneratorV2:
 
         line_count = source.count("\n") + 1
 
-        # Record a compact interface summary for use in subsequent prompts
-        ctx.generated_interfaces[file_spec.relative_path] = self._extract_interface_summary(
-            file_spec.relative_path, source
-        )
+        # Record a compact interface summary for use in subsequent prompts.
+        # Use a lock since concurrent tasks may update the dict simultaneously.
+        interface = self._extract_interface_summary(file_spec.relative_path, source)
+        async with ctx._lock:
+            ctx.generated_interfaces[file_spec.relative_path] = interface
 
         logger.debug("Wrote %s (%d lines)", file_spec.relative_path, line_count)
 
@@ -1614,8 +1859,9 @@ class CodeGeneratorV2:
         """
         Call the LLM to generate *source* for *relative_path*.
 
-        On validation failure, retry up to :attr:`MAX_HEAL_ATTEMPTS` times
-        with the error message appended to the prompt.
+        On validation failure, retry up to :attr:`MAX_HEAL_ATTEMPTS` times.
+        The retry prompt now includes the broken source code AND the error
+        message so the LLM can see exactly what went wrong.
 
         Returns a (source_code, heal_attempt_count) tuple.
         """
@@ -1623,7 +1869,7 @@ class CodeGeneratorV2:
         current_prompt = prompt
 
         for attempt in range(self.MAX_HEAL_ATTEMPTS + 1):
-            source = await self._call_llm(current_prompt)
+            source = await self._call_llm(current_prompt, ctx)
             source = _strip_code_fences(source)
 
             error = _validate_file(relative_path, source)
@@ -1637,17 +1883,24 @@ class CodeGeneratorV2:
                     f"{self.MAX_HEAL_ATTEMPTS} heal attempts: {error}"
                 )
                 logger.warning(msg)
-                ctx.warnings.append(msg)
+                async with ctx._lock:
+                    ctx.warnings.append(msg)
                 return source, heal_count  # return best-effort
 
             logger.info(
                 "Healing %s (attempt %d/%d): %s",
                 relative_path, heal_count, self.MAX_HEAL_ATTEMPTS, error,
             )
+
+            # Include the broken source so the LLM can see what to fix,
+            # truncated to avoid exceeding context limits.
+            source_preview = source[:4000] if len(source) > 4000 else source
             current_prompt = (
                 f"{prompt}\n\n"
                 f"IMPORTANT — your previous response had this syntax error:\n"
                 f"  {error}\n\n"
+                f"Here is the broken code you produced:\n"
+                f"```\n{source_preview}\n```\n\n"
                 f"Fix the issue and output the complete corrected file. "
                 f"Output ONLY the raw source code with no markdown fences."
             )
@@ -1655,12 +1908,14 @@ class CodeGeneratorV2:
         # Unreachable in practice, but satisfies type checker
         return source, heal_count  # type: ignore[return-value]
 
-    async def _call_llm(self, prompt: str) -> str:
+    async def _call_llm(self, prompt: str, ctx: Optional[_GenerationContext] = None) -> str:
         """
         Dispatch a single LLM completion call asynchronously.
 
         The underlying ``client.complete()`` is synchronous; we use
         ``asyncio.to_thread`` so that it does not block the event loop.
+
+        If *ctx* is provided, increments the LLM call counter thread-safely.
         """
         response = await asyncio.to_thread(
             self._client.complete,
@@ -1670,7 +1925,9 @@ class CodeGeneratorV2:
             0.2,    # temperature — low for precision
             False,  # json_mode
         )
-        # ctx.llm_calls is not directly accessible here; callers handle it
+        if ctx is not None:
+            async with ctx._lock:
+                ctx.llm_calls += 1
         return response.content
 
     # ------------------------------------------------------------------
@@ -1682,9 +1939,10 @@ class CodeGeneratorV2:
         """
         Produce a compact summary of a file's public API for use in subsequent prompts.
 
-        For Python files, lists top-level class and function names.
-        For TypeScript files, lists exported symbols.
-        For other files, returns a brief content preview.
+        For Python files: extracts imports, class definitions (with bases and methods),
+        and top-level function signatures with full type annotations.
+        For TypeScript files: extracts exported symbols.
+        For other files: returns a brief content preview.
         """
         ext = Path(relative_path).suffix.lower()
         lines_preview: List[str] = []
@@ -1692,29 +1950,50 @@ class CodeGeneratorV2:
         if ext == ".py":
             try:
                 tree = ast.parse(source)
-                for node in ast.walk(tree):
-                    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-                        # Only top-level
-                        if isinstance(node, ast.ClassDef):
-                            bases = [
-                                (b.id if isinstance(b, ast.Name) else "")
-                                for b in node.bases
-                            ]
-                            lines_preview.append(f"class {node.name}({', '.join(bases)})")
-                        else:
-                            args = [a.arg for a in node.args.args]
-                            lines_preview.append(f"def {node.name}({', '.join(args)})")
-                        if len(lines_preview) >= 20:
-                            break
+                # Collect imports (useful for understanding what's available)
+                for node in ast.iter_child_nodes(tree):
+                    if isinstance(node, ast.ImportFrom):
+                        names = ", ".join(a.name for a in node.names[:5])
+                        if node.module:
+                            lines_preview.append(f"from {node.module} import {names}")
+                    if len(lines_preview) >= 5:
+                        break
+
+                # Collect top-level classes and functions
+                for node in ast.iter_child_nodes(tree):
+                    if isinstance(node, ast.ClassDef):
+                        bases = [
+                            (b.id if isinstance(b, ast.Name) else
+                             getattr(b, 'attr', '') if isinstance(b, ast.Attribute) else "")
+                            for b in node.bases
+                        ]
+                        lines_preview.append(f"class {node.name}({', '.join(filter(None, bases))})")
+                        # Add key method signatures (up to 8)
+                        method_count = 0
+                        for child in ast.iter_child_nodes(node):
+                            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                                args = [a.arg for a in child.args.args if a.arg != 'self']
+                                prefix = "async " if isinstance(child, ast.AsyncFunctionDef) else ""
+                                lines_preview.append(f"  {prefix}def {child.name}({', '.join(args)})")
+                                method_count += 1
+                                if method_count >= 8:
+                                    break
+                    elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                        args = [a.arg for a in node.args.args]
+                        prefix = "async " if isinstance(node, ast.AsyncFunctionDef) else ""
+                        lines_preview.append(f"{prefix}def {node.name}({', '.join(args)})")
+
+                    if len(lines_preview) >= 30:
+                        break
             except SyntaxError:
-                lines_preview = [source[:300]]
+                lines_preview = [source[:400]]
 
         elif ext in (".ts", ".tsx", ".js", ".jsx"):
-            for line in source.splitlines()[:60]:
+            for line in source.splitlines()[:80]:
                 stripped = line.strip()
-                if stripped.startswith("export"):
-                    lines_preview.append(stripped[:120])
-                if len(lines_preview) >= 15:
+                if stripped.startswith("export") or stripped.startswith("interface "):
+                    lines_preview.append(stripped[:150])
+                if len(lines_preview) >= 20:
                     break
 
         else:

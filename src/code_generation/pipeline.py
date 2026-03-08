@@ -263,11 +263,17 @@ class GenerationPipeline:
 
         Yields :class:`PipelineProgress` events as each phase advances.
         The final event has ``phase="complete"`` and ``progress=100``.
+        The final event also carries a ``result`` attribute (a full
+        :class:`PipelineResult`) so callers can use it directly without
+        running the pipeline a second time.
 
         Usage::
 
+            result = None
             async for event in pipeline.run_with_progress("MyApp", "An app that..."):
                 print(event.phase, event.progress, event.message)
+                if event.phase == "complete":
+                    result = event.result
 
         Raises:
             RuntimeError: If any mandatory pipeline step fails.
@@ -308,6 +314,8 @@ class GenerationPipeline:
 
         # ----------------------------------------------------------------
         # Phase: generate (20–70 %)
+        # Uses generate() directly (single pass) instead of the old
+        # generate_with_progress() + generate() double-run pattern.
         # ----------------------------------------------------------------
         yield PipelineProgress(
             phase="generate",
@@ -316,49 +324,6 @@ class GenerationPipeline:
             message="LLM-powered file generation beginning",
         )
 
-        # Collect events from the engine's progress stream
-        files_done = 0
-        total_files_estimate = 0
-        last_gen_progress = 21
-
-        gen_result_holder: List[GenerationResult] = []
-
-        async def _run_generation() -> None:
-            async for event in self.generator.generate_with_progress(
-                spec=spec,
-                output_dir=str(output_dir),
-                theme=theme,
-            ):
-                nonlocal files_done, total_files_estimate, last_gen_progress
-                # ProgressEvent from engine_v2 has .step, .percentage, .current_file
-                files_done = getattr(event, "files_done", files_done)
-                total_files_estimate = getattr(event, "total_files", total_files_estimate)
-                # Map engine percentage (0–100) → pipeline 21–70
-                mapped = int(21 + (event.percentage / 100) * 49)
-                last_gen_progress = max(last_gen_progress, mapped)
-
-        # We need to yield progress AND collect results, so run generation
-        # in a background task while we synthesise progress ticks.
-        gen_task = asyncio.create_task(_run_generation())
-
-        # Poll for completion, yielding progress updates every 0.5 s
-        while not gen_task.done():
-            await asyncio.sleep(0.5)
-            yield PipelineProgress(
-                phase="generate",
-                step="Generating files",
-                progress=last_gen_progress,
-                message=f"Generating project files…",
-                files_generated=files_done,
-                total_files=total_files_estimate,
-            )
-
-        # Retrieve any exception
-        exc = gen_task.exception()
-        if exc:
-            raise RuntimeError(f"Code generation failed: {exc}") from exc
-
-        # Now do the actual generate() call to get the GenerationResult
         generation: GenerationResult = await self.generator.generate(
             spec=spec,
             output_dir=str(output_dir),
@@ -412,13 +377,13 @@ class GenerationPipeline:
             total_files=generation.total_files,
         )
 
-        _critic_report_holder: List[Optional[dict]] = [None]
+        critic_report_dict: Optional[dict] = None
         try:
             _cr = await self.critic_panel.run(
                 output_dir=str(output_dir),
                 spec=spec,
             )
-            _critic_report_holder[0] = _cr.to_dict()
+            critic_report_dict = _cr.to_dict()
             logger.info(
                 "[pipeline] Critic panel complete — overall_score=%d, critical_issues=%d",
                 _cr.overall_score,
@@ -481,7 +446,20 @@ class GenerationPipeline:
         else:
             status = "failed"
 
-        yield PipelineProgress(
+        # Build the full PipelineResult and attach it to the final event
+        # so callers never have to re-run the pipeline.
+        pipeline_result = PipelineResult(
+            spec=spec,
+            generation=generation,
+            quality=quality_report,
+            fixes_applied=fixes_total,
+            output_path=str(output_dir.resolve()),
+            total_time_seconds=total_time,
+            status=status,
+            critic_report=critic_report_dict,
+        )
+
+        final_event = PipelineProgress(
             phase="complete",
             step="Pipeline complete",
             progress=100,
@@ -492,8 +470,11 @@ class GenerationPipeline:
             ),
             files_generated=generation.total_files,
             total_files=generation.total_files,
-            critic_report=_critic_report_holder[0],
+            critic_report=critic_report_dict,
         )
+        # Attach the result as an extra attribute so callers can grab it.
+        final_event._pipeline_result = pipeline_result  # type: ignore[attr-defined]
+        yield final_event
 
     # ------------------------------------------------------------------
     # Helpers
