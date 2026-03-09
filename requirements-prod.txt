@@ -58,9 +58,9 @@ strawberry-graphql[fastapi]~=0.216.0
 # CSRF protection
 starlette-csrf~=2.0.0
 
-# Intelligence engine (top-level imports in src/intelligence/processor.py)
-scikit-learn~=1.3.0
-textblob~=0.17.0
+# Intelligence engine (optional — guarded by try/except in processor.py)
+# scikit-learn and textblob removed from prod to avoid Cython build failures
+# on minimal deploy environments. Clustering & sentiment gracefully degrade.
 
 # Optional: monitoring (lazy import)
 sentry-sdk~=1.39.0
