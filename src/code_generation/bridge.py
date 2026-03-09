@@ -15,7 +15,7 @@ import os
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +28,7 @@ def run_v2_pipeline_thread(
     target_users: Optional[str] = None,
     features: Optional[str] = None,
     monetization: Optional[str] = None,
+    customization: Optional[Dict[str, Any]] = None,
 ) -> None:
     """Run the v2 GenerationPipeline in a worker thread.
 
@@ -70,6 +71,9 @@ def run_v2_pipeline_thread(
             description_parts.append(f"Target users: {target_users}")
         if monetization:
             description_parts.append(f"Monetization: {monetization}")
+        # Include extra instructions from customization in the description
+        if customization and customization.get("extra_instructions"):
+            description_parts.append(f"Additional requirements: {customization['extra_instructions']}")
         full_description = "\n".join(description_parts)
 
         # Parse features from newline/comma separated string
@@ -114,6 +118,7 @@ def run_v2_pipeline_thread(
                 features=feature_list,
                 theme=theme,
                 max_fix_rounds=2,
+                customization=customization,
             ):
                 # Map v2 phases to build_manager stages
                 stage_map = {

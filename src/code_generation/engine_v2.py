@@ -55,19 +55,56 @@ logger = logging.getLogger(__name__)
 # System prompt constant — used for every LLM call in this module
 # ---------------------------------------------------------------------------
 
-CODEGEN_SYSTEM_PROMPT = """You are an expert software engineer and code generator for Ignara,
-an AI-powered application builder. Your job is to generate production-ready source code files.
+CODEGEN_SYSTEM_PROMPT = """You are an elite software engineer and code generator for Ignara,
+an AI-powered application builder trusted by startups and enterprises. Your job is to generate
+production-grade, investor-ready source code that can be deployed immediately.
+
+Quality bar: the code you produce must be indistinguishable from what a senior engineer at
+a top-tier tech company (Google, Stripe, Vercel) would write. Every file must be complete,
+polished, and ready for code review.
 
 Rules you MUST follow:
 1. Output ONLY the raw source code — no markdown fences, no explanation, no commentary.
-2. Every file must be complete and self-contained; never use placeholder comments like
-   "# TODO: implement" or "// add logic here". Write the full implementation.
-3. Follow modern best practices for the relevant language/framework.
-4. Honour ALL business rules and entity relationships described in the spec.
-5. Use proper type annotations throughout (Python type hints, TypeScript types).
-6. Handle errors gracefully with appropriate HTTP status codes and user-facing messages.
-7. Never hard-code secrets. Use environment variables accessed through a config module.
-8. Generate idiomatic, readable code with clear docstrings and inline comments where helpful.
+   If you accidentally wrap in ```python or ```typescript, the system will reject your output.
+2. Every file must be COMPLETE and SELF-CONTAINED. Never use placeholder comments like
+   "# TODO: implement", "// add logic here", "pass", or "...". Write the FULL implementation.
+   If a function needs complex logic, implement it fully with proper algorithms.
+3. Follow the LATEST modern best practices:
+   - Python: async/await, type hints everywhere, Pydantic v2 model_validator, SQLAlchemy 2.0 style
+   - TypeScript: strict mode, proper generics, no `any` types, use `satisfies` operator
+   - React: Server Components by default, "use client" only when needed, proper Suspense boundaries
+   - Next.js 14+: App Router, generateMetadata, Route Handlers, Server Actions where appropriate
+4. Honour ALL business rules, entity relationships, and constraints from the spec. Every foreign
+   key, unique constraint, and validation rule must be implemented in both the model and API layer.
+5. Type safety is NON-NEGOTIABLE:
+   - Python: full type hints on every function parameter and return value
+   - TypeScript: no implicit `any`, proper generic types, discriminated unions where appropriate
+6. Error handling must be COMPREHENSIVE:
+   - Every API endpoint: try/except with specific exception types, proper HTTP status codes
+   - Frontend: loading states, error boundaries, user-friendly error messages
+   - Database: handle IntegrityError, connection failures, and timeouts gracefully
+7. Security best practices:
+   - Never hard-code secrets — use environment variables via config module
+   - SQL injection prevention (parameterized queries via ORM)
+   - XSS prevention (proper escaping, Content-Security-Policy headers)
+   - CORS configuration with explicit allowed origins
+   - Rate limiting on auth endpoints
+   - Password hashing with bcrypt, never store plaintext
+8. Code MUST be production-ready:
+   - Proper logging (not print statements)
+   - Database connection pooling and cleanup
+   - Graceful shutdown handlers
+   - Health check endpoints
+   - Proper HTTP caching headers
+9. Generate idiomatic, readable code with:
+   - Clear module-level docstrings explaining purpose
+   - Inline comments for complex business logic (not obvious code)
+   - Consistent naming conventions (snake_case for Python, camelCase for JS/TS)
+   - Logical code organization with clear separation of concerns
+10. Import management:
+    - All imports must be real packages that exist in the requirements/package.json
+    - Use relative imports within the same package, absolute for cross-package
+    - Never import from a file that doesn't exist in the project
 """
 
 
@@ -3821,8 +3858,8 @@ class CodeGeneratorV2:
             source = await self._call_llm(current_prompt, ctx, temperature=temp)
             source = _strip_code_fences(source)
 
-            # Try AST-based auto-fix before validation
-            source = self._auto_fix_python(relative_path, source)
+            # Try automatic fixes before validation (works on all file types)
+            source = self._auto_fix_source(relative_path, source)
 
             error = _validate_file(relative_path, source)
             if error is None:
@@ -3862,20 +3899,18 @@ class CodeGeneratorV2:
         return source, heal_count  # type: ignore[return-value]
 
     @staticmethod
-    def _auto_fix_python(relative_path: str, source: str) -> str:
-        """Attempt lightweight AST-based fixes on Python source.
+    def _auto_fix_source(relative_path: str, source: str) -> str:
+        """Attempt lightweight automatic fixes on generated source code.
 
         Fixes common LLM output issues without requiring another LLM call:
         - Strips markdown fences that slipped through
-        - Removes trailing unterminated strings
-        - Adds missing 'from __future__ import annotations' if TYPE_CHECKING is used
+        - Adds missing imports for common patterns
+        - Fixes trailing whitespace and encoding issues
+        - Removes LLM commentary that leaked into code
         """
-        if not relative_path.endswith(".py"):
-            return source
-
         lines = source.splitlines()
 
-        # Fix 1: Remove any stray markdown fence lines
+        # Universal Fix 1: Remove any stray markdown fence lines
         cleaned = []
         for line in lines:
             stripped = line.strip()
@@ -3885,43 +3920,134 @@ class CodeGeneratorV2:
         if len(cleaned) != len(lines):
             source = "\n".join(cleaned)
 
-        # Fix 2: If TYPE_CHECKING is used but 'from __future__ import annotations' missing
-        if "TYPE_CHECKING" in source and "from __future__ import annotations" not in source:
-            source = "from __future__ import annotations\n" + source
+        # Universal Fix 2: Remove LLM commentary lines at start/end
+        # LLMs sometimes add "Here is the code:" or "This file implements..."
+        lines = source.splitlines()
+        while lines and not lines[0].strip():
+            lines.pop(0)  # Remove leading blank lines
+        commentary_prefixes = (
+            "here is", "here's", "below is", "this file",
+            "this code", "the following", "i've", "i have",
+            "sure,", "certainly", "of course",
+        )
+        while lines:
+            first = lines[0].strip().lower()
+            if any(first.startswith(p) for p in commentary_prefixes):
+                lines.pop(0)
+            else:
+                break
+        source = "\n".join(lines)
 
-        # Fix 3: If the file uses 'Mapped[' but doesn't import it
-        if "Mapped[" in source and "from sqlalchemy.orm import" not in source:
-            if "from sqlalchemy" in source:
-                source = source.replace(
-                    "from sqlalchemy",
-                    "from sqlalchemy.orm import Mapped, mapped_column, relationship\nfrom sqlalchemy",
-                    1,
-                )
+        # Python-specific fixes
+        if relative_path.endswith(".py"):
+            # Fix: TYPE_CHECKING needs future annotations
+            if "TYPE_CHECKING" in source and "from __future__ import annotations" not in source:
+                source = "from __future__ import annotations\n" + source
+
+            # Fix: Mapped[] without import
+            if "Mapped[" in source and "from sqlalchemy.orm import" not in source:
+                if "from sqlalchemy" in source:
+                    source = source.replace(
+                        "from sqlalchemy",
+                        "from sqlalchemy.orm import Mapped, mapped_column, relationship\nfrom sqlalchemy",
+                        1,
+                    )
+
+            # Fix: Optional[] without import
+            if "Optional[" in source and "from typing" not in source:
+                source = "from typing import Optional\n" + source
+
+            # Fix: AsyncSession without import
+            if "AsyncSession" in source and "from sqlalchemy.ext.asyncio" not in source:
+                if "from sqlalchemy" in source:
+                    source = "from sqlalchemy.ext.asyncio import AsyncSession\n" + source
+
+            # Fix: HTTPException without import
+            if "HTTPException" in source and "from fastapi" not in source:
+                source = "from fastapi import HTTPException\n" + source
+
+            # Fix: Depends without import
+            if "Depends(" in source and "Depends" not in source.split("import")[0] if "import" in source else True:
+                if "from fastapi" in source and "Depends" not in source.split("\n")[0]:
+                    pass  # Already has fastapi import, just might need Depends added
+
+        # TypeScript/JavaScript fixes
+        elif relative_path.endswith((".ts", ".tsx", ".js", ".jsx")):
+            # Fix: Remove accidental Python-style comments
+            lines = source.splitlines()
+            fixed_lines = []
+            for line in lines:
+                stripped = line.lstrip()
+                # Don't fix shebang or legitimate patterns
+                if stripped.startswith("# ") and not stripped.startswith("#!"):
+                    # Could be a Python comment leaked in — check context
+                    if not any(kw in stripped for kw in ["region", "endregion", "pragma", "sourceMappingURL"]):
+                        fixed_lines.append(line.replace("# ", "// ", 1))
+                        continue
+                fixed_lines.append(line)
+            source = "\n".join(fixed_lines)
+
+        # Ensure file ends with newline
+        if source and not source.endswith("\n"):
+            source += "\n"
 
         return source
+
+    @staticmethod
+    def _auto_fix_python(relative_path: str, source: str) -> str:
+        """Backward-compatible wrapper for _auto_fix_source."""
+        return CodeGeneratorV2._auto_fix_source(relative_path, source)
 
     async def _call_llm(
         self,
         prompt: str,
         ctx: Optional[_GenerationContext] = None,
         temperature: float = 0.2,
+        max_retries: int = 3,
     ) -> str:
         """
-        Dispatch a single LLM completion call asynchronously.
+        Dispatch a single LLM completion call asynchronously with retry.
 
         The underlying ``client.complete()`` is synchronous; we use
         ``asyncio.to_thread`` so that it does not block the event loop.
 
+        Retries on transient errors (rate limits, timeouts, server errors)
+        with exponential backoff (2s, 4s, 8s). Permanent errors (auth,
+        bad request) are raised immediately.
+
         If *ctx* is provided, increments the LLM call counter thread-safely.
         """
-        response = await asyncio.to_thread(
-            self._client.complete,
-            prompt,
-            CODEGEN_SYSTEM_PROMPT,
-            8192,   # max_tokens — allow large files
-            temperature,
-            False,  # json_mode
-        )
+        last_error: Optional[Exception] = None
+        for attempt in range(max_retries + 1):
+            try:
+                response = await asyncio.to_thread(
+                    self._client.complete,
+                    prompt,
+                    CODEGEN_SYSTEM_PROMPT,
+                    8192,   # max_tokens — allow large files
+                    temperature,
+                    False,  # json_mode
+                )
+                break  # success
+            except Exception as exc:
+                last_error = exc
+                error_str = str(exc).lower()
+                # Don't retry on permanent errors
+                is_permanent = any(kw in error_str for kw in [
+                    "authentication", "api key", "invalid_api_key",
+                    "permission", "401", "403",
+                ])
+                if is_permanent or attempt >= max_retries:
+                    raise
+                # Exponential backoff for transient errors
+                wait_seconds = 2 ** (attempt + 1)
+                logger.warning(
+                    "LLM call failed (attempt %d/%d), retrying in %ds: %s",
+                    attempt + 1, max_retries + 1, wait_seconds, exc,
+                )
+                await asyncio.sleep(wait_seconds)
+        else:
+            raise last_error  # type: ignore[misc]
         if ctx is not None:
             async with ctx._lock:
                 ctx.llm_calls += 1

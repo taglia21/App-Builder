@@ -166,6 +166,7 @@ class BuildRequest(BaseModel):
     monetization: Optional[str] = None
     theme: str = Field(default="Modern")
     llm_provider: str = Field(default="auto")
+    customization: Optional[Dict[str, Any]] = None
 
 
 class BuildResponse(BaseModel):
@@ -1151,6 +1152,7 @@ def _run_pipeline_thread(
     target_users: str = "",
     features: str = "",
     monetization: str = "",
+    customization: Optional[Dict[str, Any]] = None,
 ) -> None:
     """Run the v2 AI-powered pipeline in a worker thread."""
     from src.code_generation.bridge import run_v2_pipeline_thread
@@ -1162,6 +1164,7 @@ def _run_pipeline_thread(
         target_users=target_users,
         features=features,
         monetization=monetization,
+        customization=customization,
     )
 
 
@@ -1296,6 +1299,7 @@ async def api_create_build(data: BuildRequest) -> BuildResponse:
         data.target_users or "",
         data.features or "",
         data.monetization or "",
+        data.customization,
     )
 
     return BuildResponse(

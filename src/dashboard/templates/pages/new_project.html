@@ -183,22 +183,45 @@
         </button>
     </div>
 
-    <!-- Step 2: Generation Progress (hidden by default) -->
-    <div id="step2" class="step-content" style="display: none; background: #1f2937; border-radius: 16px; padding: 32px; border: 1px solid #374151;">
-        <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 24px;">⚙️ Generating Your App...</h2>
-        
-        <div id="generation-progress" style="margin-bottom: 24px;">
-            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
-                <div class="spinner" style="width: 24px; height: 24px; border: 3px solid #374151; border-top-color: #8b5cf6; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-                <span id="progress-text">Analyzing your idea...</span>
+    <!-- Step 2: Connecting to v2 Pipeline (brief overlay, replaces old progress UI) -->
+    <div id="step2" class="step-content" style="display: none; background: #1f2937; border-radius: 16px; padding: 48px 32px; border: 1px solid #374151; text-align: center;">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 20px;">
+            <!-- Animated logo / pulse ring -->
+            <div style="position: relative; width: 72px; height: 72px;">
+                <div style="position: absolute; inset: 0; border-radius: 50%; border: 3px solid #8b5cf6; animation: pipeline-pulse 1.4s ease-out infinite; opacity: 0;"></div>
+                <div style="position: absolute; inset: 6px; border-radius: 50%; background: linear-gradient(135deg, #8b5cf6, #6366f1); display: flex; align-items: center; justify-content: center;">
+                    <div class="spinner" style="width: 28px; height: 28px; border: 3px solid rgba(255,255,255,0.25); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+                </div>
             </div>
-            <div style="background: #374151; border-radius: 8px; height: 8px; overflow: hidden;">
-                <div id="progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #8b5cf6, #6366f1); transition: width 0.5s;"></div>
+            <div>
+                <h2 id="pipeline-status-title" style="font-size: 1.25rem; font-weight: 600; margin-bottom: 6px;">Initializing AI pipeline...</h2>
+                <p id="pipeline-status-sub" style="color: #9ca3af; font-size: 0.9rem;">Connecting to build system</p>
+            </div>
+            <!-- Pulsing dots -->
+            <div style="display: flex; gap: 6px; align-items: center;">
+                <span style="width: 8px; height: 8px; border-radius: 50%; background: #8b5cf6; animation: dot-bounce 1.2s ease-in-out infinite; display: inline-block;"></span>
+                <span style="width: 8px; height: 8px; border-radius: 50%; background: #6366f1; animation: dot-bounce 1.2s ease-in-out 0.2s infinite; display: inline-block;"></span>
+                <span style="width: 8px; height: 8px; border-radius: 50%; background: #818cf8; animation: dot-bounce 1.2s ease-in-out 0.4s infinite; display: inline-block;"></span>
             </div>
         </div>
+    </div>
 
-        <div id="generation-log" style="background: #111827; border-radius: 8px; padding: 16px; font-family: monospace; font-size: 13px; max-height: 300px; overflow-y: auto;">
-            <div style="color: #10b981;">> Initializing AI code generator...</div>
+    <!-- Step 2 Error: API failure overlay (hidden by default) -->
+    <div id="step2-error" class="step-content" style="display: none; background: #1f2937; border-radius: 16px; padding: 40px 32px; border: 1px solid #374151; text-align: center;">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 16px;">
+            <div style="width: 64px; height: 64px; border-radius: 50%; background: rgba(239,68,68,0.15); border: 2px solid #ef4444; display: flex; align-items: center; justify-content: center;">
+                <i data-lucide="alert-triangle" style="width: 28px; height: 28px; color: #ef4444;"></i>
+            </div>
+            <h2 style="font-size: 1.25rem; font-weight: 600; color: #f87171;">Failed to start build</h2>
+            <p id="pipeline-error-msg" style="color: #9ca3af; font-size: 0.9rem; max-width: 400px;">An unexpected error occurred. Please try again.</p>
+            <div style="display: flex; gap: 12px; margin-top: 8px;">
+                <button onclick="retryGenerate()" style="padding: 10px 24px; background: linear-gradient(135deg, #8b5cf6, #6366f1); border: none; border-radius: 8px; color: white; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                    <i data-lucide="refresh-cw" style="width: 16px; height: 16px;"></i> Retry
+                </button>
+                <button onclick="goToStep(1)" style="padding: 10px 24px; background: #374151; border: none; border-radius: 8px; color: #d1d5db; cursor: pointer;">
+                    Back
+                </button>
+            </div>
         </div>
     </div>
 
@@ -429,6 +452,14 @@
     0%, 100% { opacity: 0.4; }
     50% { opacity: 0.7; }
 }
+@keyframes pipeline-pulse {
+    0%   { transform: scale(1);   opacity: 0.6; }
+    100% { transform: scale(1.9); opacity: 0; }
+}
+@keyframes dot-bounce {
+    0%, 80%, 100% { transform: translateY(0);    opacity: 0.4; }
+    40%            { transform: translateY(-6px); opacity: 1; }
+}
 .step-content {
     transition: all 0.3s ease;
 }
@@ -492,106 +523,174 @@ function goToStep(step) {
     currentStep = step;
 }
 
+// Store last-used form data so retryGenerate() can re-attempt
+var _lastGenerateFormData = null;
+
 async function generateCode() {
-    const name = document.getElementById('project-name').value || 'My App';
-    const idea = document.getElementById('idea-description').value;
+    const name = document.getElementById('project-name').value.trim() || 'My App';
+    const idea = document.getElementById('idea-description').value.trim();
     const appType = document.getElementById('app-type').value;
     const techStack = document.getElementById('tech-stack').value;
-    
-    if (!idea.trim()) {
+
+    if (!idea) {
         alert('Please describe your app idea');
         return;
     }
-    
-    // Gather selected features
+
+    // --- 1. Collect selected features ---
     var features = [];
-    if (document.getElementById('feat-auth').checked) features.push('User Authentication');
+    if (document.getElementById('feat-auth').checked)     features.push('User Authentication');
     if (document.getElementById('feat-payments').checked) features.push('Payments (Stripe)');
     if (document.getElementById('feat-database').checked) features.push('Database');
-    if (document.getElementById('feat-api').checked) features.push('REST API');
-    if (document.getElementById('feat-email').checked) features.push('Email Notifications');
+    if (document.getElementById('feat-api').checked)      features.push('REST API');
+    if (document.getElementById('feat-email').checked)    features.push('Email Notifications');
     if (document.getElementById('feat-realtime').checked) features.push('Real-time Updates');
 
-    projectData = { name: name, idea: idea, appType: appType, techStack: techStack, features: features };
-    
-    goToStep(2);
-    
-    // Detailed generation steps with realistic timings
-    const steps = [
-        { text: 'Analyzing requirements...', progress: 5, color: '#a78bfa', detail: 'Parsing project description and extracting entities' },
-        { text: 'Identifying data models...', progress: 12, color: '#a78bfa', detail: 'Found: User, Session, ' + appType + 'Model' },
-        { text: 'Designing database schema...', progress: 22, color: '#818cf8', detail: 'Creating PostgreSQL migrations with Alembic' },
-        { text: 'Generating API routes...', progress: 35, color: '#818cf8', detail: '12 endpoints across 4 routers' },
-        { text: 'Creating models and services...', progress: 48, color: '#6366f1', detail: 'Building service layer with business logic' },
-        { text: 'Building UI templates...', progress: 60, color: '#6366f1', detail: 'Generating 8 pages with responsive layouts' },
-        { text: 'Setting up authentication...', progress: 72, color: '#8b5cf6', detail: 'JWT tokens + session management' },
-        { text: 'Configuring deployment files...', progress: 82, color: '#8b5cf6', detail: 'Dockerfile, docker-compose.yml, railway.toml' },
-        { text: 'Running code quality checks...', progress: 90, color: '#7c3aed', detail: 'Linting, type checking — 0 errors' },
-        { text: 'Packaging project...', progress: 96, color: '#7c3aed', detail: 'Creating requirements.txt and README.md' },
-        { text: '✓ Generation complete!', progress: 100, color: '#22c55e', detail: '34 files generated in 6.2 seconds' }
-    ];
-    
-    const log = document.getElementById('generation-log');
-    const progressBar = document.getElementById('progress-bar');
-    const progressText = document.getElementById('progress-text');
-    
-    for (const step of steps) {
-        progressText.textContent = step.text;
-        progressBar.style.width = step.progress + '%';
-        var logLine = '<div style="display:flex; justify-content:space-between;"><span style="color:' + step.color + ';">> ' + step.text + '</span><span style="color:#4b5563; font-size:0.75rem;">' + step.progress + '%</span></div>';
-        if (step.detail) {
-            logLine += '<div style="color:#6b7280; padding-left:16px; font-size:0.75rem; margin-bottom:4px;">  ' + step.detail + '</div>';
-        }
-        log.innerHTML += logLine;
-        log.scrollTop = log.scrollHeight;
-        var delay = step.progress < 50 ? 600 : (step.progress < 90 ? 500 : 400);
-        await new Promise(r => setTimeout(r, delay));
-    }
+    // --- 2. Collect advanced options ---
+    var database         = document.getElementById('opt-database').value;
+    var authStrategy     = document.getElementById('opt-auth').value;
+    var frontendFw       = document.getElementById('opt-frontend').value;
+    var cssFw            = document.getElementById('opt-css').value;
+    var deployTarget     = document.getElementById('opt-deploy').value;
+    var apiStyle         = document.getElementById('opt-api-style').value;
+    var extraInstructions = document.getElementById('opt-extra-instructions').value.trim();
 
-    // Save the project to localStorage
-    var projectId = 'proj_' + Date.now();
-    var slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-    var newProject = {
-        id: projectId,
-        name: name,
-        description: idea,
-        appType: appType,
-        techStack: techStack,
-        features: features,
-        status: 'ready',
-        created_at: new Date().toISOString(),
-        url: null
+    // Compose rich idea string that includes app type + tech stack context
+    var ideaFull = idea +
+        ' [App type: ' + appType + ']' +
+        ' [Tech stack: ' + techStack + ']' +
+        (extraInstructions ? ' [Extra: ' + extraInstructions + ']' : '');
+
+    // Cache form data for potential retry
+    _lastGenerateFormData = {
+        name, idea, appType, techStack, features,
+        database, authStrategy, frontendFw, cssFw, deployTarget, apiStyle, extraInstructions
     };
-    saveProject(newProject);
-    projectData.id = projectId;
-    projectData.slug = slug;
 
-    // Also create the project in the backend store via analyze endpoint
-    try {
-        var analyzeResp = await fetch('/api/ideas/analyze', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({idea: idea})
-        });
-        var analyzeData = await analyzeResp.json();
-        if (analyzeData.success && analyzeData.project_id) {
-            projectData.backendId = analyzeData.project_id;
-            // Trigger generation
-            await fetch('/api/generate', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({project_id: analyzeData.project_id, name: name})
-            });
-        }
-    } catch(e) {
-        console.warn('Backend project creation failed, continuing with local data:', e);
-    }
+    // Stash in projectData
+    projectData = {
+        name, idea, appType, techStack, features,
+        database, authStrategy, frontendFw, cssFw, deployTarget, apiStyle, extraInstructions
+    };
 
+    // --- 3. Show brief "Initializing" overlay (Step 2) ---
+    var statusTitle = document.getElementById('pipeline-status-title');
+    var statusSub   = document.getElementById('pipeline-status-sub');
+    statusTitle.textContent = 'Initializing AI pipeline...';
+    statusSub.textContent   = 'Connecting to build system';
+
+    // Hide any previous error panel, show connecting panel
+    document.getElementById('step2-error').style.display = 'none';
+    goToStep(2);
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    // Short pause so the animation is visible before the fetch fires
     await new Promise(r => setTimeout(r, 600));
-    goToStep(3);
+    statusSub.textContent = 'Sending your specifications...';
 
-    // Load Live Preview after transitioning to Step 3
-    loadLivePreview();
+    // --- 4. Build the POST /api/build request body ---
+    var buildBody = {
+        idea: ideaFull,
+        features: features.join(', '),
+        theme: 'Modern',
+        llm_provider: 'auto',
+        target_users: '',
+        monetization: '',
+        customization: {
+            backend_framework: 'fastapi',
+            database: database,
+            auth_strategy: authStrategy,
+            frontend_framework: frontendFw,
+            css_framework: cssFw,
+            deployment_target: deployTarget,
+            api_style: apiStyle,
+            extra_instructions: extraInstructions,
+            include_tests: true,
+            include_ci: true
+        }
+    };
+
+    // --- 5. Call the v2 pipeline ---
+    try {
+        statusSub.textContent = 'Starting build pipeline...';
+        var resp = await fetch('/api/build', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(buildBody)
+        });
+
+        if (!resp.ok) {
+            var errText = 'Server returned ' + resp.status;
+            try { var errData = await resp.json(); errText = errData.detail || errData.error || errText; } catch(_) {}
+            throw new Error(errText);
+        }
+
+        var buildData = await resp.json();
+        if (!buildData.build_id) {
+            throw new Error('Invalid response from build API — missing build_id');
+        }
+
+        // --- 6. Save project to localStorage so build_progress.html can reference it ---
+        var projectId = 'proj_' + Date.now();
+        var slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        var newProject = {
+            id: projectId,
+            build_id: buildData.build_id,
+            name: name,
+            description: idea,
+            appType: appType,
+            techStack: techStack,
+            features: features,
+            customization: buildBody.customization,
+            status: 'building',
+            created_at: new Date().toISOString(),
+            url: null
+        };
+        saveProject(newProject);
+        projectData.id = projectId;
+        projectData.slug = slug;
+        projectData.build_id = buildData.build_id;
+
+        // Also store current build context under a predictable key for build_progress.html
+        localStorage.setItem('ignara_current_build', JSON.stringify(newProject));
+
+        // Brief success feedback before redirect
+        statusTitle.textContent = 'Build started!';
+        statusSub.textContent   = 'Redirecting to live progress...';
+        await new Promise(r => setTimeout(r, 700));
+
+        // --- 7. Redirect to the real-time build progress page ---
+        window.location.href = '/build/' + buildData.build_id;
+
+    } catch (err) {
+        console.error('generateCode error:', err);
+        showPipelineError(err.message || 'Unknown error occurred');
+    }
+}
+
+function showPipelineError(msg) {
+    // Hide the connecting panel
+    document.getElementById('step2').style.display = 'none';
+    // Show error panel (not via goToStep — we don't want indicator updates)
+    var errPanel = document.getElementById('step2-error');
+    document.getElementById('pipeline-error-msg').textContent = msg;
+    errPanel.style.display = 'block';
+    // Reset step indicator back to 1 active style so UX is consistent
+    var ind1 = document.getElementById('step1-indicator');
+    var ind2 = document.getElementById('step2-indicator');
+    if (ind1) { ind1.style.background = '#8b5cf6'; ind1.style.color = 'white'; }
+    if (ind2) { ind2.style.background = '#374151'; ind2.style.color = '#9ca3af'; }
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function retryGenerate() {
+    // Go back to Step 1 form with data intact, then re-trigger
+    document.getElementById('step2-error').style.display = 'none';
+    goToStep(1);
+    // Give the browser a frame to paint step 1, then auto-submit
+    requestAnimationFrame(function() {
+        generateCode();
+    });
 }
 
 // ===================== Live Preview State =====================
