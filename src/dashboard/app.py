@@ -103,6 +103,9 @@ logger = get_logger(__name__)
 
 def _validate_environment() -> None:
     """Log warnings for missing configuration. Fail-fast in production for secrets."""
+    # Use stdlib logging here (not StructuredLogger) for maximum compatibility.
+    _log = logging.getLogger("ignara.startup")
+
     env = os.getenv("ENVIRONMENT", os.getenv("APP_ENV", "development")).lower()
     is_prod = env in ("production", "prod")
 
@@ -132,7 +135,7 @@ def _validate_environment() -> None:
             if is_prod:
                 missing_critical.append(var)
             else:
-                logger.warning(f"ENV: {var} not set — {msg}")
+                _log.warning("ENV: %s not set — %s", var, msg)
 
     if missing_critical:
         raise RuntimeError(
@@ -142,9 +145,9 @@ def _validate_environment() -> None:
 
     for var, msg in important_vars:
         if not os.getenv(var):
-            logger.info(f"ENV: {var} not set — {msg}")
+            _log.info("ENV: %s not set — %s", var, msg)
 
-    logger.info(f"Environment validated (mode={env})")
+    _log.info("Environment validated (mode=%s)", env)
 
 
 @asynccontextmanager
