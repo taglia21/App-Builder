@@ -132,7 +132,7 @@ def _validate_environment() -> None:
             if is_prod:
                 missing_critical.append(var)
             else:
-                logger.warning("ENV: %s not set — %s", var, msg)
+                logger.warning(f"ENV: {var} not set — {msg}")
 
     if missing_critical:
         raise RuntimeError(
@@ -142,9 +142,9 @@ def _validate_environment() -> None:
 
     for var, msg in important_vars:
         if not os.getenv(var):
-            logger.info("ENV: %s not set — %s", var, msg)
+            logger.info(f"ENV: {var} not set — {msg}")
 
-    logger.info("Environment validated (mode=%s)", env)
+    logger.info(f"Environment validated (mode={env})")
 
 
 @asynccontextmanager
