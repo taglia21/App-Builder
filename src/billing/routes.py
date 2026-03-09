@@ -26,9 +26,9 @@ PRICE_IDS = {
 }
 
 PLAN_DETAILS = {
-    "starter": {"name": "Starter", "price": 29, "features": ["5 apps/month", "Basic templates", "Email support"]},
-    "pro": {"name": "Pro", "price": 99, "features": ["25 apps/month", "All templates", "Priority support", "Custom domains"]},
-    "enterprise": {"name": "Enterprise", "price": 299, "features": ["Unlimited apps", "All features", "24/7 support", "White-label", "API access"]},
+    "starter": {"name": "Starter", "price": 29, "features": ["5 apps/month", "All templates", "GitHub push", "Email support"]},
+    "pro": {"name": "Pro", "price": 99, "features": ["25 apps/month", "One-click deploy", "Custom domains", "Business formation tools", "Priority support"]},
+    "enterprise": {"name": "Enterprise", "price": 299, "features": ["Unlimited apps", "White-label output", "API access", "SSO & team management", "24/7 dedicated support"]},
 }
 
 def create_billing_router(templates):
@@ -271,6 +271,11 @@ def create_billing_router(templates):
 
                     logger.info(f"Checkout completed: {sess_obj.get('id')} — subscription provisioned for user {user_id}")
 
+                elif event["type"] == "customer.subscription.created":
+                    # Subscription created — log it. Provisioning happens on checkout.session.completed.
+                    sub_obj = event["data"]["object"]
+                    logger.info(f"Subscription created: {sub_obj['id']} for customer {sub_obj.get('customer')}")
+
                 elif event["type"] == "customer.subscription.updated":
                     sub_obj = event["data"]["object"]
                     stripe_sub_id = sub_obj["id"]
@@ -303,6 +308,10 @@ def create_billing_router(templates):
                         if user:
                             user.subscription_tier = SubscriptionTier.FREE
                     logger.info(f"Subscription cancelled: {stripe_sub_id}")
+
+                elif event["type"] == "invoice.payment_succeeded":
+                    inv_obj = event["data"]["object"]
+                    logger.info(f"Invoice paid: {inv_obj.get('id')} for customer {inv_obj.get('customer')}, amount: {inv_obj.get('amount_paid')}")
 
                 elif event["type"] == "invoice.payment_failed":
                     inv_obj = event["data"]["object"]

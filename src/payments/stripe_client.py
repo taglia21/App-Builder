@@ -112,7 +112,7 @@ class StripeClient:
             api_key: Stripe API key (defaults to STRIPE_API_KEY env var)
             webhook_secret: Webhook signing secret (defaults to STRIPE_WEBHOOK_SECRET env var)
         """
-        self.api_key = api_key or os.getenv("STRIPE_API_KEY")
+        self.api_key = api_key or os.getenv("STRIPE_SECRET_KEY") or os.getenv("STRIPE_API_KEY")
         self.webhook_secret = webhook_secret or os.getenv("STRIPE_WEBHOOK_SECRET")
 
         if self.api_key:

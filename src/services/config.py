@@ -40,10 +40,19 @@ class Settings(BaseSettings):
 
     # Stripe
     STRIPE_SECRET_KEY: Optional[str] = None
+    STRIPE_API_KEY: Optional[str] = None  # Alias for STRIPE_SECRET_KEY
     STRIPE_PUBLISHABLE_KEY: Optional[str] = None
     STRIPE_WEBHOOK_SECRET: Optional[str] = None
-    STRIPE_PRICE_ID_PRO: Optional[str] = None
-    STRIPE_PRICE_ID_ENTERPRISE: Optional[str] = None
+
+    # Stripe Price IDs
+    STRIPE_PRICE_STARTER: Optional[str] = None
+    STRIPE_PRICE_PRO: Optional[str] = None
+    STRIPE_PRICE_ENTERPRISE: Optional[str] = None
+
+    @property
+    def stripe_secret_key_resolved(self) -> Optional[str]:
+        """Return STRIPE_SECRET_KEY or fallback to STRIPE_API_KEY."""
+        return self.STRIPE_SECRET_KEY or self.STRIPE_API_KEY
 
     # Email (SendGrid)
     SENDGRID_API_KEY: Optional[str] = None
