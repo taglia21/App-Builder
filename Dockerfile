@@ -54,8 +54,9 @@ RUN rm -rf tests/ .git/ .github/ *.md .env* __pycache__/ .pytest_cache/ \
     docker-compose*.yml tailwind.config.js
 
 # Create writable directories the app needs at runtime
+# Also chown /app so appuser can create files (e.g. ignara_builds.db)
 RUN mkdir -p /app/data /app/output /app/generated_projects /app/logs \
-    && chown -R appuser:appuser /app/data /app/output /app/generated_projects /app/logs
+    && chown -R appuser:appuser /app
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \

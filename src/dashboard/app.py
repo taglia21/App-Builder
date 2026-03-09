@@ -107,9 +107,15 @@ def _validate_environment() -> None:
     is_prod = env in ("production", "prod")
 
     # Critical secrets that MUST exist in production
-    critical_vars = [
-        ("COOKIE_SECRET", "Session cookies will use an insecure default"),
-        ("DATABASE_URL", "Database will fall back to SQLite"),
+    # COOKIE_SECRET falls back to JWT_SECRET_KEY → SECRET_KEY in auth code,
+    # so we check the same fallback chain here.
+    cookie_val = os.getenv(
+        "COOKIE_SECRET",
+        os.getenv("JWT_SECRET_KEY", os.getenv("SECRET_KEY", "")),
+    )
+    critical_checks = [
+        ("COOKIE_SECRET", cookie_val, "Session cookies will use an insecure default"),
+        ("DATABASE_URL", os.getenv("DATABASE_URL", ""), "Database will fall back to SQLite"),
     ]
     # Important but non-fatal
     important_vars = [
@@ -121,8 +127,7 @@ def _validate_environment() -> None:
     ]
 
     missing_critical = []
-    for var, msg in critical_vars:
-        val = os.getenv(var, "")
+    for var, val, msg in critical_checks:
         if not val or len(val) < 8:
             if is_prod:
                 missing_critical.append(var)
