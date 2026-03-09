@@ -75,6 +75,8 @@ Respond in JSON format:
     "suggestions": ["Improvement 1", "Improvement 2"]
 }
 
+ACTIONABLE FIX REQUIREMENT: Every issue MUST include: (a) the exact file path, (b) the specific problematic code or section, (c) a concrete fix with actual code. Do NOT say 'consider' or 'you might want to' — provide the exact fix.
+
 Be thorough but fair. REJECT only for serious issues."""
 
     async def review(self, artifact: Any, context: Dict[str, Any]) -> CriticReview:

@@ -82,7 +82,9 @@ Respond with JSON:
 }}
 
 Be vigilant but fair. REJECT only for critical/high severity vulnerabilities.
-RECOMMEND revision for medium severity. APPROVE if only low severity or none found.'''
+RECOMMEND revision for medium severity. APPROVE if only low severity or none found.
+
+ACTIONABLE FIX REQUIREMENT: Every issue MUST include: (a) the exact file path, (b) the specific problematic code or section, (c) a concrete fix with actual code. Do NOT say 'consider' or 'you might want to' — provide the exact fix.'''
 
     def __init__(self, llm_provider: LLMProvider):
         self.llm = llm_provider

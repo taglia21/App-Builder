@@ -1527,9 +1527,9 @@ def _build_requirements_prompt(ctx: _GenerationContext) -> str:
     for i in spec.integrations:
         name_lower = i.name.lower()
         if "stripe" in name_lower:
-            integration_deps.append("stripe>=7.0.0")
+            integration_deps.append("stripe>=8.0.0")
         elif "sendgrid" in name_lower:
-            integration_deps.append("sendgrid>=6.11.0")
+            integration_deps.append("sendgrid>=6.10.0")
         elif "twilio" in name_lower:
             integration_deps.append("twilio>=8.0.0")
         elif "s3" in name_lower or "aws" in name_lower:
@@ -1540,6 +1540,14 @@ def _build_requirements_prompt(ctx: _GenerationContext) -> str:
             integration_deps.append("openai>=1.0.0")
         elif "redis" in name_lower:
             integration_deps.append("redis>=5.0.0")
+        elif "celery" in name_lower:
+            integration_deps.append("celery>=5.3.0")
+        elif "sentry" in name_lower:
+            integration_deps.append("sentry-sdk>=1.40.0")
+        elif "slack" in name_lower:
+            integration_deps.append("slack-sdk>=3.26.0")
+        elif "google" in name_lower and "cloud" in name_lower:
+            integration_deps.append("google-cloud-storage>=2.14.0")
 
     extra = "\n".join(integration_deps)
     return textwrap.dedent(f"""
@@ -1724,6 +1732,147 @@ def _build_alembic_ini_prompt(ctx: _GenerationContext) -> str:
         - Logging sections for root, sqlalchemy.engine, alembic.
         - Output ONLY the alembic.ini content — no markdown, no explanation.
     """).strip()
+
+
+def _build_alembic_env_prompt(ctx: _GenerationContext) -> str:
+    spec = ctx.spec
+    return textwrap.dedent(f"""
+        Generate a complete alembic/env.py for an async FastAPI + SQLAlchemy project.
+
+        === SYSTEM SPEC ===
+        {_spec_summary(spec, ctx=ctx)}
+
+        === GOLDEN EXAMPLE ===
+        import asyncio
+        from logging.config import fileConfig
+
+        from alembic import context
+        from sqlalchemy import pool
+        from sqlalchemy.engine import Connection
+        from sqlalchemy.ext.asyncio import async_engine_from_config
+
+        from app.core.config import settings
+        from app.db.base import Base
+
+        # Import all models so Base.metadata is populated
+        from app.models import *  # noqa: F401, F403
+
+        config = context.config
+        if config.config_file_name is not None:
+            fileConfig(config.config_file_name)
+
+        target_metadata = Base.metadata
+
+        def run_migrations_offline() -> None:
+            url = settings.DATABASE_URL
+            context.configure(
+                url=url,
+                target_metadata=target_metadata,
+                literal_binds=True,
+                dialect_opts={{"compare_type": True}},
+            )
+            with context.begin_transaction():
+                context.run_migrations()
+
+        def do_run_migrations(connection: Connection) -> None:
+            context.configure(
+                connection=connection,
+                target_metadata=target_metadata,
+                compare_type=True,
+            )
+            with context.begin_transaction():
+                context.run_migrations()
+
+        async def run_async_migrations() -> None:
+            configuration = config.get_section(config.config_ini_section, {{}})
+            configuration["sqlalchemy.url"] = settings.DATABASE_URL
+            connectable = async_engine_from_config(
+                configuration, prefix="sqlalchemy.", poolclass=pool.NullPool,
+            )
+            async with connectable.connect() as connection:
+                await connection.run_sync(do_run_migrations)
+            await connectable.dispose()
+
+        def run_migrations_online() -> None:
+            asyncio.run(run_async_migrations())
+
+        if context.is_offline_mode():
+            run_migrations_offline()
+        else:
+            run_migrations_online()
+
+        === REQUIREMENTS ===
+        - File: backend/alembic/env.py
+        - Must import all models from app.models so Base.metadata is populated
+        - Must use async engine (async_engine_from_config)
+        - Must read DATABASE_URL from app.core.config.settings
+        - Output ONLY the Python code — no markdown, no explanation.
+    """).strip()
+
+
+def _build_initial_migration_prompt(ctx: _GenerationContext) -> str:
+    spec = ctx.spec
+    entities_desc = []
+    for entity in spec.entities:
+        fields = ", ".join(f"{f.name}:{f.type}" for f in entity.fields[:8])
+        entities_desc.append(f"  - {entity.name}: {fields}")
+    entities_str = "\n".join(entities_desc)
+
+    return textwrap.dedent(f'''
+        Generate an Alembic migration script (revision 001) that creates all tables for this application.
+
+        === SYSTEM SPEC ===
+        {_spec_summary(spec, ctx=ctx)}
+
+        === ENTITIES ===
+        {entities_str}
+
+        === GOLDEN EXAMPLE FORMAT ===
+        """Initial migration — create all tables.
+
+        Revision ID: 001_initial
+        Create Date: 2024-01-01
+        """
+        from alembic import op
+        import sqlalchemy as sa
+
+        revision = "001_initial"
+        down_revision = None
+        branch_labels = None
+        depends_on = None
+
+        def upgrade() -> None:
+            # Create users table
+            op.create_table(
+                "users",
+                sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
+                sa.Column("email", sa.String(255), unique=True, nullable=False, index=True),
+                sa.Column("hashed_password", sa.String(255), nullable=False),
+                sa.Column("full_name", sa.String(255)),
+                sa.Column("is_active", sa.Boolean(), server_default=sa.text("true")),
+                sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+                sa.Column("updated_at", sa.DateTime(timezone=True), onupdate=sa.func.now()),
+            )
+            # ... more tables ...
+
+        def downgrade() -> None:
+            # Drop in reverse order of creation
+            op.drop_table("users")
+
+        === ANTI-PATTERNS ===
+        1. Do NOT use op.create_all() — that\'s not how Alembic works.
+        2. Do NOT forget to add foreign key constraints for relationships.
+        3. Do NOT forget index=True on columns that will be frequently queried (email, slug, etc.).
+        4. Always include a downgrade() that drops tables in reverse creation order.
+
+        === REQUIREMENTS ===
+        - File: backend/alembic/versions/001_initial.py
+        - Create tables for ALL entities: {', '.join(e.name for e in spec.entities)}
+        - Include proper foreign keys for relationships
+        - Include created_at/updated_at timestamps on every table
+        - Include proper indexes on email, slug, and foreign key columns
+        - Output ONLY the Python code — no markdown, no explanation.
+    ''').strip()
 
 
 # ---------------------------------------------------------------------------
@@ -3304,6 +3453,8 @@ class CodeGeneratorV2:
             "backend/app/core/__init__.py",
             "backend/app/db/__init__.py",
             "backend/tests/__init__.py",
+            "backend/alembic/__init__.py",
+            "backend/alembic/versions/__init__.py",
         ]:
             plan.append(_FileSpec(
                 relative_path=init_path,
@@ -3422,6 +3573,20 @@ class CodeGeneratorV2:
             prompt_builder=lambda c: _build_alembic_ini_prompt(c),
             description="Alembic config",
             depends_on=[],
+        ))
+        plan.append(_FileSpec(
+            relative_path="backend/alembic/env.py",
+            category=FileCategory.BACKEND_CONFIG,
+            prompt_builder=lambda c: _build_alembic_env_prompt(c),
+            description="Alembic env.py configuration",
+            depends_on=["backend/alembic.ini", "backend/app/db/base.py", "backend/app/db/session.py"],
+        ))
+        plan.append(_FileSpec(
+            relative_path="backend/alembic/versions/001_initial.py",
+            category=FileCategory.BACKEND_CONFIG,
+            prompt_builder=lambda c: _build_initial_migration_prompt(c),
+            description="Initial Alembic migration",
+            depends_on=model_paths + ["backend/alembic/env.py"],
         ))
 
         # ========== TIER 5: Backend tests (depend on routes + CRUD) ==========

@@ -84,7 +84,9 @@ Respond with JSON:
 }}
 
 Be thorough but practical. REJECT only for critical performance issues that would cause
-production problems. RECOMMEND revision for significant inefficiencies.'''
+production problems. RECOMMEND revision for significant inefficiencies.
+
+ACTIONABLE FIX REQUIREMENT: Every issue MUST include: (a) the exact file path, (b) the specific problematic code or section, (c) a concrete fix with actual code. Do NOT say 'consider' or 'you might want to' — provide the exact fix.'''
 
     def __init__(self, llm_provider: LLMProvider):
         self.llm = llm_provider

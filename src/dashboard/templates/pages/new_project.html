@@ -101,6 +101,81 @@
             </div>
         </div>
 
+        <!-- Advanced Customization (collapsible) -->
+        <div style="margin-bottom: 24px;">
+            <button type="button" onclick="toggleAdvanced()" id="advanced-toggle"
+                    style="display: flex; align-items: center; gap: 8px; background: none; border: 1px solid #374151; border-radius: 8px; padding: 10px 16px; color: #9ca3af; cursor: pointer; font-size: 0.875rem; width: 100%; transition: all 0.2s;">
+                <i data-lucide="settings" style="width: 16px; height: 16px;"></i>
+                Advanced Options
+                <i data-lucide="chevron-down" id="advanced-chevron" style="width: 16px; height: 16px; margin-left: auto; transition: transform 0.2s;"></i>
+            </button>
+            <div id="advanced-options" style="display: none; margin-top: 16px; padding: 20px; background: rgba(17,24,39,0.5); border: 1px solid #374151; border-radius: 12px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                    <div>
+                        <label style="display: block; margin-bottom: 6px; font-size: 0.8rem; font-weight: 500; color: #d1d5db;">Database</label>
+                        <select id="opt-database" style="width: 100%; padding: 10px 12px; background: #111827; border: 1px solid #374151; border-radius: 8px; color: white; font-size: 0.85rem;">
+                            <option value="postgresql">PostgreSQL (Recommended)</option>
+                            <option value="mysql">MySQL</option>
+                            <option value="sqlite">SQLite</option>
+                            <option value="mongodb">MongoDB</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 6px; font-size: 0.8rem; font-weight: 500; color: #d1d5db;">Authentication</label>
+                        <select id="opt-auth" style="width: 100%; padding: 10px 12px; background: #111827; border: 1px solid #374151; border-radius: 8px; color: white; font-size: 0.85rem;">
+                            <option value="jwt">JWT Tokens (Recommended)</option>
+                            <option value="session">Session-Based</option>
+                            <option value="oauth2">OAuth 2.0</option>
+                            <option value="none">No Authentication</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 6px; font-size: 0.8rem; font-weight: 500; color: #d1d5db;">Frontend Framework</label>
+                        <select id="opt-frontend" style="width: 100%; padding: 10px 12px; background: #111827; border: 1px solid #374151; border-radius: 8px; color: white; font-size: 0.85rem;">
+                            <option value="nextjs">Next.js + React (Recommended)</option>
+                            <option value="react-vite">React + Vite</option>
+                            <option value="vue">Vue.js</option>
+                            <option value="svelte">SvelteKit</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                    <div>
+                        <label style="display: block; margin-bottom: 6px; font-size: 0.8rem; font-weight: 500; color: #d1d5db;">CSS Framework</label>
+                        <select id="opt-css" style="width: 100%; padding: 10px 12px; background: #111827; border: 1px solid #374151; border-radius: 8px; color: white; font-size: 0.85rem;">
+                            <option value="tailwind">Tailwind CSS (Recommended)</option>
+                            <option value="shadcn">shadcn/ui</option>
+                            <option value="material-ui">Material UI</option>
+                            <option value="chakra">Chakra UI</option>
+                            <option value="plain-css">Plain CSS</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 6px; font-size: 0.8rem; font-weight: 500; color: #d1d5db;">Deployment Target</label>
+                        <select id="opt-deploy" style="width: 100%; padding: 10px 12px; background: #111827; border: 1px solid #374151; border-radius: 8px; color: white; font-size: 0.85rem;">
+                            <option value="docker">Docker Compose (Recommended)</option>
+                            <option value="railway">Railway</option>
+                            <option value="vercel">Vercel</option>
+                            <option value="aws">AWS</option>
+                            <option value="bare">Bare Metal</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 6px; font-size: 0.8rem; font-weight: 500; color: #d1d5db;">API Style</label>
+                        <select id="opt-api-style" style="width: 100%; padding: 10px 12px; background: #111827; border: 1px solid #374151; border-radius: 8px; color: white; font-size: 0.85rem;">
+                            <option value="rest">REST API (Recommended)</option>
+                            <option value="graphql">GraphQL</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 6px; font-size: 0.8rem; font-weight: 500; color: #d1d5db;">Extra Instructions</label>
+                    <textarea id="opt-extra-instructions" rows="2" placeholder="e.g., Use Stripe for payments, add dark mode toggle, include rate limiting..."
+                              style="width: 100%; padding: 10px 12px; background: #111827; border: 1px solid #374151; border-radius: 8px; color: white; font-size: 0.85rem; resize: vertical;"></textarea>
+                </div>
+            </div>
+        </div>
+
         <button id="generate-btn" onclick="generateCode()" 
                 style="width: 100%; padding: 16px; background: linear-gradient(135deg, #8b5cf6, #6366f1); border: none; border-radius: 12px; color: white; font-size: 18px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
             <i data-lucide="sparkles" style="width: 20px; height: 20px;"></i>
@@ -844,6 +919,24 @@ function downloadProject() {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+}
+
+function toggleAdvanced() {
+    var opts = document.getElementById('advanced-options');
+    var chevron = document.getElementById('advanced-chevron');
+    var toggle = document.getElementById('advanced-toggle');
+    if (opts.style.display === 'none') {
+        opts.style.display = 'block';
+        chevron.style.transform = 'rotate(180deg)';
+        toggle.style.borderColor = '#8b5cf6';
+        toggle.style.color = '#e5e7eb';
+    } else {
+        opts.style.display = 'none';
+        chevron.style.transform = '';
+        toggle.style.borderColor = '#374151';
+        toggle.style.color = '#9ca3af';
+    }
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 // Initialize Lucide icons

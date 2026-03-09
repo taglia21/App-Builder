@@ -439,6 +439,40 @@
     </div>
     </div><!-- end #deployments -->
 
+    <!-- Refinement Chat Panel -->
+    <div style="margin-top: 32px; background: #1f2937; border-radius: 16px; border: 1px solid #374151; overflow: hidden;">
+        <button onclick="toggleChatPanel()" style="width: 100%; padding: 16px 24px; background: none; border: none; color: white; cursor: pointer; display: flex; align-items: center; gap: 12px; font-size: 1rem; font-weight: 600;">
+            <i data-lucide="message-square" style="width: 20px; height: 20px; color: #8b5cf6;"></i>
+            Refine with AI Chat
+            <span style="font-size: 0.75rem; color: #6b7280; font-weight: 400; margin-left: 4px;">— describe changes in plain English</span>
+            <i data-lucide="chevron-down" id="chat-chevron" style="width: 16px; height: 16px; margin-left: auto; transition: transform 0.2s;"></i>
+        </button>
+        <div id="chat-panel" style="display: none; border-top: 1px solid #374151;">
+            <div id="chat-messages" style="padding: 16px 24px; max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;">
+                <div style="padding: 12px 16px; background: rgba(139,92,246,0.08); border-radius: 12px; border-top-left-radius: 4px; max-width: 85%; align-self: flex-start;">
+                    <p style="font-size: 0.875rem; color: #d1d5db;">Hi! I can help you modify your generated project. Try things like:</p>
+                    <ul style="margin: 8px 0 0 16px; font-size: 0.8rem; color: #9ca3af; list-style: disc;">
+                        <li>"Add a rating field to products"</li>
+                        <li>"Make the dashboard show a chart for sales"</li>
+                        <li>"Add email notifications when orders are placed"</li>
+                        <li>"Change the color scheme to dark blue"</li>
+                    </ul>
+                </div>
+            </div>
+            <div style="padding: 12px 24px 16px; border-top: 1px solid rgba(55,65,81,0.5);">
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="chat-input" placeholder="Describe a change you want to make..."
+                           onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage()}"
+                           style="flex: 1; padding: 12px 16px; background: #111827; border: 1px solid #374151; border-radius: 10px; color: white; font-size: 0.9rem;">
+                    <button onclick="sendChatMessage()" id="chat-send-btn"
+                            style="padding: 12px 20px; background: linear-gradient(135deg, #8b5cf6, #6366f1); border: none; border-radius: 10px; color: white; cursor: pointer; font-weight: 500; display: flex; align-items: center; gap: 6px; white-space: nowrap;">
+                        <i data-lucide="send" style="width: 16px; height: 16px;"></i> Send
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Tab Content: Settings -->
     <div id="settings" class="tab-content mt-8 hidden">
     <div class="grid grid-cols-1 gap-6">
@@ -541,5 +575,94 @@
         switchTab('overview');
     }
 })();
+
+var chatId = null;
+
+function toggleChatPanel() {
+    var panel = document.getElementById('chat-panel');
+    var chevron = document.getElementById('chat-chevron');
+    if (panel.style.display === 'none') {
+        panel.style.display = 'block';
+        chevron.style.transform = 'rotate(180deg)';
+        if (!chatId) initChat();
+    } else {
+        panel.style.display = 'none';
+        chevron.style.transform = '';
+    }
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+async function initChat() {
+    try {
+        var projectPath = document.querySelector('[data-project-path]');
+        var path = projectPath ? projectPath.getAttribute('data-project-path') : '';
+        if (!path) { console.warn('No project path for chat'); return; }
+        var resp = await fetch('/api/v2/chat', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({project_path: path})
+        });
+        if (resp.ok) {
+            var data = await resp.json();
+            chatId = data.chat_id;
+        }
+    } catch(e) { console.error('Chat init failed:', e); }
+}
+
+async function sendChatMessage() {
+    var input = document.getElementById('chat-input');
+    var msg = input.value.trim();
+    if (!msg || !chatId) return;
+    input.value = '';
+
+    var messagesEl = document.getElementById('chat-messages');
+    // Add user bubble
+    messagesEl.innerHTML += '<div style="padding: 12px 16px; background: rgba(99,102,241,0.15); border-radius: 12px; border-top-right-radius: 4px; max-width: 85%; align-self: flex-end;"><p style="font-size: 0.875rem; color: #e5e7eb;">' + escapeHtml(msg) + '</p></div>';
+    // Add loading bubble
+    messagesEl.innerHTML += '<div id="chat-loading" style="padding: 12px 16px; background: rgba(139,92,246,0.08); border-radius: 12px; border-top-left-radius: 4px; max-width: 85%; align-self: flex-start;"><div class="spinner" style="width: 16px; height: 16px; border: 2px solid #374151; border-top-color: #8b5cf6; border-radius: 50%; animation: spin 1s linear infinite; display: inline-block;"></div> <span style="font-size: 0.8rem; color: #9ca3af;">Analyzing and applying changes...</span></div>';
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+
+    var btn = document.getElementById('chat-send-btn');
+    btn.disabled = true;
+
+    try {
+        var resp = await fetch('/api/v2/chat/' + chatId + '/message', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({instruction: msg, apply_changes: true})
+        });
+        var data = await resp.json();
+        var loadingEl = document.getElementById('chat-loading');
+        if (loadingEl) loadingEl.remove();
+
+        var resultHtml = '<p style="font-size: 0.875rem; color: #d1d5db;">' + escapeHtml(data.message || 'Changes applied.') + '</p>';
+        if (data.refinement_result) {
+            var r = data.refinement_result;
+            var files = (r.files_modified || []).concat(r.files_created || []);
+            if (files.length > 0) {
+                resultHtml += '<div style="margin-top: 8px; font-size: 0.75rem; color: #6b7280;">';
+                resultHtml += '<span style="color: #10b981;">\u2713 ' + files.length + ' file(s) changed</span>';
+                files.slice(0, 5).forEach(function(f) {
+                    resultHtml += '<div style="padding-left: 8px;">&bull; ' + escapeHtml(f.path || f) + '</div>';
+                });
+                resultHtml += '</div>';
+            }
+        }
+        messagesEl.innerHTML += '<div style="padding: 12px 16px; background: rgba(139,92,246,0.08); border-radius: 12px; border-top-left-radius: 4px; max-width: 85%; align-self: flex-start;">' + resultHtml + '</div>';
+    } catch(e) {
+        var loadingEl = document.getElementById('chat-loading');
+        if (loadingEl) loadingEl.remove();
+        messagesEl.innerHTML += '<div style="padding: 12px 16px; background: rgba(239,68,68,0.1); border-radius: 12px; border-top-left-radius: 4px; max-width: 85%; align-self: flex-start;"><p style="font-size: 0.875rem; color: #ef4444;">Error: ' + escapeHtml(e.message) + '</p></div>';
+    }
+    btn.disabled = false;
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function escapeHtml(str) {
+    var div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
 </script>
 {% endblock %}

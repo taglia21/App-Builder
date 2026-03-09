@@ -84,7 +84,9 @@ Respond with JSON:
 }}
 
 Think from the USER\'S perspective. REJECT only for critical UX failures that would
-make the app unusable. RECOMMEND revision for significant usability issues.'''
+make the app unusable. RECOMMEND revision for significant usability issues.
+
+ACTIONABLE FIX REQUIREMENT: Every issue MUST include: (a) the exact file path, (b) the specific problematic code or section, (c) a concrete fix with actual code. Do NOT say 'consider' or 'you might want to' — provide the exact fix.'''
 
     def __init__(self, llm_provider: LLMProvider):
         self.llm = llm_provider
