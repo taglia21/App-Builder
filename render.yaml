@@ -13,7 +13,7 @@ services:
       - key: REDIS_URL
         fromService:
           name: ignara-redis
-          type: redis
+          type: keyvalue
           property: connectionString
       - key: SECRET_KEY
         generateValue: true
@@ -44,7 +44,7 @@ services:
     domains:
       - ignara.pro
       - www.ignara.pro
-  - type: redis
+  - type: keyvalue
     name: ignara-redis
     ipAllowList: []
     plan: starter
