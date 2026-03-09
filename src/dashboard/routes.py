@@ -501,8 +501,8 @@ class DashboardRoutes:
                             "summary":  result.quality.summary,
                         }
                         break
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("Quality data lookup from _jobs failed: %s", e)
 
         return self.render(request, "pages/quality_dashboard.html", {
             "project": project,
@@ -697,8 +697,24 @@ class DashboardRoutes:
         name: str = Form(None),
         email: str = Form(None),
     ) -> HTMLResponse:
-        """Handle settings update form."""
-        # Update settings (mock)
+        """Handle settings update form — persists to database."""
+        user = get_current_user(request)
+        if user:
+            try:
+                from src.database.db import get_db
+                db = get_db()
+                with db.session() as session:
+                    from src.database.models import User
+                    db_user = session.query(User).filter(User.id == user.id).first()
+                    if db_user:
+                        if name is not None:
+                            db_user.full_name = name
+                        if email is not None:
+                            db_user.email = email
+                        session.commit()
+                        logger.info("Settings updated for user %s", user.id)
+            except Exception as e:
+                logger.error("Failed to update settings for user %s: %s", user.id, e)
 
         if request.headers.get("HX-Request"):
             return self.render(request, "partials/settings_saved.html", {
@@ -1317,8 +1333,8 @@ async def business_formation_submit(request: Request) -> JSONResponse:
                     rec.status = "submitted"
                     rec.external_order_id = provider_ref
                     s2.commit()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Failed to update formation record %s: %s", formation_id, e)
 
     except Exception as prov_err:
         logger.error(f"Formation provider error: {prov_err}")
@@ -1367,8 +1383,8 @@ async def deploy_page(request: Request) -> HTMLResponse:
                     "name": build.get("project_name", project_id),
                     "status": build.get("status", "generated"),
                 }
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Build manager lookup for %s failed: %s", project_id, e)
 
     if not project:
         return RedirectResponse(url="/dashboard", status_code=302)
@@ -1438,8 +1454,6 @@ async def generate_app_api(request: Request) -> JSONResponse:
         idea = project.get('idea', 'My App')
         name = body.get('name', 'app')
 
-        # Attempt real generation first, fall back to mock on failure
-        real_generation_succeeded = False
         try:
             import json as _json
             import uuid as _uuid
@@ -1496,36 +1510,26 @@ async def generate_app_api(request: Request) -> JSONResponse:
             project['download_ready'] = True
             project['files_generated'] = codebase.files_generated
             project['lines_of_code'] = codebase.lines_of_code
-            real_generation_succeeded = True
             logger.info(
                 f"Real generation succeeded for project {project_id}: "
                 f"{codebase.files_generated} files, {codebase.lines_of_code} lines"
             )
 
         except Exception as gen_exc:
-            logger.warning(
-                f"Real generation failed for project {project_id}, "
-                f"falling back to mock data: {gen_exc}"
+            logger.error(
+                "Code generation failed for project %s: %s",
+                project_id, gen_exc,
+                exc_info=True,
             )
-
-        if not real_generation_succeeded:
-            # Fallback: populate project with mock data
-            project['status'] = 'generated'
-            project['generated_at'] = datetime.now(timezone.utc).isoformat()
-            project['download_ready'] = True
-            project['files'] = [
-                {'name': 'app.py', 'type': 'python', 'lines': 150},
-                {'name': 'models.py', 'type': 'python', 'lines': 80},
-                {'name': 'routes.py', 'type': 'python', 'lines': 200},
-                {'name': 'templates/base.html', 'type': 'html', 'lines': 100},
-                {'name': 'templates/dashboard.html', 'type': 'html', 'lines': 120},
-                {'name': 'static/styles.css', 'type': 'css', 'lines': 300},
-                {'name': 'requirements.txt', 'type': 'text', 'lines': 15},
-                {'name': 'README.md', 'type': 'markdown', 'lines': 50},
-                {'name': 'Dockerfile', 'type': 'docker', 'lines': 20},
-                {'name': '.env.example', 'type': 'env', 'lines': 10},
-            ]
-            project['file_contents'] = _generate_mock_file_contents(name, idea)
+            project['status'] = 'error'
+            project['error'] = str(gen_exc)
+            _save_projects_store()
+            return JSONResponse({
+                'success': False,
+                'error': 'Code generation failed. Please try again or simplify your requirements.',
+                'details': str(gen_exc),
+                'project_id': project_id,
+            }, status_code=500)
 
         _save_projects_store()
         return JSONResponse({
@@ -1846,18 +1850,3 @@ async def deploy_start_api(request: Request) -> JSONResponse:
         logger.error(f"Deploy start error: {e}")
         return JSONResponse({'success': False, 'error': str(e)}, status_code=500)
 
-
-def _generate_mock_file_contents(name: str, idea: str) -> dict:
-    """Generate realistic mock file contents for the preview."""
-    return {
-        'app.py': f'''"""Main application entry point for {name}."""\nfrom fastapi import FastAPI\nfrom fastapi.middleware.cors import CORSMiddleware\nfrom routes import router\nfrom models import Base\nfrom database import engine\n\napp = FastAPI(\n    title="{name}",\n    description="{idea[:80]}",\n    version="1.0.0"\n)\n\napp.add_middleware(\n    CORSMiddleware,\n    allow_origins=["*"],\n    allow_credentials=True,\n    allow_methods=["*"],\n    allow_headers=["*"],\n)\n\nBase.metadata.create_all(bind=engine)\napp.include_router(router)\n\n@app.get("/")\nasync def root():\n    return {{"message": "Welcome to {name}!", "status": "running"}}\n\n@app.get("/health")\nasync def health_check():\n    return {{"status": "healthy"}}\n\nif __name__ == "__main__":\n    import uvicorn\n    uvicorn.run(app, host="0.0.0.0", port=8000)\n''',
-        'models.py': f'''"""Database models for {name}."""\nfrom sqlalchemy import Column, Integer, String, DateTime, Boolean, Text\nfrom sqlalchemy.ext.declarative import declarative_base\nfrom datetime import datetime\n\nBase = declarative_base()\n\nclass User(Base):\n    __tablename__ = "users"\n\n    id = Column(Integer, primary_key=True, index=True)\n    email = Column(String(255), unique=True, index=True, nullable=False)\n    hashed_password = Column(String(255), nullable=False)\n    full_name = Column(String(100))\n    is_active = Column(Boolean, default=True)\n    created_at = Column(DateTime, default=datetime.utcnow)\n    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)\n\nclass Project(Base):\n    __tablename__ = "projects"\n\n    id = Column(Integer, primary_key=True, index=True)\n    title = Column(String(200), nullable=False)\n    description = Column(Text)\n    owner_id = Column(Integer, index=True)\n    status = Column(String(50), default="active")\n    created_at = Column(DateTime, default=datetime.utcnow)\n''',
-        'routes.py': f'''"""API routes for {name}."""\nfrom fastapi import APIRouter, Depends, HTTPException, status\nfrom sqlalchemy.orm import Session\nfrom typing import List\nfrom models import User, Project\nfrom database import get_db\nfrom auth import get_current_user\n\nrouter = APIRouter()\n\n@router.get("/users/me")\nasync def get_current_user_profile(\n    current_user: User = Depends(get_current_user)\n):\n    return current_user\n\n@router.get("/projects", response_model=List[dict])\nasync def list_projects(\n    db: Session = Depends(get_db),\n    current_user: User = Depends(get_current_user)\n):\n    projects = db.query(Project).filter(\n        Project.owner_id == current_user.id\n    ).all()\n    return projects\n\n@router.post("/projects", status_code=status.HTTP_201_CREATED)\nasync def create_project(\n    title: str, description: str,\n    db: Session = Depends(get_db),\n    current_user: User = Depends(get_current_user)\n):\n    project = Project(\n        title=title,\n        description=description,\n        owner_id=current_user.id\n    )\n    db.add(project)\n    db.commit()\n    return project\n''',
-        'templates/base.html': '''<!DOCTYPE html>\n<html lang="en">\n<head>\n    <meta charset="UTF-8">\n    <meta name="viewport" content="width=device-width, initial-scale=1.0">\n    <title>{{ title }}</title>\n    <link href="/static/styles.css" rel="stylesheet">\n</head>\n<body>\n    <nav class="navbar">\n        <div class="container">\n            <a href="/" class="brand">''' + name + '''</a>\n            <div class="nav-links">\n                <a href="/dashboard">Dashboard</a>\n                <a href="/projects">Projects</a>\n                <a href="/profile">Profile</a>\n            </div>\n        </div>\n    </nav>\n    <main class="container">\n        {% block content %}{% endblock %}\n    </main>\n    <footer class="footer">\n        <p>&copy; 2024 ''' + name + '''. All rights reserved.</p>\n    </footer>\n</body>\n</html>\n''',
-        'templates/dashboard.html': '''{% extends "base.html" %}\n{% block content %}\n<div class="dashboard">\n    <h1>Dashboard</h1>\n    <div class="stats-grid">\n        <div class="stat-card">\n            <h3>Total Projects</h3>\n            <p class="stat-value">{{ stats.total_projects }}</p>\n        </div>\n        <div class="stat-card">\n            <h3>Active Users</h3>\n            <p class="stat-value">{{ stats.active_users }}</p>\n        </div>\n        <div class="stat-card">\n            <h3>Tasks Completed</h3>\n            <p class="stat-value">{{ stats.tasks_done }}</p>\n        </div>\n    </div>\n    <div class="recent-activity">\n        <h2>Recent Activity</h2>\n        {% for item in activity %}\n        <div class="activity-item">\n            <span class="activity-icon">{{ item.icon }}</span>\n            <span>{{ item.text }}</span>\n            <time>{{ item.time }}</time>\n        </div>\n        {% endfor %}\n    </div>\n</div>\n{% endblock %}\n''',
-        'static/styles.css': '''/* Generated styles */\n:root {\n    --primary: #8b5cf6;\n    --primary-dark: #7c3aed;\n    --bg-dark: #0f172a;\n    --bg-card: #1e293b;\n    --text: #e2e8f0;\n    --text-muted: #94a3b8;\n    --border: #334155;\n    --success: #10b981;\n    --danger: #ef4444;\n}\n\n* { margin: 0; padding: 0; box-sizing: border-box; }\nbody { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg-dark); color: var(--text); }\n.container { max-width: 1200px; margin: 0 auto; padding: 0 1.5rem; }\n\n.navbar { background: var(--bg-card); border-bottom: 1px solid var(--border); padding: 1rem 0; }\n.navbar .container { display: flex; justify-content: space-between; align-items: center; }\n.brand { font-size: 1.25rem; font-weight: 700; color: var(--primary); text-decoration: none; }\n.nav-links a { color: var(--text-muted); text-decoration: none; margin-left: 1.5rem; }\n.nav-links a:hover { color: var(--text); }\n\n.dashboard { padding: 2rem 0; }\n.stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin: 1.5rem 0; }\n.stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; }\n.stat-value { font-size: 2rem; font-weight: 700; color: var(--primary); }\n\n.footer { text-align: center; padding: 2rem; color: var(--text-muted); border-top: 1px solid var(--border); margin-top: 3rem; }\n''',
-        'requirements.txt': 'fastapi==0.109.0\nuvicorn==0.27.0\nsqlalchemy==2.0.25\nalembic==1.13.1\npython-jose==3.3.0\npasslib==1.7.4\npython-multipart==0.0.6\nhttpx==0.26.0\npython-dotenv==1.0.0\npsycopg2-binary==2.9.9\n',
-        'README.md': f'''# {name}\n\n{idea[:120]}\n\n## Quick Start\n\n```bash\npip install -r requirements.txt\nuvicorn app:app --reload\n```\n\n## Features\n\n- User authentication with JWT\n- RESTful API with FastAPI\n- PostgreSQL database with SQLAlchemy ORM\n- Responsive dashboard UI\n- Docker support for deployment\n\n## API Endpoints\n\n| Method | Path | Description |\n|--------|------|-------------|\n| GET | / | Health check |\n| POST | /auth/login | User login |\n| GET | /users/me | Current user profile |\n| GET | /projects | List projects |\n| POST | /projects | Create project |\n\n## Deployment\n\n```bash\ndocker-compose up -d\n```\n''',
-        'Dockerfile': 'FROM python:3.11-slim\n\nWORKDIR /app\n\nCOPY requirements.txt .\nRUN pip install --no-cache-dir -r requirements.txt\n\nCOPY . .\n\nEXPOSE 8000\n\nCMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]\n',
-        '.env.example': 'DATABASE_URL=postgresql://user:password@localhost:5432/dbname\nSECRET_KEY=your-secret-key-here\nALGORITHM=HS256\nACCESS_TOKEN_EXPIRE_MINUTES=30\nDEBUG=true\n'
-    }

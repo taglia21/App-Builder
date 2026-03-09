@@ -92,8 +92,8 @@ except ImportError:
     try:
         from src.logging_config import setup_sentry
         setup_sentry()
-    except Exception:
-        pass
+    except Exception as _sentry_fallback_err:
+        logging.getLogger(__name__).debug("Sentry fallback init skipped: %s", _sentry_fallback_err)
 except Exception as _sentry_err:
     logging.getLogger(__name__).warning(f"Sentry init failed: {_sentry_err}")
 

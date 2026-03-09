@@ -15,12 +15,22 @@ from uuid import uuid4
 
 from concurrent.futures import ThreadPoolExecutor
 
-from fastapi import APIRouter, Body
-from pydantic import BaseModel, Field
+import re
+
+from fastapi import APIRouter, Body, HTTPException, Request
+from pydantic import BaseModel, Field, field_validator
 
 _build_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="build-pipeline")
 
 logger = logging.getLogger(__name__)
+
+
+def _sanitize_input(text: str, max_length: int = 5000) -> str:
+    """Sanitize user input: strip control chars, limit length."""
+    if not text:
+        return text
+    text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
+    return text[:max_length].strip()
 
 
 # ==================== Request/Response Models ====================
@@ -73,7 +83,7 @@ class ProjectListResponse(BaseModel):
 
 class GenerationRequest(BaseModel):
     """Request to generate a project."""
-    project_id: str
+    project_id: str = Field(..., min_length=1, max_length=100)
     regenerate: bool = False
 
 
@@ -89,10 +99,18 @@ class GenerationStatus(BaseModel):
 
 class DeploymentRequest(BaseModel):
     """Request to deploy a project."""
-    project_id: str
-    environment: str = "production"
+    project_id: str = Field(..., min_length=1, max_length=100)
+    environment: str = Field(default="production", max_length=50)
     frontend: bool = True
     backend: bool = True
+
+    @field_validator("environment")
+    @classmethod
+    def validate_environment(cls, v: str) -> str:
+        allowed = {"production", "staging", "development", "preview"}
+        if v not in allowed:
+            raise ValueError(f"Environment must be one of: {', '.join(sorted(allowed))}")
+        return v
 
 
 class DeploymentStatus(BaseModel):
@@ -170,13 +188,29 @@ class OnboardingStatusResponse(BaseModel):
 
 class BuildRequest(BaseModel):
     """Request to start a pipeline build."""
-    idea: str = Field(..., min_length=5, max_length=5000)
-    target_users: Optional[str] = None
-    features: Optional[str] = None
-    monetization: Optional[str] = None
-    theme: str = Field(default="Modern")
-    llm_provider: str = Field(default="auto")
+    idea: str = Field(..., min_length=5, max_length=5000, description="App idea description")
+    target_users: Optional[str] = Field(None, max_length=1000)
+    features: Optional[str] = Field(None, max_length=3000)
+    monetization: Optional[str] = Field(None, max_length=500)
+    theme: str = Field(default="Modern", max_length=50)
+    llm_provider: str = Field(default="auto", max_length=50)
     customization: Optional[Dict[str, Any]] = None
+
+    @field_validator("theme")
+    @classmethod
+    def validate_theme(cls, v: str) -> str:
+        allowed = {"Modern", "Minimal", "Corporate", "Creative", "Dark", "Light", "Startup"}
+        if v not in allowed:
+            raise ValueError(f"Theme must be one of: {', '.join(sorted(allowed))}")
+        return v
+
+    @field_validator("llm_provider")
+    @classmethod
+    def validate_llm_provider(cls, v: str) -> str:
+        allowed = {"auto", "openai", "anthropic", "google", "local"}
+        if v not in allowed:
+            raise ValueError(f"LLM provider must be one of: {', '.join(sorted(allowed))}")
+        return v
 
 
 class BuildResponse(BaseModel):
@@ -322,14 +356,17 @@ class APIRoutes:
                     created_at=datetime.fromisoformat(b["started_at"]) if b.get("started_at") else datetime.now(timezone.utc),
                     updated_at=datetime.fromisoformat(b.get("completed_at") or b["started_at"]) if b.get("started_at") else datetime.now(timezone.utc),
                 )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Build manager lookup for project %s failed: %s", project_id, e)
 
         raise HTTPException(status_code=404, detail="Project not found")
 
     @staticmethod
-    async def create_project(project: ProjectCreate) -> ProjectResponse:
+    async def create_project(request: Request, project: ProjectCreate) -> ProjectResponse:
         """Create a new project in the database."""
+        from src.dashboard.routes import get_current_user
+        user = get_current_user(request)
+        user_id = str(user.id) if user else "anonymous"
         try:
             from src.database.db import get_db
             from src.database.models import Project as DBProject, ProjectStatus as DBStatus
@@ -338,7 +375,7 @@ class APIRoutes:
                 db_project = DBProject(
                     name=project.name,
                     description=project.description,
-                    user_id="default",  # TODO: get from auth context
+                    user_id=user_id,
                     status=DBStatus.DRAFT,
                     config={
                         "features": project.features or [],
@@ -359,17 +396,10 @@ class APIRoutes:
                     updated_at=db_project.updated_at or datetime.now(timezone.utc),
                 )
         except Exception as e:
-            logger.warning("DB create failed, returning mock: %s", e)
-            return ProjectResponse(
-                id=str(uuid4()),
-                name=project.name,
-                description=project.description,
-                status=ProjectStatus.DRAFT,
-                features=project.features or [],
-                tech_stack=project.tech_stack or {},
-                urls={},
-                created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc),
+            logger.error("Project creation failed: %s", e, exc_info=True)
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to create project. Please try again.",
             )
 
     @staticmethod
@@ -488,8 +518,8 @@ class APIRoutes:
                         steps=steps,
                         estimated_time_remaining=max(0, (100 - progress) * 2),
                     )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Build status lookup from build_manager failed: %s", e)
 
         return GenerationStatus(
             project_id=project_id,
@@ -569,10 +599,13 @@ class APIRoutes:
 
     @staticmethod
     async def create_checkout_session(
+        request: Request,
         tier: str = Body(...),
         billing_period: str = Body("monthly"),
     ) -> Dict[str, str]:
         """Create a Stripe checkout session."""
+        from src.dashboard.routes import get_current_user
+        user = get_current_user(request)
         stripe_key = os.environ.get("STRIPE_SECRET_KEY", "")
         if not stripe_key:
             return {
@@ -597,6 +630,8 @@ class APIRoutes:
                 payment_method_types=["card"],
                 line_items=[{"price": price_id, "quantity": 1}],
                 mode="subscription",
+                metadata={"user_id": str(user.id) if user else "anonymous"},
+                client_reference_id=str(user.id) if user else None,
                 success_url=f"{base_url}/billing/success?session_id={{CHECKOUT_SESSION_ID}}",
                 cancel_url=f"{base_url}/billing/plans",
             )
@@ -609,18 +644,42 @@ class APIRoutes:
             return {"error": str(e), "checkout_url": "", "session_id": ""}
 
     @staticmethod
-    async def create_portal_session() -> Dict[str, str]:
+    async def create_portal_session(request: Request) -> Dict[str, str]:
         """Create a Stripe customer portal session."""
         stripe_key = os.environ.get("STRIPE_SECRET_KEY", "")
         if not stripe_key:
             return {"error": "Stripe not configured", "portal_url": ""}
+
+        from src.dashboard.routes import get_current_user
+        user = get_current_user(request)
+        if not user:
+            return {"error": "Authentication required", "portal_url": ""}
+
+        # Look up Stripe customer ID
+        customer_id = getattr(user, 'stripe_customer_id', None)
+        if not customer_id:
+            try:
+                from src.database.db import get_db
+                db = get_db()
+                with db.session() as sess:
+                    from src.database.models import Subscription
+                    sub = sess.query(Subscription).filter(
+                        Subscription.user_id == str(user.id)
+                    ).first()
+                    if sub and hasattr(sub, 'stripe_customer_id'):
+                        customer_id = sub.stripe_customer_id
+            except Exception as e:
+                logger.warning("Stripe customer lookup failed: %s", e)
+
+        if not customer_id:
+            return {"error": "No billing account found. Subscribe to a plan first.", "portal_url": ""}
 
         try:
             import stripe
             stripe.api_key = stripe_key
             base_url = os.environ.get("BASE_URL", "http://localhost:8000")
             portal_session = stripe.billing_portal.Session.create(
-                customer="cus_default",  # TODO: get from auth context
+                customer=customer_id,
                 return_url=f"{base_url}/billing",
             )
             return {"portal_url": portal_session.url}
@@ -631,18 +690,32 @@ class APIRoutes:
     # ==================== API Keys ====================
 
     @staticmethod
-    async def list_api_keys() -> List[Dict[str, Any]]:
-        """List API keys (without the actual key value)."""
-        return [
-            {
-                "id": "key_1",
-                "name": "Production Key",
-                "scopes": ["read", "write"],
-                "created_at": "2024-01-15T12:00:00Z",
-                "last_used": "2024-01-20T15:30:00Z",
-                "prefix": "val_prod_",
-            },
-        ]
+    async def list_api_keys(request: Request) -> List[Dict[str, Any]]:
+        """List API keys for the current user (without actual key values)."""
+        from src.dashboard.routes import get_current_user
+        user = get_current_user(request)
+        if not user:
+            return []
+        try:
+            from src.database.db import get_db
+            db = get_db()
+            with db.session() as session:
+                from src.database.models import APIKey
+                keys = session.query(APIKey).filter(
+                    APIKey.user_id == str(user.id)
+                ).all()
+                return [
+                    {
+                        "id": str(k.id),
+                        "name": k.name,
+                        "scopes": getattr(k, 'scopes', ["read", "write"]),
+                        "created_at": k.created_at.isoformat() if hasattr(k, 'created_at') and k.created_at else None,
+                    }
+                    for k in keys
+                ]
+        except Exception as e:
+            logger.warning("Failed to list API keys: %s", e)
+            return []
 
     @staticmethod
     async def create_api_key(request: APIKeyCreate) -> APIKeyResponse:
@@ -1019,8 +1092,8 @@ class APIRoutes:
                     # Match by job_id prefix or idea name fragment
                     if project_id in job.job_id or project_id.replace("-", "") in job.job_id:
                         return job.result.output_path
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Job output path lookup failed: %s", e)
 
         # Fallback: look in output/ subdirectory
         from pathlib import Path
@@ -1074,23 +1147,47 @@ class APIRoutes:
             "message": "Thank you for reaching out! We'll get back to you within 24 hours."
         }
 
-    async def get_onboarding_status(self) -> OnboardingStatusResponse:
-        """Get user onboarding status."""
-        # Mock data - in production, fetch from database for current user
+    async def get_onboarding_status(self, request: Request) -> OnboardingStatusResponse:
+        """Get user onboarding status from database."""
+        from src.dashboard.routes import get_current_user
+        user = get_current_user(request)
+
         steps = {
             "emailVerified": False,
             "apiKeysAdded": False,
             "firstAppGenerated": False,
-            "firstDeploy": False
+            "firstDeploy": False,
         }
 
-        completed_count = sum(1 for v in steps.values() if v)
+        if user:
+            steps["emailVerified"] = bool(getattr(user, 'email_verified', True))
 
+            try:
+                from src.database.db import get_db
+                from src.database.models import Project as DBProject
+                db = get_db()
+                with db.session() as session:
+                    has_projects = session.query(DBProject).filter(
+                        DBProject.user_id == str(user.id)
+                    ).first() is not None
+                    steps["firstAppGenerated"] = has_projects
+            except Exception as e:
+                logger.debug("Onboarding project check failed: %s", e)
+
+            try:
+                from src.services.build_manager import build_manager
+                builds = build_manager.list_builds(user_id=str(user.id))
+                if builds:
+                    steps["firstAppGenerated"] = True
+            except Exception as e:
+                logger.debug("Onboarding build check failed: %s", e)
+
+        completed_count = sum(1 for v in steps.values() if v)
         return OnboardingStatusResponse(
             steps=steps,
             completedCount=completed_count,
             totalSteps=4,
-            allComplete=completed_count == 4
+            allComplete=completed_count == 4,
         )
 
 
@@ -1287,8 +1384,25 @@ def _run_pipeline_thread_legacy(
         plugin_registry.call_hook("on_error", build_id=build_id, error=exc)
 
 
-async def api_create_build(data: BuildRequest) -> BuildResponse:
+async def api_create_build(request: Request, data: BuildRequest) -> BuildResponse:
     """POST /api/build — start a v2 AI-powered pipeline build."""
+    import time as _time
+    if not hasattr(APIRoutes, '_build_rate_limits'):
+        APIRoutes._build_rate_limits = {}
+    client_ip = request.client.host if request.client else "unknown"
+    now = _time.time()
+    APIRoutes._build_rate_limits = {
+        k: [t for t in v if now - t < 60]
+        for k, v in APIRoutes._build_rate_limits.items()
+    }
+    recent = APIRoutes._build_rate_limits.get(client_ip, [])
+    if len(recent) >= 5:
+        raise HTTPException(status_code=429, detail="Rate limit: max 5 builds per minute.")
+    recent.append(now)
+    APIRoutes._build_rate_limits[client_ip] = recent
+
+    data.idea = _sanitize_input(data.idea)
+
     from src.services.build_manager import build_manager
 
     build_id = build_manager.create_build(
