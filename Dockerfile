@@ -53,6 +53,10 @@ RUN rm -rf tests/ .git/ .github/ *.md .env* __pycache__/ .pytest_cache/ \
     requirements-dev.txt mypy.ini pyproject.toml \
     docker-compose*.yml tailwind.config.js
 
+# Create writable directories the app needs at runtime
+RUN mkdir -p /app/data /app/output /app/generated_projects /app/logs \
+    && chown -R appuser:appuser /app/data /app/output /app/generated_projects /app/logs
+
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
