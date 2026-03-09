@@ -17,11 +17,12 @@ import asyncio
 import logging
 import time
 from pathlib import Path
-from typing import AsyncGenerator, List, Optional
+from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
 from src.code_generation.architect import SystemArchitect, SystemSpec
+from src.code_generation.consistency import ConsistencyChecker, ConsistencyResult
 from src.code_generation.critic_integration import CriticPanel, CriticReport
 from src.code_generation.engine_v2 import CodeGeneratorV2, GenerationResult
 from src.code_generation.quality import AutoFixer, CodeQualityPipeline, QualityReport
@@ -41,11 +42,13 @@ class PipelineResult(BaseModel):
     generation: GenerationResult
     quality: QualityReport
     fixes_applied: int = 0
+    consistency_fixes: int = 0
     output_path: str = ""
     total_time_seconds: float = 0.0
     # "success" | "success_with_warnings" | "failed"
     status: str = "success"
     critic_report: Optional[dict] = None
+    customization: Optional[Dict[str, Any]] = None
 
 
 class PipelineProgress(BaseModel):
@@ -88,6 +91,7 @@ class GenerationPipeline:
         self.quality = CodeQualityPipeline()
         self.fixer = AutoFixer()
         self.critic_panel = CriticPanel()
+        self.consistency = ConsistencyChecker()
         self.output_base_dir = Path(output_base_dir)
 
     # ------------------------------------------------------------------
@@ -101,6 +105,7 @@ class GenerationPipeline:
         features: Optional[List[str]] = None,
         theme: str = "Modern",
         max_fix_rounds: int = 2,
+        customization: Optional[Dict[str, Any]] = None,
     ) -> PipelineResult:
         """Run the full generation pipeline.
 
@@ -126,6 +131,7 @@ class GenerationPipeline:
             theme,
             max_fix_rounds,
         )
+        customization = customization or {}
 
         # ----------------------------------------------------------------
         # Step 1: Architecture Design
@@ -136,6 +142,7 @@ class GenerationPipeline:
                 idea_name=idea_name,
                 idea_description=idea_description,
                 features=features,
+                customization=customization,
             )
         except Exception as exc:
             logger.exception("[pipeline] Architect failed: %s", exc)
@@ -150,10 +157,26 @@ class GenerationPipeline:
                 spec=spec,
                 output_dir=str(output_dir),
                 theme=theme,
+                customization=customization,
             )
         except Exception as exc:
             logger.exception("[pipeline] Generator failed: %s", exc)
             raise RuntimeError(f"Code generation failed: {exc}") from exc
+
+        # ----------------------------------------------------------------
+        # Step 2.5: Consistency pass
+        # ----------------------------------------------------------------
+        logger.info("[pipeline] Step 2.5/4 — Consistency pass")
+        consistency_fixes_run = 0
+        try:
+            consistency_result: ConsistencyResult = self.consistency.run(str(output_dir))
+            consistency_fixes_run = consistency_result.total_fixes
+            if consistency_result.total_fixes > 0:
+                logger.info("[pipeline] Consistency pass: %d fix(es) applied", consistency_result.total_fixes)
+            for w in consistency_result.warnings:
+                logger.warning("[pipeline] Consistency warning: %s", w)
+        except Exception as exc:
+            logger.warning("[pipeline] Consistency pass failed (non-blocking): %s", exc)
 
         # ----------------------------------------------------------------
         # Step 3: Quality Validation
@@ -236,10 +259,12 @@ class GenerationPipeline:
             generation=generation,
             quality=quality_report,
             fixes_applied=fixes_applied_total,
+            consistency_fixes=consistency_fixes_run,
             output_path=str(output_dir.resolve()),
             total_time_seconds=total_time,
             status=status,
             critic_report=critic_report_dict,
+            customization=customization or None,
         )
 
         logger.info(
@@ -258,6 +283,7 @@ class GenerationPipeline:
         features: Optional[List[str]] = None,
         theme: str = "Modern",
         max_fix_rounds: int = 2,
+        customization: Optional[Dict[str, Any]] = None,
     ) -> AsyncGenerator[PipelineProgress, None]:
         """Stream pipeline progress for real-time UI updates.
 
@@ -279,6 +305,7 @@ class GenerationPipeline:
             RuntimeError: If any mandatory pipeline step fails.
         """
         features = features or []
+        customization = customization or {}
         output_dir = self._output_dir(idea_name)
         t_start = time.monotonic()
 
@@ -296,6 +323,7 @@ class GenerationPipeline:
             idea_name=idea_name,
             idea_description=idea_description,
             features=features,
+            customization=customization,
         )
 
         entity_count = len(spec.entities) if spec.entities else 0
@@ -328,6 +356,7 @@ class GenerationPipeline:
             spec=spec,
             output_dir=str(output_dir),
             theme=theme,
+            customization=customization,
         )
 
         yield PipelineProgress(
@@ -338,6 +367,27 @@ class GenerationPipeline:
             files_generated=generation.total_files,
             total_files=generation.total_files,
         )
+
+        # Phase: consistency (70-71%)
+        yield PipelineProgress(
+            phase="consistency",
+            step="Running consistency checks",
+            progress=70,
+            message="Validating cross-file imports, naming, and config coherence",
+            files_generated=generation.total_files,
+            total_files=generation.total_files,
+        )
+
+        consistency_fixes = 0
+        try:
+            consistency_result = self.consistency.run(str(output_dir))
+            consistency_fixes = consistency_result.total_fixes
+            if consistency_fixes > 0:
+                logger.info("[pipeline] Consistency pass: %d fix(es)", consistency_fixes)
+            for w in consistency_result.warnings:
+                logger.warning("[pipeline] Consistency: %s", w)
+        except Exception as exc:
+            logger.warning("[pipeline] Consistency pass failed (non-blocking): %s", exc)
 
         # ----------------------------------------------------------------
         # Phase: validate (70–82 %)
@@ -453,10 +503,12 @@ class GenerationPipeline:
             generation=generation,
             quality=quality_report,
             fixes_applied=fixes_total,
+            consistency_fixes=consistency_fixes,
             output_path=str(output_dir.resolve()),
             total_time_seconds=total_time,
             status=status,
             critic_report=critic_report_dict,
+            customization=customization or None,
         )
 
         final_event = PipelineProgress(

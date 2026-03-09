@@ -351,6 +351,7 @@ class SystemArchitect:
         idea_name: str,
         idea_description: str,
         features: Optional[List[str]] = None,
+        customization: Optional[Dict[str, Any]] = None,
     ) -> SystemSpec:
         """
         Orchestrate a multi-step LLM pipeline to produce a full SystemSpec.
@@ -378,6 +379,18 @@ class SystemArchitect:
 
         # Build a shared context string reused across prompts
         context = self._build_context(idea_name, idea_description, features)
+
+        if customization:
+            context += "\n\nCustomization preferences:\n"
+            context += f"- Backend framework: {customization.get('backend_framework', 'fastapi')}\n"
+            context += f"- Database: {customization.get('database', 'postgresql')}\n"
+            context += f"- Auth strategy: {customization.get('auth_strategy', 'jwt')}\n"
+            context += f"- Frontend framework: {customization.get('frontend_framework', 'nextjs')}\n"
+            context += f"- CSS framework: {customization.get('css_framework', 'tailwind')}\n"
+            context += f"- Deployment target: {customization.get('deployment_target', 'docker')}\n"
+            context += f"- API style: {customization.get('api_style', 'rest')}\n"
+            if customization.get('extra_instructions'):
+                context += f"- Extra instructions: {customization['extra_instructions']}\n"
 
         # ---------- Step 1: High-level decomposition ----------
         decomposition: Dict[str, Any] = {}

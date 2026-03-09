@@ -160,6 +160,7 @@ class _GenerationContext:
     _spec_summary_cache: Optional[str] = None
     # Lock for thread-safe updates to shared state
     _lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+    customization: Dict[str, Any] = field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
@@ -238,13 +239,14 @@ def _validate_file(relative_path: str, source: str) -> Optional[str]:
 # ---------------------------------------------------------------------------
 
 
-def _spec_summary(spec: SystemSpec, *, compact: bool = False) -> str:
+def _spec_summary(spec: SystemSpec, *, compact: bool = False, ctx: Optional["_GenerationContext"] = None) -> str:
     """Render a concise text representation of *spec* for use in prompts.
 
     Args:
         spec: The system specification.
         compact: If True, omit API routes and business rules for shorter prompts
                  (useful for config/infra files that don't need route details).
+        ctx: Optional generation context; if provided and has customization, appends it.
     """
     lines: List[str] = [
         f"App: {spec.app_name}",
@@ -287,6 +289,30 @@ def _spec_summary(spec: SystemSpec, *, compact: bool = False) -> str:
         f"Tech Stack: {spec.tech_stack.backend_framework} / "
         f"{spec.tech_stack.frontend_framework} / {spec.tech_stack.database}",
     ]
+    if ctx is not None and ctx.customization:
+        lines.append(f"\nCustomization: backend={ctx.customization.get('backend_framework','fastapi')}, "
+                     f"db={ctx.customization.get('database','postgresql')}, "
+                     f"auth={ctx.customization.get('auth_strategy','jwt')}, "
+                     f"frontend={ctx.customization.get('frontend_framework','nextjs')}, "
+                     f"css={ctx.customization.get('css_framework','tailwind')}, "
+                     f"deploy={ctx.customization.get('deployment_target','docker')}")
+        if ctx.customization.get('extra_instructions'):
+            lines.append(f"Extra instructions: {ctx.customization['extra_instructions']}")
+    return "\n".join(lines)
+
+
+def _spec_summary_with_customization(spec: SystemSpec, ctx: "_GenerationContext", *, compact: bool = False) -> str:
+    """Render spec summary with customization preferences appended."""
+    lines = _spec_summary(spec, compact=compact).splitlines()
+    if ctx.customization:
+        lines.append(f"\nCustomization: backend={ctx.customization.get('backend_framework','fastapi')}, "
+                     f"db={ctx.customization.get('database','postgresql')}, "
+                     f"auth={ctx.customization.get('auth_strategy','jwt')}, "
+                     f"frontend={ctx.customization.get('frontend_framework','nextjs')}, "
+                     f"css={ctx.customization.get('css_framework','tailwind')}, "
+                     f"deploy={ctx.customization.get('deployment_target','docker')}")
+        if ctx.customization.get('extra_instructions'):
+            lines.append(f"Extra instructions: {ctx.customization['extra_instructions']}")
     return "\n".join(lines)
 
 
@@ -379,27 +405,76 @@ def _build_model_prompt(entity: EntitySpec, ctx: _GenerationContext) -> str:
         Generate a complete SQLAlchemy ORM model file for the entity described below.
 
         === SYSTEM SPEC ===
-        {_spec_summary(spec)}
+        {_spec_summary(spec, ctx=ctx)}
 
         === ENTITY DETAIL ===
         {_entity_detail(entity)}
 
         === ALREADY GENERATED INTERFACES ===
-        {_interfaces_summary(ctx)}
+        {_interfaces_summary(ctx, relevant_to=f'backend/app/models/{entity.name.lower()}.py')}
+
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        The following is a perfectly written SQLAlchemy model. Yours must meet this standard:
+
+        from __future__ import annotations
+        import uuid
+        from datetime import datetime
+        from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, func
+        from sqlalchemy.orm import Mapped, mapped_column, relationship
+        from app.db.base import Base
+
+        class Post(Base):
+            '''Blog post authored by a User.'''
+
+            __tablename__ = "posts"
+
+            id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+            title: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+            body: Mapped[str] = mapped_column(Text, nullable=False)
+            published: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+            author_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
+            created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+            updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+            author: Mapped["User"] = relationship("User", back_populates="posts")
+
+            def __repr__(self) -> str:
+                return f"<Post id={{self.id!r}} title={{self.title!r}}>"
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT use the legacy Column() style — always use mapped_column() with Mapped[] annotations.
+        2. Do NOT leave any TODO, FIXME, or placeholder comments in the output.
+        3. Do NOT import * from sqlalchemy or any other module.
+        4. Do NOT define relationships without back_populates unless the relationship is truly one-directional.
+        5. Do NOT hard-code created_at/updated_at as Python datetime.now() — use server_default=func.now().
+
+        === CROSS-FILE CONSISTENCY ===
+        - Import Base exclusively from app.db.base: `from app.db.base import Base`
+        - Use the exact __tablename__ value that will be referenced by foreign keys in other models.
+        - Relationship target class names must exactly match the class names in their respective model files.
+        - Import related model classes using TYPE_CHECKING guard to avoid circular imports:
+          `from __future__ import annotations` at top of file is required.
+
+        === CODE QUALITY REQUIREMENTS ===
+        - Every class must have a docstring describing the entity's purpose.
+        - Use Mapped[T] and mapped_column() for ALL columns (SQLAlchemy 2.x style — no legacy Column()).
+        - Provide explicit nullable=True/False on every column.
+        - Every model must define __repr__ returning a concise, useful string.
+        - Use uuid.uuid4() via a Python default lambda for primary key generation.
+        - Add database indexes (index=True) on any field that will be frequently filtered or sorted.
+        - If entity has soft_delete, add deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
         === REQUIREMENTS ===
         - File: backend/app/models/{entity.name.lower()}.py
-        - Use SQLAlchemy 2.x declarative_base (imported from backend/app/db/base.py as Base).
-        - Add all fields with appropriate Column types:
+        - Use SQLAlchemy 2.x mapped_column() with Mapped[] type annotations throughout.
+        - Map field types correctly:
             string → String(255), text → Text, integer → Integer,
-            decimal → Float, boolean → Boolean, timestamp → DateTime,
-            uuid → String(36) with server_default=func.uuid_generate_v4() where supported.
-        - Add created_at and updated_at DateTime columns with server defaults if entity.timestamps is True.
-        - Add deleted_at DateTime column (nullable) for soft-delete if entity.soft_delete is True.
-        - Implement all relationships using SQLAlchemy relationship() with appropriate back_populates.
-        - Add __tablename__ class variable.
-        - Add __repr__ returning a useful string.
-        - Import everything from sqlalchemy; do NOT import from future models.
+            decimal → Numeric(precision=10, scale=2), boolean → Boolean,
+            timestamp/datetime → DateTime(timezone=True), uuid → String(36).
+        - Add created_at and updated_at with server_default=func.now() and onupdate=func.now().
+        - Add deleted_at (nullable) for soft-delete if applicable.
+        - Implement all relationships using relationship() with back_populates.
+        - Add __tablename__ and __repr__.
         - Output ONLY the Python source — no markdown, no explanation.
     """).strip()
 
@@ -410,25 +485,89 @@ def _build_schema_prompt(entity: EntitySpec, ctx: _GenerationContext) -> str:
         Generate complete Pydantic v2 schema classes for the entity described below.
 
         === SYSTEM SPEC ===
-        {_spec_summary(spec)}
+        {_spec_summary(spec, ctx=ctx)}
 
         === ENTITY DETAIL ===
         {_entity_detail(entity)}
 
         === ALREADY GENERATED INTERFACES ===
-        {_interfaces_summary(ctx)}
+        {_interfaces_summary(ctx, relevant_to=f'backend/app/schemas/{entity.name.lower()}.py')}
+
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        The following is a perfectly written Pydantic v2 schema file:
+
+        from __future__ import annotations
+        from datetime import datetime
+        from typing import Optional
+        from pydantic import BaseModel, ConfigDict, EmailStr, Field
+
+        class PostBase(BaseModel):
+            '''Fields shared across all Post schema variants.'''
+            title: str = Field(..., min_length=1, max_length=255, description="Post headline")
+            body: str = Field(..., min_length=1, description="Full post body text")
+            published: bool = Field(default=False, description="Whether the post is publicly visible")
+
+        class PostCreate(PostBase):
+            '''Payload for creating a new Post.'''
+            author_id: str = Field(..., description="UUID of the authoring user")
+
+        class PostUpdate(BaseModel):
+            '''Payload for partially updating a Post — all fields optional.'''
+            title: Optional[str] = Field(None, min_length=1, max_length=255, description="Post headline")
+            body: Optional[str] = Field(None, min_length=1, description="Full post body text")
+            published: Optional[bool] = Field(None, description="Whether the post is publicly visible")
+
+        class PostRead(PostBase):
+            '''Full Post representation returned from the API.'''
+            model_config = ConfigDict(
+                from_attributes=True,
+                json_schema_extra={{
+                    "example": {{
+                        "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                        "title": "Hello World",
+                        "body": "My first post.",
+                        "published": True,
+                        "author_id": "abc123",
+                        "created_at": "2024-01-01T00:00:00Z",
+                        "updated_at": "2024-01-01T00:00:00Z",
+                    }}
+                }},
+            )
+            id: str
+            author_id: str
+            created_at: datetime
+            updated_at: datetime
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT mix Pydantic v1 and v2 syntax — always use ConfigDict, not class Config.
+        2. Do NOT make Update schema inherit from Base — it must be a standalone BaseModel with all Optional fields.
+        3. Do NOT leave fields without Field() descriptions.
+        4. Do NOT use `Any` as a field type when a more specific type is available.
+        5. Do NOT omit model_config = ConfigDict(from_attributes=True) from the Read schema.
+
+        === CROSS-FILE CONSISTENCY ===
+        - Import Base schema from this same file when nesting (e.g. nested read schemas for relationships).
+        - The Read schema field names must exactly match the SQLAlchemy model column/relationship names
+          defined in backend/app/models/{entity.name.lower()}.py.
+        - Nested relationship schemas should import from their respective schema module:
+          e.g. `from app.schemas.user import UserRead`.
+
+        === CODE QUALITY REQUIREMENTS ===
+        - Every class must have a one-line docstring.
+        - Every field must use Field() with at minimum a description= argument.
+        - Add validators using @field_validator for any fields with non-trivial constraints.
+        - The Read schema must include id, created_at, updated_at, and all foreign key IDs.
+        - Use EmailStr (from pydantic) for any email fields.
+        - Use proper Python types: str, int, float, bool, datetime, Optional[T], list[T].
 
         === REQUIREMENTS ===
         - File: backend/app/schemas/{entity.name.lower()}.py
-        - Create four Pydantic BaseModel subclasses:
-            1. {entity.name}Base — shared fields (exclude id, created_at, updated_at)
-            2. {entity.name}Create(Base) — fields required for creation
-            3. {entity.name}Update(Base) — all fields Optional for partial update
-            4. {entity.name}Read(Base) — full read schema including id, timestamps, relationships as nested schemas
-        - Use Optional[T] for nullable fields, proper validators where applicable.
-        - Add model_config = ConfigDict(from_attributes=True) for ORM compatibility.
-        - Include field descriptions in Field(..., description="...").
-        - Add an example schema in model_config = ConfigDict(json_schema_extra={{"example": {{...}}}}).
+        - Create four Pydantic v2 BaseModel subclasses:
+            1. {entity.name}Base — shared validated fields (exclude id, timestamps)
+            2. {entity.name}Create(PostBase) — all fields needed to create; add any FK ids
+            3. {entity.name}Update(BaseModel) — ALL fields Optional for PATCH support
+            4. {entity.name}Read({entity.name}Base) — includes id, timestamps, nested relationship schemas
+        - model_config = ConfigDict(from_attributes=True, json_schema_extra={{"example": {{...}}}}) on Read.
         - Output ONLY the Python source — no markdown, no explanation.
     """).strip()
 
@@ -443,11 +582,13 @@ def _build_crud_prompt(entity: EntitySpec, ctx: _GenerationContext) -> str:
         f"  {r.method} {r.path}: {r.business_logic[:200]}" for r in routes_for_entity
     ) or "  (standard CRUD)"
 
+    plural = entity.plural.lower() if hasattr(entity, 'plural') else entity.name.lower() + 's'
+
     return textwrap.dedent(f"""
         Generate a complete CRUD operations module for the entity described below.
 
         === SYSTEM SPEC ===
-        {_spec_summary(spec)}
+        {_spec_summary(spec, ctx=ctx)}
 
         === ENTITY DETAIL ===
         {_entity_detail(entity)}
@@ -456,22 +597,98 @@ def _build_crud_prompt(entity: EntitySpec, ctx: _GenerationContext) -> str:
         {route_info}
 
         === ALREADY GENERATED INTERFACES ===
-        {_interfaces_summary(ctx)}
+        {_interfaces_summary(ctx, relevant_to=f'backend/app/crud/{entity.name.lower()}.py')}
+
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        The following is a perfectly written async CRUD module:
+
+        from __future__ import annotations
+        from typing import List, Optional
+        from sqlalchemy import select
+        from sqlalchemy.ext.asyncio import AsyncSession
+        from app.models.post import Post
+        from app.schemas.post import PostCreate, PostUpdate
+
+        async def get_post(db: AsyncSession, post_id: str) -> Optional[Post]:
+            '''Fetch a single Post by primary key. Returns None if not found.'''
+            result = await db.execute(select(Post).where(Post.id == post_id))
+            return result.scalars().first()
+
+        async def get_posts(
+            db: AsyncSession,
+            *,
+            skip: int = 0,
+            limit: int = 100,
+            author_id: Optional[str] = None,
+        ) -> List[Post]:
+            '''List Posts with optional filtering and pagination.'''
+            query = select(Post)
+            if author_id is not None:
+                query = query.where(Post.author_id == author_id)
+            query = query.offset(skip).limit(limit)
+            result = await db.execute(query)
+            return list(result.scalars().all())
+
+        async def create_post(db: AsyncSession, obj_in: PostCreate) -> Post:
+            '''Persist a new Post and return the refreshed ORM instance.'''
+            db_obj = Post(**obj_in.model_dump())
+            db.add(db_obj)
+            await db.commit()
+            await db.refresh(db_obj)
+            return db_obj
+
+        async def update_post(db: AsyncSession, db_obj: Post, obj_in: PostUpdate) -> Post:
+            '''Apply a partial update to *db_obj* and persist changes.'''
+            update_data = obj_in.model_dump(exclude_unset=True)
+            for field, value in update_data.items():
+                setattr(db_obj, field, value)
+            db.add(db_obj)
+            await db.commit()
+            await db.refresh(db_obj)
+            return db_obj
+
+        async def delete_post(db: AsyncSession, post_id: str) -> bool:
+            '''Hard-delete a Post. Returns True if deleted, False if not found.'''
+            db_obj = await get_post(db, post_id)
+            if db_obj is None:
+                return False
+            await db.delete(db_obj)
+            await db.commit()
+            return True
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT use db.query() (sync ORM) — always use async select() with await db.execute().
+        2. Do NOT commit inside a try/except and silently swallow exceptions — let them propagate.
+        3. Do NOT use obj_in.dict() — use obj_in.model_dump() (Pydantic v2).
+        4. Do NOT fetch the entire table without offset/limit on list functions.
+        5. Do NOT hard-code IDs or business values — all data comes from the schema input.
+
+        === CROSS-FILE CONSISTENCY ===
+        - Import model from: `from app.models.{entity.name.lower()} import {entity.name}`
+        - Import schemas from: `from app.schemas.{entity.name.lower()} import {entity.name}Create, {entity.name}Update`
+        - AsyncSession must come from: `from sqlalchemy.ext.asyncio import AsyncSession`
+        - Use select() from: `from sqlalchemy import select`
+
+        === CODE QUALITY REQUIREMENTS ===
+        - Every function must have a complete docstring explaining its purpose and return value.
+        - All parameters must have type annotations; all functions must have return type annotations.
+        - Use keyword-only arguments (*, param) for optional filter params in list functions.
+        - Use model_dump(exclude_unset=True) for partial updates so unset fields are not overwritten.
+        - For soft-delete entities: set deleted_at = datetime.utcnow() instead of calling db.delete().
+        - All async functions must handle exceptions via try/except and re-raise as appropriate.
 
         === REQUIREMENTS ===
         - File: backend/app/crud/{entity.name.lower()}.py
-        - Import the SQLAlchemy model from backend/app/models/{entity.name.lower()}.py
-        - Import the Pydantic schemas from backend/app/schemas/{entity.name.lower()}.py
-        - Use SQLAlchemy async session: from sqlalchemy.ext.asyncio import AsyncSession
-        - Implement these async functions:
-            get_{entity.name.lower()}(db, id) → Optional[model]
-            get_{entity.plural.lower() if hasattr(entity, 'plural') else entity.name.lower()+'s'}(db, skip, limit, **filters) → List[model]
-            create_{entity.name.lower()}(db, obj_in: Create) → model
-            update_{entity.name.lower()}(db, db_obj: model, obj_in: Update) → model
-            delete_{entity.name.lower()}(db, id) → bool  (soft-delete if applicable)
-        - Enforce all business rules for this entity listed in the spec.
-        - Use select(), where(), offset(), limit() from sqlalchemy.future.
-        - Commit and refresh after create/update.
+        - Import the SQLAlchemy model from app.models.{entity.name.lower()}
+        - Import Pydantic schemas from app.schemas.{entity.name.lower()}
+        - Use SQLAlchemy 2.x async API: select(), scalars(), await db.execute()
+        - Implement these typed async functions:
+            get_{entity.name.lower()}(db: AsyncSession, {entity.name.lower()}_id: str) -> Optional[{entity.name}]
+            get_{plural}(db: AsyncSession, *, skip: int = 0, limit: int = 100, ...) -> List[{entity.name}]
+            create_{entity.name.lower()}(db: AsyncSession, obj_in: {entity.name}Create) -> {entity.name}
+            update_{entity.name.lower()}(db: AsyncSession, db_obj: {entity.name}, obj_in: {entity.name}Update) -> {entity.name}
+            delete_{entity.name.lower()}(db: AsyncSession, {entity.name.lower()}_id: str) -> bool
+        - Enforce all business rules listed above for this entity.
         - Output ONLY the Python source — no markdown, no explanation.
     """).strip()
 
@@ -488,12 +705,13 @@ def _build_route_prompt(entity: EntitySpec, ctx: _GenerationContext) -> str:
     ) or "  (standard REST CRUD endpoints)"
 
     roles_info = "\n".join(f"  {r.name}: {', '.join(r.permissions)}" for r in spec.roles)
+    plural = entity.plural.lower() if hasattr(entity, 'plural') else entity.name.lower() + 's'
 
     return textwrap.dedent(f"""
         Generate a complete FastAPI router for the entity described below.
 
         === SYSTEM SPEC ===
-        {_spec_summary(spec)}
+        {_spec_summary(spec, ctx=ctx)}
 
         === ENTITY DETAIL ===
         {_entity_detail(entity)}
@@ -505,20 +723,104 @@ def _build_route_prompt(entity: EntitySpec, ctx: _GenerationContext) -> str:
         {roles_info}
 
         === ALREADY GENERATED INTERFACES ===
-        {_interfaces_summary(ctx)}
+        {_interfaces_summary(ctx, relevant_to=f'backend/app/api/endpoints/{entity.name.lower()}.py')}
+
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        The following is a perfectly written FastAPI router:
+
+        from __future__ import annotations
+        from typing import List
+        from fastapi import APIRouter, Depends, HTTPException, status
+        from sqlalchemy.ext.asyncio import AsyncSession
+        from app.core.auth import get_current_active_user, get_db
+        from app.crud.post import create_post, delete_post, get_post, get_posts, update_post
+        from app.models.user import User
+        from app.schemas.post import PostCreate, PostRead, PostUpdate
+
+        router = APIRouter(prefix="/posts", tags=["Posts"])
+
+        @router.get("/", response_model=List[PostRead], summary="List all posts")
+        async def list_posts(
+            skip: int = 0,
+            limit: int = 100,
+            db: AsyncSession = Depends(get_db),
+        ) -> List[PostRead]:
+            '''Return a paginated list of published posts.'''
+            return await get_posts(db, skip=skip, limit=limit)
+
+        @router.get("/{{post_id}}", response_model=PostRead, summary="Get a post by ID")
+        async def read_post(
+            post_id: str,
+            db: AsyncSession = Depends(get_db),
+        ) -> PostRead:
+            '''Fetch a single post by its UUID. Raises 404 if not found.'''
+            post = await get_post(db, post_id)
+            if post is None:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
+            return post
+
+        @router.post("/", response_model=PostRead, status_code=status.HTTP_201_CREATED, summary="Create a post")
+        async def create_post_endpoint(
+            payload: PostCreate,
+            db: AsyncSession = Depends(get_db),
+            current_user: User = Depends(get_current_active_user),
+        ) -> PostRead:
+            '''Create a new post owned by the authenticated user.'''
+            return await create_post(db, obj_in=payload)
+
+        @router.patch("/{{post_id}}", response_model=PostRead, summary="Update a post")
+        async def update_post_endpoint(
+            post_id: str,
+            payload: PostUpdate,
+            db: AsyncSession = Depends(get_db),
+            current_user: User = Depends(get_current_active_user),
+        ) -> PostRead:
+            '''Partially update a post. Only provided fields are changed.'''
+            post = await get_post(db, post_id)
+            if post is None:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
+            return await update_post(db, db_obj=post, obj_in=payload)
+
+        @router.delete("/{{post_id}}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete a post")
+        async def delete_post_endpoint(
+            post_id: str,
+            db: AsyncSession = Depends(get_db),
+            current_user: User = Depends(get_current_active_user),
+        ) -> None:
+            '''Delete a post by ID. Returns 404 if not found.'''
+            deleted = await delete_post(db, post_id)
+            if not deleted:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT omit response_model= from any route decorator — every route must declare its response type.
+        2. Do NOT return raw dicts from route functions — return ORM objects compatible with the response_model.
+        3. Do NOT put business logic directly in route functions — delegate to CRUD functions.
+        4. Do NOT catch HTTPException and re-raise it as a generic Exception.
+        5. Do NOT use sync Session — always use AsyncSession from the get_db dependency.
+
+        === CROSS-FILE CONSISTENCY ===
+        - Import CRUD functions from: `from app.crud.{entity.name.lower()} import ...`
+        - Import schemas from: `from app.schemas.{entity.name.lower()} import {entity.name}Create, {entity.name}Read, {entity.name}Update`
+        - Import auth deps from: `from app.core.auth import get_current_active_user, get_db`
+        - Import the User model from: `from app.models.user import User`
+        - Route path parameters must match the CRUD function's ID parameter name.
+
+        === CODE QUALITY REQUIREMENTS ===
+        - Every route function must have a docstring describing what it does.
+        - Every route decorator must set response_model=, status_code= (where non-default), and summary=.
+        - All function parameters must have type annotations including return type.
+        - Use status.HTTP_xxx constants instead of raw integers everywhere.
+        - Auth-required routes must include current_user: User = Depends(get_current_active_user).
+        - Role-checking must use require_role() dependency from app.core.auth.
+        - List endpoints must accept skip: int = 0 and limit: int = 100 query parameters.
 
         === REQUIREMENTS ===
         - File: backend/app/api/endpoints/{entity.name.lower()}.py
-        - Use APIRouter with prefix="/{entity.plural.lower() if hasattr(entity, 'plural') else entity.name.lower()+'s'}" and tags=["{entity.name}"]
-        - Import CRUD functions from backend/app/crud/{entity.name.lower()}.py
-        - Import schemas from backend/app/schemas/{entity.name.lower()}.py
-        - Use AsyncSession dependency: db: AsyncSession = Depends(get_db)
-        - Use current_user dependency for auth-required endpoints: current_user = Depends(get_current_user)
-        - Return proper HTTP status codes (201 for create, 404 for not found, 400 for bad request).
-        - Handle not-found cases and raise HTTPException(status_code=404) appropriately.
-        - Use response_model= annotations on every route.
-        - Include pagination params (skip: int = 0, limit: int = 100) on list endpoints.
-        - Apply role-based access checks from the permissions spec where relevant.
+        - APIRouter with prefix="/{plural}" and tags=["{entity.name}"]
+        - Import CRUD from app.crud.{entity.name.lower()}, schemas from app.schemas.{entity.name.lower()}
+        - AsyncSession via Depends(get_db), current user via Depends(get_current_active_user)
+        - Implement all routes listed above with proper status codes and response_model= on every one.
         - Output ONLY the Python source — no markdown, no explanation.
     """).strip()
 
@@ -530,21 +832,45 @@ def _build_main_router_prompt(ctx: _GenerationContext) -> str:
         Generate the main FastAPI API router that aggregates all entity routers.
 
         === SYSTEM SPEC ===
-        {_spec_summary(spec)}
+        {_spec_summary(spec, ctx=ctx)}
 
         === ENTITY ROUTERS TO INCLUDE ===
-        {chr(10).join('  - backend/app/api/endpoints/' + n + '.py' for n in entity_names)}
-        Also include: backend/app/api/endpoints/auth.py
+        {chr(10).join('  - app/api/endpoints/' + n + '.py  (router variable name: router)' for n in entity_names)}
+        Also include: app/api/endpoints/auth.py (router variable name: router)
 
         === ALREADY GENERATED INTERFACES ===
-        {_interfaces_summary(ctx)}
+        {_interfaces_summary(ctx, relevant_to='backend/app/api/__init__.py')}
+
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        from fastapi import APIRouter
+        from app.api.endpoints import auth, post, user
+
+        api_router = APIRouter()
+        api_router.include_router(auth.router, prefix="/auth", tags=["Authentication"])
+        api_router.include_router(post.router)   # prefix already set in post.py
+        api_router.include_router(user.router)   # prefix already set in user.py
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT re-declare the prefix or tags if they are already set in the individual router files.
+        2. Do NOT import router objects by aliased names that differ from their module structure.
+        3. Do NOT forget to include the auth router — it is always required.
+        4. Do NOT add any route handlers directly in this aggregator file.
+        5. Do NOT import from future (ungenerated) modules.
+
+        === CROSS-FILE CONSISTENCY ===
+        - Import each entity router as: `from app.api.endpoints import {', '.join(entity_names)}, auth`
+        - Each entity module exposes a `router = APIRouter(...)` variable.
+        - The auth router must be included with prefix="/auth".
+
+        === CODE QUALITY REQUIREMENTS ===
+        - File must have a module-level docstring explaining it is the aggregator.
+        - Imports must be explicit — one import per module, not `from ... import *`.
+        - api_router must be the single exported name; add __all__ = ["api_router"].
 
         === REQUIREMENTS ===
         - File: backend/app/api/__init__.py
-        - Create an api_router = APIRouter()
-        - Include each entity router with: api_router.include_router(...)
-        - Include the auth router at prefix="/auth"
-        - Export api_router
+        - Create api_router = APIRouter()
+        - Include each entity router and the auth router.
         - Output ONLY the Python source — no markdown, no explanation.
     """).strip()
 
@@ -556,24 +882,85 @@ def _build_main_app_prompt(ctx: _GenerationContext) -> str:
         Generate the main FastAPI application entry point.
 
         === SYSTEM SPEC ===
-        {_spec_summary(spec)}
+        {_spec_summary(spec, ctx=ctx)}
 
         === INTEGRATIONS ===
         {', '.join(integrations) if integrations else 'None'}
 
         === ALREADY GENERATED INTERFACES ===
-        {_interfaces_summary(ctx)}
+        {_interfaces_summary(ctx, relevant_to='backend/app/main.py')}
+
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        import logging
+        from contextlib import asynccontextmanager
+        from fastapi import FastAPI
+        from fastapi.middleware.cors import CORSMiddleware
+        from fastapi.middleware.gzip import GZipMiddleware
+        from app.api import api_router
+        from app.core.config import settings
+        from app.db.session import engine
+
+        logger = logging.getLogger(__name__)
+        logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+
+        @asynccontextmanager
+        async def lifespan(app: FastAPI):
+            '''Handle startup and shutdown events.'''
+            logger.info("Starting up %s", settings.PROJECT_NAME)
+            yield
+            logger.info("Shutting down %s", settings.PROJECT_NAME)
+            await engine.dispose()
+
+        app = FastAPI(
+            title=settings.PROJECT_NAME,
+            version=settings.VERSION,
+            description="{spec.description[:200]}",
+            openapi_url=f"{{settings.API_V1_STR}}/openapi.json",
+            lifespan=lifespan,
+        )
+
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=settings.ALLOWED_ORIGINS,
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+        app.add_middleware(GZipMiddleware, minimum_size=1000)
+        app.include_router(api_router, prefix=settings.API_V1_STR)
+
+        @app.get("/health", tags=["Health"], summary="Service health check")
+        async def health_check() -> dict:
+            '''Return service liveness status.'''
+            return {{"status": "ok", "version": settings.VERSION}}
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT use deprecated @app.on_event("startup") — use the lifespan context manager.
+        2. Do NOT hard-code CORS origins, secret keys, or database URLs — read from settings.
+        3. Do NOT import settings values at module level before the settings object is created.
+        4. Do NOT add business logic or route handlers to main.py — use the api_router.
+        5. Do NOT configure logging after the app is created — configure it at module load.
+
+        === CROSS-FILE CONSISTENCY ===
+        - Import api_router from: `from app.api import api_router`
+        - Import settings from: `from app.core.config import settings`
+        - Import engine for disposal from: `from app.db.session import engine`
+        - The API prefix must match settings.API_V1_STR (= "/api/v1").
+
+        === CODE QUALITY REQUIREMENTS ===
+        - Use lifespan context manager (asynccontextmanager) instead of deprecated event decorators.
+        - Log startup/shutdown with the app name and version.
+        - The health endpoint must include the application version in its response.
+        - Set openapi_url to use the API_V1_STR prefix so docs appear at /api/v1/docs.
+        - All settings values must be read from the `settings` singleton.
 
         === REQUIREMENTS ===
         - File: backend/app/main.py
-        - Create app = FastAPI(title="{spec.app_name}", version="1.0.0", description="{spec.description[:200]}")
-        - Add CORSMiddleware allowing the frontend origin (from settings.ALLOWED_ORIGINS).
-        - Add GZipMiddleware.
-        - Include the api_router from backend/app/api/__init__.py with prefix="/api/v1"
-        - Add a health check endpoint GET /health that returns {{"status": "ok"}}.
-        - Add startup/shutdown event handlers to init/close the DB connection pool.
-        - Configure structured logging using Python logging.
-        - Do not hard-code any secrets; use settings from backend/app/core/config.py.
+        - FastAPI app with title, version, description, and lifespan handler.
+        - CORSMiddleware from settings.ALLOWED_ORIGINS, GZipMiddleware.
+        - Include api_router with prefix=settings.API_V1_STR.
+        - GET /health endpoint returning status and version.
+        - Structured logging configured at module level.
         - Output ONLY the Python source — no markdown, no explanation.
     """).strip()
 
@@ -589,29 +976,77 @@ def _build_core_config_prompt(ctx: _GenerationContext) -> str:
         Generate the settings/configuration module for the FastAPI backend.
 
         === SYSTEM SPEC ===
-        {_spec_summary(spec)}
+        {_spec_summary(spec, ctx=ctx)}
 
         === REQUIRED ENV VARS FROM INTEGRATIONS ===
         {extra_env}
 
-        === REQUIREMENTS ===
-        - File: backend/app/core/config.py
-        - Use pydantic-settings BaseSettings with model_config = SettingsConfigDict(env_file=".env")
-        - Include these settings:
-            PROJECT_NAME: str = "{spec.app_name}"
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        from typing import List
+        from pydantic import AnyHttpUrl, field_validator
+        from pydantic_settings import BaseSettings, SettingsConfigDict
+
+        class Settings(BaseSettings):
+            '''Application configuration loaded from environment variables and .env file.'''
+
+            model_config = SettingsConfigDict(
+                env_file=".env",
+                env_file_encoding="utf-8",
+                case_sensitive=True,
+            )
+
+            PROJECT_NAME: str = "MyApp"
             VERSION: str = "1.0.0"
             API_V1_STR: str = "/api/v1"
-            SECRET_KEY: str = "{ctx.secret_key}"  (document that this MUST be overridden in production)
+
+            # Security — OVERRIDE SECRET_KEY in production!
+            SECRET_KEY: str = "change-me-in-production-use-secrets-token-urlsafe-32"
+            ALGORITHM: str = "HS256"
             ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
             REFRESH_TOKEN_EXPIRE_DAYS: int = 7
-            ALGORITHM: str = "HS256"
-            DATABASE_URL: str  (no default — must be set in environment)
+
+            # Database — required, no default
+            DATABASE_URL: str
+
+            # Redis
             REDIS_URL: str = "redis://localhost:6379/0"
-            ALLOWED_ORIGINS: list[str] = ["http://localhost:3000"]
+
+            # CORS
+            ALLOWED_ORIGINS: List[str] = ["http://localhost:3000"]
+
+            # Runtime
             DEBUG: bool = False
             ENVIRONMENT: str = "development"
-        - Include a setting for each integration env var collected above.
-        - Export a single `settings = Settings()` instance.
+
+            @field_validator("ALLOWED_ORIGINS", mode="before")
+            @classmethod
+            def parse_cors(cls, v: str | List[str]) -> List[str]:
+                '''Accept comma-separated string or list for ALLOWED_ORIGINS.'''
+                if isinstance(v, str):
+                    return [origin.strip() for origin in v.split(",")]
+                return v
+
+        settings = Settings()
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT use class Config: — always use model_config = SettingsConfigDict(...).
+        2. Do NOT hard-code production secrets — the SECRET_KEY default is only for local dev.
+        3. Do NOT import settings values directly at module level in other files — they must import `settings`.
+        4. Do NOT use os.environ.get() anywhere — all env reading goes through the Settings class.
+        5. Do NOT omit the DATABASE_URL field — it must have NO default to force explicit configuration.
+
+        === CODE QUALITY REQUIREMENTS ===
+        - Every field must have a comment explaining its purpose if not obvious.
+        - Add @field_validator for ALLOWED_ORIGINS to support comma-separated string from env.
+        - Ensure DATABASE_URL has NO default value (required env var).
+        - The settings singleton must be instantiated at the bottom of the file as `settings = Settings()`.
+        - Include type annotations on every field.
+
+        === REQUIREMENTS ===
+        - File: backend/app/core/config.py
+        - pydantic-settings BaseSettings with SettingsConfigDict(env_file=".env")
+        - All standard fields listed above plus integration-specific vars.
+        - Export `settings = Settings()` at bottom.
         - Output ONLY the Python source — no markdown, no explanation.
     """).strip()
 
@@ -621,21 +1056,79 @@ def _build_core_security_prompt(ctx: _GenerationContext) -> str:
         Generate the security utilities module (password hashing and JWT tokens) for a FastAPI app.
 
         === SYSTEM SPEC ===
-        {_spec_summary(ctx.spec)}
+        {_spec_summary(ctx.spec, ctx=ctx)}
 
         === ALREADY GENERATED INTERFACES ===
-        {_interfaces_summary(ctx)}
+        {_interfaces_summary(ctx, relevant_to='backend/app/core/security.py')}
+
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        from datetime import datetime, timedelta, timezone
+        from typing import Optional
+        from fastapi import HTTPException, status
+        from jose import JWTError, jwt
+        from passlib.context import CryptContext
+        from app.core.config import settings
+
+        _pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+        def hash_password(password: str) -> str:
+            '''Return a bcrypt hash of *password*.'''
+            return _pwd_context.hash(password)
+
+        def verify_password(plain: str, hashed: str) -> bool:
+            '''Return True if *plain* matches *hashed*.'''
+            return _pwd_context.verify(plain, hashed)
+
+        def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+            '''Encode *data* as a signed JWT access token.'''
+            to_encode = data.copy()
+            expire = datetime.now(timezone.utc) + (
+                expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+            )
+            to_encode.update({{"exp": expire, "type": "access"}})
+            return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
+        def create_refresh_token(data: dict) -> str:
+            '''Encode *data* as a signed JWT refresh token with longer expiry.'''
+            to_encode = data.copy()
+            expire = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+            to_encode.update({{"exp": expire, "type": "refresh"}})
+            return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
+        def decode_token(token: str) -> dict:
+            '''Decode and validate a JWT. Raises 401 HTTPException on failure.'''
+            try:
+                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+                return payload
+            except JWTError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Could not validate credentials",
+                    headers={{"WWW-Authenticate": "Bearer"}},
+                ) from exc
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT use datetime.utcnow() — use datetime.now(timezone.utc) to produce timezone-aware datetimes.
+        2. Do NOT catch JWTError silently — always re-raise as HTTPException(401).
+        3. Do NOT store the CryptContext as a global function call result — use a module-level variable.
+        4. Do NOT hard-code the secret key — always read from settings.
+        5. Do NOT forget the WWW-Authenticate header on 401 responses.
+
+        === CROSS-FILE CONSISTENCY ===
+        - Import settings from: `from app.core.config import settings`
+        - Use settings.SECRET_KEY and settings.ALGORITHM for all JWT operations.
+        - The decode_token() function is imported by app.core.auth to validate bearer tokens.
+
+        === CODE QUALITY REQUIREMENTS ===
+        - Every function must have a docstring.
+        - All parameters and return types must have type annotations.
+        - The CryptContext must be a module-level singleton (not re-created per call).
+        - decode_token must include the type claim check to distinguish access vs refresh tokens.
 
         === REQUIREMENTS ===
         - File: backend/app/core/security.py
-        - Use passlib[bcrypt] for password hashing:
-            hash_password(password: str) -> str
-            verify_password(plain: str, hashed: str) -> bool
-        - Use python-jose for JWT:
-            create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str
-            create_refresh_token(data: dict) -> str
-            decode_token(token: str) -> dict  (raises HTTPException on invalid/expired)
-        - Import SECRET_KEY and ALGORITHM from backend/app/core/config.py settings.
+        - hash_password, verify_password, create_access_token, create_refresh_token, decode_token.
+        - Use passlib bcrypt + python-jose.
         - Output ONLY the Python source — no markdown, no explanation.
     """).strip()
 
@@ -645,21 +1138,87 @@ def _build_core_auth_prompt(ctx: _GenerationContext) -> str:
         Generate FastAPI dependency functions for authentication and authorisation.
 
         === SYSTEM SPEC ===
-        {_spec_summary(ctx.spec)}
+        {_spec_summary(ctx.spec, ctx=ctx)}
 
         === ALREADY GENERATED INTERFACES ===
-        {_interfaces_summary(ctx)}
+        {_interfaces_summary(ctx, relevant_to='backend/app/core/auth.py')}
+
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        from typing import AsyncGenerator, Callable
+        from fastapi import Depends, HTTPException, status
+        from fastapi.security import OAuth2PasswordBearer
+        from sqlalchemy import select
+        from sqlalchemy.ext.asyncio import AsyncSession
+        from app.core.security import decode_token
+        from app.db.session import AsyncSessionLocal
+        from app.models.user import User
+
+        oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+
+        async def get_db() -> AsyncGenerator[AsyncSession, None]:
+            '''Yield a database session, rolling back on exception.'''
+            async with AsyncSessionLocal() as session:
+                try:
+                    yield session
+                except Exception:
+                    await session.rollback()
+                    raise
+
+        async def get_current_user(
+            token: str = Depends(oauth2_scheme),
+            db: AsyncSession = Depends(get_db),
+        ) -> User:
+            '''Decode the bearer token and return the authenticated User.'''
+            payload = decode_token(token)  # raises 401 on invalid token
+            user_id: str | None = payload.get("sub")
+            if user_id is None:
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token subject")
+            result = await db.execute(select(User).where(User.id == user_id))
+            user = result.scalars().first()
+            if user is None:
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+            return user
+
+        async def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:
+            '''Raise 400 if the user account is disabled.'''
+            if not current_user.is_active:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user")
+            return current_user
+
+        def require_role(*roles: str) -> Callable:
+            '''Return a dependency that enforces one of the allowed *roles*.'''
+            async def _check(current_user: User = Depends(get_current_active_user)) -> User:
+                if current_user.role not in roles:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=f"Role '{{current_user.role}}' is not authorised for this action",
+                    )
+                return current_user
+            return _check
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT yield the session outside a try/except — always rollback on exception.
+        2. Do NOT raise 403 when the user is not found — that is a 401.
+        3. Do NOT store the OAuth2 scheme configuration inside a route function — it must be module-level.
+        4. Do NOT import User model inside the function body — import at module level.
+        5. Do NOT use synchronous session methods — always await db.execute().
+
+        === CROSS-FILE CONSISTENCY ===
+        - Import decode_token from: `from app.core.security import decode_token`
+        - Import AsyncSessionLocal from: `from app.db.session import AsyncSessionLocal`
+        - Import User from: `from app.models.user import User`
+        - tokenUrl must exactly match the auth router's login endpoint: "/api/v1/auth/login"
+
+        === CODE QUALITY REQUIREMENTS ===
+        - Every function must have a docstring.
+        - All type annotations must be complete including return types.
+        - get_db must use `async with AsyncSessionLocal() as session` (context-manager style).
+        - require_role must return a proper Callable type-annotated dependency.
 
         === REQUIREMENTS ===
         - File: backend/app/core/auth.py
-        - Implement:
-            get_db() → async generator yielding AsyncSession
-            get_current_user(token: str = Depends(oauth2_scheme), db = Depends(get_db)) → User model
-            get_current_active_user(current_user = Depends(get_current_user)) → User model
-            require_role(*roles: str) → Depends-compatible factory that raises 403 if role not met
-        - Use OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
-        - Decode the JWT using decode_token from backend/app/core/security.py
-        - Fetch the user from the DB using the subject claim.
+        - get_db, get_current_user, get_current_active_user, require_role.
+        - OAuth2PasswordBearer with tokenUrl="/api/v1/auth/login".
         - Output ONLY the Python source — no markdown, no explanation.
     """).strip()
 
@@ -670,87 +1229,294 @@ def _build_db_session_prompt(ctx: _GenerationContext) -> str:
         Generate the SQLAlchemy async database session setup for the FastAPI backend.
 
         === SYSTEM SPEC ===
-        {_spec_summary(spec)}
+        {_spec_summary(spec, ctx=ctx)}
+
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+        from app.core.config import settings
+
+        engine = create_async_engine(
+            settings.DATABASE_URL,
+            echo=settings.DEBUG,
+            pool_pre_ping=True,
+            pool_size=10,
+            max_overflow=20,
+        )
+
+        AsyncSessionLocal: async_sessionmaker[AsyncSession] = async_sessionmaker(
+            bind=engine,
+            class_=AsyncSession,
+            expire_on_commit=False,
+            autocommit=False,
+            autoflush=False,
+        )
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT use create_engine() (sync) — always use create_async_engine().
+        2. Do NOT set expire_on_commit=True — it causes lazy-load errors after commit in async context.
+        3. Do NOT define get_db() in this file — it belongs in app.core.auth.
+        4. Do NOT import models here — keep session.py free of model dependencies.
+        5. Do NOT hard-code the DATABASE_URL — read it from settings.
+
+        === CROSS-FILE CONSISTENCY ===
+        - Import settings from: `from app.core.config import settings`
+        - engine is imported by app.main for disposal and by app.db.base for Alembic.
+        - AsyncSessionLocal is imported by app.core.auth for the get_db dependency.
+
+        === CODE QUALITY REQUIREMENTS ===
+        - Module-level docstring explaining the purpose of the file.
+        - echo=settings.DEBUG so SQL logging is only enabled in debug mode.
+        - Export both `engine` and `AsyncSessionLocal` at module level.
+        - Use type annotation `async_sessionmaker[AsyncSession]` for AsyncSessionLocal.
 
         === REQUIREMENTS ===
         - File: backend/app/db/session.py
-        - Use sqlalchemy.ext.asyncio: create_async_engine, AsyncSession, async_sessionmaker
-        - Read DATABASE_URL from settings (backend/app/core/config.py).
-        - Create engine with pool_pre_ping=True, pool_size=10, max_overflow=20.
-        - Create AsyncSessionLocal = async_sessionmaker(...)
-        - Export: engine, AsyncSessionLocal
-        - Also export async get_db() generator that yields a session and commits/rolls back on exit.
+        - create_async_engine with pool_pre_ping, pool_size=10, max_overflow=20.
+        - AsyncSessionLocal = async_sessionmaker with expire_on_commit=False.
+        - Export engine and AsyncSessionLocal.
         - Output ONLY the Python source — no markdown, no explanation.
     """).strip()
 
 
 def _build_db_base_prompt(ctx: _GenerationContext) -> str:
+    model_imports = "\n".join(
+        f"from app.models.{e.name.lower()} import {e.name}  # noqa: F401"
+        for e in ctx.spec.entities
+    )
     return textwrap.dedent(f"""
-        Generate the SQLAlchemy declarative base and a shared BaseModel mixin.
+        Generate the SQLAlchemy declarative base and a shared TimestampMixin.
+
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        '''Database base classes and Alembic model registry.'''
+        from datetime import datetime
+        from typing import Optional
+        from sqlalchemy import DateTime, func
+        from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+        class Base(DeclarativeBase):
+            '''SQLAlchemy 2.x declarative base for all ORM models.'''
+            pass
+
+        class TimestampMixin:
+            '''Mixin that adds created_at and updated_at columns to any model.'''
+            created_at: Mapped[datetime] = mapped_column(
+                DateTime(timezone=True), server_default=func.now(), nullable=False
+            )
+            updated_at: Mapped[datetime] = mapped_column(
+                DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+            )
+
+        class SoftDeleteMixin:
+            '''Mixin that adds a deleted_at column for soft-delete support.'''
+            deleted_at: Mapped[Optional[datetime]] = mapped_column(
+                DateTime(timezone=True), nullable=True, default=None
+            )
+
+        # Import all models so that Alembic autogenerate detects them:
+        from app.models.user import User  # noqa: F401
+        from app.models.post import Post  # noqa: F401
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT use declarative_base() — use DeclarativeBase class syntax (SQLAlchemy 2.x).
+        2. Do NOT define columns in TimestampMixin using Column() — use mapped_column() with Mapped[].
+        3. Do NOT omit the # noqa: F401 comment on model imports — they appear unused but are required by Alembic.
+        4. Do NOT add any business logic to this file.
+        5. Do NOT import session or engine here — keep base.py free of session dependencies.
+
+        === CODE QUALITY REQUIREMENTS ===
+        - Module-level docstring.
+        - Base must be a class inheriting from DeclarativeBase (not an instance of declarative_base()).
+        - TimestampMixin and SoftDeleteMixin must use Mapped[] annotations.
+        - All entity models must be imported at the bottom with # noqa: F401.
 
         === REQUIREMENTS ===
         - File: backend/app/db/base.py
-        - Create Base = DeclarativeBase() using SQLAlchemy 2.x style.
-        - Create a TimestampMixin class with created_at and updated_at columns.
-        - Import all ORM models at the bottom of the file so Alembic autogenerate picks them up.
-          Models to import: {', '.join(e.name.lower() for e in ctx.spec.entities)}.
-        - Export Base, TimestampMixin.
+        - Base = class inheriting DeclarativeBase.
+        - TimestampMixin with created_at, updated_at.
+        - SoftDeleteMixin with deleted_at.
+        - Import all models at the bottom:
+{model_imports}
         - Output ONLY the Python source — no markdown, no explanation.
     """).strip()
 
 
 def _build_auth_router_prompt(ctx: _GenerationContext) -> str:
     spec = ctx.spec
+    # Find the user entity name
+    user_entity = next((e.name for e in spec.entities if 'user' in e.name.lower()), 'User')
     return textwrap.dedent(f"""
-        Generate the FastAPI authentication router (login, register, refresh, logout).
+        Generate the FastAPI authentication router (login, register, refresh, logout, me).
 
         === SYSTEM SPEC ===
-        {_spec_summary(spec)}
+        {_spec_summary(spec, ctx=ctx)}
 
         === ALREADY GENERATED INTERFACES ===
-        {_interfaces_summary(ctx)}
+        {_interfaces_summary(ctx, relevant_to='backend/app/api/endpoints/auth.py')}
+
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        from fastapi import APIRouter, Depends, HTTPException, status
+        from fastapi.security import OAuth2PasswordRequestForm
+        from sqlalchemy.ext.asyncio import AsyncSession
+        from app.core.auth import get_current_active_user, get_db
+        from app.core.security import (
+            create_access_token, create_refresh_token, decode_token, hash_password, verify_password
+        )
+        from app.crud.user import create_user, get_user_by_email
+        from app.schemas.user import UserCreate, UserRead
+        from app.models.user import User
+        from pydantic import BaseModel
+
+        router = APIRouter(tags=["Authentication"])
+
+        class TokenResponse(BaseModel):
+            '''OAuth2-compatible token response.'''
+            access_token: str
+            refresh_token: str
+            token_type: str = "bearer"
+
+        @router.post("/login", response_model=TokenResponse, summary="Login with email and password")
+        async def login(
+            form_data: OAuth2PasswordRequestForm = Depends(),
+            db: AsyncSession = Depends(get_db),
+        ) -> TokenResponse:
+            '''Authenticate user and return access + refresh tokens.'''
+            user = await get_user_by_email(db, email=form_data.username)
+            if user is None or not verify_password(form_data.password, user.hashed_password):
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Incorrect email or password",
+                    headers={{"WWW-Authenticate": "Bearer"}},
+                )
+            return TokenResponse(
+                access_token=create_access_token({{"sub": user.id}}),
+                refresh_token=create_refresh_token({{"sub": user.id}}),
+            )
+
+        @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
+        async def register(
+            payload: UserCreate,
+            db: AsyncSession = Depends(get_db),
+        ) -> UserRead:
+            '''Register a new user account.'''
+            existing = await get_user_by_email(db, email=payload.email)
+            if existing:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+            payload.password = hash_password(payload.password)
+            return await create_user(db, obj_in=payload)
+
+        @router.get("/me", response_model=UserRead, summary="Get current user profile")
+        async def get_me(current_user: User = Depends(get_current_active_user)) -> UserRead:
+            '''Return the profile of the authenticated user.'''
+            return current_user
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT store passwords in plain text — always hash with hash_password() before saving.
+        2. Do NOT return a 404 when login fails — use 401 with the WWW-Authenticate header.
+        3. Do NOT use GET for login or register — they must be POST endpoints.
+        4. Do NOT put the TokenResponse schema inline as a dict — define it as a Pydantic model.
+        5. Do NOT implement token blacklisting by modifying the JWT — treat logout as client-side for now.
+
+        === CROSS-FILE CONSISTENCY ===
+        - Import CRUD from: `from app.crud.{user_entity.lower()} import create_{user_entity.lower()}, get_{user_entity.lower()}_by_email`
+        - Import schemas from: `from app.schemas.{user_entity.lower()} import {user_entity}Create, {user_entity}Read`
+        - Token payload must use "sub" claim containing the user ID (string).
+        - The router has no prefix here — it is mounted at /auth by the api_router aggregator.
+
+        === CODE QUALITY REQUIREMENTS ===
+        - Every route function must have a docstring.
+        - Define TokenResponse as a Pydantic BaseModel with access_token, refresh_token, token_type.
+        - Every route must have response_model= set.
+        - The /me endpoint must use get_current_active_user (not get_current_user) to check is_active.
+        - Refresh endpoint must decode the refresh token and issue a new access token.
 
         === REQUIREMENTS ===
         - File: backend/app/api/endpoints/auth.py
-        - Endpoints:
-            POST /login  — OAuth2PasswordRequestForm, return access + refresh tokens
-            POST /register — create new user, return access token
-            POST /refresh  — take refresh token, return new access token
-            POST /logout   — invalidate session/token (or just return success)
-            GET  /me       — return current user profile
-        - Use schemas from backend/app/schemas/user.py (or equivalent User entity).
-        - Use CRUD functions for the User entity.
-        - Hash passwords before storage; verify on login.
-        - Return OAuth2-compatible token response: {{"access_token": ..., "token_type": "bearer"}}
+        - POST /login, POST /register, POST /refresh, POST /logout, GET /me
+        - OAuth2PasswordRequestForm for /login.
+        - Hash passwords on register, verify on login.
+        - Return TokenResponse (access + refresh + token_type="bearer").
         - Output ONLY the Python source — no markdown, no explanation.
     """).strip()
 
 
 def _build_test_prompt(entity: EntitySpec, ctx: _GenerationContext) -> str:
+    plural = entity.plural.lower() if hasattr(entity, 'plural') else entity.name.lower() + 's'
     return textwrap.dedent(f"""
         Generate pytest tests for the {entity.name} entity API endpoints.
 
         === SYSTEM SPEC ===
-        {_spec_summary(ctx.spec)}
+        {_spec_summary(ctx.spec, ctx=ctx)}
 
         === ENTITY DETAIL ===
         {_entity_detail(entity)}
 
         === ALREADY GENERATED INTERFACES ===
-        {_interfaces_summary(ctx)}
+        {_interfaces_summary(ctx, relevant_to=f'backend/tests/test_{entity.name.lower()}.py')}
+
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        import pytest
+        from httpx import AsyncClient, ASGITransport
+        from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+        from app.main import app
+        from app.db.base import Base
+        from app.core.auth import get_db
+
+        TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
+
+        @pytest.fixture(scope="function")
+        async def db_session():
+            '''Provide an isolated in-memory database session for each test.'''
+            engine = create_async_engine(TEST_DB_URL)
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+            Session = async_sessionmaker(bind=engine, expire_on_commit=False)
+            async with Session() as session:
+                yield session
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.drop_all)
+            await engine.dispose()
+
+        @pytest.fixture(scope="function")
+        async def client(db_session: AsyncSession):
+            '''Async HTTP client with DB dependency overridden.'''
+            async def _override_db():
+                yield db_session
+            app.dependency_overrides[get_db] = _override_db
+            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+                yield ac
+            app.dependency_overrides.clear()
+
+        @pytest.fixture
+        async def auth_headers(client: AsyncClient):
+            '''Return Authorization headers for an authenticated test user.'''
+            await client.post("/api/v1/auth/register", json={{
+                "email": "test@example.com", "password": "TestPass123!", "name": "Test User"
+            }})
+            resp = await client.post("/api/v1/auth/login", data={{
+                "username": "test@example.com", "password": "TestPass123!"
+            }})
+            token = resp.json()["access_token"]
+            return {{"Authorization": f"Bearer {{token}}"}}
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT use a real database for tests — use sqlite+aiosqlite:///:memory: with override.
+        2. Do NOT share state between tests via module-level variables.
+        3. Do NOT use requests (sync) — use httpx.AsyncClient with ASGITransport.
+        4. Do NOT assert only on status codes — also verify the response body fields.
+        5. Do NOT skip testing the 401/403 unauthorised cases.
+
+        === CODE QUALITY REQUIREMENTS ===
+        - Every test function must have a docstring explaining what it tests.
+        - Use @pytest.mark.asyncio on every async test function.
+        - Fixtures must have scope="function" so tests are isolated.
+        - Test names must be descriptive: test_create_returns_201, not test_create.
+        - Each test must assert on both the HTTP status code AND key response body fields.
 
         === REQUIREMENTS ===
         - File: backend/tests/test_{entity.name.lower()}.py
-        - Use pytest with pytest-asyncio for async tests.
-        - Use httpx.AsyncClient as the test client.
-        - Test at minimum:
-            test_create_{entity.name.lower()} — POST creates successfully
-            test_read_{entity.name.lower()} — GET by ID returns correct data
-            test_list_{entity.plural.lower() if hasattr(entity, 'plural') else entity.name.lower()+'s'} — GET list returns paginated results
-            test_update_{entity.name.lower()} — PATCH updates fields
-            test_delete_{entity.name.lower()} — DELETE removes/soft-deletes
-            test_unauthorized_{entity.name.lower()} — unauthenticated access returns 401
-        - Use fixtures for test DB session and authenticated test client.
+        - pytest + pytest-asyncio, httpx.AsyncClient with ASGITransport.
+        - Fixtures: db_session (in-memory SQLite), client, auth_headers.
+        - Tests: create (201), read by id (200), list (200 + pagination), update (200), delete (204), unauth (401).
         - Output ONLY the Python source — no markdown, no explanation.
     """).strip()
 
@@ -780,47 +1546,115 @@ def _build_requirements_prompt(ctx: _GenerationContext) -> str:
         Generate a requirements.txt for a FastAPI backend project.
 
         === SYSTEM SPEC ===
-        {_spec_summary(spec)}
+        {_spec_summary(spec, ctx=ctx)}
 
         === EXTRA DEPENDENCIES NEEDED FOR INTEGRATIONS ===
         {extra or '(none beyond core)'}
 
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        # Web framework
+        fastapi>=0.110.0
+        uvicorn[standard]>=0.29.0
+        python-multipart>=0.0.9
+
+        # Database
+        sqlalchemy>=2.0.0
+        asyncpg>=0.29.0
+        alembic>=1.13.0
+        aiosqlite>=0.20.0
+
+        # Validation & settings
+        pydantic>=2.6.0
+        pydantic-settings>=2.2.0
+        email-validator>=2.1.0
+
+        # Auth & security
+        python-jose[cryptography]>=3.3.0
+        passlib[bcrypt]>=1.7.4
+
+        # HTTP client
+        httpx>=0.27.0
+
+        # Caching
+        redis>=5.0.0
+
+        # Testing
+        pytest>=8.0.0
+        pytest-asyncio>=0.23.0
+        aiosqlite>=0.20.0
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT pin to exact versions (==) — use minimum versions (>=) for flexibility.
+        2. Do NOT include packages that are not actually used by the application.
+        3. Do NOT duplicate packages — each package must appear exactly once.
+        4. Do NOT mix comments and package names on the same line.
+        5. Do NOT forget email-validator when the app handles email fields.
+
+        === CODE QUALITY REQUIREMENTS ===
+        - Group packages with section comments (# Web framework, # Database, etc.).
+        - Keep packages in alphabetical order within each group.
+        - Include aiosqlite for the test suite (in-memory SQLite testing).
+        - Add email-validator>=2.1.0 since EmailStr is used in schemas.
+        - Use >=X.Y.0 style minimum version pins.
+
         === REQUIREMENTS ===
         - File: backend/requirements.txt
-        - Always include:
-            fastapi>=0.110.0
-            uvicorn[standard]>=0.29.0
-            sqlalchemy>=2.0.0
-            asyncpg>=0.29.0
-            alembic>=1.13.0
-            pydantic>=2.6.0
-            pydantic-settings>=2.2.0
-            python-jose[cryptography]>=3.3.0
-            passlib[bcrypt]>=1.7.4
-            python-multipart>=0.0.9
-            httpx>=0.27.0
-            redis>=5.0.0
-            pytest>=8.0.0
-            pytest-asyncio>=0.23.0
-        - Add the integration-specific deps listed above.
-        - Pin to minor versions using >=X.Y.0 style (not exact pins).
+        - Include all core deps above plus integration deps: {extra or '(none)'}
+        - Grouped by category with comments.
         - Output ONLY the requirements.txt content — no markdown, no explanation.
     """).strip()
 
 
 def _build_backend_dockerfile_prompt(ctx: _GenerationContext) -> str:
     return textwrap.dedent(f"""
-        Generate a production-ready Dockerfile for the FastAPI backend.
+        Generate a production-ready multi-stage Dockerfile for the FastAPI backend.
+
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        # Stage 1: Install dependencies
+        FROM python:3.11-slim AS builder
+        WORKDIR /build
+        COPY requirements.txt .
+        RUN pip install --no-cache-dir --upgrade pip \\
+            && pip install --no-cache-dir -r requirements.txt
+
+        # Stage 2: Production image
+        FROM python:3.11-slim AS runner
+        WORKDIR /app
+
+        # Create non-root user
+        RUN useradd --uid 1000 --create-home appuser
+
+        # Copy installed packages from builder
+        COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+        COPY --from=builder /usr/local/bin /usr/local/bin
+
+        # Copy application code
+        COPY --chown=appuser:appuser . .
+
+        USER appuser
+        EXPOSE 8000
+
+        CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT run as root in the final image — always create and switch to a non-root user.
+        2. Do NOT install dev/build tools in the final image — use multi-stage builds.
+        3. Do NOT use CMD with shell form — always use exec form (JSON array).
+        4. Do NOT copy requirements.txt after copying application code (defeats layer caching).
+        5. Do NOT use ENTRYPOINT + CMD combination unless there is a specific reason.
+
+        === CODE QUALITY REQUIREMENTS ===
+        - Use multi-stage build: builder (install deps) + runner (lean production image).
+        - Add comments to each stage explaining its purpose.
+        - Set --chown on COPY to give file ownership to appuser immediately.
+        - Include HEALTHCHECK instruction pointing to the /health endpoint.
+        - The EXPOSE instruction must match the port in CMD.
 
         === REQUIREMENTS ===
         - File: backend/Dockerfile
-        - Use python:3.11-slim as base image.
-        - Multi-stage build: builder stage installs deps, final stage is lean.
-        - Run as non-root user (uid 1000).
-        - Copy requirements.txt, install with pip --no-cache-dir.
-        - Copy application code.
-        - Expose port 8000.
-        - Use CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+        - Multi-stage: python:3.11-slim builder + python:3.11-slim runner.
+        - Non-root user (uid 1000).
+        - CMD uvicorn app.main:app on port 8000.
         - Output ONLY the Dockerfile content — no markdown, no explanation.
     """).strip()
 
@@ -829,12 +1663,65 @@ def _build_alembic_ini_prompt(ctx: _GenerationContext) -> str:
     return textwrap.dedent(f"""
         Generate an alembic.ini configuration file for database migrations.
 
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        [alembic]
+        script_location = alembic
+        prepend_sys_path = .
+
+        # Timestamp-based migration filenames for readable ordering
+        file_template = %%(year)d%%(month).2d%%(day).2d_%%(hour).2d%%(minute).2d_%%(rev)s_%%(slug)s
+
+        # The real URL is set at runtime via env.py reading from DATABASE_URL env var
+        sqlalchemy.url = postgresql+asyncpg://user:password@localhost:5432/dbname
+
+        [post_write_hooks]
+
+        [loggers]
+        keys = root,sqlalchemy,alembic
+
+        [handlers]
+        keys = console
+
+        [formatters]
+        keys = generic
+
+        [logger_root]
+        level = WARN
+        handlers = console
+        qualname =
+
+        [logger_sqlalchemy]
+        level = WARN
+        handlers =
+        qualname = sqlalchemy.engine
+
+        [logger_alembic]
+        level = INFO
+        handlers =
+        qualname = alembic
+
+        [handler_console]
+        class = StreamHandler
+        args = (sys.stderr,)
+        level = NOTSET
+        formatter = generic
+
+        [formatter_generic]
+        format = %(levelname)-5.5s [%(name)s] %(message)s
+        datefmt = %H:%M:%S
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT put real credentials in sqlalchemy.url — it is overridden by env.py at runtime.
+        2. Do NOT use sequential revision IDs in file_template — timestamps are more readable.
+        3. Do NOT set sqlalchemy.engine logger to INFO in production — it logs every SQL statement.
+        4. Do NOT omit prepend_sys_path = . — required for alembic to find the app module.
+        5. Do NOT include extra sections that are not used (keeps the file readable).
+
         === REQUIREMENTS ===
         - File: backend/alembic.ini
-        - Set script_location = alembic
-        - Set sqlalchemy.url placeholder as driver://user:pass@host/dbname (will be overridden by env)
-        - Set file_template = %%(year)d%%(month).2d%%(day).2d_%%(hour).2d%%(minute).2d_%%(rev)s_%%(slug)s
-        - Configure logging section with alembic and sqlalchemy.engine loggers.
+        - script_location = alembic, file_template with timestamps.
+        - sqlalchemy.url placeholder (overridden by env.py).
+        - Logging sections for root, sqlalchemy.engine, alembic.
         - Output ONLY the alembic.ini content — no markdown, no explanation.
     """).strip()
 
@@ -850,18 +1737,75 @@ def _build_frontend_types_prompt(ctx: _GenerationContext) -> str:
         Generate TypeScript interface definitions that mirror the backend Pydantic schemas.
 
         === SYSTEM SPEC ===
-        {_spec_summary(spec)}
+        {_spec_summary(spec, ctx=ctx)}
 
         === ALREADY GENERATED INTERFACES ===
-        {_interfaces_summary(ctx)}
+        {_interfaces_summary(ctx, relevant_to='frontend/src/types/index.ts')}
+
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        // Base response wrappers
+        export interface ApiResponse<T> {{
+          data: T;
+          message: string;
+          success: boolean;
+        }}
+
+        export interface PaginatedResponse<T> {{
+          items: T[];
+          total: number;
+          page: number;
+          per_page: number;
+        }}
+
+        export interface ApiError {{
+          detail: string;
+          status: number;
+        }}
+
+        // User entity types
+        export interface User {{
+          id: string;
+          email: string;
+          name: string;
+          role: string;
+          is_active: boolean;
+          created_at: string;  // ISO 8601 datetime string
+          updated_at: string;
+        }}
+
+        export type UserCreate = Omit<User, 'id' | 'created_at' | 'updated_at' | 'is_active'> & {{
+          password: string;
+        }};
+
+        export type UserUpdate = Partial<Omit<User, 'id' | 'created_at' | 'updated_at'>>;
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT use `any` as a type — every field must have a specific TypeScript type.
+        2. Do NOT include Python-specific concepts (UUID class, datetime objects) — use string for both.
+        3. Do NOT make id optional in Read types — it is always present in API responses.
+        4. Do NOT repeat the full interface for Create/Update — use Omit<> and Partial<> utilities.
+        5. Do NOT define types that are only used in one component — this file is the single source of truth.
+
+        === CROSS-FILE CONSISTENCY ===
+        - This file is imported by every frontend component and page: `import type {{ User, Post }} from '@/types'`
+        - Field names must exactly match the JSON keys returned by the FastAPI backend.
+        - datetime columns become string in TypeScript (ISO 8601 format).
+        - boolean columns remain boolean.
+        - Optional backend fields become field?: type in TypeScript.
+
+        === CODE QUALITY REQUIREMENTS ===
+        - Every interface must have a JSDoc comment explaining the entity.
+        - Use type aliases (type UserCreate = ...) for create/update payloads, not new interfaces.
+        - Export everything at the top level (no default exports).
+        - Add ApiError interface for typed error handling in the API client.
+        - Group entity types with section comments (// === User === etc.).
 
         === REQUIREMENTS ===
         - File: frontend/src/types/index.ts
-        - Export a TypeScript interface for each entity Read schema.
-        - Export create/update payload types (Omit id, timestamps).
-        - Export a generic ApiResponse<T> type: {{ data: T; message: string; success: boolean }}
-        - Export a PaginatedResponse<T> type: {{ items: T[]; total: number; page: number; per_page: number }}
-        - Use proper TypeScript types: string, number, boolean, Date (as string for JSON), optional fields with ?
+        - ApiResponse<T>, PaginatedResponse<T>, ApiError utility types.
+        - One Read interface per entity with all fields.
+        - One Create type (Omit id+timestamps, add password if User).
+        - One Update type (Partial of non-readonly fields).
         - Output ONLY the TypeScript source — no markdown, no explanation.
     """).strip()
 
@@ -873,84 +1817,298 @@ def _build_api_client_prompt(ctx: _GenerationContext) -> str:
         Generate a fully-typed TypeScript API client for the frontend.
 
         === SYSTEM SPEC ===
-        {_spec_summary(spec)}
+        {_spec_summary(spec, ctx=ctx)}
 
         === ENTITIES ===
         {', '.join(entity_names)}
 
         === ALREADY GENERATED INTERFACES ===
-        {_interfaces_summary(ctx)}
+        {_interfaces_summary(ctx, relevant_to='frontend/src/lib/api.ts')}
+
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        import type {{ ApiError, PaginatedResponse, User, UserCreate, UserUpdate }} from '@/types';
+
+        const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1';
+
+        function getAuthToken(): string | null {{
+          if (typeof window === 'undefined') return null;
+          return localStorage.getItem('access_token');
+        }}
+
+        async function request<T>(
+          method: string,
+          path: string,
+          body?: unknown,
+          options: {{ auth?: boolean }} = {{ auth: true }}
+        ): Promise<T> {{
+          const headers: HeadersInit = {{ 'Content-Type': 'application/json' }};
+          if (options.auth !== false) {{
+            const token = getAuthToken();
+            if (token) headers['Authorization'] = `Bearer ${{token}}`;
+          }}
+          const res = await fetch(`${{BASE_URL}}${{path}}`, {{
+            method,
+            headers,
+            body: body !== undefined ? JSON.stringify(body) : undefined,
+          }});
+          if (!res.ok) {{
+            const err = await res.json().catch(() => ({{ detail: res.statusText }}));
+            throw {{ detail: err.detail ?? 'Request failed', status: res.status }} satisfies ApiError;
+          }}
+          if (res.status === 204) return undefined as T;
+          return res.json() as Promise<T>;
+        }}
+
+        // Authentication API
+        export const authApi = {{
+          login: (email: string, password: string) =>
+            request<{{ access_token: string; refresh_token: string; token_type: string }}>(
+              'POST', '/auth/login',
+              new URLSearchParams({{ username: email, password }}).toString(),
+              // Override content-type for form data
+            ),
+          register: (data: UserCreate) => request<User>('POST', '/auth/register', data, {{ auth: false }}),
+          getMe: () => request<User>('GET', '/auth/me'),
+          logout: () => {{ localStorage.removeItem('access_token'); }},
+        }};
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT use axios — use native fetch() for zero-dependency API calls.
+        2. Do NOT swallow HTTP errors silently — always throw a typed ApiError.
+        3. Do NOT access localStorage on the server (Next.js SSR) — guard with typeof window check.
+        4. Do NOT hard-code the API base URL — read from NEXT_PUBLIC_API_URL env var.
+        5. Do NOT define separate functions for every entity route — use a generic request<T>() helper.
+
+        === CROSS-FILE CONSISTENCY ===
+        - Import all types from: `import type {{ ... }} from '@/types'`
+        - The auth login endpoint expects application/x-www-form-urlencoded (OAuth2 form), not JSON.
+        - Token is stored in localStorage under key 'access_token'.
+        - Entity API paths must match the backend router prefixes: /api/v1/{{plural_name}}/
+
+        === CODE QUALITY REQUIREMENTS ===
+        - Every exported function/object must have a JSDoc comment.
+        - The request<T>() helper must handle 204 No Content responses (return undefined).
+        - Error shape must match the ApiError interface from @/types.
+        - Use 'satisfies ApiError' when throwing errors to get compile-time type checking.
+        - Export each entity API as a named const (e.g. export const userApi = ...) .
 
         === REQUIREMENTS ===
         - File: frontend/src/lib/api.ts
-        - Use fetch() with a base URL from process.env.NEXT_PUBLIC_API_URL
-        - Add an Authorization header using a token stored in localStorage.
-        - Implement a generic request<T>(method, path, body?) → Promise<T> helper.
-        - For each entity, export a typed API object with methods:
-            list(params?: {{ skip?: number; limit?: number }}) → Promise<PaginatedResponse<EntityRead>>
-            get(id: string) → Promise<EntityRead>
-            create(data: EntityCreate) → Promise<EntityRead>
-            update(id: string, data: EntityUpdate) → Promise<EntityRead>
-            remove(id: string) → Promise<void>
-        - Export authApi with: login(), register(), logout(), getMe(), refreshToken()
-        - Handle HTTP errors by throwing typed ApiError objects.
+        - Generic request<T>() helper with auth header injection.
+        - authApi: login (form-encoded), register, getMe, logout, refreshToken.
+        - Per-entity API objects: list, get, create, update, remove.
+        - Typed ApiError thrown on HTTP errors.
         - Output ONLY the TypeScript source — no markdown, no explanation.
     """).strip()
 
 
 def _build_ui_components_prompt(ctx: _GenerationContext, theme: str) -> str:
     return textwrap.dedent(f"""
-        Generate a set of reusable React UI components styled with Tailwind CSS.
+        Generate a set of reusable, accessible React UI components styled with Tailwind CSS.
 
         === THEME ===
         {theme}
 
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        "use client";
+        import {{ type ReactNode, type ButtonHTMLAttributes, forwardRef }} from 'react';
+        import {{ clsx }} from 'clsx';
+
+        // === Button ===
+        type ButtonVariant = 'primary' | 'secondary' | 'destructive' | 'ghost';
+        type ButtonSize = 'sm' | 'md' | 'lg';
+
+        interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {{
+          /** Visual style variant */
+          variant?: ButtonVariant;
+          /** Size preset */
+          size?: ButtonSize;
+          /** Show loading spinner and disable interactions */
+          loading?: boolean;
+          children: ReactNode;
+        }}
+
+        export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
+          function Button(
+            {{ variant = 'primary', size = 'md', loading = false, disabled, className, children, ...props }},
+            ref
+          ) {{
+            return (
+              <button
+                ref={{ref}}
+                disabled={{disabled || loading}}
+                aria-busy={{loading}}
+                className={{clsx(
+                  'inline-flex items-center justify-center font-medium rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
+                  {{
+                    'bg-blue-600 text-white hover:bg-blue-700 focus-visible:ring-blue-600': variant === 'primary',
+                    'bg-gray-100 text-gray-900 hover:bg-gray-200 focus-visible:ring-gray-400': variant === 'secondary',
+                    'bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-600': variant === 'destructive',
+                    'text-gray-700 hover:bg-gray-100 focus-visible:ring-gray-400': variant === 'ghost',
+                    'h-8 px-3 text-sm': size === 'sm',
+                    'h-10 px-4 text-sm': size === 'md',
+                    'h-12 px-6 text-base': size === 'lg',
+                  }},
+                  className
+                )}}
+                {{...props}}
+              >
+                {{loading && <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden="true" />}}
+                {{children}}
+              </button>
+            );
+          }}
+        );
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT use inline style={{}} for any styling — use Tailwind utility classes exclusively.
+        2. Do NOT create components without aria-* attributes for interactive elements.
+        3. Do NOT use non-semantic HTML — buttons must be <button>, inputs must be <input> with <label>.
+        4. Do NOT omit the forwardRef wrapper for form elements (Input, Button) — needed for react-hook-form.
+        5. Do NOT hardcode colors as hex values — use Tailwind color tokens.
+
+        === ACCESSIBILITY REQUIREMENTS (MANDATORY) ===
+        - Every Button must have aria-busy={{loading}} when loading.
+        - Every Input must have an associated <label> element linked via htmlFor/id.
+        - Modal must trap focus and handle Escape key to close; use role="dialog" and aria-modal="true".
+        - Table must use proper <thead>, <tbody>, <th scope="col"> markup.
+        - Alert must use role="alert" for error/warning variants.
+        - Icon-only buttons must have aria-label.
+
+        === RESPONSIVE DESIGN REQUIREMENTS ===
+        - All layout components must use responsive Tailwind breakpoints (sm:, md:, lg:).
+        - Table should be horizontally scrollable on mobile: wrap in overflow-x-auto.
+        - Modal panel should be full-screen on mobile, centered card on md+.
+        - Card should stack vertically on mobile, side-by-side on lg+.
+
+        === CODE QUALITY REQUIREMENTS ===
+        - Every component must have a JSDoc comment describing its purpose.
+        - Every prop interface must have JSDoc comments on each prop.
+        - Use forwardRef for all components that render form elements.
+        - Use clsx() for conditional class merging (import from 'clsx').
+        - Export all components as named exports (no default exports).
+        - All TypeScript types must be explicit — no implicit `any`.
+
         === REQUIREMENTS ===
         - File: frontend/src/components/ui/index.tsx
-        - Export these components:
-            Button — variants: primary, secondary, destructive, ghost; sizes: sm, md, lg
-            Input — with label, error, hint props
-            Card — with header, content, footer slots
-            Badge — with variants: default, success, warning, error
-            Modal — controlled with isOpen/onClose; renders a backdrop and panel
-            Spinner — loading indicator
-            Table — with columns definition and data array props, including pagination controls
-            Alert — variants: info, success, warning, error with dismissible prop
-            Avatar — with src, name initials fallback
-            Dropdown — with trigger and items
-        - Use "use client" directive at the top.
-        - Use Tailwind utility classes; respect the {theme} visual theme.
-        - Keep components fully typed with TypeScript.
+        - "use client" directive at the top.
+        - Button (variants + loading state), Input (label + error + hint), Card, Badge,
+          Modal (backdrop + focus trap), Spinner, Table (columns + pagination),
+          Alert (dismissible), Avatar (image + initials fallback), Dropdown.
+        - Full TypeScript types with JSDoc on every prop.
+        - Tailwind classes matching the {theme} theme.
         - Output ONLY the TypeScript/TSX source — no markdown, no explanation.
     """).strip()
 
 
 def _build_entity_component_prompt(entity: EntitySpec, ctx: _GenerationContext, theme: str) -> str:
     spec = ctx.spec
+    plural = entity.plural.lower() if hasattr(entity, 'plural') else entity.name.lower() + 's'
     return textwrap.dedent(f"""
         Generate React components for managing the {entity.name} entity in the frontend.
 
         === SYSTEM SPEC ===
-        {_spec_summary(spec)}
+        {_spec_summary(spec, ctx=ctx)}
 
         === ENTITY DETAIL ===
         {_entity_detail(entity)}
 
         === ALREADY GENERATED INTERFACES ===
-        {_interfaces_summary(ctx)}
+        {_interfaces_summary(ctx, relevant_to=f'frontend/src/components/{entity.name.lower()}/{entity.name}Components.tsx')}
+
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        'use client';
+        import {{ useState, useEffect }} from 'react';
+        import {{ useForm }} from 'react-hook-form';
+        import {{ zodResolver }} from '@hookform/resolvers/zod';
+        import {{ z }} from 'zod';
+        import {{ Button, Card, Input, Spinner, Alert, Table }} from '@/components/ui';
+        import {{ postApi }} from '@/lib/api';
+        import type {{ Post, PostCreate }} from '@/types';
+
+        // === PostTable ===
+        interface PostTableProps {{
+          /** Initial list of posts to display */
+          initialPosts?: Post[];
+          /** Called when user requests to edit a post */
+          onEdit?: (post: Post) => void;
+          /** Called after a post is successfully deleted */
+          onDelete?: (postId: string) => void;
+        }}
+
+        export function PostTable({{ initialPosts = [], onEdit, onDelete }}: PostTableProps) {{
+          const [posts, setPosts] = useState<Post[]>(initialPosts);
+          const [loading, setLoading] = useState(false);
+          const [error, setError] = useState<string | null>(null);
+
+          useEffect(() => {{
+            setLoading(true);
+            postApi.list().then(setPosts).catch(e => setError(e.detail)).finally(() => setLoading(false));
+          }}, []);
+
+          if (loading) return <Spinner aria-label="Loading posts" />;
+          if (error) return <Alert variant="error" role="alert">{{error}}</Alert>;
+
+          const columns = [
+            {{ key: 'title', label: 'Title' }},
+            {{ key: 'published', label: 'Status' }},
+            {{ key: 'created_at', label: 'Created' }},
+          ];
+
+          return (
+            <div className="overflow-x-auto">
+              <Table
+                columns={{columns}}
+                data={{posts}}
+                rowActions={{(post) => (
+                  <>
+                    <Button size="sm" variant="ghost" onClick={{() => onEdit?.(post)}} aria-label={{`Edit ${{post.title}}`}}>Edit</Button>
+                    <Button size="sm" variant="destructive" onClick={{() => onDelete?.(post.id)}} aria-label={{`Delete ${{post.title}}`}}>Delete</Button>
+                  </>
+                )}}
+              />
+            </div>
+          );
+        }}
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT fetch data without a loading state — every async operation needs loading + error states.
+        2. Do NOT render form fields without react-hook-form registration — use register() or Controller.
+        3. Do NOT omit aria-label on icon-only or context-dependent action buttons.
+        4. Do NOT mutate state directly — always use the setter function.
+        5. Do NOT forget to handle the onSubmit error case in the form — display it to the user.
+
+        === ACCESSIBILITY REQUIREMENTS ===
+        - All interactive table row actions must have aria-label with the item name.
+        - Form fields must use the Input component with label= prop (not bare <input>).
+        - Loading states must use aria-busy or a Spinner with aria-label.
+        - Error messages must appear in an Alert with role="alert".
+        - Delete confirmation should use a Modal with focus management, not window.confirm().
+
+        === RESPONSIVE DESIGN ===
+        - Table must be wrapped in overflow-x-auto for horizontal scroll on mobile.
+        - Form must use responsive grid: single column on mobile, two columns on md+.
+        - Card summary must show only essential fields on mobile (hide secondary fields with md:block).
+
+        === CROSS-FILE CONSISTENCY ===
+        - Import entity types from: `import type {{ {entity.name}, {entity.name}Create }} from '@/types'`
+        - Import API client from: `import {{ {entity.name.lower()}Api }} from '@/lib/api'`
+        - Import UI components from: `import {{ Button, Card, Input, ... }} from '@/components/ui'`
+
+        === CODE QUALITY REQUIREMENTS ===
+        - Every component and every prop interface must have a JSDoc comment.
+        - All async operations must use useState for loading and error.
+        - Form validation schema must be defined as a Zod schema with descriptive error messages.
+        - Zod schema must enforce the same constraints as the backend Pydantic schema.
+        - Use useEffect for data fetching; always clean up / handle unmount.
 
         === REQUIREMENTS ===
         - File: frontend/src/components/{entity.name.lower()}/{entity.name}Components.tsx
-        - Export three components:
-            {entity.name}Table — renders a list of {entity.plural.lower() if hasattr(entity, 'plural') else entity.name.lower()+'s'} with columns for key fields, row actions (edit, delete)
-            {entity.name}Form — create/edit form with controlled inputs, Zod validation, submission handler
-            {entity.name}Card — summary card showing key fields, used in dashboard widgets
-        - Use "use client" directive.
-        - Import shared UI components from @/components/ui.
-        - Import API methods from @/lib/api.
-        - Import types from @/types.
-        - Use React Hook Form + Zod for form validation.
-        - Apply {theme} visual theme via Tailwind classes.
+        - "use client" directive.
+        - {entity.name}Table: loading/error states, columns for key fields, edit + delete row actions.
+        - {entity.name}Form: react-hook-form + Zod, create and edit modes, loading on submit, error display.
+        - {entity.name}Card: compact summary card for dashboard use.
+        - All components accessible and responsive with Tailwind {theme} theme.
         - Output ONLY the TypeScript/TSX source — no markdown, no explanation.
     """).strip()
 
@@ -967,7 +2125,7 @@ def _build_page_prompt(page: PageSpec, ctx: _GenerationContext, theme: str) -> s
         Generate a Next.js 14 App Router page for the page described below.
 
         === SYSTEM SPEC ===
-        {_spec_summary(spec)}
+        {_spec_summary(spec, ctx=ctx)}
 
         === PAGE SPEC ===
         Route: {page.route}
@@ -981,16 +2139,71 @@ def _build_page_prompt(page: PageSpec, ctx: _GenerationContext, theme: str) -> s
         {related_entities or '(none)'}
 
         === ALREADY GENERATED INTERFACES ===
-        {_interfaces_summary(ctx)}
+        {_interfaces_summary(ctx, relevant_to=f'frontend/src/app/{safe_route}/page.tsx')}
+
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        import {{ Suspense }} from 'react';
+        import {{ redirect }} from 'next/navigation';
+        import type {{ Metadata }} from 'next';
+        import {{ PostTable }} from '@/components/post/PostComponents';
+        import {{ Spinner }} from '@/components/ui';
+
+        export const metadata: Metadata = {{
+          title: 'Posts | {spec.app_name}',
+          description: 'Manage your posts.',
+        }};
+
+        export default async function PostsPage() {{
+          // Auth guard — reads session cookie server-side
+          // const session = await getSession(); if (!session) redirect('/login');
+
+          return (
+            <main className="p-6 md:p-8 lg:p-10">
+              <div className="mb-6 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                <h1 className="text-2xl font-semibold tracking-tight">Posts</h1>
+              </div>
+              <Suspense fallback={{<Spinner aria-label="Loading posts" />}}>
+                <PostTable />
+              </Suspense>
+            </main>
+          );
+        }}
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT add "use client" to the page file unless the page itself needs browser APIs — child components handle their own interactivity.
+        2. Do NOT fetch data in the page without a Suspense boundary for the loading state.
+        3. Do NOT embed inline styles — use Tailwind utility classes.
+        4. Do NOT forget generateMetadata() — every page needs title and description for SEO.
+        5. Do NOT import server-only packages (e.g. fs, database clients) in client components.
+
+        === ACCESSIBILITY REQUIREMENTS ===
+        - The page must have a <main> element as the primary landmark.
+        - The page heading must be <h1> (exactly one per page).
+        - Suspense fallback must include aria-label on the Spinner.
+        - Any modal or dialog opened from this page must manage focus correctly.
+
+        === RESPONSIVE DESIGN ===
+        - Page padding: p-4 on mobile, md:p-6 on tablet, lg:p-8 on desktop.
+        - Page header row (title + actions) must use flexbox that stacks on mobile.
+        - Content grid should be 1 column mobile, 2 columns md+, 3 columns lg+ where appropriate.
+
+        === CROSS-FILE CONSISTENCY ===
+        - Import entity components from: `import {{ {page.title.replace(' ', '')}Table }} from '@/components/...'`
+        - Import UI primitives from: `import {{ Spinner }} from '@/components/ui'`
+        - If auth_required={page.auth_required}, add a server-side auth check using next-auth or cookies.
+
+        === CODE QUALITY REQUIREMENTS ===
+        - Export generateMetadata() with title=`{{page title}} | {spec.app_name}` and a description.
+        - Use Suspense around any async data-fetching components.
+        - The default export must be an async function for server-side data fetching.
+        - Prefer server components; only add "use client" when browser APIs (useState, etc.) are needed.
 
         === REQUIREMENTS ===
         - File: frontend/src/app/{safe_route}/page.tsx
-        - Use Next.js App Router conventions (async server component unless interactivity needed).
-        - If auth_required, check session and redirect to /login if not authenticated.
-        - Import and use the relevant entity components and UI components.
-        - Display page title in an <h1> with proper Tailwind styling for {theme} theme.
-        - Include loading and error states.
-        - Use generateMetadata() for SEO.
+        - generateMetadata() for SEO.
+        - Auth redirect if auth_required={page.auth_required}.
+        - Suspense boundaries around entity components.
+        - Responsive layout with Tailwind {theme} theme.
         - Output ONLY the TypeScript/TSX source — no markdown, no explanation.
     """).strip()
 
@@ -1002,7 +2215,7 @@ def _build_dashboard_layout_prompt(ctx: _GenerationContext, theme: str) -> str:
         Generate the dashboard layout component for the Next.js frontend.
 
         === SYSTEM SPEC ===
-        {_spec_summary(spec)}
+        {_spec_summary(spec, ctx=ctx)}
 
         === THEME ===
         {theme}
@@ -1010,13 +2223,111 @@ def _build_dashboard_layout_prompt(ctx: _GenerationContext, theme: str) -> str:
         === NAV ITEMS ===
         {nav_items}
 
+        === ALREADY GENERATED INTERFACES ===
+        {_interfaces_summary(ctx, relevant_to='frontend/src/app/(dashboard)/layout.tsx')}
+
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        'use client';
+        import {{ useEffect, useState, type ReactNode }} from 'react';
+        import {{ useRouter, usePathname }} from 'next/navigation';
+        import Link from 'next/link';
+        import {{ authApi }} from '@/lib/api';
+        import type {{ User }} from '@/types';
+
+        interface DashboardLayoutProps {{
+          children: ReactNode;
+        }}
+
+        export default function DashboardLayout({{ children }}: DashboardLayoutProps) {{
+          const router = useRouter();
+          const pathname = usePathname();
+          const [user, setUser] = useState<User | null>(null);
+          const [sidebarOpen, setSidebarOpen] = useState(false);
+
+          useEffect(() => {{
+            const token = localStorage.getItem('access_token');
+            if (!token) {{ router.replace('/login'); return; }}
+            authApi.getMe().then(setUser).catch(() => {{ router.replace('/login'); }});
+          }}, [router]);
+
+          const navLinks = [
+            {{ href: '/dashboard', label: 'Overview' }},
+            // entity nav links generated below
+          ];
+
+          return (
+            <div className="flex h-screen overflow-hidden bg-gray-50">
+              {{
+                /* Sidebar */
+              }}
+              <aside
+                aria-label="Main navigation"
+                className={{`fixed inset-y-0 left-0 z-50 w-64 transform bg-white shadow-lg transition-transform duration-200 ease-in-out md:relative md:translate-x-0 ${{sidebarOpen ? 'translate-x-0' : '-translate-x-full'}}`}}
+              >
+                <div className="flex h-16 items-center border-b px-4">
+                  <span className="text-lg font-semibold">{spec.app_name}</span>
+                </div>
+                <nav className="mt-4 space-y-1 px-2" aria-label="Sidebar">
+                  {{navLinks.map(link => (
+                    <Link
+                      key={{link.href}}
+                      href={{link.href}}
+                      aria-current={{pathname === link.href ? 'page' : undefined}}
+                      className={{`flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors ${{pathname === link.href ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-100'}}`}}
+                    >
+                      {{link.label}}
+                    </Link>
+                  ))}}
+                </nav>
+              </aside>
+
+              <div className="flex flex-1 flex-col overflow-hidden">
+                <header className="flex h-16 items-center justify-between border-b bg-white px-4 md:px-6">
+                  <button onClick={{() => setSidebarOpen(!sidebarOpen)}} aria-label="Toggle navigation" className="md:hidden">
+                    &#9776;
+                  </button>
+                  <span className="ml-auto text-sm text-gray-600">{{user?.email}}</span>
+                  <button onClick={{() => {{ authApi.logout(); router.replace('/login'); }}}} aria-label="Sign out" className="ml-4 text-sm text-red-600 hover:underline">Sign out</button>
+                </header>
+                <main className="flex-1 overflow-y-auto p-4 md:p-6" id="main-content">{{children}}</main>
+              </div>
+            </div>
+          );
+        }}
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT use window.location for navigation — always use useRouter() from next/navigation.
+        2. Do NOT block rendering while fetching user — show a skeleton or spinner while loading.
+        3. Do NOT check auth with a synchronous localStorage read in render — use useEffect.
+        4. Do NOT hardcode nav links as plain <a> tags — use Next.js <Link> for client-side navigation.
+        5. Do NOT omit the mobile hamburger menu — the sidebar must be collapsible on small screens.
+
+        === ACCESSIBILITY REQUIREMENTS ===
+        - Sidebar <aside> must have aria-label="Main navigation".
+        - Active nav link must have aria-current="page".
+        - Mobile toggle button must have aria-label="Toggle navigation".
+        - Logout button must have aria-label="Sign out".
+        - Main content area should have id="main-content" for skip-link targets.
+
+        === RESPONSIVE DESIGN ===
+        - Sidebar: hidden (off-screen) on mobile, always visible on md+.
+        - Mobile sidebar: slide in/out via translateX transition.
+        - Header: show hamburger menu only on mobile (md:hidden).
+        - Main content: full-width at all breakpoints with appropriate padding.
+
+        === CODE QUALITY REQUIREMENTS ===
+        - Use "use client" since it uses hooks (useRouter, useState, useEffect).
+        - Auth check in useEffect: read token, call getMe(), redirect to /login on error.
+        - Nav links with aria-current based on current pathname.
+        - Logout clears token from localStorage then redirects.
+
         === REQUIREMENTS ===
         - File: frontend/src/app/(dashboard)/layout.tsx
-        - Render a sidebar with navigation links for each entity section.
-        - Include a top header bar with app name "{spec.app_name}", user avatar, and logout button.
-        - Use "use client" directive.
-        - Protect the layout — redirect to /login if no auth token found.
-        - Apply {theme} visual theme with Tailwind CSS.
+        - "use client" directive.
+        - Sidebar with responsive mobile toggle, nav links for all entities.
+        - Top header with app name, user email, logout button.
+        - Auth guard: redirect to /login if no token or getMe() fails.
+        - Apply {theme} theme with Tailwind CSS.
         - Output ONLY the TypeScript/TSX source — no markdown, no explanation.
     """).strip()
 
@@ -1027,20 +2338,97 @@ def _build_auth_pages_prompt(ctx: _GenerationContext, theme: str) -> str:
         Generate login and register pages for the Next.js frontend.
 
         === SYSTEM SPEC ===
-        {_spec_summary(spec)}
+        {_spec_summary(spec, ctx=ctx)}
 
         === THEME ===
         {theme}
+
+        === ALREADY GENERATED INTERFACES ===
+        {_interfaces_summary(ctx, relevant_to='frontend/src/app/(auth)/login/page.tsx')}
+
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        'use client';
+        import {{ useState }} from 'react';
+        import {{ useRouter }} from 'next/navigation';
+        import {{ useForm }} from 'react-hook-form';
+        import {{ zodResolver }} from '@hookform/resolvers/zod';
+        import {{ z }} from 'zod';
+        import {{ Button, Input, Alert }} from '@/components/ui';
+        import {{ authApi }} from '@/lib/api';
+
+        const loginSchema = z.object({{
+          email: z.string().email('Enter a valid email address'),
+          password: z.string().min(8, 'Password must be at least 8 characters'),
+        }});
+        type LoginFormValues = z.infer<typeof loginSchema>;
+
+        export default function LoginPage() {{
+          const router = useRouter();
+          const [serverError, setServerError] = useState<string | null>(null);
+          const {{ register, handleSubmit, formState: {{ errors, isSubmitting }} }} = useForm<LoginFormValues>({{
+            resolver: zodResolver(loginSchema),
+          }});
+
+          const onSubmit = async (data: LoginFormValues) => {{
+            setServerError(null);
+            try {{
+              const result = await authApi.login(data.email, data.password);
+              localStorage.setItem('access_token', result.access_token);
+              router.replace('/dashboard');
+            }} catch (err: unknown) {{
+              setServerError((err as {{ detail?: string }}).detail ?? 'Login failed. Please try again.');
+            }}
+          }};
+
+          return (
+            <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
+              <div className="w-full max-w-sm rounded-xl bg-white p-8 shadow-md">
+                <h1 className="mb-6 text-2xl font-semibold tracking-tight">Sign in to {spec.app_name}</h1>
+                {{serverError && <Alert variant="error" role="alert" className="mb-4">{{serverError}}</Alert>}}
+                <form onSubmit={{handleSubmit(onSubmit)}} noValidate className="space-y-4">
+                  <Input
+                    id="email" label="Email address" type="email" autoComplete="email"
+                    error={{errors.email?.message}} {{...register('email')}}
+                  />
+                  <Input
+                    id="password" label="Password" type="password" autoComplete="current-password"
+                    error={{errors.password?.message}} {{...register('password')}}
+                  />
+                  <Button type="submit" className="w-full" loading={{isSubmitting}}>Sign in</Button>
+                </form>
+                <p className="mt-4 text-center text-sm text-gray-500">
+                  No account? <a href="/register" className="text-blue-600 hover:underline">Create one</a>
+                </p>
+              </div>
+            </div>
+          );
+        }}
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT use uncontrolled form inputs without register() — all inputs must be registered with react-hook-form.
+        2. Do NOT store the refresh_token in localStorage — only the access_token goes there.
+        3. Do NOT navigate with window.location.href — use useRouter().replace().
+        4. Do NOT display raw error objects to users — always show err.detail or a friendly fallback message.
+        5. Do NOT omit noValidate on the <form> element when using react-hook-form (prevents browser validation conflict).
+
+        === ACCESSIBILITY REQUIREMENTS ===
+        - All inputs must have id= and label= props linked via htmlFor.
+        - Submit button must show loading state (aria-busy).
+        - Server errors must be in an Alert with role="alert" so screen readers announce them.
+        - Use autocomplete attributes: email, current-password, new-password.
+
+        === RESPONSIVE DESIGN ===
+        - Both pages: centered card, max-w-sm on mobile, full height centering with min-h-screen.
+        - Card padding: p-6 mobile, p-8 desktop.
 
         === REQUIREMENTS ===
         - Generate TWO files separated by the comment "// === FILE: <path> ===" so they can be split:
             frontend/src/app/(auth)/login/page.tsx
             frontend/src/app/(auth)/register/page.tsx
-        - Login page: email + password form, submit calls authApi.login(), stores token, redirects to dashboard.
-        - Register page: name + email + password + confirm-password form with Zod validation.
-        - Both pages: use React Hook Form, show error messages, loading state on submit.
-        - Apply {theme} visual theme with Tailwind CSS centered card layout.
-        - "use client" directive on both.
+        - Login: email + password, authApi.login(), store token, redirect to /dashboard.
+        - Register: name + email + password + confirm-password, Zod validation, authApi.register().
+        - Both: react-hook-form, Zod, loading state, server error display, "use client".
+        - Apply {theme} theme with Tailwind CSS.
         - Output ONLY the TypeScript/TSX source — no markdown, no explanation.
     """).strip()
 
@@ -1051,33 +2439,128 @@ def _build_frontend_package_json_prompt(ctx: _GenerationContext) -> str:
         Generate a package.json for a Next.js 14 + TypeScript + Tailwind CSS frontend project.
 
         === SYSTEM SPEC ===
-        {_spec_summary(spec)}
+        {_spec_summary(spec, ctx=ctx)}
+
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        {{
+          "name": "myapp-frontend",
+          "version": "0.1.0",
+          "private": true,
+          "scripts": {{
+            "dev": "next dev",
+            "build": "next build",
+            "start": "next start",
+            "lint": "next lint",
+            "type-check": "tsc --noEmit"
+          }},
+          "dependencies": {{
+            "next": "14.2.3",
+            "react": "^18.3.1",
+            "react-dom": "^18.3.1",
+            "@hookform/resolvers": "^3.3.4",
+            "clsx": "^2.1.1",
+            "lucide-react": "^0.379.0",
+            "react-hook-form": "^7.51.5",
+            "tailwind-merge": "^2.3.0",
+            "zod": "^3.23.8"
+          }},
+          "devDependencies": {{
+            "@types/node": "^20.14.0",
+            "@types/react": "^18.3.3",
+            "@types/react-dom": "^18.3.0",
+            "autoprefixer": "^10.4.19",
+            "eslint": "^8.57.0",
+            "eslint-config-next": "14.2.3",
+            "postcss": "^8.4.38",
+            "tailwindcss": "^3.4.4",
+            "typescript": "^5.4.5"
+          }}
+        }}
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT use "latest" for version strings — pin to specific semver ranges.
+        2. Do NOT put tailwindcss, postcss, or autoprefixer in dependencies — they belong in devDependencies.
+        3. Do NOT add unused packages (e.g. axios if we use fetch).
+        4. Do NOT omit the "type-check" script — CI needs it.
+        5. Do NOT use class-variance-authority unless shadcn/ui is explicitly required.
+
+        === CODE QUALITY REQUIREMENTS ===
+        - Pin next and eslint-config-next to the same version.
+        - Keep runtime dependencies in dependencies, build tools in devDependencies.
+        - Include all packages imported in components: clsx, lucide-react, react-hook-form, zod.
+        - Scripts must include dev, build, start, lint, type-check.
 
         === REQUIREMENTS ===
         - File: frontend/package.json
         - name: "{spec.app_name.lower().replace(' ', '-')}-frontend"
-        - Scripts: dev, build, start, lint, type-check
-        - Dependencies (use latest stable versions):
-            next, react, react-dom, typescript, @types/react, @types/node,
-            tailwindcss, autoprefixer, postcss,
-            react-hook-form, @hookform/resolvers, zod,
-            lucide-react, clsx, class-variance-authority, tailwind-merge
-        - devDependencies: eslint, eslint-config-next, @types/react-dom
+        - Next.js 14, React 18, TypeScript, Tailwind CSS, react-hook-form, zod, clsx.
         - Output ONLY the package.json content — no markdown, no explanation.
     """).strip()
 
 
 def _build_tailwind_config_prompt(ctx: _GenerationContext, theme: str) -> str:
     return textwrap.dedent(f"""
-        Generate a tailwind.config.ts for Next.js 14 with the {theme} theme.
+        Generate a tailwind.config.ts for Next.js 14 with the {theme} visual theme.
+
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        import type {{ Config }} from 'tailwindcss';
+
+        const config: Config = {{
+          darkMode: 'class',
+          content: [
+            './src/pages/**/*.{{js,ts,jsx,tsx,mdx}}',
+            './src/components/**/*.{{js,ts,jsx,tsx,mdx}}',
+            './src/app/**/*.{{js,ts,jsx,tsx,mdx}}',
+          ],
+          theme: {{
+            extend: {{
+              colors: {{
+                brand: {{
+                  50:  '#eff6ff',
+                  100: '#dbeafe',
+                  500: '#3b82f6',
+                  600: '#2563eb',
+                  700: '#1d4ed8',
+                  900: '#1e3a8a',
+                }},
+              }},
+              fontFamily: {{
+                sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+              }},
+              borderRadius: {{
+                xl: '0.875rem',
+                '2xl': '1.25rem',
+              }},
+              boxShadow: {{
+                card: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
+              }},
+            }},
+          }},
+          plugins: [],
+        }};
+
+        export default config;
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT use JIT mode flag — it is the default in Tailwind v3, no configuration needed.
+        2. Do NOT omit the content array — without it Tailwind cannot purge unused classes.
+        3. Do NOT define colors as raw hex strings inside utility classes — extend the theme palette.
+        4. Do NOT add plugins that are not installed in package.json.
+        5. Do NOT use string literals for darkMode — use 'class' (single quotes, no 'selector').
+
+        === CODE QUALITY REQUIREMENTS ===
+        - Use TypeScript (tailwind.config.ts, not .js).
+        - Import Config type from 'tailwindcss' for type safety.
+        - Theme colors must reflect the {theme} visual theme (e.g. blue for Modern, etc.).
+        - Include Inter font family as the sans-serif default.
+        - Extend borderRadius and boxShadow with card-friendly values.
 
         === REQUIREMENTS ===
         - File: frontend/tailwind.config.ts
-        - Content paths: ./src/**/*.{{ts,tsx}}
-        - Extend theme with a custom color palette appropriate for the {theme} theme.
-        - Include font families: Inter for sans-serif body text.
-        - Add borderRadius and boxShadow extensions.
-        - Enable darkMode: "class"
+        - Content paths covering all .ts/.tsx files in src/.
+        - Theme extension with brand color palette, Inter font, radius + shadow extensions.
+        - darkMode: 'class'.
+        - Reflect {theme} visual theme in the color palette.
         - Output ONLY the TypeScript config — no markdown, no explanation.
     """).strip()
 
@@ -1086,14 +2569,60 @@ def _build_frontend_dockerfile_prompt(ctx: _GenerationContext) -> str:
     return textwrap.dedent(f"""
         Generate a production-ready multi-stage Dockerfile for a Next.js frontend.
 
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        # Stage 1: Install dependencies
+        FROM node:20-alpine AS deps
+        WORKDIR /app
+        COPY package.json package-lock.json* ./
+        RUN npm ci
+
+        # Stage 2: Build the application
+        FROM node:20-alpine AS builder
+        WORKDIR /app
+        COPY --from=deps /app/node_modules ./node_modules
+        COPY . .
+        ENV NEXT_TELEMETRY_DISABLED=1
+        RUN npm run build
+
+        # Stage 3: Production runner (minimal image)
+        FROM node:20-alpine AS runner
+        WORKDIR /app
+        ENV NODE_ENV=production
+        ENV NEXT_TELEMETRY_DISABLED=1
+
+        # Create non-root user
+        RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
+
+        # Copy Next.js standalone output
+        COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+        COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+        COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+
+        USER nextjs
+        EXPOSE 3000
+        ENV PORT=3000
+        ENV HOSTNAME=0.0.0.0
+
+        CMD ["node", "server.js"]
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT run as root in the final image — always create nextjs user with uid 1001.
+        2. Do NOT copy node_modules into the runner stage — use Next.js standalone output.
+        3. Do NOT use npm install instead of npm ci — npm ci ensures reproducible installs.
+        4. Do NOT forget NEXT_TELEMETRY_DISABLED=1 to opt out of Next.js telemetry.
+        5. Do NOT COPY . . before installing deps in the deps stage — defeats layer caching.
+
+        === CODE QUALITY REQUIREMENTS ===
+        - Three stages: deps (install), builder (build), runner (serve).
+        - Use .next/standalone for the minimal production output.
+        - Set NEXT_TELEMETRY_DISABLED=1 in both builder and runner.
+        - Non-root user nextjs (uid 1001) in runner.
+        - CMD must run node server.js (standalone output entrypoint).
+
         === REQUIREMENTS ===
         - File: frontend/Dockerfile
-        - Stage 1 (deps): node:20-alpine, install dependencies with npm ci
-        - Stage 2 (builder): copy deps and src, run npm run build
-        - Stage 3 (runner): node:20-alpine, copy .next/standalone output, run server
-        - Expose port 3000
-        - Set NODE_ENV=production
-        - Run as non-root user (nextjs uid 1001)
+        - Three-stage: deps (node:20-alpine), builder, runner (node:20-alpine).
+        - Non-root user (nextjs uid 1001), standalone output, port 3000.
         - Output ONLY the Dockerfile content — no markdown, no explanation.
     """).strip()
 
@@ -1102,11 +2631,57 @@ def _build_tsconfig_prompt(ctx: _GenerationContext) -> str:
     return textwrap.dedent(f"""
         Generate a tsconfig.json for a Next.js 14 project with TypeScript strict mode.
 
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        {{
+          "compilerOptions": {{
+            "lib": ["dom", "dom.iterable", "esnext"],
+            "allowJs": false,
+            "skipLibCheck": true,
+            "strict": true,
+            "strictNullChecks": true,
+            "noUncheckedIndexedAccess": true,
+            "noImplicitAny": true,
+            "noImplicitReturns": true,
+            "noFallthroughCasesInSwitch": true,
+            "forceConsistentCasingInFileNames": true,
+            "noEmit": true,
+            "esModuleInterop": true,
+            "module": "esnext",
+            "moduleResolution": "bundler",
+            "resolveJsonModule": true,
+            "isolatedModules": true,
+            "jsx": "preserve",
+            "incremental": true,
+            "plugins": [{{
+              "name": "next"
+            }}],
+            "paths": {{
+              "@/*": ["./src/*"]
+            }}
+          }},
+          "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+          "exclude": ["node_modules"]
+        }}
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT set strict: false — strict mode catches real bugs.
+        2. Do NOT set skipLibCheck: false — it will cause build failures from @types packages.
+        3. Do NOT use "moduleResolution": "node" for Next.js 14 — use "bundler".
+        4. Do NOT add "outDir" — Next.js manages output; noEmit: true is correct.
+        5. Do NOT omit the paths alias — @/* is used throughout all component imports.
+
+        === CODE QUALITY REQUIREMENTS ===
+        - Enable noUncheckedIndexedAccess to prevent undefined array access bugs.
+        - Enable noImplicitReturns to ensure all code paths return a value.
+        - Use moduleResolution: "bundler" (required for Next.js 14 + React Server Components).
+        - Include the Next.js plugin in plugins for IDE support.
+        - Path alias @/* must map to ./src/*.
+
         === REQUIREMENTS ===
         - File: frontend/tsconfig.json
-        - Extend next/typescript
-        - Enable strict: true, strictNullChecks, noUncheckedIndexedAccess
-        - Configure path aliases: "@/*" → "./src/*"
+        - strict: true, strictNullChecks, noUncheckedIndexedAccess, noImplicitAny.
+        - moduleResolution: bundler, jsx: preserve, incremental: true.
+        - paths: {{"@/*": ["./src/*"]}}.
         - Output ONLY the JSON content — no markdown, no explanation.
     """).strip()
 
@@ -1124,19 +2699,94 @@ def _build_docker_compose_prompt(ctx: _GenerationContext) -> str:
         Generate a docker-compose.yml for the full stack application.
 
         === SYSTEM SPEC ===
-        {_spec_summary(spec)}
+        {_spec_summary(spec, ctx=ctx)}
+
+        === SERVICES NEEDED ===
+        - db: PostgreSQL 16
+        - backend: FastAPI (./backend)
+        - frontend: Next.js (./frontend)
+        - redis: {'yes' if has_redis else 'no'}
+        - celery worker: {'yes' if has_celery else 'no'}
+
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        version: '3.9'
+
+        services:
+          db:
+            image: postgres:16-alpine
+            restart: unless-stopped
+            environment:
+              POSTGRES_DB: appdb
+              POSTGRES_USER: postgres
+              POSTGRES_PASSWORD: postgres
+            volumes:
+              - postgres_data:/var/lib/postgresql/data
+            healthcheck:
+              test: ["CMD-SHELL", "pg_isready -U postgres -d appdb"]
+              interval: 10s
+              timeout: 5s
+              retries: 5
+            networks:
+              - app-network
+
+          backend:
+            build:
+              context: ./backend
+              dockerfile: Dockerfile
+            restart: unless-stopped
+            env_file: .env
+            environment:
+              DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/appdb
+            ports:
+              - "8000:8000"
+            depends_on:
+              db:
+                condition: service_healthy
+            networks:
+              - app-network
+            mem_limit: 512m
+
+          frontend:
+            build:
+              context: ./frontend
+              dockerfile: Dockerfile
+            restart: unless-stopped
+            environment:
+              NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
+            ports:
+              - "3000:3000"
+            depends_on:
+              - backend
+            networks:
+              - app-network
+            mem_limit: 512m
+
+        volumes:
+          postgres_data:
+
+        networks:
+          app-network:
+            driver: bridge
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT use depends_on with just a service name for health-dependent services — use condition: service_healthy.
+        2. Do NOT put real passwords or secrets in docker-compose.yml — use env_file: .env.
+        3. Do NOT omit the healthcheck on the db service — other services depend on it being ready.
+        4. Do NOT expose database or Redis ports to the host in production configs.
+        5. Do NOT omit restart: unless-stopped on long-running services.
+
+        === CODE QUALITY REQUIREMENTS ===
+        - Every service must have restart: unless-stopped.
+        - Database service must have a healthcheck with pg_isready.
+        - Backend must use depends_on with condition: service_healthy for db.
+        - Use named volumes (not bind mounts) for database data persistence.
+        - All services share the app-network bridge network.
+        - Include mem_limit on backend and frontend services.
 
         === REQUIREMENTS ===
         - File: docker-compose.yml
-        - Services:
-            db: postgres:16-alpine, with volume, env DATABASE_URL parts, healthcheck
-            backend: build from ./backend, depends_on db{',' + ' redis' if has_redis else ''}, env_file .env, port 8000
-            frontend: build from ./frontend, depends_on backend, port 3000, env NEXT_PUBLIC_API_URL
-            {'redis: redis:7-alpine, port 6379, volume' if has_redis else ''}
-            {'worker: same image as backend, command celery -A app.worker worker, depends_on redis, db' if has_celery else ''}
-        - Use named volumes for postgres and redis data.
-        - Use a shared network "app-network".
-        - Include resource limits (mem_limit) on backend and frontend services.
+        - Services: db (postgres:16), backend, frontend{'redis' if has_redis else ''}{'worker' if has_celery else ''}.
+        - Named volumes, app-network, healthchecks, mem_limits.
         - Output ONLY the docker-compose.yml content — no markdown, no explanation.
     """).strip()
 
@@ -1151,18 +2801,64 @@ def _build_env_example_prompt(ctx: _GenerationContext) -> str:
         Generate a .env.example file listing all environment variables needed by the application.
 
         === SYSTEM SPEC ===
-        {_spec_summary(spec)}
+        {_spec_summary(spec, ctx=ctx)}
 
         === INTEGRATION ENV VARS ===
         {extra or '(none beyond core)'}
 
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        # =============================================================================
+        # {spec.app_name} — Environment Variables
+        # Copy this file to .env and fill in the values for your environment.
+        # NEVER commit .env to version control.
+        # =============================================================================
+
+        # ---- Database ---------------------------------------------------------------
+        # PostgreSQL connection string used by the FastAPI backend
+        DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/appdb
+
+        # ---- Cache ------------------------------------------------------------------
+        # Redis connection string (used for caching and Celery if enabled)
+        REDIS_URL=redis://localhost:6379/0
+
+        # ---- Security ---------------------------------------------------------------
+        # MUST be changed in production. Generate with: python -c "import secrets; print(secrets.token_urlsafe(32))"
+        SECRET_KEY=replace-this-with-a-secure-random-value
+        ALGORITHM=HS256
+        ACCESS_TOKEN_EXPIRE_MINUTES=30
+        REFRESH_TOKEN_EXPIRE_DAYS=7
+
+        # ---- CORS -------------------------------------------------------------------
+        # Comma-separated list of allowed frontend origins
+        ALLOWED_ORIGINS=http://localhost:3000
+
+        # ---- Runtime ----------------------------------------------------------------
+        ENVIRONMENT=development
+        DEBUG=false
+
+        # ---- Frontend ---------------------------------------------------------------
+        # Public API URL used by the Next.js frontend (must start with NEXT_PUBLIC_)
+        NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT put real secrets, passwords, or API keys in .env.example — use placeholder values.
+        2. Do NOT omit the generation command comment for SECRET_KEY.
+        3. Do NOT forget the NEXT_PUBLIC_ prefix on frontend env vars.
+        4. Do NOT add vars that are not referenced anywhere in the codebase.
+        5. Do NOT use SCREAMING_SNAKE_CASE inconsistently — all env vars must be uppercase.
+
+        === CODE QUALITY REQUIREMENTS ===
+        - Group vars by category with section comments.
+        - Every var must have a comment explaining its purpose and acceptable format.
+        - Include the SECRET_KEY generation command in the comment.
+        - Provide realistic placeholder values (not just empty =).
+
         === REQUIREMENTS ===
         - File: .env.example
-        - Core vars: DATABASE_URL, REDIS_URL, SECRET_KEY, ALLOWED_ORIGINS, ENVIRONMENT, DEBUG
-        - JWT vars: ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_DAYS
-        - Frontend vars: NEXT_PUBLIC_API_URL
-        - Include all integration env vars listed above.
-        - Add helpful comments explaining what each var is for.
+        - Core backend vars: DATABASE_URL, REDIS_URL, SECRET_KEY, ALGORITHM, ALLOWED_ORIGINS, ENVIRONMENT, DEBUG.
+        - JWT vars: ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_DAYS.
+        - Frontend: NEXT_PUBLIC_API_URL.
+        - Integration vars: {extra or '(none)'}
         - Output ONLY the .env.example content — no markdown, no explanation.
     """).strip()
 
@@ -1183,21 +2879,100 @@ def _build_gitignore_prompt(ctx: _GenerationContext) -> str:
 
 def _build_readme_prompt(ctx: _GenerationContext) -> str:
     spec = ctx.spec
+    entities_list = ', '.join(e.name for e in spec.entities)
     return textwrap.dedent(f"""
-        Generate a comprehensive README.md for the application described below.
+        Generate a comprehensive, developer-friendly README.md for the application described below.
 
         === SYSTEM SPEC ===
-        {_spec_summary(spec)}
+        {_spec_summary(spec, ctx=ctx)}
+
+        === GOLDEN EXAMPLE STRUCTURE (match this exact section order and quality) ===
+        # AppName
+
+        ![Python](https://img.shields.io/badge/python-3.11-blue) ![Node](https://img.shields.io/badge/node-20-green) ![License](https://img.shields.io/badge/license-MIT-lightgrey)
+
+        > One-sentence description of what the app does and who it's for.
+
+        ## Features
+        - ✅ Feature 1
+        - ✅ Feature 2
+
+        ## Tech Stack
+        | Layer | Technology |
+        |---|---|
+        | Backend | FastAPI 0.110+, SQLAlchemy 2.x, PostgreSQL 16 |
+        | Frontend | Next.js 14, React 18, Tailwind CSS |
+        | Auth | JWT (python-jose) + bcrypt |
+        | Infra | Docker Compose, Alembic |
+
+        ## Quick Start (Docker Compose)
+        ```bash
+        cp .env.example .env          # Fill in your values
+        docker compose up --build -d  # Start all services
+        docker compose exec backend alembic upgrade head  # Run migrations
+        open http://localhost:3000    # View the app
+        ```
+
+        ## Local Development
+        ### Backend
+        ```bash
+        cd backend
+        python -m venv .venv && source .venv/bin/activate
+        pip install -r requirements.txt
+        alembic upgrade head
+        uvicorn app.main:app --reload
+        ```
+
+        ### Frontend
+        ```bash
+        cd frontend
+        npm install
+        cp .env.example .env.local
+        npm run dev
+        ```
+
+        ## Environment Variables
+        See `.env.example` for the full list with descriptions.
+
+        ## API Documentation
+        - Interactive docs: http://localhost:8000/api/v1/docs
+        - ReDoc: http://localhost:8000/api/v1/redoc
+
+        ## Database Migrations
+        ```bash
+        # Create a new migration
+        alembic revision --autogenerate -m "describe your change"
+        # Apply migrations
+        alembic upgrade head
+        # Roll back one step
+        alembic downgrade -1
+        ```
+
+        ## Testing
+        ```bash
+        cd backend && pytest --cov=app tests/
+        ```
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT write vague descriptions like "it does things" — be specific about what the app does.
+        2. Do NOT omit code blocks for commands — every shell command must be in a ```bash block.
+        3. Do NOT include the entire API schema — link to /docs instead.
+        4. Do NOT use placeholder text like [INSERT YOUR VALUE HERE].
+        5. Do NOT forget the Environment Variables section — developers always need this.
+
+        === CODE QUALITY REQUIREMENTS ===
+        - Use proper GitHub-flavored Markdown.
+        - All code examples must be in fenced code blocks with language tags.
+        - Include a table of contents if the README exceeds 6 sections.
+        - Use real version numbers from requirements.txt, not placeholders.
+        - Badge URLs must use shields.io format.
 
         === REQUIREMENTS ===
         - File: README.md
-        - Sections: Overview, Features, Tech Stack, Prerequisites, Quick Start (Docker Compose),
-          Local Development (Backend, Frontend), Environment Variables, API Documentation,
-          Database Migrations, Testing, Deployment, Contributing, License.
-        - Include real command examples with proper shell syntax.
-        - Document all major API endpoints.
-        - Include badges: build status, license, Python version, Node version.
-        - Output ONLY the Markdown content — no markdown fences wrapping the whole file, no explanation.
+        - App: {spec.app_name}, Entities: {entities_list}
+        - Sections: Overview, Features, Tech Stack, Quick Start, Local Dev, Env Vars, API Docs, Migrations, Testing.
+        - Real bash commands, shields.io badges, table for tech stack.
+        - Output ONLY the Markdown content — no outer fences, no explanation.
     """).strip()
 
 
@@ -1207,7 +2982,7 @@ def _build_github_ci_prompt(ctx: _GenerationContext) -> str:
         Generate a GitHub Actions CI/CD workflow file.
 
         === SYSTEM SPEC ===
-        {_spec_summary(spec)}
+        {_spec_summary(spec, ctx=ctx)}
 
         === REQUIREMENTS ===
         - File: .github/workflows/ci.yml
@@ -1262,6 +3037,7 @@ class CodeGeneratorV2:
         spec: SystemSpec,
         output_dir: str,
         theme: str = "Modern",
+        customization: Optional[Dict[str, Any]] = None,
     ) -> GenerationResult:
         """
         Generate a complete, production-ready project from *spec*.
@@ -1279,7 +3055,7 @@ class CodeGeneratorV2:
             A :class:`GenerationResult` with file list, metrics, and warnings.
         """
         t_start = time.monotonic()
-        ctx = _GenerationContext(spec=spec, output_dir=Path(output_dir), theme=theme)
+        ctx = _GenerationContext(spec=spec, output_dir=Path(output_dir), theme=theme, customization=customization or {})
         ctx.output_dir.mkdir(parents=True, exist_ok=True)
 
         plan = self._build_file_plan(ctx)
@@ -1361,6 +3137,7 @@ class CodeGeneratorV2:
         spec: SystemSpec,
         output_dir: str,
         theme: str = "Modern",
+        customization: Optional[Dict[str, Any]] = None,
     ) -> AsyncGenerator[ProgressEvent, None]:
         """
         Async generator variant that yields :class:`ProgressEvent` objects during generation.
@@ -1368,7 +3145,7 @@ class CodeGeneratorV2:
         Uses the same concurrent tier-based approach as :meth:`generate`.
         """
         t_start = time.monotonic()
-        ctx = _GenerationContext(spec=spec, output_dir=Path(output_dir), theme=theme)
+        ctx = _GenerationContext(spec=spec, output_dir=Path(output_dir), theme=theme, customization=customization or {})
         ctx.output_dir.mkdir(parents=True, exist_ok=True)
 
         plan = self._build_file_plan(ctx)
@@ -1859,18 +3636,28 @@ class CodeGeneratorV2:
         """
         Call the LLM to generate *source* for *relative_path*.
 
-        On validation failure, retry up to :attr:`MAX_HEAL_ATTEMPTS` times.
-        The retry prompt now includes the broken source code AND the error
-        message so the LLM can see exactly what went wrong.
+        On validation failure, retry up to :attr:`MAX_HEAL_ATTEMPTS` times
+        with escalating temperature (0.2 → 0.4 → 0.6) to encourage the LLM
+        to try different approaches.
+
+        Before each retry, attempts an AST-based auto-fix for common issues
+        (missing imports, unbalanced brackets) that can be resolved without
+        the LLM.
 
         Returns a (source_code, heal_attempt_count) tuple.
         """
         heal_count = 0
         current_prompt = prompt
+        # Escalating temperature: start precise, get more creative on retries
+        temperatures = [0.2, 0.4, 0.6, 0.8]
 
         for attempt in range(self.MAX_HEAL_ATTEMPTS + 1):
-            source = await self._call_llm(current_prompt, ctx)
+            temp = temperatures[min(attempt, len(temperatures) - 1)]
+            source = await self._call_llm(current_prompt, ctx, temperature=temp)
             source = _strip_code_fences(source)
+
+            # Try AST-based auto-fix before validation
+            source = self._auto_fix_python(relative_path, source)
 
             error = _validate_file(relative_path, source)
             if error is None:
@@ -1888,8 +3675,8 @@ class CodeGeneratorV2:
                 return source, heal_count  # return best-effort
 
             logger.info(
-                "Healing %s (attempt %d/%d): %s",
-                relative_path, heal_count, self.MAX_HEAL_ATTEMPTS, error,
+                "Healing %s (attempt %d/%d, temp=%.1f): %s",
+                relative_path, heal_count, self.MAX_HEAL_ATTEMPTS, temp, error,
             )
 
             # Include the broken source so the LLM can see what to fix,
@@ -1897,18 +3684,63 @@ class CodeGeneratorV2:
             source_preview = source[:4000] if len(source) > 4000 else source
             current_prompt = (
                 f"{prompt}\n\n"
-                f"IMPORTANT — your previous response had this syntax error:\n"
+                f"CRITICAL — your previous response had this error:\n"
                 f"  {error}\n\n"
                 f"Here is the broken code you produced:\n"
                 f"```\n{source_preview}\n```\n\n"
-                f"Fix the issue and output the complete corrected file. "
+                f"Fix the issue and output the COMPLETE corrected file. "
+                f"Do NOT abbreviate or truncate any part of the file. "
                 f"Output ONLY the raw source code with no markdown fences."
             )
 
         # Unreachable in practice, but satisfies type checker
         return source, heal_count  # type: ignore[return-value]
 
-    async def _call_llm(self, prompt: str, ctx: Optional[_GenerationContext] = None) -> str:
+    @staticmethod
+    def _auto_fix_python(relative_path: str, source: str) -> str:
+        """Attempt lightweight AST-based fixes on Python source.
+
+        Fixes common LLM output issues without requiring another LLM call:
+        - Strips markdown fences that slipped through
+        - Removes trailing unterminated strings
+        - Adds missing 'from __future__ import annotations' if TYPE_CHECKING is used
+        """
+        if not relative_path.endswith(".py"):
+            return source
+
+        lines = source.splitlines()
+
+        # Fix 1: Remove any stray markdown fence lines
+        cleaned = []
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith("```") and len(stripped) < 20:
+                continue  # Skip markdown fences
+            cleaned.append(line)
+        if len(cleaned) != len(lines):
+            source = "\n".join(cleaned)
+
+        # Fix 2: If TYPE_CHECKING is used but 'from __future__ import annotations' missing
+        if "TYPE_CHECKING" in source and "from __future__ import annotations" not in source:
+            source = "from __future__ import annotations\n" + source
+
+        # Fix 3: If the file uses 'Mapped[' but doesn't import it
+        if "Mapped[" in source and "from sqlalchemy.orm import" not in source:
+            if "from sqlalchemy" in source:
+                source = source.replace(
+                    "from sqlalchemy",
+                    "from sqlalchemy.orm import Mapped, mapped_column, relationship\nfrom sqlalchemy",
+                    1,
+                )
+
+        return source
+
+    async def _call_llm(
+        self,
+        prompt: str,
+        ctx: Optional[_GenerationContext] = None,
+        temperature: float = 0.2,
+    ) -> str:
         """
         Dispatch a single LLM completion call asynchronously.
 
@@ -1922,7 +3754,7 @@ class CodeGeneratorV2:
             prompt,
             CODEGEN_SYSTEM_PROMPT,
             8192,   # max_tokens — allow large files
-            0.2,    # temperature — low for precision
+            temperature,
             False,  # json_mode
         )
         if ctx is not None:

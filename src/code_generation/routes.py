@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import io
+import json
 import logging
 import uuid
 import zipfile
@@ -23,6 +24,7 @@ from src.code_generation.refinement import (
     refinement_engine,
     refinement_history,
 )
+from src.code_generation.refinement_chat import ChatManager, RefinementChat, chat_manager
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +82,18 @@ class GenerateRequest(BaseModel):
     theme: str = Field(default="Modern", description="Visual theme, e.g. 'Modern', 'Minimal', 'Dark'.")
     max_fix_rounds: int = Field(default=2, ge=0, le=5, description="Auto-fix iterations (0 = disabled).")
 
+    # --- Customization Options ---
+    backend_framework: str = Field(default="fastapi", description="Backend framework: 'fastapi', 'express', 'django'.")
+    database: str = Field(default="postgresql", description="Database: 'postgresql', 'mysql', 'sqlite', 'mongodb'.")
+    auth_strategy: str = Field(default="jwt", description="Authentication: 'jwt', 'session', 'oauth2', 'none'.")
+    frontend_framework: str = Field(default="nextjs", description="Frontend framework: 'nextjs', 'react-vite', 'vue', 'svelte'.")
+    css_framework: str = Field(default="tailwind", description="CSS: 'tailwind', 'shadcn', 'material-ui', 'chakra', 'plain-css'.")
+    deployment_target: str = Field(default="docker", description="Deployment: 'docker', 'vercel', 'railway', 'aws', 'bare'.")
+    include_tests: bool = Field(default=True, description="Whether to generate test files.")
+    include_ci: bool = Field(default=True, description="Whether to generate CI/CD config (GitHub Actions).")
+    api_style: str = Field(default="rest", description="API style: 'rest', 'graphql'.")
+    extra_instructions: str = Field(default="", max_length=2000, description="Additional instructions for the code generator (e.g., 'Use Stripe for payments').")
+
 
 class StartResponse(BaseModel):
     """Response body for POST /api/v2/generate."""
@@ -123,13 +137,28 @@ async def _run_pipeline(job_id: str, req: "GenerateRequest") -> None:
     job.status = "running"
     pipeline = GenerationPipeline()
 
+    customization = {
+        "backend_framework": req.backend_framework,
+        "database": req.database,
+        "auth_strategy": req.auth_strategy,
+        "frontend_framework": req.frontend_framework,
+        "css_framework": req.css_framework,
+        "deployment_target": req.deployment_target,
+        "include_tests": req.include_tests,
+        "include_ci": req.include_ci,
+        "api_style": req.api_style,
+        "extra_instructions": req.extra_instructions,
+    }
+
     try:
+        result: PipelineResult | None = None
         async for progress_event in pipeline.run_with_progress(
             idea_name=req.idea_name,
             idea_description=req.description,
             features=req.features,
             theme=req.theme,
             max_fix_rounds=req.max_fix_rounds,
+            customization=customization,
         ):
             job.push_progress(progress_event)
             logger.debug(
@@ -139,15 +168,15 @@ async def _run_pipeline(job_id: str, req: "GenerateRequest") -> None:
                 progress_event.progress,
                 progress_event.step,
             )
+            # Grab the PipelineResult from the final "complete" event
+            if progress_event.phase == "complete":
+                result = getattr(progress_event, "_pipeline_result", None)
 
-        # run_with_progress only yields — collect the full result via run()
-        result = await pipeline.run(
-            idea_name=req.idea_name,
-            idea_description=req.description,
-            features=req.features,
-            theme=req.theme,
-            max_fix_rounds=req.max_fix_rounds,
-        )
+        # Extract the PipelineResult from the final "complete" event.
+        # run_with_progress attaches the full result via _pipeline_result
+        # attribute so we never need to call pipeline.run() a second time.
+        if result is None:
+            raise RuntimeError("Pipeline completed without producing a result")
         job.result = result
         job.status = "completed"
         job.completed_at = datetime.now(timezone.utc)
@@ -696,3 +725,188 @@ async def push_job_to_github(job_id: str, req: GitHubPushRequest = None) -> GitH
             + (f"{len(upload_result['errors'])} files had errors." if upload_result.get("errors") else "")
         ),
     )
+
+
+# ---------------------------------------------------------------------------
+# Refinement Chat API
+# ---------------------------------------------------------------------------
+
+class CreateChatRequest(BaseModel):
+    """Request body for POST /api/v2/chat."""
+    project_path: str = Field(..., description="Absolute path to the generated project.")
+    project_id: Optional[str] = Field(default=None, description="Optional dashboard project ID.")
+
+class CreateChatResponse(BaseModel):
+    chat_id: str
+    project_path: str
+    created_at: str
+
+class ChatMessageRequest(BaseModel):
+    """Request body for POST /api/v2/chat/{chat_id}/message."""
+    instruction: str = Field(..., min_length=1, max_length=4000)
+    scope: Optional[str] = Field(default=None)
+    apply_changes: bool = Field(default=True, description="Whether to apply changes or just note the instruction.")
+
+class ChatMessageResponse(BaseModel):
+    message: str
+    refinement_result: Optional[Dict[str, Any]] = None
+    error: Optional[str] = None
+
+class ChatHistoryResponse(BaseModel):
+    chat_id: str
+    project_path: str
+    messages: List[Dict[str, Any]]
+    created_at: str
+    updated_at: str
+
+class ChatListResponse(BaseModel):
+    chats: List[Dict[str, Any]]
+
+
+@router.post("/chat", response_model=CreateChatResponse, status_code=201)
+async def create_refinement_chat(req: CreateChatRequest) -> CreateChatResponse:
+    """Start a new multi-turn refinement conversation for a project."""
+    import os
+    project_path = os.path.abspath(req.project_path)
+    if not os.path.isdir(project_path):
+        raise HTTPException(status_code=400, detail=f"Project path does not exist: {req.project_path}")
+
+    chat = chat_manager.create_chat(project_path=project_path, project_id=req.project_id)
+    return CreateChatResponse(
+        chat_id=chat.chat_id,
+        project_path=chat.project_path,
+        created_at=chat.created_at,
+    )
+
+
+@router.post("/chat/{chat_id}/message", response_model=ChatMessageResponse)
+async def send_chat_message(chat_id: str, req: ChatMessageRequest) -> ChatMessageResponse:
+    """Send a message in a refinement chat. Changes are applied by default."""
+    chat = chat_manager.get_chat(chat_id)
+    if not chat:
+        raise HTTPException(status_code=404, detail=f"Chat '{chat_id}' not found.")
+
+    try:
+        result = await chat_manager.send_message(
+            chat_id=chat_id,
+            instruction=req.instruction,
+            scope=req.scope,
+            apply_changes=req.apply_changes,
+        )
+    except Exception as exc:
+        logger.exception("Chat message error: %s", exc)
+        raise HTTPException(status_code=500, detail=f"Chat processing failed: {exc}")
+
+    return ChatMessageResponse(
+        message=result.get("message", ""),
+        refinement_result=result.get("refinement_result"),
+        error=result.get("error"),
+    )
+
+
+@router.get("/chat/{chat_id}", response_model=ChatHistoryResponse)
+async def get_chat_history(chat_id: str) -> ChatHistoryResponse:
+    """Get the full conversation history for a refinement chat."""
+    chat = chat_manager.get_chat(chat_id)
+    if not chat:
+        raise HTTPException(status_code=404, detail=f"Chat '{chat_id}' not found.")
+
+    return ChatHistoryResponse(
+        chat_id=chat.chat_id,
+        project_path=chat.project_path,
+        messages=[m.model_dump() for m in chat.messages],
+        created_at=chat.created_at,
+        updated_at=chat.updated_at,
+    )
+
+
+@router.get("/chats", response_model=ChatListResponse)
+async def list_chats(project_path: Optional[str] = None) -> ChatListResponse:
+    """List all active refinement chats, optionally filtered by project."""
+    chats = chat_manager.list_chats(project_path=project_path)
+    return ChatListResponse(
+        chats=[
+            {
+                "chat_id": c.chat_id,
+                "project_path": c.project_path,
+                "message_count": len(c.messages),
+                "created_at": c.created_at,
+                "updated_at": c.updated_at,
+            }
+            for c in chats
+        ]
+    )
+
+
+@router.delete("/chat/{chat_id}", status_code=204)
+async def delete_chat(chat_id: str):
+    """Delete a refinement chat session."""
+    if not chat_manager.delete_chat(chat_id):
+        raise HTTPException(status_code=404, detail=f"Chat '{chat_id}' not found.")
+
+
+@router.websocket("/chat/ws/{chat_id}")
+async def refinement_chat_ws(websocket: WebSocket, chat_id: str):
+    """WebSocket endpoint for real-time refinement chat.
+
+    Send JSON messages: {"instruction": "...", "scope": "...", "apply_changes": true}
+    Receive JSON responses: {"type": "status"|"result"|"error", "data": {...}}
+    """
+    await websocket.accept()
+
+    chat = chat_manager.get_chat(chat_id)
+    if not chat:
+        await websocket.send_json({"type": "error", "data": {"message": f"Chat '{chat_id}' not found."}})
+        await websocket.close(code=4004)
+        return
+
+    logger.info("[ws-chat] Connected to chat %s", chat_id)
+
+    try:
+        while True:
+            raw = await websocket.receive_text()
+            try:
+                data = json.loads(raw)
+            except json.JSONDecodeError:
+                await websocket.send_json({"type": "error", "data": {"message": "Invalid JSON"}})
+                continue
+
+            instruction = data.get("instruction", "").strip()
+            if not instruction:
+                await websocket.send_json({"type": "error", "data": {"message": "Missing 'instruction' field"}})
+                continue
+
+            # Send acknowledgment
+            await websocket.send_json({
+                "type": "status",
+                "data": {"message": f"Processing: {instruction[:100]}...", "phase": "planning"},
+            })
+
+            try:
+                result = await chat_manager.send_message(
+                    chat_id=chat_id,
+                    instruction=instruction,
+                    scope=data.get("scope"),
+                    apply_changes=data.get("apply_changes", True),
+                )
+
+                await websocket.send_json({
+                    "type": "result",
+                    "data": result,
+                })
+            except Exception as exc:
+                await websocket.send_json({
+                    "type": "error",
+                    "data": {"message": f"Refinement failed: {exc}"},
+                })
+
+    except WebSocketDisconnect:
+        logger.info("[ws-chat] Client disconnected from chat %s", chat_id)
+    except Exception as exc:
+        logger.warning("[ws-chat] Error on chat %s: %s", chat_id, exc)
+        try:
+            await websocket.send_json({"type": "error", "data": {"message": str(exc)}})
+        except Exception:
+            pass
+    finally:
+        await websocket.close()
