@@ -376,6 +376,67 @@ async def download_project(job_id: str):
     )
 
 
+@router.get("/generate/{job_id}/files")
+async def list_project_files(job_id: str):
+    """List all files in the generated project."""
+    job = _jobs.get(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail=f"Job '{job_id}' not found.")
+    if job.status != "completed" or job.result is None:
+        raise HTTPException(status_code=409, detail=f"Job not completed (status={job.status}).")
+
+    output_path = Path(job.result.output_path)
+    if not output_path.exists():
+        raise HTTPException(status_code=500, detail="Output directory not found.")
+
+    files = []
+    for file_path in sorted(output_path.rglob("*")):
+        if file_path.is_file():
+            rel_path = str(file_path.relative_to(output_path))
+            try:
+                size = file_path.stat().st_size
+            except OSError:
+                size = 0
+            files.append({
+                "path": rel_path,
+                "size": size,
+                "extension": file_path.suffix,
+            })
+
+    return {"job_id": job_id, "total_files": len(files), "files": files}
+
+
+@router.get("/generate/{job_id}/files/{file_path:path}")
+async def get_file_content(job_id: str, file_path: str):
+    """Return the content of a specific generated file."""
+    job = _jobs.get(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail=f"Job '{job_id}' not found.")
+    if job.status != "completed" or job.result is None:
+        raise HTTPException(status_code=409, detail=f"Job not completed (status={job.status}).")
+
+    output_path = Path(job.result.output_path)
+    full_path = output_path / file_path
+
+    # Security: ensure the path doesn't escape the output directory
+    try:
+        full_path.resolve().relative_to(output_path.resolve())
+    except ValueError:
+        raise HTTPException(status_code=403, detail="Path traversal not allowed.")
+
+    if not full_path.is_file():
+        raise HTTPException(status_code=404, detail=f"File not found: {file_path}")
+
+    try:
+        content = full_path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        content = "(binary file - cannot display)"
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error reading file: {e}")
+
+    return {"path": file_path, "content": content, "size": full_path.stat().st_size}
+
+
 @router.get("/generate/{job_id}/spec", response_model=SpecResponse)
 async def get_job_spec(job_id: str) -> SpecResponse:
     """Return the system architecture spec for a completed generation job.

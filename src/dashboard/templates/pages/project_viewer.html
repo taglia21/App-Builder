@@ -1,0 +1,1131 @@
+{% extends "base.html" %}
+{% block title %}Project Viewer — Ignara{% endblock %}
+
+{% block extra_css %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+    /* ── Layout ── */
+    .viewer-layout {
+        display: flex;
+        height: 100vh;
+        overflow: hidden;
+        background: #0f172a;
+    }
+
+    /* ── Top header bar ── */
+    .viewer-topbar {
+        position: fixed;
+        top: 0;
+        left: 256px; /* sidebar width from base.html */
+        right: 0;
+        height: 56px;
+        background: #0f172a;
+        border-bottom: 1px solid #1e293b;
+        display: flex;
+        align-items: center;
+        padding: 0 20px;
+        gap: 16px;
+        z-index: 100;
+    }
+    .viewer-topbar-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: #f1f5f9;
+        flex: 1;
+    }
+    .viewer-topbar-meta {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        flex-shrink: 0;
+    }
+    .meta-chip {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: #94a3b8;
+    }
+    .meta-chip .val {
+        color: #e2e8f0;
+        font-weight: 500;
+    }
+    .quality-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 3px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        background: rgba(139,92,246,0.15);
+        border: 1px solid rgba(139,92,246,0.35);
+        color: #c4b5fd;
+    }
+    .btn-topbar {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 14px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        border: none;
+        transition: all 0.15s;
+    }
+    .btn-topbar-ghost {
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1);
+        color: #cbd5e1;
+    }
+    .btn-topbar-ghost:hover { background: rgba(255,255,255,0.09); color: #f1f5f9; }
+    .btn-topbar-purple {
+        background: #8b5cf6;
+        color: white;
+        border: none;
+    }
+    .btn-topbar-purple:hover { background: #7c3aed; }
+
+    /* ── Content area (below topbar) ── */
+    .viewer-body {
+        display: flex;
+        flex: 1;
+        margin-top: 56px;
+        height: calc(100vh - 56px);
+        overflow: hidden;
+    }
+
+    /* ── File tree panel ── */
+    .filetree-panel {
+        width: 280px;
+        flex-shrink: 0;
+        background: #0f172a;
+        border-right: 1px solid #1e293b;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    .filetree-search {
+        padding: 12px 14px;
+        border-bottom: 1px solid #1e293b;
+        flex-shrink: 0;
+    }
+    .filetree-search input {
+        width: 100%;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid #1e293b;
+        border-radius: 7px;
+        padding: 7px 10px 7px 30px;
+        font-size: 13px;
+        color: #e2e8f0;
+        outline: none;
+        box-sizing: border-box;
+    }
+    .filetree-search input::placeholder { color: #475569; }
+    .filetree-search input:focus { border-color: rgba(139,92,246,0.5); }
+    .filetree-search-wrap { position: relative; }
+    .filetree-search-icon {
+        position: absolute;
+        left: 9px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #475569;
+        pointer-events: none;
+    }
+    .filetree-scroll {
+        flex: 1;
+        overflow-y: auto;
+        padding: 8px 6px 16px;
+    }
+    .filetree-scroll::-webkit-scrollbar { width: 4px; }
+    .filetree-scroll::-webkit-scrollbar-track { background: transparent; }
+    .filetree-scroll::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+
+    /* ── Tree nodes ── */
+    .tree-folder {
+        cursor: pointer;
+        user-select: none;
+    }
+    .tree-folder-header {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 13px;
+        color: #94a3b8;
+        transition: background 0.1s;
+    }
+    .tree-folder-header:hover { background: rgba(255,255,255,0.04); color: #cbd5e1; }
+    .tree-folder-chevron {
+        width: 14px;
+        height: 14px;
+        flex-shrink: 0;
+        transition: transform 0.15s;
+    }
+    .tree-folder.open > .tree-folder-header .tree-folder-chevron {
+        transform: rotate(90deg);
+    }
+    .tree-folder-children {
+        margin-left: 12px;
+        display: none;
+        border-left: 1px solid #1e293b;
+        margin-bottom: 2px;
+    }
+    .tree-folder.open > .tree-folder-children { display: block; }
+
+    .tree-file {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 13px;
+        color: #94a3b8;
+        cursor: pointer;
+        transition: all 0.1s;
+        margin-left: 4px;
+    }
+    .tree-file:hover { background: rgba(255,255,255,0.04); color: #cbd5e1; }
+    .tree-file.active {
+        background: rgba(139,92,246,0.15);
+        color: #c4b5fd;
+        border: 1px solid rgba(139,92,246,0.25);
+    }
+    .tree-file-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tree-file-size { font-size: 11px; color: #334155; flex-shrink: 0; }
+    .file-icon { width: 14px; height: 14px; flex-shrink: 0; }
+
+    /* ── Code panel ── */
+    .code-panel {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        background: #0f172a;
+    }
+
+    /* ── Tab bar ── */
+    .tab-bar {
+        display: flex;
+        align-items: center;
+        border-bottom: 1px solid #1e293b;
+        background: #0c1525;
+        flex-shrink: 0;
+        padding: 0 4px;
+    }
+    .tab-btn {
+        padding: 10px 18px;
+        font-size: 13px;
+        color: #475569;
+        cursor: pointer;
+        border: none;
+        background: transparent;
+        border-bottom: 2px solid transparent;
+        transition: all 0.15s;
+        white-space: nowrap;
+    }
+    .tab-btn:hover { color: #94a3b8; }
+    .tab-btn.active { color: #c4b5fd; border-bottom-color: #8b5cf6; }
+
+    /* ── File breadcrumb ── */
+    .file-breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        font-size: 12px;
+        color: #475569;
+        background: #0c1525;
+        border-bottom: 1px solid #1e293b;
+        flex-shrink: 0;
+        min-height: 34px;
+    }
+    .file-breadcrumb span { color: #64748b; }
+    .file-breadcrumb .crumb-sep { color: #1e293b; }
+    .file-breadcrumb .crumb-file { color: #94a3b8; font-weight: 500; }
+
+    /* ── Code view ── */
+    .code-view {
+        flex: 1;
+        overflow: auto;
+        position: relative;
+    }
+    .code-view::-webkit-scrollbar { width: 8px; height: 8px; }
+    .code-view::-webkit-scrollbar-track { background: #0c1525; }
+    .code-view::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+    .code-view::-webkit-scrollbar-thumb:hover { background: #2d3f55; }
+
+    .code-copy-btn {
+        position: sticky;
+        float: right;
+        top: 12px;
+        right: 14px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 10px;
+        font-size: 11px;
+        font-weight: 500;
+        border-radius: 6px;
+        background: rgba(15,23,42,0.85);
+        border: 1px solid #1e293b;
+        color: #64748b;
+        cursor: pointer;
+        transition: all 0.15s;
+        backdrop-filter: blur(4px);
+        z-index: 10;
+    }
+    .code-copy-btn:hover { border-color: #8b5cf6; color: #c4b5fd; }
+    .code-copy-btn.copied { color: #4ade80; border-color: rgba(74,222,128,0.3); }
+
+    .code-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: 'JetBrains Mono', 'Fira Code', monospace;
+        font-size: 13px;
+        line-height: 1.6;
+        tab-size: 4;
+    }
+    .code-table td { padding: 0; vertical-align: top; }
+    .line-numbers {
+        width: 1%;
+        white-space: nowrap;
+        text-align: right;
+        padding: 14px 12px 14px 16px;
+        color: #2d3f55;
+        user-select: none;
+        border-right: 1px solid #1e293b;
+        background: #0c1525;
+        font-size: 12px;
+    }
+    .line-numbers div { line-height: 1.6; }
+    .code-content {
+        padding: 14px 16px 14px 16px;
+        white-space: pre;
+        color: #e2e8f0;
+        width: 100%;
+    }
+    .code-content:focus { outline: none; }
+
+    /* ── Syntax highlighting ── */
+    .hl-keyword  { color: #a78bfa; }   /* purple — import, def, class, etc. */
+    .hl-string   { color: #86efac; }   /* green — string literals */
+    .hl-comment  { color: #475569; font-style: italic; }  /* gray — comments */
+    .hl-decorator{ color: #fbbf24; }   /* yellow — decorators */
+    .hl-number   { color: #fb923c; }   /* orange — numbers */
+    .hl-type     { color: #67e8f9; }   /* cyan — type annotations */
+
+    /* ── Empty / loading states ── */
+    .empty-state {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        color: #334155;
+        padding: 40px;
+        text-align: center;
+    }
+    .empty-state svg { opacity: 0.3; }
+    .empty-state h3 { font-size: 15px; color: #475569; font-weight: 500; margin: 0; }
+    .empty-state p  { font-size: 13px; margin: 0; max-width: 260px; line-height: 1.5; }
+
+    .loading-pulse {
+        animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+        0%, 100% { opacity: 0.4; }
+        50%       { opacity: 1;   }
+    }
+
+    /* ── Preview panel ── */
+    .preview-panel {
+        flex: 1;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+    .preview-iframe {
+        flex: 1;
+        border: none;
+        background: white;
+    }
+    .preview-rendered {
+        flex: 1;
+        overflow: auto;
+        padding: 24px 32px;
+        color: #cbd5e1;
+        font-size: 14px;
+        line-height: 1.7;
+    }
+    .preview-rendered h1,
+    .preview-rendered h2,
+    .preview-rendered h3 { color: #f1f5f9; margin-top: 1.5em; }
+    .preview-rendered code {
+        background: rgba(255,255,255,0.05);
+        border-radius: 4px;
+        padding: 2px 6px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12px;
+        color: #c4b5fd;
+    }
+    .preview-rendered pre {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid #1e293b;
+        border-radius: 8px;
+        padding: 16px;
+        overflow: auto;
+    }
+    .preview-rendered a { color: #818cf8; }
+
+    /* ── Error / binary notice ── */
+    .binary-notice {
+        padding: 16px 20px;
+        margin: 16px;
+        border-radius: 10px;
+        background: rgba(251,191,36,0.06);
+        border: 1px solid rgba(251,191,36,0.2);
+        color: #fbbf24;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    /* ── Transitions ── */
+    .fade-in {
+        animation: fadeIn 0.2s ease;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(4px); }
+        to   { opacity: 1; transform: translateY(0);   }
+    }
+
+    /* ── Stats row ── */
+    .stats-chips {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 14px;
+        border-bottom: 1px solid #1e293b;
+        background: #0c1525;
+        flex-shrink: 0;
+    }
+    .stat-chip {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 3px 9px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 500;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.07);
+        color: #64748b;
+    }
+    .stat-chip .chip-val { color: #94a3b8; }
+
+    /* ── Error toast ── */
+    #error-toast {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        background: #1e293b;
+        border: 1px solid rgba(239,68,68,0.35);
+        color: #fca5a5;
+        padding: 10px 16px;
+        border-radius: 10px;
+        font-size: 13px;
+        display: none;
+        z-index: 999;
+        max-width: 360px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="error-toast"></div>
+
+<!-- Top header bar -->
+<div class="viewer-topbar">
+    <div style="display:flex;align-items:center;gap:10px;">
+        <a href="/build/{{ build_id }}" style="color:#475569;text-decoration:none;display:flex;align-items:center;" title="Back to build">
+            <i data-lucide="arrow-left" style="width:16px;height:16px;"></i>
+        </a>
+        <div class="viewer-topbar-title" id="project-title">
+            <span class="loading-pulse" style="color:#475569">Loading project…</span>
+        </div>
+    </div>
+    <div class="viewer-topbar-meta" id="topbar-meta" style="display:none;">
+        <div class="meta-chip">
+            <i data-lucide="files" style="width:13px;height:13px;"></i>
+            <span id="meta-files" class="val">—</span>
+            <span>files</span>
+        </div>
+        <div class="meta-chip">
+            <i data-lucide="clock" style="width:13px;height:13px;"></i>
+            <span id="meta-time" class="val">—</span>
+        </div>
+        <div class="quality-badge" id="meta-quality" style="display:none;">
+            <i data-lucide="shield-check" style="width:12px;height:12px;"></i>
+            <span id="meta-quality-val">—</span>
+        </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-shrink:0;">
+        <button class="btn-topbar btn-topbar-ghost" onclick="downloadZip()">
+            <i data-lucide="download" style="width:14px;height:14px;"></i>
+            Download ZIP
+        </button>
+        <button class="btn-topbar btn-topbar-ghost" onclick="pushToGithub()">
+            <i data-lucide="github" style="width:14px;height:14px;"></i>
+            Push to GitHub
+        </button>
+        <button class="btn-topbar btn-topbar-purple" onclick="window.location.href='/projects/'+BUILD_ID+'/deploy'">
+            <i data-lucide="rocket" style="width:14px;height:14px;"></i>
+            Deploy
+        </button>
+    </div>
+</div>
+
+<!-- Main body -->
+<div class="viewer-body">
+    <!-- File tree panel -->
+    <div class="filetree-panel">
+        <div class="filetree-search">
+            <div class="filetree-search-wrap">
+                <i data-lucide="search" class="filetree-search-icon" style="width:14px;height:14px;"></i>
+                <input type="text" id="tree-search" placeholder="Search files…" oninput="filterTree(this.value)">
+            </div>
+        </div>
+        <div class="filetree-scroll" id="file-tree">
+            <div class="empty-state" style="padding:30px 20px;">
+                <i data-lucide="folder-open" style="width:32px;height:32px;" class="loading-pulse"></i>
+                <h3>Loading files…</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- Code panel -->
+    <div class="code-panel">
+        <!-- Tab bar -->
+        <div class="tab-bar">
+            <button class="tab-btn active" id="tab-code" onclick="switchTab('code')">
+                <i data-lucide="code-2" style="width:13px;height:13px;display:inline-block;vertical-align:-2px;margin-right:5px;"></i>
+                Code
+            </button>
+            <button class="tab-btn" id="tab-preview" onclick="switchTab('preview')">
+                <i data-lucide="eye" style="width:13px;height:13px;display:inline-block;vertical-align:-2px;margin-right:5px;"></i>
+                Preview
+            </button>
+        </div>
+
+        <!-- Breadcrumb -->
+        <div class="file-breadcrumb" id="file-breadcrumb">
+            <i data-lucide="folder-open" style="width:13px;height:13px;flex-shrink:0;"></i>
+            <span style="color:#334155;">Select a file to view its content</span>
+        </div>
+
+        <!-- Code view (tab 1) -->
+        <div id="panel-code" style="flex:1;overflow:hidden;display:flex;flex-direction:column;">
+            <div class="empty-state" id="code-empty">
+                <i data-lucide="mouse-pointer-click" style="width:36px;height:36px;"></i>
+                <h3>No file selected</h3>
+                <p>Click any file in the tree on the left to view its source code here.</p>
+            </div>
+            <div id="code-content-wrap" style="flex:1;overflow:hidden;display:none;flex-direction:column;">
+                <div class="code-view" id="code-view-area">
+                    <button class="code-copy-btn" id="copy-btn" onclick="copyCode()">
+                        <i data-lucide="copy" style="width:11px;height:11px;"></i>
+                        Copy
+                    </button>
+                    <table class="code-table" id="code-table">
+                        <tbody id="code-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preview panel (tab 2) -->
+        <div id="panel-preview" style="flex:1;overflow:hidden;display:none;flex-direction:column;">
+            <div class="empty-state" id="preview-empty">
+                <i data-lucide="layout" style="width:36px;height:36px;"></i>
+                <h3>No file selected</h3>
+                <p>Select an HTML file to render a live preview, or any other file for a formatted view.</p>
+            </div>
+            <div id="preview-content-wrap" style="flex:1;overflow:hidden;display:none;flex-direction:column;">
+                <iframe id="preview-iframe" class="preview-iframe" style="display:none;"></iframe>
+                <div id="preview-rendered" class="preview-rendered" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script>
+(function () {
+    'use strict';
+
+    const BUILD_ID = {{ build_id | tojson }};
+    let allFiles = [];
+    let activeFilePath = null;
+    let activeFileContent = '';
+    let currentTab = 'code';
+
+    // ── Initialise Lucide icons ──────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+        if (window.lucide) lucide.createIcons();
+        loadFileTree();
+        loadBuildMeta();
+    });
+
+    // ── Load build metadata ──────────────────────────────────────────────────
+    async function loadBuildMeta() {
+        try {
+            const res = await fetch(`/api/build/${BUILD_ID}`);
+            if (!res.ok) return;
+            const data = await res.json();
+            const titleEl = document.getElementById('project-title');
+            const metaEl  = document.getElementById('topbar-meta');
+            const timeEl  = document.getElementById('meta-time');
+            const qualEl  = document.getElementById('meta-quality');
+            const qualValEl = document.getElementById('meta-quality-val');
+
+            titleEl.innerHTML = '';
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = data.app_name || data.idea_name || `Build ${BUILD_ID.slice(0,8)}`;
+            titleEl.appendChild(nameSpan);
+
+            if (data.build_time_seconds) {
+                timeEl.textContent = formatSeconds(data.build_time_seconds);
+            } else if (data.total_time_seconds) {
+                timeEl.textContent = formatSeconds(data.total_time_seconds);
+            } else {
+                timeEl.textContent = '—';
+            }
+
+            const score = data.quality_score || (data.quality && data.quality.score);
+            if (score !== undefined && score !== null) {
+                qualValEl.textContent = `Score ${Math.round(score)}`;
+                qualEl.style.display = 'inline-flex';
+            }
+
+            metaEl.style.display = 'flex';
+        } catch (e) { /* non-fatal */ }
+    }
+
+    function formatSeconds(s) {
+        s = Math.round(s);
+        if (s < 60) return `${s}s`;
+        const m = Math.floor(s / 60);
+        const r = s % 60;
+        return r ? `${m}m ${r}s` : `${m}m`;
+    }
+
+    // ── Load file tree ────────────────────────────────────────────────────────
+    async function loadFileTree() {
+        try {
+            const res = await fetch(`/api/build/${BUILD_ID}/files`);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            allFiles = data.files || [];
+            document.getElementById('meta-files').textContent = allFiles.length;
+            renderTree(allFiles);
+        } catch (e) {
+            document.getElementById('file-tree').innerHTML = `
+                <div class="empty-state" style="padding:24px 16px;">
+                    <i data-lucide="alert-circle" style="width:28px;height:28px;color:#ef4444;"></i>
+                    <h3 style="color:#ef4444;">Failed to load files</h3>
+                    <p>${escapeHtml(String(e))}</p>
+                    <button onclick="loadFileTree()" style="margin-top:12px;padding:8px 18px;background:rgba(139,92,246,0.15);border:1px solid rgba(139,92,246,0.3);border-radius:8px;color:#a78bfa;font-size:0.82rem;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
+                        <i data-lucide="refresh-cw" style="width:13px;height:13px;"></i> Retry
+                    </button>
+                </div>`;
+            if (window.lucide) lucide.createIcons();
+        }
+    }
+
+    // ── Build tree structure ──────────────────────────────────────────────────
+    function buildTreeData(files) {
+        const root = {};
+        for (const f of files) {
+            const parts = f.path.replace(/\\/g, '/').split('/');
+            let node = root;
+            for (let i = 0; i < parts.length - 1; i++) {
+                if (!node[parts[i]]) node[parts[i]] = { __isDir: true, __children: {} };
+                node = node[parts[i]].__children;
+            }
+            const fname = parts[parts.length - 1];
+            node[fname] = { __isDir: false, __file: f };
+        }
+        return root;
+    }
+
+    function renderTree(files) {
+        const treeEl = document.getElementById('file-tree');
+        const treeData = buildTreeData(files);
+        treeEl.innerHTML = '';
+        renderTreeNode(treeData, treeEl, '');
+        if (window.lucide) lucide.createIcons();
+    }
+
+    function renderTreeNode(node, container, prefix) {
+        // Sort: dirs first, then files
+        const entries = Object.entries(node).sort(([aKey, aVal], [bKey, bVal]) => {
+            if (aVal.__isDir && !bVal.__isDir) return -1;
+            if (!aVal.__isDir && bVal.__isDir) return 1;
+            return aKey.localeCompare(bKey);
+        });
+
+        for (const [name, val] of entries) {
+            if (val.__isDir) {
+                const folderDiv = document.createElement('div');
+                folderDiv.className = 'tree-folder open';
+                folderDiv.dataset.prefix = prefix + name + '/';
+
+                const header = document.createElement('div');
+                header.className = 'tree-folder-header';
+                header.innerHTML = `
+                    <i data-lucide="chevron-right" class="tree-folder-chevron" style="width:14px;height:14px;"></i>
+                    <i data-lucide="folder" style="width:14px;height:14px;color:#f59e0b;flex-shrink:0;"></i>
+                    <span style="flex:1;">${escapeHtml(name)}</span>`;
+                header.addEventListener('click', () => folderDiv.classList.toggle('open'));
+
+                const children = document.createElement('div');
+                children.className = 'tree-folder-children';
+
+                folderDiv.appendChild(header);
+                folderDiv.appendChild(children);
+                container.appendChild(folderDiv);
+                renderTreeNode(val.__children, children, prefix + name + '/');
+            } else {
+                const f = val.__file;
+                const fileDiv = document.createElement('div');
+                fileDiv.className = 'tree-file';
+                fileDiv.dataset.path = f.path;
+                const iconHtml = fileIconSvg(f.extension);
+                fileDiv.innerHTML = `
+                    ${iconHtml}
+                    <span class="tree-file-name">${escapeHtml(name)}</span>
+                    <span class="tree-file-size">${formatSize(f.size)}</span>`;
+                fileDiv.addEventListener('click', () => selectFile(f.path, fileDiv));
+                container.appendChild(fileDiv);
+            }
+        }
+    }
+
+    // ── File selection ────────────────────────────────────────────────────────
+    async function selectFile(path, el) {
+        // Update active state
+        document.querySelectorAll('.tree-file.active').forEach(e => e.classList.remove('active'));
+        el.classList.add('active');
+        activeFilePath = path;
+
+        updateBreadcrumb(path);
+        showCodeLoading();
+
+        try {
+            const res = await fetch(`/api/build/${BUILD_ID}/files/${encodeFilePath(path)}`);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            activeFileContent = data.content;
+            displayCode(data.content, path);
+            updatePreview(data.content, path);
+        } catch (e) {
+            showCodeError(String(e));
+        }
+    }
+
+    function encodeFilePath(p) {
+        return p.split('/').map(encodeURIComponent).join('/');
+    }
+
+    // ── Breadcrumb ────────────────────────────────────────────────────────────
+    function updateBreadcrumb(path) {
+        const crumbEl = document.getElementById('file-breadcrumb');
+        const parts = path.replace(/\\/g, '/').split('/');
+        const crumbs = parts.map((p, i) => {
+            if (i === parts.length - 1) {
+                return `<span class="crumb-file">${escapeHtml(p)}</span>`;
+            }
+            return `<span>${escapeHtml(p)}</span>`;
+        }).join('<span class="crumb-sep"> / </span>');
+
+        const iconName = getFileIcon(path.split('/').pop()?.split('.').pop() || '');
+        crumbEl.innerHTML = `<i data-lucide="${iconName}" style="width:13px;height:13px;flex-shrink:0;"></i>${crumbs}`;
+        if (window.lucide) lucide.createIcons();
+    }
+
+    // ── Code display ──────────────────────────────────────────────────────────
+    function showCodeLoading() {
+        document.getElementById('code-empty').style.display = 'none';
+        const wrap = document.getElementById('code-content-wrap');
+        wrap.style.display = 'flex';
+        document.getElementById('code-body').innerHTML = `
+            <tr><td class="line-numbers"><div>…</div></td>
+            <td class="code-content"><span class="loading-pulse" style="color:#334155;">Loading…</span></td></tr>`;
+    }
+
+    function showCodeError(msg) {
+        document.getElementById('code-body').innerHTML = `
+            <tr><td class="line-numbers"></td>
+            <td class="code-content" style="padding:24px;">
+                <div style="color:#ef4444;font-size:0.85rem;margin-bottom:10px;">${escapeHtml(msg)}</div>
+                <button onclick="if(activeFilePath){const el=document.querySelector('.tree-file.active');if(el)selectFile(activeFilePath,el)}" style="padding:6px 14px;background:rgba(139,92,246,0.15);border:1px solid rgba(139,92,246,0.3);border-radius:6px;color:#a78bfa;font-size:0.8rem;cursor:pointer;">Retry</button>
+            </td></tr>`;
+    }
+
+    function displayCode(content, path) {
+        const wrap = document.getElementById('code-content-wrap');
+        wrap.style.display = 'flex';
+        document.getElementById('code-empty').style.display = 'none';
+
+        // Binary notice
+        if (content === '(binary file - cannot display)') {
+            document.getElementById('code-body').innerHTML = '';
+            wrap.insertAdjacentHTML('afterbegin', `
+                <div class="binary-notice fade-in">
+                    <i data-lucide="file-binary" style="width:16px;height:16px;flex-shrink:0;"></i>
+                    Binary file — cannot display as text.
+                </div>`);
+            if (window.lucide) lucide.createIcons();
+            return;
+        }
+
+        // Remove any existing binary notice
+        const existing = wrap.querySelector('.binary-notice');
+        if (existing) existing.remove();
+
+        const ext = (path.split('.').pop() || '').toLowerCase();
+        const highlighted = highlightCode(content, ext);
+        const lines = highlighted.split('\n');
+
+        const lineNums = lines.map((_, i) => `<div>${i + 1}</div>`).join('');
+        const codeLines = lines.map(l => l || ' ').join('\n');
+
+        document.getElementById('code-body').innerHTML = `
+            <tr>
+                <td class="line-numbers">${lineNums}</td>
+                <td class="code-content fade-in">${codeLines}</td>
+            </tr>`;
+    }
+
+    // ── Syntax highlighting ───────────────────────────────────────────────────
+    function highlightCode(code, ext) {
+        const escaped = escapeHtml(code);
+
+        if (['py'].includes(ext)) return highlightPython(escaped);
+        if (['ts', 'tsx', 'js', 'jsx', 'mjs'].includes(ext)) return highlightJS(escaped);
+        if (['json'].includes(ext)) return highlightJSON(escaped);
+        if (['html', 'htm'].includes(ext)) return highlightHTML(escaped);
+        if (['css', 'scss', 'sass'].includes(ext)) return highlightCSS(escaped);
+        if (['yml', 'yaml'].includes(ext)) return highlightYAML(escaped);
+        if (['md', 'mdx'].includes(ext)) return highlightMD(escaped);
+        return escaped; // plain
+    }
+
+    function wrapTokens(code, rules) {
+        // rules: array of { regex, className } — applied in order
+        // We process line-by-line so comments apply cleanly
+        return code.split('\n').map(line => {
+            for (const { regex, cls } of rules) {
+                line = line.replace(regex, (m) => `<span class="${cls}">${m}</span>`);
+            }
+            return line;
+        }).join('\n');
+    }
+
+    const PY_KEYWORDS = /\b(import|from|def|class|async|await|return|if|elif|else|for|while|in|not|and|or|is|None|True|False|try|except|finally|with|as|pass|break|continue|raise|yield|lambda|global|nonlocal|del|assert)\b/g;
+    const JS_KEYWORDS = /\b(import|export|from|const|let|var|function|class|async|await|return|if|else|for|while|in|of|new|this|typeof|instanceof|true|false|null|undefined|interface|type|extends|implements|default|switch|case|break|continue|throw|try|catch|finally|void|static|get|set|super)\b/g;
+
+    function highlightPython(code) {
+        return code.split('\n').map(line => {
+            // Comments
+            line = line.replace(/(#.*)$/, '<span class="hl-comment">$1</span>');
+            // Strings (double then single — simple approach)
+            line = line.replace(/(&quot;(?:[^&]|&(?!quot;))*&quot;|&#039;(?:[^&]|&(?!#039;))*&#039;)/g, '<span class="hl-string">$1</span>');
+            // Decorators
+            line = line.replace(/(@\w+)/g, '<span class="hl-decorator">$1</span>');
+            // Keywords (skip inside spans)
+            line = line.replace(PY_KEYWORDS, '<span class="hl-keyword">$1</span>');
+            // Numbers
+            line = line.replace(/\b(\d+\.?\d*)\b/g, '<span class="hl-number">$1</span>');
+            return line;
+        }).join('\n');
+    }
+
+    function highlightJS(code) {
+        return code.split('\n').map(line => {
+            // Single-line comments
+            line = line.replace(/(\/\/.*)$/, '<span class="hl-comment">$1</span>');
+            // Template literals (basic)
+            line = line.replace(/(`[^`]*`)/g, '<span class="hl-string">$1</span>');
+            // Strings
+            line = line.replace(/(&quot;[^&quot;]*&quot;|&#039;[^&#039;]*&#039;)/g, '<span class="hl-string">$1</span>');
+            // Keywords
+            line = line.replace(JS_KEYWORDS, '<span class="hl-keyword">$1</span>');
+            // Decorators
+            line = line.replace(/(@\w+)/g, '<span class="hl-decorator">$1</span>');
+            // Numbers
+            line = line.replace(/\b(\d+\.?\d*)\b/g, '<span class="hl-number">$1</span>');
+            return line;
+        }).join('\n');
+    }
+
+    function highlightJSON(code) {
+        return code.split('\n').map(line => {
+            // String keys
+            line = line.replace(/(&quot;[^&quot;]*&quot;)\s*:/g, '<span class="hl-type">$1</span>:');
+            // String values
+            line = line.replace(/:\s*(&quot;[^&quot;]*&quot;)/g, ': <span class="hl-string">$1</span>');
+            // Booleans / null
+            line = line.replace(/\b(true|false|null)\b/g, '<span class="hl-keyword">$1</span>');
+            // Numbers
+            line = line.replace(/\b(-?\d+\.?\d*)\b/g, '<span class="hl-number">$1</span>');
+            return line;
+        }).join('\n');
+    }
+
+    function highlightHTML(code) {
+        return code.split('\n').map(line => {
+            // Comments
+            line = line.replace(/(&lt;!--.*?--&gt;)/g, '<span class="hl-comment">$1</span>');
+            // Tags
+            line = line.replace(/(&lt;\/?[\w-]+)/g, '<span class="hl-keyword">$1</span>');
+            // Attributes
+            line = line.replace(/\s([\w-]+)=/g, ' <span class="hl-decorator">$1</span>=');
+            // String values
+            line = line.replace(/(&quot;[^&quot;]*&quot;)/g, '<span class="hl-string">$1</span>');
+            return line;
+        }).join('\n');
+    }
+
+    function highlightCSS(code) {
+        return code.split('\n').map(line => {
+            // Comments
+            line = line.replace(/(\/\*.*?\*\/)/g, '<span class="hl-comment">$1</span>');
+            // Properties
+            line = line.replace(/^\s*([\w-]+)\s*:/gm, '<span class="hl-type">$1</span>:');
+            // Values with strings
+            line = line.replace(/(&quot;[^&quot;]*&quot;)/g, '<span class="hl-string">$1</span>');
+            // Numbers + units
+            line = line.replace(/\b(\d+\.?\d*(?:px|em|rem|%|vh|vw|s|ms)?)\b/g, '<span class="hl-number">$1</span>');
+            return line;
+        }).join('\n');
+    }
+
+    function highlightYAML(code) {
+        return code.split('\n').map(line => {
+            // Comments
+            line = line.replace(/(#.*)$/, '<span class="hl-comment">$1</span>');
+            // Keys
+            line = line.replace(/^(\s*[\w-]+)\s*:/m, '<span class="hl-type">$1</span>:');
+            // Strings
+            line = line.replace(/(&quot;[^&quot;]*&quot;|&#039;[^&#039;]*&#039;)/g, '<span class="hl-string">$1</span>');
+            // Booleans / null
+            line = line.replace(/\b(true|false|null|yes|no)\b/gi, '<span class="hl-keyword">$1</span>');
+            // Numbers
+            line = line.replace(/\b(\d+\.?\d*)\b/g, '<span class="hl-number">$1</span>');
+            return line;
+        }).join('\n');
+    }
+
+    function highlightMD(code) {
+        return code.split('\n').map(line => {
+            // Headings
+            line = line.replace(/^(#{1,6}\s.*)$/, '<span class="hl-keyword">$1</span>');
+            // Code spans
+            line = line.replace(/(`[^`]+`)/g, '<span class="hl-string">$1</span>');
+            // Bold
+            line = line.replace(/(\*\*[^*]+\*\*)/g, '<strong>$1</strong>');
+            // Links
+            line = line.replace(/(\[[^\]]+\]\([^)]+\))/g, '<span class="hl-decorator">$1</span>');
+            return line;
+        }).join('\n');
+    }
+
+    // ── Preview ───────────────────────────────────────────────────────────────
+    function updatePreview(content, path) {
+        const ext = (path.split('.').pop() || '').toLowerCase();
+        const iframeEl = document.getElementById('preview-iframe');
+        const renderedEl = document.getElementById('preview-rendered');
+        const wrapEl = document.getElementById('preview-content-wrap');
+        const emptyEl = document.getElementById('preview-empty');
+
+        emptyEl.style.display = 'none';
+        wrapEl.style.display = 'flex';
+
+        if (ext === 'html' || ext === 'htm') {
+            iframeEl.style.display = 'block';
+            renderedEl.style.display = 'none';
+            const blob = new Blob([content], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            iframeEl.src = url;
+            setTimeout(() => URL.revokeObjectURL(url), 5000);
+        } else if (ext === 'md' || ext === 'mdx') {
+            iframeEl.style.display = 'none';
+            renderedEl.style.display = 'block';
+            renderedEl.innerHTML = simpleMarkdown(escapeHtml(content));
+            renderedEl.classList.add('fade-in');
+        } else {
+            iframeEl.style.display = 'none';
+            renderedEl.style.display = 'block';
+            renderedEl.innerHTML = `<pre style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8;">${escapeHtml(content)}</pre>`;
+        }
+    }
+
+    function simpleMarkdown(html) {
+        // Very simple markdown-to-HTML for README preview
+        return html
+            .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+            .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+            .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.+?)\*/g, '<em>$1</em>')
+            .replace(/`(.+?)`/g, '<code>$1</code>')
+            .replace(/^\- (.+)$/gm, '<li>$1</li>')
+            .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank">$1</a>')
+            .replace(/\n\n/g, '<br><br>');
+    }
+
+    // ── Tab switching ─────────────────────────────────────────────────────────
+    window.switchTab = function(tab) {
+        currentTab = tab;
+        document.getElementById('tab-code').classList.toggle('active', tab === 'code');
+        document.getElementById('tab-preview').classList.toggle('active', tab === 'preview');
+        document.getElementById('panel-code').style.display    = tab === 'code'    ? 'flex' : 'none';
+        document.getElementById('panel-preview').style.display = tab === 'preview' ? 'flex' : 'none';
+    };
+
+    // ── Copy code ─────────────────────────────────────────────────────────────
+    window.copyCode = async function() {
+        if (!activeFileContent) return;
+        try {
+            await navigator.clipboard.writeText(activeFileContent);
+            const btn = document.getElementById('copy-btn');
+            btn.classList.add('copied');
+            btn.innerHTML = '<i data-lucide="check" style="width:11px;height:11px;"></i> Copied!';
+            if (window.lucide) lucide.createIcons();
+            setTimeout(() => {
+                btn.classList.remove('copied');
+                btn.innerHTML = '<i data-lucide="copy" style="width:11px;height:11px;"></i> Copy';
+                if (window.lucide) lucide.createIcons();
+            }, 2000);
+        } catch (e) { /* clipboard blocked */ }
+    };
+
+    // ── Download ZIP ─────────────────────────────────────────────────────────
+    window.downloadZip = function() {
+        window.location.href = `/api/build/${BUILD_ID}/download`;
+    };
+
+    // ── Push to GitHub ────────────────────────────────────────────────────────
+    window.pushToGithub = async function() {
+        const btn = document.querySelector('.btn-topbar-purple');
+        btn.disabled = true;
+        btn.textContent = 'Pushing…';
+        try {
+            const res = await fetch(`/api/v2/generate/${BUILD_ID}/github`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+            const data = await res.json();
+            if (res.ok) {
+                showToast(`Pushed to GitHub: ${data.repo_url}`, 'success');
+                window.open(data.repo_url, '_blank');
+            } else {
+                showToast(data.detail || 'GitHub push failed', 'error');
+            }
+        } catch (e) {
+            showToast(String(e), 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i data-lucide="github" style="width:14px;height:14px;"></i> Push to GitHub';
+            if (window.lucide) lucide.createIcons();
+        }
+    };
+
+    // ── Tree search ───────────────────────────────────────────────────────────
+    window.filterTree = function(query) {
+        if (!query.trim()) {
+            renderTree(allFiles);
+            return;
+        }
+        const q = query.toLowerCase();
+        const filtered = allFiles.filter(f => f.path.toLowerCase().includes(q));
+        renderTree(filtered);
+    };
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    function escapeHtml(str) {
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function formatSize(bytes) {
+        if (bytes < 1024) return `${bytes}B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}K`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)}M`;
+    }
+
+    function getFileIcon(ext) {
+        const map = {
+            py: 'file-code', ts: 'file-code', tsx: 'file-code',
+            js: 'file-code', jsx: 'file-code',
+            json: 'file-json', yml: 'file-cog', yaml: 'file-cog',
+            md: 'file-text', mdx: 'file-text', txt: 'file-text',
+            html: 'file-code', htm: 'file-code',
+            css: 'file-code', scss: 'file-code',
+            dockerfile: 'container', sh: 'terminal', bash: 'terminal',
+            env: 'settings', toml: 'settings', cfg: 'settings', ini: 'settings',
+            sql: 'database', svg: 'image', png: 'image', jpg: 'image', jpeg: 'image',
+        };
+        return map[ext.toLowerCase()] || 'file';
+    }
+
+    function fileIconSvg(ext) {
+        const icon = getFileIcon((ext || '').replace('.', ''));
+        const colorMap = {
+            'file-code': ext => {
+                const e = (ext || '').toLowerCase().replace('.', '');
+                if (['py'].includes(e)) return '#60a5fa';         // blue
+                if (['ts', 'tsx'].includes(e)) return '#22d3ee'; // cyan
+                if (['js', 'jsx'].includes(e)) return '#fbbf24'; // yellow
+                if (['html', 'htm'].includes(e)) return '#f97316'; // orange
+                if (['css', 'scss'].includes(e)) return '#a78bfa'; // purple
+                return '#94a3b8';
+            },
+            'file-json':  () => '#fbbf24',
+            'file-cog':   () => '#4ade80',
+            'file-text':  () => '#94a3b8',
+            'container':  () => '#60a5fa',
+            'terminal':   () => '#4ade80',
+            'settings':   () => '#94a3b8',
+            'database':   () => '#f87171',
+            'image':      () => '#fb923c',
+        };
+        const colorFn = colorMap[icon] || (() => '#64748b');
+        const color = typeof colorFn === 'function' ? colorFn(ext) : colorFn;
+        return `<i data-lucide="${icon}" class="file-icon" style="color:${color};"></i>`;
+    }
+
+    function showToast(msg, type) {
+        const el = document.getElementById('error-toast');
+        el.textContent = msg;
+        el.style.display = 'block';
+        el.style.borderColor = type === 'success' ? 'rgba(74,222,128,0.35)' : 'rgba(239,68,68,0.35)';
+        el.style.color = type === 'success' ? '#86efac' : '#fca5a5';
+        clearTimeout(el._t);
+        el._t = setTimeout(() => { el.style.display = 'none'; }, 4000);
+    }
+
+    // expose for inline handlers
+    window.selectFile = selectFile;
+})();
+</script>
+{% endblock %}

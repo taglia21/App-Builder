@@ -505,8 +505,9 @@ Description: {idea_description}
         tech_stack_hints, complexity_estimate.
         """
         system_prompt = (
-            "You are an expert software architect specializing in SaaS product design. "
-            "Your task is to analyse a startup idea and produce a high-level system decomposition. "
+            "You are a world-class software architect who has designed systems at Google, Stripe, and Vercel. "
+            "Your task is to analyse a startup idea and produce a thorough, investor-grade system decomposition. "
+            "Think deeply about edge cases, scalability, and what would make this a production-ready SaaS. "
             "Be thorough, practical, and realistic. Return only valid JSON."
         )
         prompt = f"""{context}
@@ -532,7 +533,11 @@ Return a JSON object with this exact structure:
     "Rule 1: plain English description",
     "Rule 2: ..."
   ],
-  "complexity_estimate": "low | medium | high"
+  "complexity_estimate": "low | medium | high",
+  "monetization_model": "Description of how this app can generate revenue",
+  "scaling_considerations": ["consideration 1", "consideration 2"],
+  "security_requirements": ["requirement 1", "requirement 2"],
+  "third_party_integrations": ["Stripe for payments", "SendGrid for emails", "..."]
 }}
 
 Focus on what this specific app needs — do not add generic features."""
@@ -565,10 +570,10 @@ Focus on what this specific app needs — do not add generic features."""
         Returns a list of EntitySpec instances.
         """
         system_prompt = (
-            "You are a senior database architect. "
-            "Design a complete, normalised relational data model for the described application. "
-            "Identify all distinct business objects. Typical real apps have 4–8 entities. "
-            "Return only valid JSON."
+            "You are a senior database architect who has designed schemas for applications handling "
+            "millions of users. Design a complete, normalised relational data model with proper indexes, "
+            "constraints, and audit fields. Think about query patterns, not just data storage. "
+            "Typical production apps have 5-10 entities. Return only valid JSON."
         )
 
         features_hint = ""
@@ -621,7 +626,10 @@ Rules:
 4. Use snake_case for field names.
 5. Aim for 4–8 entities covering the core domain.
 6. Define relationships bidirectionally (e.g. User has many Posts, Post belongs to User).
-7. Be comprehensive — include all fields that the described features would need."""
+7. Be comprehensive — include all fields that the described features would need.
+8. Include a status/state field where entities go through a lifecycle (e.g., draft → published → archived).
+9. Add audit fields: created_by, updated_by for entities modified by users.
+10. Consider adding a Settings or Configuration entity for app-wide settings."""
 
         response = self._client.complete(
             prompt,
@@ -702,10 +710,10 @@ Rules:
         Returns a list of RouteSpec instances.
         """
         system_prompt = (
-            "You are a senior API architect. "
-            "Design a complete, production-quality REST API for the described application. "
-            "Include CRUD routes, auth routes, and any business-specific operations. "
-            "Return only valid JSON."
+            "You are a senior API architect who has built APIs serving millions of requests. "
+            "Design a complete, production-quality REST API with proper pagination, filtering, "
+            "error handling, and rate limiting considerations. Include both standard CRUD and "
+            "domain-specific business operations. Return only valid JSON."
         )
 
         entity_names = [e.name for e in entities]
@@ -751,7 +759,10 @@ Requirements:
 4. Add any business-specific routes the features demand (e.g., /checkout, /publish, /approve).
 5. Use RESTful naming conventions with plural nouns.
 6. Include pagination query params for list endpoints (page, per_page, sort, filter).
-7. Be concise in business_logic — aim for 2–4 sentences."""
+7. Be concise in business_logic — aim for 2–4 sentences.
+8. Include rate_limit hint for sensitive endpoints (e.g., auth: "10/min", general: "100/min").
+9. For list endpoints, include filter_by and sort_by options in the response.
+10. Add a /api/v1/stats or /api/v1/dashboard endpoint that returns aggregate counts/metrics."""
 
         response = self._client.complete(
             prompt,
@@ -823,10 +834,10 @@ Requirements:
         Returns a list of PageSpec instances.
         """
         system_prompt = (
-            "You are a senior frontend architect and UX designer. "
-            "Plan the complete page structure and component hierarchy for the described application. "
-            "Think about the user journey from landing page through authenticated flows. "
-            "Return only valid JSON."
+            "You are a senior frontend architect and UX designer at a top-tier design agency. "
+            "Plan a polished, production-ready page structure with thoughtful component hierarchy, "
+            "responsive design considerations, and smooth user journeys. Think about what would "
+            "impress investors in a demo. Return only valid JSON."
         )
 
         entity_names = [e.name for e in entities]
@@ -877,7 +888,10 @@ Requirements:
 4. For each page with a form, add a form component.
 5. For entity list pages, add a table or card-list component plus any relevant charts/stats.
 6. Use kebab-case routes.
-7. Aim for 8–15 pages covering the full user journey."""
+7. Aim for 8–15 pages covering the full user journey.
+8. Include a /analytics or /insights page with charts (even if simple) showing key metrics.
+9. Every page should specify at least 2-3 components for a rich, complete experience.
+10. Add an /onboarding or /getting-started page for new users."""
 
         response = self._client.complete(
             prompt,

@@ -1397,6 +1397,83 @@ async def api_build_download(build_id: str):
     )
 
 
+async def api_build_list_files(build_id: str):
+    """List all files in a completed build's output directory."""
+    from pathlib import Path
+
+    from fastapi import HTTPException
+
+    from src.services.build_manager import build_manager
+
+    build = build_manager.get_build(build_id)
+    if not build:
+        raise HTTPException(status_code=404, detail="Build not found")
+    if build.get("status") != "completed":
+        raise HTTPException(status_code=409, detail=f"Build not completed (status={build.get('status')}).")
+
+    output_path_str = build.get("output_path")
+    if not output_path_str:
+        raise HTTPException(status_code=500, detail="Output directory not found.")
+    output_path = Path(output_path_str)
+    if not output_path.exists():
+        raise HTTPException(status_code=500, detail="Output directory not found.")
+
+    files = []
+    for file_path in sorted(output_path.rglob("*")):
+        if file_path.is_file():
+            rel_path = str(file_path.relative_to(output_path))
+            try:
+                size = file_path.stat().st_size
+            except OSError:
+                size = 0
+            files.append({
+                "path": rel_path,
+                "size": size,
+                "extension": file_path.suffix,
+            })
+
+    return {"build_id": build_id, "total_files": len(files), "files": files}
+
+
+async def api_build_get_file(build_id: str, file_path: str):
+    """Return the content of a specific file from a completed build."""
+    from pathlib import Path
+
+    from fastapi import HTTPException
+
+    from src.services.build_manager import build_manager
+
+    build = build_manager.get_build(build_id)
+    if not build:
+        raise HTTPException(status_code=404, detail="Build not found")
+    if build.get("status") != "completed":
+        raise HTTPException(status_code=409, detail=f"Build not completed (status={build.get('status')}).")
+
+    output_path_str = build.get("output_path")
+    if not output_path_str:
+        raise HTTPException(status_code=500, detail="Output directory not found.")
+    output_path = Path(output_path_str)
+    full_path = output_path / file_path
+
+    # Security: ensure the path doesn't escape the output directory
+    try:
+        full_path.resolve().relative_to(output_path.resolve())
+    except ValueError:
+        raise HTTPException(status_code=403, detail="Path traversal not allowed.")
+
+    if not full_path.is_file():
+        raise HTTPException(status_code=404, detail=f"File not found: {file_path}")
+
+    try:
+        content = full_path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        content = "(binary file - cannot display)"
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error reading file: {e}")
+
+    return {"path": file_path, "content": content, "size": full_path.stat().st_size}
+
+
 def create_build_router() -> APIRouter:
     """Create router for build pipeline API endpoints."""
     router = APIRouter()
@@ -1405,4 +1482,6 @@ def create_build_router() -> APIRouter:
     router.add_api_route("/builds", api_list_builds, methods=["GET"])
     router.add_api_route("/build/{build_id}/stream", api_build_stream, methods=["GET"])
     router.add_api_route("/build/{build_id}/download", api_build_download, methods=["GET"])
+    router.add_api_route("/build/{build_id}/files", api_build_list_files, methods=["GET"])
+    router.add_api_route("/build/{build_id}/files/{file_path:path}", api_build_get_file, methods=["GET"])
     return router

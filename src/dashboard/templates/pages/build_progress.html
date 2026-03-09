@@ -569,6 +569,10 @@
 
             <!-- Action buttons -->
             <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                <a id="btn-explore" href="#" style="display:inline-flex; align-items:center; gap:8px; padding:12px 28px; background:linear-gradient(135deg,#8b5cf6,#6366f1); border-radius:10px; color:white; font-weight:600; text-decoration:none; font-size:0.95rem; transition:all 0.2s;">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                    Explore Project
+                </a>
                 <a id="btn-download" href="#" class="action-btn btn-purple">
                     <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                     Download ZIP
@@ -603,14 +607,27 @@
 
     <!-- ── Error card ── -->
     <div id="error-section" style="display: none;" class="completion-card">
-        <div class="card" style="padding: 24px; border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.04);">
-            <div style="display: flex; align-items: flex-start; gap: 12px;">
-                <div style="width: 36px; height: 36px; border-radius: 50%; background: rgba(239,68,68,0.15); border: 2px solid rgba(239,68,68,0.4); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                    <svg width="16" height="16" fill="none" stroke="#f87171" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        <div class="card" style="padding: 28px; border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.04);">
+            <div style="display: flex; align-items: flex-start; gap: 14px;">
+                <div style="width: 42px; height: 42px; border-radius: 50%; background: rgba(239,68,68,0.15); border: 2px solid rgba(239,68,68,0.4); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <svg width="18" height="18" fill="none" stroke="#f87171" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </div>
-                <div>
-                    <h3 style="font-size: 1rem; font-weight: 600; color: #f87171; margin: 0 0 6px;">Build Failed</h3>
-                    <p id="error-message" style="font-size: 0.83rem; color: #9ca3af; margin: 0; line-height: 1.5;"></p>
+                <div style="flex: 1;">
+                    <h3 style="font-size: 1.05rem; font-weight: 600; color: #f87171; margin: 0 0 8px;">Build Failed</h3>
+                    <p id="error-message" style="font-size: 0.85rem; color: #9ca3af; margin: 0 0 16px; line-height: 1.6;"></p>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button onclick="window.location.reload()" style="padding: 9px 20px; background: linear-gradient(135deg, #8b5cf6, #6366f1); border: none; border-radius: 8px; color: white; font-weight: 600; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: opacity 0.15s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                            Retry Build
+                        </button>
+                        <button onclick="window.location.href='/new'" style="padding: 9px 20px; background: rgba(55,65,81,0.6); border: 1px solid rgba(75,85,99,0.4); border-radius: 8px; color: #d1d5db; font-size: 0.85rem; cursor: pointer; transition: background 0.15s;" onmouseover="this.style.background='rgba(55,65,81,0.9)'" onmouseout="this.style.background='rgba(55,65,81,0.6)'">
+                            Start New Project
+                        </button>
+                    </div>
+                    <details style="margin-top: 14px;">
+                        <summary style="font-size: 0.78rem; color: #6b7280; cursor: pointer; user-select: none;">Diagnostic info</summary>
+                        <pre id="error-diagnostic" style="margin-top: 8px; font-size: 0.72rem; color: #6b7280; background: rgba(0,0,0,0.2); padding: 10px 12px; border-radius: 6px; overflow-x: auto; white-space: pre-wrap; word-break: break-all;"></pre>
+                    </details>
                 </div>
             </div>
         </div>
@@ -930,6 +947,7 @@
         }
 
         // Button links
+        document.getElementById('btn-explore').href = '/build/' + BUILD_ID + '/viewer';
         document.getElementById('btn-download').href = '/api/v2/generate/' + BUILD_ID + '/download';
         document.getElementById('btn-files').href = '/projects/' + BUILD_ID;
         document.getElementById('btn-explorer').href = '/projects/' + BUILD_ID + '/files';
@@ -945,7 +963,7 @@
     }
 
     /* ── Show error ── */
-    function showError(msg) {
+    function showError(msg, diagnosticData) {
         buildComplete = true;
         document.getElementById('typing-indicator').style.display = 'none';
         const statusIcon = document.getElementById('status-icon');
@@ -953,6 +971,19 @@
         statusIcon.style.animation = 'none';
         document.getElementById('status-label').textContent = 'Failed';
         document.getElementById('error-message').textContent = msg || 'An unexpected error occurred.';
+        // Populate diagnostic info
+        const diagEl = document.getElementById('error-diagnostic');
+        if (diagEl) {
+            const elapsed = Math.round((Date.now() - startTime) / 1000);
+            const diag = {
+                build_id: BUILD_ID,
+                error: msg,
+                elapsed_seconds: elapsed,
+                timestamp: new Date().toISOString(),
+                ...(diagnosticData || {})
+            };
+            diagEl.textContent = JSON.stringify(diag, null, 2);
+        }
         const sec = document.getElementById('error-section');
         sec.style.display = 'block';
         requestAnimationFrame(function () { sec.classList.add('visible'); });
@@ -1027,9 +1058,20 @@
         };
 
         eventSource.onerror = function () {
+            if (buildComplete) return;
             addLog('Connection lost. Reconnecting…', 'warn');
             eventSource.close();
-            setTimeout(connect, reconnectDelay);
+            // Show a reconnecting indicator on the status
+            var statusLabel = document.getElementById('status-label');
+            var statusIcon = document.getElementById('status-icon');
+            if (statusLabel) statusLabel.textContent = 'Reconnecting…';
+            if (statusIcon) { statusIcon.style.background = '#f59e0b'; statusIcon.style.animation = 'pulseIcon 0.7s ease-in-out infinite'; }
+            setTimeout(function () {
+                if (!buildComplete) {
+                    if (statusLabel && statusLabel.textContent === 'Reconnecting…') statusLabel.textContent = 'Connecting…';
+                    connect();
+                }
+            }, reconnectDelay);
             reconnectDelay = Math.min(reconnectDelay * 2, 16000);
         };
     }
@@ -1062,7 +1104,7 @@
 
     /* ── Deploy button handler ── */
     document.getElementById('btn-deploy').addEventListener('click', function () {
-        window.location.href = '/projects/' + BUILD_ID + '/deploy';
+        window.location.href = '/build/' + BUILD_ID + '/deploy';
     });
 
     /* ── GitHub push button handler ── */

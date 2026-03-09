@@ -423,6 +423,17 @@ class DashboardRoutes:
             return RedirectResponse(url="/login", status_code=303)
         return self.render(request, "pages/build_progress.html", {"active": "build", "build_id": build_id, "user": user})
 
+    async def project_viewer_page(self, request: Request, build_id: str) -> HTMLResponse:
+        """Project viewer page."""
+        user = get_current_user(request)
+        if not user:
+            return RedirectResponse(url="/login", status_code=303)
+        return self.render(request, "pages/project_viewer.html", {"active": "build", "build_id": build_id, "user": user})
+
+    async def build_deploy_page(self, request: Request, build_id: str) -> HTMLResponse:
+        """Redirect /build/{build_id}/deploy → /projects/{build_id}/deploy for consistency."""
+        return RedirectResponse(url=f"/projects/{build_id}/deploy", status_code=302)
+
     async def builds_page(self, request: Request) -> HTMLResponse:
         """Build history page."""
         user = get_current_user(request)
@@ -1056,6 +1067,8 @@ def create_dashboard_router(templates: Jinja2Templates) -> APIRouter:
     # Build pipeline page routes
     router.add_api_route("/build", routes.build_page, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/build/{build_id}", routes.build_progress_page, methods=["GET"], response_class=HTMLResponse)
+    router.add_api_route("/build/{build_id}/viewer", routes.project_viewer_page, methods=["GET"], response_class=HTMLResponse)
+    router.add_api_route("/build/{build_id}/deploy", routes.build_deploy_page, methods=["GET"], response_class=HTMLResponse)
     router.add_api_route("/builds", routes.builds_page, methods=["GET"], response_class=HTMLResponse)
 
     # Quality dashboard and AI refinement pages
@@ -1342,6 +1355,21 @@ async def deploy_page(request: Request) -> HTMLResponse:
     project_id = request.path_params.get('project_id')
 
     project = _projects_store.get(project_id)
+
+    # Fallback: check build_manager if not in projects store (build_id == project_id)
+    if not project:
+        try:
+            from src.services.build_manager import build_manager
+            build = build_manager.get_build(project_id)
+            if build:
+                project = {
+                    "id": project_id,
+                    "name": build.get("project_name", project_id),
+                    "status": build.get("status", "generated"),
+                }
+        except Exception:
+            pass
+
     if not project:
         return RedirectResponse(url="/dashboard", status_code=302)
 
