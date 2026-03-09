@@ -2425,6 +2425,9 @@ def _build_entity_component_prompt(entity: EntitySpec, ctx: _GenerationContext, 
         - Form validation schema must be defined as a Zod schema with descriptive error messages.
         - Zod schema must enforce the same constraints as the backend Pydantic schema.
         - Use useEffect for data fetching; always clean up / handle unmount.
+        - Use Tailwind CSS utility classes exclusively for all styling — no inline styles, no CSS modules.
+        - Apply responsive Tailwind breakpoints (sm:, md:, lg:) for mobile-first layouts.
+        - Use Tailwind's dark: variant for any elements that need dark mode support.
 
         === REQUIREMENTS ===
         - File: frontend/src/components/{entity.name.lower()}/{entity.name}Components.tsx
@@ -2432,7 +2435,7 @@ def _build_entity_component_prompt(entity: EntitySpec, ctx: _GenerationContext, 
         - {entity.name}Table: loading/error states, columns for key fields, edit + delete row actions.
         - {entity.name}Form: react-hook-form + Zod, create and edit modes, loading on submit, error display.
         - {entity.name}Card: compact summary card for dashboard use.
-        - All components accessible and responsive with Tailwind {theme} theme.
+        - All components accessible and responsive using Tailwind CSS utility classes ({theme} theme).
         - Output ONLY the TypeScript/TSX source — no markdown, no explanation.
     """).strip()
 
@@ -2521,13 +2524,16 @@ def _build_page_prompt(page: PageSpec, ctx: _GenerationContext, theme: str) -> s
         - Use Suspense around any async data-fetching components.
         - The default export must be an async function for server-side data fetching.
         - Prefer server components; only add "use client" when browser APIs (useState, etc.) are needed.
+        - Use Tailwind CSS utility classes exclusively for all styling — no inline styles, no CSS modules.
+        - Apply responsive Tailwind breakpoints (sm:, md:, lg:) for mobile-first layout.
+        - Use Tailwind's dark: variant for dark mode styles.
 
         === REQUIREMENTS ===
         - File: frontend/src/app/{safe_route}/page.tsx
         - generateMetadata() for SEO.
         - Auth redirect if auth_required={page.auth_required}.
         - Suspense boundaries around entity components.
-        - Responsive layout with Tailwind {theme} theme.
+        - Responsive layout with Tailwind CSS utility classes ({theme} theme).
         - Output ONLY the TypeScript/TSX source — no markdown, no explanation.
     """).strip()
 
@@ -3007,6 +3013,681 @@ def _build_tsconfig_prompt(ctx: _GenerationContext) -> str:
         - moduleResolution: bundler, jsx: preserve, incremental: true.
         - paths: {{"@/*": ["./src/*"]}}.
         - Output ONLY the JSON content — no markdown, no explanation.
+    """).strip()
+
+
+# ---------------------------------------------------------------------------
+# Sprint 6: TypeScript-first React prompt builders
+# ---------------------------------------------------------------------------
+
+
+def _build_typescript_config_prompt(ctx: _GenerationContext) -> str:
+    """Generate tsconfig.json with strict mode, path aliases, proper lib/target."""
+    spec = ctx.spec
+    frontend_framework = ctx.customization.get('frontend_framework', 'nextjs')
+    return textwrap.dedent(f"""
+        Generate a production-grade tsconfig.json for a {frontend_framework} TypeScript project.
+
+        === SYSTEM SPEC ===
+        {_spec_summary(spec, compact=True, ctx=ctx)}
+
+        === FRAMEWORK ===
+        {frontend_framework}
+
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        {{
+          "compilerOptions": {{
+            "lib": ["dom", "dom.iterable", "esnext"],
+            "allowJs": false,
+            "skipLibCheck": true,
+            "strict": true,
+            "strictNullChecks": true,
+            "strictFunctionTypes": true,
+            "strictBindCallApply": true,
+            "strictPropertyInitialization": true,
+            "noUncheckedIndexedAccess": true,
+            "noImplicitAny": true,
+            "noImplicitReturns": true,
+            "noImplicitThis": true,
+            "noFallthroughCasesInSwitch": true,
+            "exactOptionalPropertyTypes": true,
+            "forceConsistentCasingInFileNames": true,
+            "noEmit": true,
+            "esModuleInterop": true,
+            "module": "esnext",
+            "moduleResolution": "bundler",
+            "resolveJsonModule": true,
+            "isolatedModules": true,
+            "jsx": "preserve",
+            "target": "ES2022",
+            "useDefineForClassFields": true,
+            "incremental": true,
+            "plugins": [{{
+              "name": "next"
+            }}],
+            "paths": {{
+              "@/*": ["./src/*"],
+              "@/components/*": ["./src/components/*"],
+              "@/lib/*": ["./src/lib/*"],
+              "@/types/*": ["./src/types/*"],
+              "@/hooks/*": ["./src/hooks/*"],
+              "@/utils/*": ["./src/utils/*"]
+            }}
+          }},
+          "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+          "exclude": ["node_modules", ".next", "out", "dist"]
+        }}
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT set strict: false — strict mode catches real bugs at compile time.
+        2. Do NOT use "moduleResolution": "node" for modern Next.js/React — use "bundler".
+        3. Do NOT omit path aliases — @/* and sub-aliases are used throughout imports.
+        4. Do NOT set target lower than ES2022 — modern runtimes support it natively.
+        5. Do NOT omit exactOptionalPropertyTypes — it prevents undefined property bugs.
+
+        === CODE QUALITY REQUIREMENTS ===
+        - Enable ALL strict sub-options individually for maximum type safety.
+        - Include path aliases for all major source directories.
+        - Set target: ES2022 for async/await, optional chaining, and nullish coalescing.
+        - Include the framework-specific plugin (next for Next.js).
+        - Exclude build output directories.
+
+        === REQUIREMENTS ===
+        - File: frontend/tsconfig.json
+        - strict mode with all sub-options enabled.
+        - Path aliases: @/*, @/components/*, @/lib/*, @/types/*, @/hooks/*, @/utils/*.
+        - target: ES2022, moduleResolution: bundler.
+        - Output ONLY the JSON content — no markdown, no explanation.
+    """).strip()
+
+
+def _build_react_types_prompt(ctx: _GenerationContext) -> str:
+    """Generate shared type definitions file (types/index.ts) with entity interfaces,
+    API response types, and form schemas."""
+    spec = ctx.spec
+    entities_detail = "\n\n".join(_entity_detail(e) for e in spec.entities)
+    entity_names = [e.name for e in spec.entities]
+    return textwrap.dedent(f"""
+        Generate a comprehensive TypeScript type definitions file for the frontend.
+
+        === SYSTEM SPEC ===
+        {_spec_summary(spec, ctx=ctx)}
+
+        === ENTITIES TO TYPE ===
+        {entities_detail}
+
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        // =============================================================================
+        // Core Entity Interfaces
+        // =============================================================================
+
+        export interface User {{
+          id: string;
+          email: string;
+          full_name: string | null;
+          is_active: boolean;
+          created_at: string; // ISO 8601
+          updated_at: string;
+        }}
+
+        export interface Post {{
+          id: string;
+          title: string;
+          body: string;
+          published: boolean;
+          author_id: string;
+          author?: User;
+          created_at: string;
+          updated_at: string;
+        }}
+
+        // =============================================================================
+        // API Response Types
+        // =============================================================================
+
+        export interface ApiResponse<T> {{
+          data: T;
+          message?: string;
+          success: boolean;
+        }}
+
+        export interface PaginatedResponse<T> {{
+          items: T[];
+          total: number;
+          page: number;
+          per_page: number;
+          pages: number;
+        }}
+
+        export interface ApiError {{
+          detail: string;
+          status_code: number;
+        }}
+
+        // =============================================================================
+        // Form Schema Types
+        // =============================================================================
+
+        export type PostCreateForm = Omit<Post, 'id' | 'author_id' | 'author' | 'created_at' | 'updated_at'>;
+        export type PostUpdateForm = Partial<PostCreateForm>;
+
+        // =============================================================================
+        // Auth Types
+        // =============================================================================
+
+        export interface LoginCredentials {{
+          email: string;
+          password: string;
+        }}
+
+        export interface AuthTokens {{
+          access_token: string;
+          refresh_token: string;
+          token_type: 'bearer';
+        }}
+
+        export interface AuthState {{
+          user: User | null;
+          tokens: AuthTokens | null;
+          isAuthenticated: boolean;
+          isLoading: boolean;
+        }}
+
+        // =============================================================================
+        // UI Types
+        // =============================================================================
+
+        export type SortOrder = 'asc' | 'desc';
+
+        export interface SortConfig {{
+          field: string;
+          order: SortOrder;
+        }}
+
+        export interface FilterConfig {{
+          [key: string]: string | number | boolean | null;
+        }}
+
+        export interface TableColumn<T> {{
+          key: keyof T;
+          label: string;
+          sortable?: boolean;
+          render?: (value: T[keyof T], row: T) => React.ReactNode;
+        }}
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT use `any` type — use unknown or proper generics.
+        2. Do NOT mix interface and type alias randomly — use interface for object shapes, type for unions/intersections.
+        3. Do NOT include mutable methods in data interfaces — keep them pure data shapes.
+        4. Do NOT omit optional fields with ? — backend optional fields must be typed correctly.
+        5. Do NOT use number for IDs — use string (UUIDs).
+
+        === CODE QUALITY REQUIREMENTS ===
+        - Every entity ({', '.join(entity_names)}) must have a TypeScript interface.
+        - Include Create and Update form types for each entity (Omit/Partial of the base interface).
+        - Include ApiResponse<T>, PaginatedResponse<T>, and ApiError utility types.
+        - Include AuthState, LoginCredentials, and AuthTokens for auth flows.
+        - Include UI utility types: SortOrder, SortConfig, FilterConfig, TableColumn<T>.
+        - Use string for all date fields (ISO 8601 format from the API).
+        - Use string for all ID fields (UUID strings).
+        - Include relationships as optional foreign entity types (e.g., author?: User).
+
+        === REQUIREMENTS ===
+        - File: frontend/src/types/index.ts
+        - Entity interfaces for: {', '.join(entity_names)}.
+        - Generic API response types: ApiResponse<T>, PaginatedResponse<T>, ApiError.
+        - Form schema types: EntityCreateForm and EntityUpdateForm for each entity.
+        - Auth types: LoginCredentials, AuthTokens, AuthState.
+        - UI utility types: SortOrder, SortConfig, FilterConfig, TableColumn<T>.
+        - Export ALL types with named exports.
+        - Output ONLY the TypeScript source — no markdown, no explanation.
+    """).strip()
+
+
+# ---------------------------------------------------------------------------
+# Sprint 6: Tailwind CSS integration prompt builders
+# ---------------------------------------------------------------------------
+
+
+def _build_postcss_config_prompt(ctx: _GenerationContext) -> str:
+    """Generate standard PostCSS config for Tailwind CSS."""
+    frontend_framework = ctx.customization.get('frontend_framework', 'nextjs')
+    return textwrap.dedent(f"""
+        Generate a postcss.config.js for a {frontend_framework} project using Tailwind CSS.
+
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        // postcss.config.js
+        module.exports = {{
+          plugins: {{
+            tailwindcss: {{}},
+            autoprefixer: {{}},
+          }},
+        }};
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT use postcss.config.ts (CJS module.exports is the standard for PostCSS configs).
+        2. Do NOT add nesting plugin unless you explicitly use CSS nesting syntax.
+        3. Do NOT omit autoprefixer — it handles vendor prefixes for cross-browser support.
+        4. Do NOT add cssnano in development config — only in production builds.
+        5. Do NOT specify version numbers — just use the plugin name as key.
+
+        === CODE QUALITY REQUIREMENTS ===
+        - Use module.exports (CommonJS) — PostCSS config is always CJS.
+        - Include tailwindcss and autoprefixer as the two standard plugins.
+        - Empty objects {{}} for plugin options (no config needed for standard setup).
+        - Single file, no extra comments beyond one header line.
+
+        === REQUIREMENTS ===
+        - File: frontend/postcss.config.js
+        - Plugins: tailwindcss and autoprefixer.
+        - CommonJS module.exports format.
+        - Output ONLY the JavaScript content — no markdown, no explanation.
+    """).strip()
+
+
+def _build_global_css_prompt(ctx: _GenerationContext) -> str:
+    """Generate globals.css with @tailwind directives, CSS custom properties, base resets."""
+    spec = ctx.spec
+    theme = ctx.theme or 'Modern'
+    frontend_framework = ctx.customization.get('frontend_framework', 'nextjs')
+    return textwrap.dedent(f"""
+        Generate a globals.css file with Tailwind CSS directives, CSS custom properties, and base resets.
+
+        === SYSTEM SPEC ===
+        {_spec_summary(spec, compact=True, ctx=ctx)}
+
+        === THEME ===
+        {theme}
+
+        === FRAMEWORK ===
+        {frontend_framework}
+
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        @tailwind base;
+        @tailwind components;
+        @tailwind utilities;
+
+        /* =============================================================================
+           CSS Custom Properties (Design Tokens)
+        ============================================================================= */
+        :root {{
+          /* Brand Colors */
+          --brand-50: 239 246 255;
+          --brand-100: 219 234 254;
+          --brand-500: 59 130 246;
+          --brand-600: 37 99 235;
+          --brand-700: 29 78 216;
+          --brand-900: 30 58 138;
+
+          /* Semantic Colors */
+          --color-background: 255 255 255;
+          --color-foreground: 15 23 42;
+          --color-muted: 248 250 252;
+          --color-muted-foreground: 100 116 139;
+          --color-border: 226 232 240;
+          --color-ring: 59 130 246;
+
+          /* Typography */
+          --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+          --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', monospace;
+
+          /* Spacing */
+          --radius: 0.5rem;
+          --radius-sm: 0.25rem;
+          --radius-lg: 0.75rem;
+          --radius-xl: 1rem;
+        }}
+
+        .dark {{
+          --color-background: 2 6 23;
+          --color-foreground: 248 250 252;
+          --color-muted: 15 23 42;
+          --color-muted-foreground: 148 163 184;
+          --color-border: 30 41 59;
+          --color-ring: 96 165 250;
+        }}
+
+        /* =============================================================================
+           Base Resets
+        ============================================================================= */
+        @layer base {{
+          *, *::before, *::after {{
+            box-sizing: border-box;
+            border-color: rgb(var(--color-border));
+          }}
+
+          html {{
+            scroll-behavior: smooth;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+          }}
+
+          body {{
+            background-color: rgb(var(--color-background));
+            color: rgb(var(--color-foreground));
+            font-family: var(--font-sans);
+            line-height: 1.6;
+          }}
+
+          h1, h2, h3, h4, h5, h6 {{
+            font-weight: 600;
+            line-height: 1.25;
+            letter-spacing: -0.025em;
+          }}
+
+          a {{
+            color: inherit;
+            text-decoration: none;
+          }}
+
+          button {{
+            cursor: pointer;
+          }}
+
+          input, textarea, select {{
+            font-family: inherit;
+          }}
+
+          img, video {{
+            max-width: 100%;
+            height: auto;
+          }}
+
+          code {{
+            font-family: var(--font-mono);
+            font-size: 0.875em;
+          }}
+        }}
+
+        /* =============================================================================
+           Component Layer
+        ============================================================================= */
+        @layer components {{
+          .card {{
+            @apply rounded-xl border bg-white p-6 shadow-sm dark:bg-slate-900;
+          }}
+
+          .btn {{
+            @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium
+                   transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2
+                   disabled:pointer-events-none disabled:opacity-50;
+          }}
+
+          .btn-primary {{
+            @apply btn bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500;
+          }}
+
+          .btn-secondary {{
+            @apply btn border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 focus:ring-slate-300;
+          }}
+
+          .input {{
+            @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm
+                   placeholder:text-slate-400 focus:border-blue-500 focus:outline-none
+                   focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-800;
+          }}
+
+          .label {{
+            @apply text-sm font-medium text-slate-700 dark:text-slate-300;
+          }}
+
+          .badge {{
+            @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+          }}
+        }}
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT forget the three @tailwind directives — they are mandatory.
+        2. Do NOT use hex colors in CSS custom properties — use space-separated RGB channels for opacity support.
+        3. Do NOT use px values for --radius — use rem for scaling with user preferences.
+        4. Do NOT put component styles in @layer base — use @layer components for reusable classes.
+        5. Do NOT hardcode dark mode in :root — use .dark class selector for dark mode overrides.
+
+        === CODE QUALITY REQUIREMENTS ===
+        - Include @tailwind base, components, and utilities directives at the top.
+        - Define CSS custom properties using space-separated RGB channels (enables opacity modifiers).
+        - Include both :root (light) and .dark (dark mode) token definitions.
+        - Provide @layer base with HTML element resets.
+        - Provide @layer components with commonly used class abstractions (.card, .btn, .input, etc.).
+        - Reflect the {theme} theme in the brand color palette.
+
+        === REQUIREMENTS ===
+        - File: frontend/src/app/globals.css (or frontend/src/index.css for non-Next.js frameworks)
+        - @tailwind base, components, utilities.
+        - CSS custom properties (design tokens) with light + dark variants.
+        - @layer base: HTML resets.
+        - @layer components: .card, .btn, .btn-primary, .btn-secondary, .input, .label, .badge.
+        - Output ONLY the CSS content — no markdown, no explanation.
+    """).strip()
+
+
+# ---------------------------------------------------------------------------
+# Sprint 6: Docker/Infrastructure prompt builders
+# ---------------------------------------------------------------------------
+
+
+def _build_dockerfile_prompt(ctx: _GenerationContext) -> str:
+    """Generate multi-stage Dockerfile: node:alpine for frontend build, python:slim for backend,
+    non-root user, health check."""
+    spec = ctx.spec
+    frontend_framework = ctx.customization.get('frontend_framework', 'nextjs')
+    return textwrap.dedent(f"""
+        Generate a production-ready multi-stage Dockerfile for the full-stack application.
+
+        === SYSTEM SPEC ===
+        {_spec_summary(spec, compact=True, ctx=ctx)}
+
+        === FRAMEWORK ===
+        Frontend: {frontend_framework}
+        Backend: FastAPI (Python)
+
+        === GOLDEN EXAMPLE — Backend Dockerfile (match this quality and style exactly) ===
+        # =============================================================================
+        # Stage 1: Builder — install dependencies
+        # =============================================================================
+        FROM python:3.12-slim AS builder
+
+        WORKDIR /app
+
+        # Install system dependencies needed for compiling Python packages
+        RUN apt-get update && apt-get install -y --no-install-recommends \\
+            build-essential \\
+            libpq-dev \\
+            && rm -rf /var/lib/apt/lists/*
+
+        # Copy and install Python dependencies
+        COPY requirements.txt .
+        RUN pip install --no-cache-dir --upgrade pip && \\
+            pip install --no-cache-dir -r requirements.txt
+
+        # =============================================================================
+        # Stage 2: Runtime — minimal image
+        # =============================================================================
+        FROM python:3.12-slim AS runtime
+
+        WORKDIR /app
+
+        # Install only runtime system dependencies
+        RUN apt-get update && apt-get install -y --no-install-recommends \\
+            libpq5 \\
+            curl \\
+            && rm -rf /var/lib/apt/lists/*
+
+        # Create non-root user
+        RUN groupadd --gid 1001 appgroup && \\
+            useradd --uid 1001 --gid appgroup --shell /bin/bash --create-home appuser
+
+        # Copy installed packages from builder
+        COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
+        COPY --from=builder /usr/local/bin /usr/local/bin
+
+        # Copy application source
+        COPY --chown=appuser:appgroup . .
+
+        USER appuser
+
+        EXPOSE 8000
+
+        # Health check
+        HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \\
+            CMD curl -f http://localhost:8000/health || exit 1
+
+        CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+
+        === GOLDEN EXAMPLE — Frontend Dockerfile ===
+        # Stage 1: deps
+        FROM node:20-alpine AS deps
+        WORKDIR /app
+        COPY package.json package-lock.json* ./
+        RUN npm ci
+
+        # Stage 2: builder
+        FROM node:20-alpine AS builder
+        WORKDIR /app
+        COPY --from=deps /app/node_modules ./node_modules
+        COPY . .
+        ENV NEXT_TELEMETRY_DISABLED=1
+        RUN npm run build
+
+        # Stage 3: runner
+        FROM node:20-alpine AS runner
+        WORKDIR /app
+        ENV NODE_ENV=production
+        ENV NEXT_TELEMETRY_DISABLED=1
+        RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
+        COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+        COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+        COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+        USER nextjs
+        EXPOSE 3000
+        HEALTHCHECK --interval=30s --timeout=10s --retries=3 CMD wget -qO- http://localhost:3000/api/health || exit 1
+        CMD ["node", "server.js"]
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT run as root in the final image — create a non-root user.
+        2. Do NOT copy node_modules into the runner stage — use standalone output.
+        3. Do NOT use npm install instead of npm ci.
+        4. Do NOT leave build tools in the runtime image — use multi-stage builds.
+        5. Do NOT omit HEALTHCHECK — it enables Docker to detect unhealthy containers.
+
+        === CODE QUALITY REQUIREMENTS ===
+        - Backend: two stages (builder + runtime) using python:3.12-slim.
+        - Frontend: three stages (deps + builder + runner) using node:20-alpine.
+        - Non-root user in both runtime images.
+        - HEALTHCHECK directive on both runtime stages.
+        - Minimal runtime images with only necessary packages.
+        - Clear stage labels as comments.
+
+        === REQUIREMENTS ===
+        - Generate the backend/Dockerfile (Python multi-stage).
+        - Non-root user (uid 1001), HEALTHCHECK, minimal runtime image.
+        - Output ONLY the Dockerfile content — no markdown, no explanation.
+    """).strip()
+
+
+def _build_dockerignore_prompt(ctx: _GenerationContext) -> str:
+    """Generate proper .dockerignore for node_modules, __pycache__, .env, etc."""
+    spec = ctx.spec
+    return textwrap.dedent(f"""
+        Generate a .dockerignore file for the full-stack application.
+
+        === SYSTEM SPEC ===
+        {_spec_summary(spec, compact=True, ctx=ctx)}
+
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        # =============================================================================
+        # .dockerignore — Exclude files from Docker build context
+        # =============================================================================
+
+        # Version control
+        .git
+        .gitignore
+        .gitattributes
+
+        # Environment files (NEVER include secrets in images)
+        .env
+        .env.*
+        !.env.example
+
+        # Python artifacts
+        __pycache__
+        *.py[cod]
+        *$py.class
+        *.pyc
+        .pytest_cache
+        .mypy_cache
+        .ruff_cache
+        htmlcov
+        .coverage
+        dist
+        build
+        *.egg-info
+
+        # Virtual environments
+        venv
+        .venv
+        env
+        .env_folder
+
+        # Node.js artifacts
+        node_modules
+        npm-debug.log*
+        yarn-debug.log*
+        yarn-error.log*
+        .pnpm-debug.log*
+
+        # Next.js build output (use standalone output instead)
+        .next
+        out
+
+        # IDE and editor files
+        .vscode
+        .idea
+        *.swp
+        *.swo
+        .DS_Store
+        Thumbs.db
+
+        # Documentation
+        README.md
+        docs
+        *.md
+
+        # Test artifacts
+        coverage
+        .nyc_output
+        test-results
+        playwright-report
+
+        # CI/CD
+        .github
+        .gitlab-ci.yml
+        Jenkinsfile
+
+        # Docker files themselves (avoid recursive copy)
+        Dockerfile*
+        docker-compose*.yml
+        .dockerignore
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT ignore .env.example — it is non-sensitive and useful inside the image.
+        2. Do NOT forget node_modules — it bloats the build context significantly.
+        3. Do NOT ignore requirements.txt — it is needed to install Python dependencies.
+        4. Do NOT use /* glob patterns for top-level — too aggressive, may exclude needed files.
+        5. Do NOT forget __pycache__ and *.pyc — Python bytecode must be excluded.
+
+        === CODE QUALITY REQUIREMENTS ===
+        - Group exclusions by category with comment headers.
+        - Include both Python and Node.js artifact patterns.
+        - Exclude all .env files except .env.example.
+        - Exclude version control, IDE, and CI/CD files.
+        - Exclude test artifacts and coverage reports.
+
+        === REQUIREMENTS ===
+        - File: .dockerignore (project root)
+        - Exclude: .git, .env (except .env.example), __pycache__, *.pyc, node_modules, .next.
+        - Exclude: IDE files, test artifacts, documentation.
+        - Output ONLY the .dockerignore content — no markdown, no explanation.
     """).strip()
 
 
@@ -5704,6 +6385,20 @@ class CodeGeneratorV2:
                 description="Frontend Dockerfile",
                 depends_on=[],
             ))
+            plan.append(_FileSpec(
+                relative_path="frontend/postcss.config.js",
+                category=FileCategory.FRONTEND_CONFIG,
+                prompt_builder=lambda c: _build_postcss_config_prompt(c),
+                description="PostCSS config for Tailwind CSS",
+                depends_on=[],
+            ))
+            plan.append(_FileSpec(
+                relative_path="frontend/src/index.css",
+                category=FileCategory.FRONTEND_CONFIG,
+                prompt_builder=lambda c: _build_global_css_prompt(c),
+                description="Global CSS with Tailwind directives and design tokens",
+                depends_on=[],
+            ))
 
         elif frontend_framework == 'svelte':
             # ---- SvelteKit frontend ----
@@ -5815,6 +6510,20 @@ class CodeGeneratorV2:
                 description="Frontend Dockerfile",
                 depends_on=[],
             ))
+            plan.append(_FileSpec(
+                relative_path="frontend/postcss.config.js",
+                category=FileCategory.FRONTEND_CONFIG,
+                prompt_builder=lambda c: _build_postcss_config_prompt(c),
+                description="PostCSS config for Tailwind CSS",
+                depends_on=[],
+            ))
+            plan.append(_FileSpec(
+                relative_path="frontend/src/app.css",
+                category=FileCategory.FRONTEND_CONFIG,
+                prompt_builder=lambda c: _build_global_css_prompt(c),
+                description="Global CSS with Tailwind directives and design tokens",
+                depends_on=[],
+            ))
 
         else:
             # ---- Default: Next.js / React frontend ----
@@ -5823,8 +6532,8 @@ class CodeGeneratorV2:
             plan.append(_FileSpec(
                 relative_path="frontend/src/types/index.ts",
                 category=FileCategory.FRONTEND_TYPE,
-                prompt_builder=lambda c: _build_frontend_types_prompt(c),
-                description="TypeScript type definitions",
+                prompt_builder=lambda c: _build_react_types_prompt(c),
+                description="TypeScript type definitions (entity interfaces, API types, form schemas)",
                 depends_on=[],  # Tier 0 for frontend
             ))
             plan.append(_FileSpec(
@@ -5907,8 +6616,8 @@ class CodeGeneratorV2:
             plan.append(_FileSpec(
                 relative_path="frontend/tsconfig.json",
                 category=FileCategory.FRONTEND_CONFIG,
-                prompt_builder=lambda c: _build_tsconfig_prompt(c),
-                description="TypeScript config",
+                prompt_builder=lambda c: _build_typescript_config_prompt(c),
+                description="TypeScript config (strict mode, path aliases, ES2022)",
                 depends_on=[],
             ))
             plan.append(_FileSpec(
@@ -5916,6 +6625,20 @@ class CodeGeneratorV2:
                 category=FileCategory.FRONTEND_CONFIG,
                 prompt_builder=lambda c: _build_frontend_dockerfile_prompt(c),
                 description="Frontend Dockerfile",
+                depends_on=[],
+            ))
+            plan.append(_FileSpec(
+                relative_path="frontend/postcss.config.js",
+                category=FileCategory.FRONTEND_CONFIG,
+                prompt_builder=lambda c: _build_postcss_config_prompt(c),
+                description="PostCSS config for Tailwind CSS",
+                depends_on=[],
+            ))
+            plan.append(_FileSpec(
+                relative_path="frontend/src/app/globals.css",
+                category=FileCategory.FRONTEND_CONFIG,
+                prompt_builder=lambda c: _build_global_css_prompt(c),
+                description="Global CSS with Tailwind directives and design tokens",
                 depends_on=[],
             ))
 
@@ -5939,6 +6662,13 @@ class CodeGeneratorV2:
             category=FileCategory.INFRASTRUCTURE,
             prompt_builder=lambda c: _build_gitignore_prompt(c),
             description=".gitignore",
+            depends_on=[],
+        ))
+        plan.append(_FileSpec(
+            relative_path=".dockerignore",
+            category=FileCategory.INFRASTRUCTURE,
+            prompt_builder=lambda c: _build_dockerignore_prompt(c),
+            description=".dockerignore (excludes node_modules, __pycache__, .env, etc.)",
             depends_on=[],
         ))
         plan.append(_FileSpec(

@@ -220,6 +220,23 @@ class SystemSpec(BaseModel):
     tech_stack: TechStackSpec = Field(default_factory=TechStackSpec)
     features: List[str] = Field(default_factory=list)
 
+    # Sprint 6: Enhanced architect fields
+    # Recommended library versions for the tech stack (e.g., "React 18.2", "FastAPI 0.109")
+    tech_stack_recommendation: List[str] = Field(
+        default_factory=list,
+        description="Recommended specific library versions (e.g., 'React 18.2', 'FastAPI 0.109', 'PostgreSQL 16')",
+    )
+    # Directory layout tree for the generated project
+    project_structure: Optional[str] = Field(
+        default=None,
+        description="Directory layout tree string describing the project file structure",
+    )
+    # API endpoint design with method, path, and description
+    api_design: List[Dict[str, str]] = Field(
+        default_factory=list,
+        description="List of API endpoints with method, path, and description fields",
+    )
+
     # Metadata populated by the architect
     architect_version: str = "2.0"
     llm_steps_completed: List[str] = Field(default_factory=list)
@@ -1024,12 +1041,30 @@ Return a JSON object with this structure:
     "auth_method": "JWT + refresh tokens",
     "api_style": "REST",
     "testing": "pytest + Jest"
-  }}
+  }},
+  "tech_stack_recommendation": [
+    "Python 3.12",
+    "FastAPI 0.109",
+    "SQLAlchemy 2.0",
+    "Pydantic 2.6",
+    "PostgreSQL 16",
+    "Redis 7.2",
+    "React 18.2",
+    "Next.js 14.1",
+    "TypeScript 5.3",
+    "Tailwind CSS 3.4",
+    "Alembic 1.13",
+    "pytest 8.0",
+    "Docker 25"
+  ],
+  "project_structure": "project-root/\n├── backend/\n│   ├── app/\n│   │   ├── api/\n│   │   │   └── endpoints/\n│   │   ├── core/\n│   │   ├── crud/\n│   │   ├── db/\n│   │   ├── models/\n│   │   ├── schemas/\n│   │   └── main.py\n│   └── requirements.txt\n├── frontend/\n│   ├── src/\n│   │   ├── app/\n│   │   ├── components/\n│   │   ├── lib/\n│   │   └── types/\n│   └── package.json\n└── docker-compose.yml"
 }}
 
 Permission format: "resource:action" where action is read/write/delete/admin.
 Only include integrations the app genuinely needs based on its features.
-Tech stack should be idiomatic for a modern SaaS — prefer the defaults unless the app has special needs."""
+Tech stack should be idiomatic for a modern SaaS — prefer the defaults unless the app has special needs.
+For tech_stack_recommendation: list specific pinned versions for all major dependencies.
+For project_structure: provide a realistic directory tree using ASCII art characters."""
 
         response = self._client.complete(
             prompt,
@@ -1166,6 +1201,27 @@ Tech stack should be idiomatic for a modern SaaS — prefer the defaults unless 
                 timestamps=True,
             ))
 
+        # ---- Sprint 6: tech_stack_recommendation ----
+        raw_tsr = cross_cutting.get("tech_stack_recommendation", [])
+        tech_stack_recommendation: List[str] = [
+            str(item) for item in raw_tsr if item
+        ] if isinstance(raw_tsr, list) else []
+
+        # ---- Sprint 6: project_structure ----
+        project_structure: Optional[str] = cross_cutting.get("project_structure")
+        if project_structure and not isinstance(project_structure, str):
+            project_structure = None
+
+        # ---- Sprint 6: api_design (derived from routes) ----
+        api_design: List[Dict[str, str]] = [
+            {
+                "method": r.method,
+                "path": r.path,
+                "description": r.description or r.summary,
+            }
+            for r in routes
+        ]
+
         return SystemSpec(
             app_name=idea_name,
             description=description,
@@ -1177,6 +1233,9 @@ Tech stack should be idiomatic for a modern SaaS — prefer the defaults unless 
             business_rules=deduped_rules,
             tech_stack=tech_stack,
             features=features if isinstance(features, list) else [],
+            tech_stack_recommendation=tech_stack_recommendation,
+            project_structure=project_structure,
+            api_design=api_design,
             llm_steps_completed=steps_completed,
         )
 
@@ -1312,5 +1371,43 @@ Tech stack should be idiomatic for a modern SaaS — prefer the defaults unless 
             business_rules=business_rules,
             tech_stack=TechStackSpec(),
             features=features,
+            # Sprint 6: new fields with sensible fallback defaults
+            tech_stack_recommendation=[
+                "Python 3.12",
+                "FastAPI 0.109",
+                "SQLAlchemy 2.0",
+                "Pydantic 2.6",
+                "PostgreSQL 16",
+                "Redis 7.2",
+                "React 18.2",
+                "Next.js 14.1",
+                "TypeScript 5.3",
+                "Tailwind CSS 3.4",
+            ],
+            project_structure=(
+                "project-root/\n"
+                "├── backend/\n"
+                "│   ├── app/\n"
+                "│   │   ├── api/endpoints/\n"
+                "│   │   ├── core/\n"
+                "│   │   ├── crud/\n"
+                "│   │   ├── db/\n"
+                "│   │   ├── models/\n"
+                "│   │   ├── schemas/\n"
+                "│   │   └── main.py\n"
+                "│   └── requirements.txt\n"
+                "├── frontend/\n"
+                "│   ├── src/\n"
+                "│   │   ├── app/\n"
+                "│   │   ├── components/\n"
+                "│   │   ├── lib/\n"
+                "│   │   └── types/\n"
+                "│   └── package.json\n"
+                "└── docker-compose.yml"
+            ),
+            api_design=[
+                {"method": r.method, "path": r.path, "description": r.description or r.summary}
+                for r in routes
+            ],
             llm_steps_completed=["fallback"],
         )

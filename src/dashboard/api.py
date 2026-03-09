@@ -152,6 +152,10 @@ class DiscussRequest(BaseModel):
     """Request to ask the planning assistant a question."""
     message: str = Field(..., min_length=1, max_length=2000)
     context: Optional[Dict[str, Any]] = None
+    history: Optional[List[Dict[str, str]]] = Field(
+        default=None,
+        description="Prior conversation turns [{role, content}, ...] for multi-turn planning.",
+    )
 
 
 class OnboardingStatusResponse(BaseModel):
@@ -1480,15 +1484,15 @@ async def api_build_get_file(build_id: str, file_path: str):
     return {"path": file_path, "content": content, "size": full_path.stat().st_size}
 
 
-async def api_discuss(data: DiscussRequest) -> Dict[str, Any]:
-    """POST /api/discuss — planning assistant for brainstorming app ideas."""
-    ctx = data.context or {}
-    app_name = ctx.get("name", "your app")
-    description = ctx.get("description", "")
-    features = ctx.get("features", [])
+def _discuss_keyword_fallback(
+    data: "DiscussRequest",
+    app_name: str,
+    description: str,
+    features: list,
+) -> Dict[str, Any]:
+    """Keyword-matching fallback for when the LLM call fails."""
     message_lower = data.message.lower()
 
-    # Build a contextual, personalised reply
     if any(kw in message_lower for kw in ["auth", "login", "sign", "user"]):
         reply = (
             f"For {app_name}, user authentication is a great foundation. "
@@ -1533,7 +1537,7 @@ async def api_discuss(data: DiscussRequest) -> Dict[str, Any]:
         reply = (
             f"For {app_name}'s API design, a RESTful approach works well for most use cases. "
             "Version your API from day one (e.g. /api/v1/...) even if you only have one version. "
-            "Return consistent error shapes: {error, message, code}. "
+            "Return consistent error shapes: {{error, message, code}}. "
             "Add request validation at the boundary using Pydantic (FastAPI) or Zod (Node) — "
             "never trust incoming data."
         )
@@ -1558,7 +1562,6 @@ async def api_discuss(data: DiscussRequest) -> Dict[str, Any]:
             "Use a staging environment that mirrors production before shipping",
         ]
     else:
-        # Generic planning response personalised with context
         desc_snippet = f" — {description[:100]}" if description else ""
         feature_list = ", ".join(features[:3]) if features else "authentication, API, and a database"
         reply = (
@@ -1575,10 +1578,150 @@ async def api_discuss(data: DiscussRequest) -> Dict[str, Any]:
             "Keep your initial tech stack boring and proven; innovate in the product layer",
         ]
 
-    return {
-        "reply": reply,
-        "suggestions": suggestions,
-    }
+    return {"reply": reply, "suggestions": suggestions}
+
+
+def _parse_discuss_llm_response(content: str) -> Dict[str, Any]:
+    """Parse the LLM response text into reply + suggestion chips.
+
+    Expected format (but gracefully handles plain text too):
+
+        <reply>…text…</reply>
+        <suggestions>
+        - suggestion one
+        - suggestion two
+        </suggestions>
+
+    Falls back to treating the whole content as the reply with an empty list.
+    """
+    import re
+
+    # Try XML-style tags first
+    reply_match = re.search(r"<reply>(.*?)</reply>", content, re.DOTALL)
+    sugg_match = re.search(r"<suggestions>(.*?)</suggestions>", content, re.DOTALL)
+
+    if reply_match:
+        reply = reply_match.group(1).strip()
+    else:
+        # Strip any suggestion block and use the rest as the reply
+        reply = re.sub(r"<suggestions>.*?</suggestions>", "", content, flags=re.DOTALL).strip()
+        if not reply:
+            reply = content.strip()
+
+    suggestions: List[str] = []
+    if sugg_match:
+        raw_sugg = sugg_match.group(1).strip()
+        for line in raw_sugg.splitlines():
+            line = line.strip().lstrip("-•* ").strip()
+            if line:
+                suggestions.append(line)
+
+    # Cap at 6 suggestions
+    suggestions = suggestions[:6]
+
+    return {"reply": reply, "suggestions": suggestions}
+
+
+async def api_discuss(data: DiscussRequest) -> Dict[str, Any]:
+    """POST /api/discuss — LLM-powered planning assistant for brainstorming app ideas.
+
+    Uses the configured LLM provider to generate contextual, multi-turn advice.
+    Falls back to keyword-matching responses if the LLM call fails.
+    """
+    import asyncio
+
+    ctx = data.context or {}
+    app_name = ctx.get("name", "your app")
+    description = ctx.get("description", "")
+    features = ctx.get("features", [])
+
+    # -----------------------------------------------------------------
+    # Build the system + user prompts
+    # -----------------------------------------------------------------
+    features_str = ", ".join(features) if features else "(none specified)"
+    system_prompt = (
+        "You are Ignara, a senior full-stack architect and product strategist. "
+        "Your role is to help users plan, architect, and build their web applications. "
+        "You give concrete, opinionated advice — prefer specific technology choices over vague options. "
+        "Keep replies focused and practical (2-4 paragraphs max). "
+        "After your reply, output a <suggestions> block with 3-5 short follow-up action items "
+        "the user could ask about next, each on its own line starting with a dash (-). "
+        "Format your full response as:\n"
+        "<reply>\n"
+        "Your advice here.\n"
+        "</reply>\n"
+        "<suggestions>\n"
+        "- Suggestion one\n"
+        "- Suggestion two\n"
+        "</suggestions>"
+    )
+
+    # Build the user message with project context
+    context_block = (
+        f"Project name: {app_name}\n"
+        f"Description: {description or '(none)'}\n"
+        f"Key features: {features_str}\n"
+    )
+
+    # Append prior conversation history if provided
+    history = data.history or []
+    history_block = ""
+    if history:
+        lines = []
+        for turn in history[-10:]:  # Limit to last 10 turns to control token usage
+            role = turn.get("role", "user").capitalize()
+            content_turn = turn.get("content", "").strip()
+            if content_turn:
+                lines.append(f"{role}: {content_turn}")
+        if lines:
+            history_block = "\nConversation so far:\n" + "\n".join(lines) + "\n"
+
+    user_message = (
+        f"{context_block}"
+        f"{history_block}"
+        f"\nUser: {data.message}"
+    )
+
+    # -----------------------------------------------------------------
+    # Attempt real LLM call (30 s timeout)
+    # -----------------------------------------------------------------
+    try:
+        from src.llm import get_llm_client
+
+        client = get_llm_client()  # auto-detects best available provider
+
+        # client.complete() is synchronous — run it in a thread to keep the
+        # async event-loop free and to enforce the 30 s timeout.
+        loop = asyncio.get_event_loop()
+        response = await asyncio.wait_for(
+            loop.run_in_executor(
+                None,
+                lambda: client.complete(
+                    prompt=user_message,
+                    system_prompt=system_prompt,
+                    max_tokens=1024,
+                    temperature=0.7,
+                ),
+            ),
+            timeout=30.0,
+        )
+
+        parsed = _parse_discuss_llm_response(response.content)
+        logger.info(
+            "discuss LLM response: provider=%s model=%s latency=%.0fms",
+            response.provider,
+            response.model,
+            response.latency_ms,
+        )
+        return parsed
+
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "discuss LLM call failed (%s: %s) — falling back to keyword matching",
+            type(exc).__name__,
+            exc,
+        )
+        return _discuss_keyword_fallback(data, app_name, description, features)
 
 
 # ==================== Visual Edit Endpoint ====================
@@ -1593,9 +1736,15 @@ class VisualEditRequest(BaseModel):
 async def api_visual_edit(build_id: str, request: VisualEditRequest) -> Dict[str, Any]:
     """Apply visual edits from the Visual Edit mode overlay.
 
-    This is currently a stub that logs the edits and returns success.
-    Future implementation will patch the actual source files in the build output.
+    Reads the target HTML/CSS file from the build output, applies the requested
+    CSS and text-content changes, writes the file back, and returns the updated
+    file contents so the frontend can refresh its preview.
     """
+    import re
+    from pathlib import Path as _Path
+
+    from fastapi import HTTPException
+
     edits_count = len(request.edits)
     logger.info(
         "Visual edit request for build %s — %d edit(s) on file '%s'\nCSS patch:\n%s",
@@ -1604,16 +1753,173 @@ async def api_visual_edit(build_id: str, request: VisualEditRequest) -> Dict[str
         request.file_path,
         request.css_patch or "(none)",
     )
-    for i, edit in enumerate(request.edits):
-        logger.debug("  Edit %d/%d: selector=%r tag=%r", i + 1, edits_count,
-                     edit.get("selector"), edit.get("tag"))
 
+    # ------------------------------------------------------------------
+    # 1. Resolve the build output directory
+    # ------------------------------------------------------------------
+    from src.services.build_manager import build_manager
+
+    build = build_manager.get_build(build_id)
+    if not build:
+        raise HTTPException(status_code=404, detail=f"Build '{build_id}' not found.")
+
+    output_path_str = build.get("output_path")
+    if not output_path_str:
+        raise HTTPException(
+            status_code=422,
+            detail="Build has no output_path — it may still be in progress.",
+        )
+
+    output_dir = _Path(output_path_str)
+    if not output_dir.exists():
+        raise HTTPException(
+            status_code=422,
+            detail=f"Build output directory does not exist: {output_path_str}",
+        )
+
+    updated_files: Dict[str, str] = {}
+    errors: List[str] = []
+
+    # ------------------------------------------------------------------
+    # 2. Apply CSS patch — append to / create custom.css
+    # ------------------------------------------------------------------
+    if request.css_patch:
+        css_file = output_dir / "custom.css"
+        try:
+            existing_css = css_file.read_text(encoding="utf-8") if css_file.exists() else ""
+            separator = "\n" if existing_css and not existing_css.endswith("\n") else ""
+            new_css = existing_css + separator + request.css_patch
+            css_file.write_text(new_css, encoding="utf-8")
+            updated_files["custom.css"] = new_css
+            logger.debug("Appended CSS patch (%d chars) to %s", len(request.css_patch), css_file)
+        except OSError as exc:
+            errors.append(f"Failed to write custom.css: {exc}")
+            logger.warning("Visual edit: CSS patch failed: %s", exc)
+
+    # ------------------------------------------------------------------
+    # 3. Apply per-element edits to the target HTML/CSS file
+    # ------------------------------------------------------------------
+    if request.edits and request.file_path:
+        # Security: prevent path traversal
+        try:
+            target_file = (output_dir / request.file_path).resolve()
+            target_file.relative_to(output_dir.resolve())
+        except ValueError:
+            raise HTTPException(status_code=403, detail="Path traversal not allowed.")
+
+        if not target_file.exists():
+            errors.append(f"Target file not found: {request.file_path}")
+            logger.warning("Visual edit: target file not found: %s", target_file)
+        else:
+            try:
+                file_content = target_file.read_text(encoding="utf-8")
+                modified_content = file_content
+
+                for i, edit in enumerate(request.edits):
+                    selector: str = edit.get("selector", "")
+                    prop: str = edit.get("property", "")
+                    value: str = edit.get("value", "")
+                    tag: str = edit.get("tag", "")
+                    text_content: Optional[str] = edit.get("textContent")
+
+                    logger.debug(
+                        "  Edit %d/%d: selector=%r tag=%r property=%r value=%r",
+                        i + 1, edits_count, selector, tag, prop, value,
+                    )
+
+                    # -- Text content replacement --
+                    # Matches the first element whose opening tag contains the
+                    # CSS selector fragments (class / id) and replaces its
+                    # inner text.  Works for simple single-level elements.
+                    if text_content is not None and selector:
+                        # Build a regex that matches <tag ...selector...>...</tag>
+                        tag_pattern = tag if tag else r"[a-zA-Z][a-zA-Z0-9]*"
+                        # Escape special regex chars in selector (keep . and #)
+                        sel_escaped = re.escape(selector).replace(r"\.", "\\.").replace(r"\#", "#")
+                        # Convert CSS class/id selectors to attribute presence checks
+                        sel_regex = sel_escaped.replace(r"\.", r'[^>]*class="[^"]*').replace("#", r'[^>]*id="')
+                        # Simpler: just look for the class/id string anywhere in the tag
+                        class_or_id = selector.lstrip(".#")
+                        pattern = (
+                            rf"(<{tag_pattern}(?=[^>]*(?:class|id)=['\"][^'\"]*"
+                            + re.escape(class_or_id)
+                            + r"[^'\"]*['\"])[^>]*>)"
+                            r"([^<]*)"
+                            rf"(</{tag_pattern}>)"
+                        )
+                        replacement = rf"\g<1>{re.escape(text_content)}\g<3>"
+                        new_content, n_subs = re.subn(pattern, replacement, modified_content, count=1)
+                        if n_subs:
+                            modified_content = new_content
+                            logger.debug("    Text replacement applied for selector %r", selector)
+                        else:
+                            logger.debug("    Text replacement: no match for selector %r", selector)
+
+                    # -- Inline CSS property patch --
+                    # Injects / updates a CSS rule for *selector* inside the
+                    # first <style> block found in the file.
+                    if prop and value:
+                        rule = f"{selector} {{ {prop}: {value}; }}"
+                        # Try to update an existing property in an existing rule
+                        existing_rule_pattern = (
+                            rf"({re.escape(selector)}\s*{{[^}}]*)({re.escape(prop)}\s*:[^;}}]+)(;?[^}}]*}})"
+                        )
+                        new_rule_replacement = rf"\g<1>{prop}: {value}\g<3>"
+                        new_content, n_subs = re.subn(
+                            existing_rule_pattern,
+                            new_rule_replacement,
+                            modified_content,
+                            count=1,
+                        )
+                        if n_subs:
+                            modified_content = new_content
+                            logger.debug("    CSS property updated in existing rule for %r", selector)
+                        else:
+                            # Append the new rule inside the first <style> block
+                            style_pattern = r"(</style>)"
+                            insert = f"\n  {rule}\n"
+                            new_content, n_subs = re.subn(
+                                style_pattern, insert + r"\1", modified_content, count=1
+                            )
+                            if n_subs:
+                                modified_content = new_content
+                                logger.debug("    CSS rule appended to <style> block for %r", selector)
+                            else:
+                                # No <style> block — append a new one before </head> or at end
+                                style_block = f"<style>\n  {rule}\n</style>\n"
+                                if "</head>" in modified_content:
+                                    modified_content = modified_content.replace(
+                                        "</head>", style_block + "</head>", 1
+                                    )
+                                else:
+                                    modified_content += "\n" + style_block
+                                logger.debug("    Injected new <style> block for %r", selector)
+
+                # Write modified content back
+                target_file.write_text(modified_content, encoding="utf-8")
+                updated_files[request.file_path] = modified_content
+                logger.info(
+                    "Visual edit: wrote %d bytes to %s",
+                    len(modified_content),
+                    target_file,
+                )
+
+            except OSError as exc:
+                errors.append(f"Failed to write {request.file_path}: {exc}")
+                logger.warning("Visual edit: file write failed: %s", exc)
+
+    # ------------------------------------------------------------------
+    # 4. Return result
+    # ------------------------------------------------------------------
+    success = len(errors) == 0
     return {
-        "success": True,
-        "message": "Visual edits applied",
+        "success": success,
+        "message": "Visual edits applied" if success else f"Completed with {len(errors)} error(s)",
         "edits_count": edits_count,
         "build_id": build_id,
         "file_path": request.file_path,
+        "updated_files": updated_files,
+        "errors": errors,
     }
 
 
