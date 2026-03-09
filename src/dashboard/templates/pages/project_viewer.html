@@ -445,6 +445,263 @@
         z-index: 999;
         max-width: 360px;
     }
+
+    /* ── Live mode: building badge ── */
+    .building-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        background: rgba(251,191,36,0.12);
+        border: 1px solid rgba(251,191,36,0.35);
+        color: #fbbf24;
+        animation: badge-appear 0.25s ease;
+    }
+    @keyframes badge-appear {
+        from { opacity: 0; transform: scale(0.85); }
+        to   { opacity: 1; transform: scale(1); }
+    }
+
+    /* ── Pulsing live dot ── */
+    .live-dot {
+        display: inline-block;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #fbbf24;
+        flex-shrink: 0;
+        animation: live-pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes live-pulse {
+        0%, 100% { opacity: 1;   transform: scale(1);    }
+        50%       { opacity: 0.4; transform: scale(0.75); }
+    }
+
+    /* Pulsing dot on file row while being generated */
+    .tree-file .gen-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #fbbf24;
+        flex-shrink: 0;
+        animation: live-pulse 1s ease-in-out infinite;
+    }
+    .tree-file.gen-pending {
+        opacity: 0.65;
+    }
+
+    /* Progress bar under topbar during build */
+    #live-progress-bar-wrap {
+        position: fixed;
+        top: 56px;
+        left: 256px;
+        right: 0;
+        height: 2px;
+        background: rgba(251,191,36,0.1);
+        z-index: 99;
+        display: none;
+    }
+    #live-progress-bar {
+        height: 2px;
+        background: linear-gradient(90deg, #f59e0b, #fbbf24);
+        transition: width 0.4s ease;
+        width: 0%;
+    }
+
+    /* ── Visual Edit Mode ── */
+    #btn-visual-edit.ve-active {
+        background: rgba(99,179,237,0.18);
+        border-color: rgba(99,179,237,0.5);
+        color: #63b3ed;
+    }
+
+    /* Floating toolbar shown inside the preview panel when VE is active */
+    #ve-toolbar {
+        display: none;
+        position: absolute;
+        top: 8px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(15,23,42,0.96);
+        border: 1px solid rgba(99,179,237,0.35);
+        border-radius: 10px;
+        padding: 6px 12px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 12px;
+        color: #63b3ed;
+        font-weight: 600;
+        z-index: 50;
+        backdrop-filter: blur(8px);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        pointer-events: auto;
+        white-space: nowrap;
+    }
+    #ve-toolbar.hidden { display: none !important; }
+    .ve-toolbar-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #63b3ed;
+        animation: live-pulse 1.5s ease-in-out infinite;
+        flex-shrink: 0;
+    }
+    #ve-undo-btn, #ve-apply-btn {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 500;
+        cursor: pointer;
+        border: none;
+        transition: all 0.15s;
+    }
+    #ve-undo-btn {
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.1);
+        color: #94a3b8;
+    }
+    #ve-undo-btn:hover { background: rgba(255,255,255,0.1); color: #f1f5f9; }
+    #ve-apply-btn {
+        background: rgba(99,179,237,0.2);
+        border: 1px solid rgba(99,179,237,0.4);
+        color: #63b3ed;
+    }
+    #ve-apply-btn:hover { background: rgba(99,179,237,0.32); }
+    #ve-edit-count {
+        padding: 2px 7px;
+        border-radius: 999px;
+        background: rgba(99,179,237,0.2);
+        font-size: 11px;
+    }
+
+    /* Wrapper around the preview panel to allow absolute positioning */
+    .preview-panel { position: relative; }
+
+    /* Edit panel (floating popup near clicked element) */
+    #ve-edit-panel {
+        display: none;
+        position: fixed;
+        background: rgba(15,23,42,0.97);
+        border: 1px solid rgba(99,179,237,0.3);
+        border-radius: 12px;
+        padding: 16px;
+        width: 280px;
+        z-index: 9999;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+        backdrop-filter: blur(12px);
+        font-size: 13px;
+        color: #e2e8f0;
+    }
+    #ve-edit-panel h4 {
+        margin: 0 0 12px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #63b3ed;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    #ve-edit-panel h4 button {
+        background: none;
+        border: none;
+        color: #475569;
+        cursor: pointer;
+        padding: 2px;
+        display: flex;
+        align-items: center;
+    }
+    #ve-edit-panel h4 button:hover { color: #94a3b8; }
+    .ve-field {
+        margin-bottom: 10px;
+    }
+    .ve-field label {
+        display: block;
+        font-size: 11px;
+        color: #64748b;
+        margin-bottom: 4px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+    .ve-field input[type="text"],
+    .ve-field input[type="number"] {
+        width: 100%;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid #1e293b;
+        border-radius: 6px;
+        padding: 6px 9px;
+        font-size: 12px;
+        color: #e2e8f0;
+        outline: none;
+        box-sizing: border-box;
+        transition: border-color 0.15s;
+    }
+    .ve-field input[type="text"]:focus,
+    .ve-field input[type="number"]:focus { border-color: rgba(99,179,237,0.5); }
+    .ve-field input[type="color"] {
+        width: 100%;
+        height: 32px;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid #1e293b;
+        border-radius: 6px;
+        padding: 2px 4px;
+        cursor: pointer;
+        box-sizing: border-box;
+    }
+    .ve-fields-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+    .ve-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 14px;
+    }
+    .ve-actions button {
+        flex: 1;
+        padding: 7px 0;
+        border-radius: 7px;
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        border: none;
+        transition: all 0.15s;
+    }
+    #ve-panel-cancel {
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1) !important;
+        color: #94a3b8;
+    }
+    #ve-panel-cancel:hover { background: rgba(255,255,255,0.1); color: #f1f5f9; }
+    #ve-panel-apply {
+        background: rgba(99,179,237,0.2);
+        border: 1px solid rgba(99,179,237,0.4) !important;
+        color: #63b3ed;
+    }
+    #ve-panel-apply:hover { background: rgba(99,179,237,0.32); }
+    .ve-tag-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 7px;
+        background: rgba(139,92,246,0.15);
+        border: 1px solid rgba(139,92,246,0.25);
+        border-radius: 4px;
+        font-size: 11px;
+        color: #a78bfa;
+        font-family: 'JetBrains Mono', monospace;
+        margin-bottom: 10px;
+    }
 </style>
 {% endblock %}
 
@@ -477,6 +734,10 @@
         </div>
     </div>
     <div style="display:flex;gap:8px;flex-shrink:0;">
+        <button class="btn-topbar btn-topbar-ghost" id="btn-visual-edit" onclick="toggleVisualEdit()">
+            <i data-lucide="mouse-pointer-2" style="width:14px;height:14px;"></i>
+            Visual Edit
+        </button>
         <button class="btn-topbar btn-topbar-ghost" onclick="downloadZip()">
             <i data-lucide="download" style="width:14px;height:14px;"></i>
             Download ZIP
@@ -490,6 +751,11 @@
             Deploy
         </button>
     </div>
+</div>
+
+<!-- Live build progress bar -->
+<div id="live-progress-bar-wrap">
+    <div id="live-progress-bar"></div>
 </div>
 
 <!-- Main body -->
@@ -552,6 +818,20 @@
 
         <!-- Preview panel (tab 2) -->
         <div id="panel-preview" style="flex:1;overflow:hidden;display:none;flex-direction:column;">
+            <!-- Visual Edit floating toolbar -->
+            <div id="ve-toolbar" class="hidden">
+                <span class="ve-toolbar-dot"></span>
+                Visual Edit Mode
+                <span id="ve-edit-count" style="display:none;">0 edits</span>
+                <button id="ve-undo-btn" onclick="veUndo()" title="Undo last edit">
+                    <i data-lucide="undo-2" style="width:11px;height:11px;"></i>
+                    Undo
+                </button>
+                <button id="ve-apply-btn" onclick="veApplyChanges()">
+                    <i data-lucide="check-circle" style="width:11px;height:11px;"></i>
+                    Apply Changes
+                </button>
+            </div>
             <div class="empty-state" id="preview-empty">
                 <i data-lucide="layout" style="width:36px;height:36px;"></i>
                 <h3>No file selected</h3>
@@ -562,6 +842,55 @@
                 <div id="preview-rendered" class="preview-rendered" style="display:none;"></div>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- Visual Edit floating panel -->
+<div id="ve-edit-panel">
+    <h4>
+        Edit Element
+        <button onclick="veClosePanel()" title="Close">
+            <i data-lucide="x" style="width:13px;height:13px;"></i>
+        </button>
+    </h4>
+    <div id="ve-tag-badge" class="ve-tag-badge">div</div>
+    <div class="ve-field">
+        <label>Text Content</label>
+        <input type="text" id="ve-input-text" placeholder="Element text…" oninput="veLivePreview()">
+    </div>
+    <div class="ve-fields-row">
+        <div class="ve-field">
+            <label>Font Size (px)</label>
+            <input type="number" id="ve-input-fontsize" min="6" max="200" placeholder="16" oninput="veLivePreview()">
+        </div>
+        <div class="ve-field">
+            <label>Border Radius (px)</label>
+            <input type="number" id="ve-input-radius" min="0" max="999" placeholder="0" oninput="veLivePreview()">
+        </div>
+    </div>
+    <div class="ve-fields-row">
+        <div class="ve-field">
+            <label>Padding (px)</label>
+            <input type="number" id="ve-input-padding" min="0" max="200" placeholder="0" oninput="veLivePreview()">
+        </div>
+        <div class="ve-field">
+            <label>Margin (px)</label>
+            <input type="number" id="ve-input-margin" min="0" max="200" placeholder="0" oninput="veLivePreview()">
+        </div>
+    </div>
+    <div class="ve-fields-row">
+        <div class="ve-field">
+            <label>Text Color</label>
+            <input type="color" id="ve-input-color" oninput="veLivePreview()">
+        </div>
+        <div class="ve-field">
+            <label>Background</label>
+            <input type="color" id="ve-input-bg" oninput="veLivePreview()">
+        </div>
+    </div>
+    <div class="ve-actions">
+        <button id="ve-panel-cancel" onclick="veClosePanel()">Cancel</button>
+        <button id="ve-panel-apply" onclick="veApplyEdit()">Apply Edit</button>
     </div>
 </div>
 
@@ -579,9 +908,206 @@
     // ── Initialise Lucide icons ──────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', () => {
         if (window.lucide) lucide.createIcons();
-        loadFileTree();
+        initLiveMode();   // checks status; falls through to loadFileTree() if already done
         loadBuildMeta();
     });
+
+    // ── Live mode (SSE streaming during active builds) ─────────────────────
+    let _liveEventSource = null;
+    let _liveFilePaths = new Set(); // paths we've already added to the tree
+
+    async function initLiveMode() {
+        try {
+            const res = await fetch(`/api/build/${BUILD_ID}`);
+            if (!res.ok) {
+                // Can't determine status — fall back to normal load
+                loadFileTree();
+                return;
+            }
+            const build = await res.json();
+            const status = build.status;
+
+            if (status === 'completed') {
+                // Build already done — normal static mode
+                loadFileTree();
+                return;
+            }
+
+            if (status === 'failed') {
+                loadFileTree(); // will likely show empty / error state
+                return;
+            }
+
+            // ── Build is in progress: enter live mode ─────────────────────────
+            enterLiveMode();
+        } catch (e) {
+            // Network error — fall back gracefully
+            loadFileTree();
+        }
+    }
+
+    function enterLiveMode() {
+        // Show "Building…" badge in topbar
+        const titleEl = document.getElementById('project-title');
+        if (titleEl) {
+            titleEl.innerHTML = `
+                <span class="building-badge">
+                    <span class="live-dot"></span>
+                    Building&hellip;
+                </span>`;
+        }
+
+        // Show thin progress bar
+        const barWrap = document.getElementById('live-progress-bar-wrap');
+        if (barWrap) barWrap.style.display = 'block';
+
+        // Show skeleton file tree
+        const treeEl = document.getElementById('file-tree');
+        treeEl.innerHTML = `
+            <div style="padding:16px 10px;">
+                <div style="font-size:11px;color:#475569;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px;padding-left:4px;">Generating files…</div>
+            </div>`;
+
+        // Open SSE connection
+        _liveEventSource = new EventSource(`/api/build/${BUILD_ID}/stream`);
+
+        _liveEventSource.onmessage = (e) => {
+            let ev;
+            try { ev = JSON.parse(e.data); } catch { return; }
+            handleLiveEvent(ev);
+        };
+
+        _liveEventSource.onerror = () => {
+            // SSE closed or errored — assume build done, refresh tree
+            closeLiveMode();
+            loadFileTree();
+            loadBuildMeta();
+        };
+    }
+
+    function handleLiveEvent(ev) {
+        // Update progress bar
+        if (ev.progress !== undefined) {
+            const bar = document.getElementById('live-progress-bar');
+            if (bar) bar.style.width = `${ev.progress}%`;
+        }
+
+        // If the event carries a current_file path, add it to the live tree
+        if (ev.current_file) {
+            addLiveFile(ev.current_file, /* pending */ true);
+        }
+
+        // Some events carry a files_generated list
+        if (Array.isArray(ev.files_generated)) {
+            for (const fp of ev.files_generated) {
+                addLiveFile(fp, false);
+            }
+        }
+
+        // Update topbar title with phase info if available
+        if (ev.phase || ev.message) {
+            const label = ev.phase || ev.message || 'Building…';
+            const titleEl = document.getElementById('project-title');
+            if (titleEl) {
+                titleEl.innerHTML = `
+                    <span class="building-badge">
+                        <span class="live-dot"></span>
+                        ${escapeHtml(label)}
+                    </span>`;
+            }
+        }
+
+        // Handle completion
+        if (ev.type === 'complete' || ev.type === 'failed') {
+            closeLiveMode();
+            loadFileTree();
+            loadBuildMeta();
+        }
+    }
+
+    function addLiveFile(filePath, isPending) {
+        if (_liveFilePaths.has(filePath)) {
+            // Mark previously-pending file as done
+            if (!isPending) {
+                const existing = document.querySelector(`.tree-file[data-path="${CSS.escape(filePath)}"]`);
+                if (existing) {
+                    existing.classList.remove('gen-pending');
+                    const dot = existing.querySelector('.gen-dot');
+                    if (dot) dot.remove();
+                }
+            }
+            return;
+        }
+        _liveFilePaths.add(filePath);
+        allFiles.push({ path: filePath, size: 0, extension: '.' + (filePath.split('.').pop() || '') });
+        document.getElementById('meta-files').textContent = allFiles.length;
+
+        // Find (or create) the container for this file in the tree
+        const treeEl = document.getElementById('file-tree');
+        // Remove skeleton placeholder text once we have the first file
+        const placeholder = treeEl.querySelector('div[style]');
+        if (placeholder && allFiles.length === 1) placeholder.remove();
+
+        const parts = filePath.replace(/\\/g, '/').split('/');
+        const fileName = parts[parts.length - 1];
+        const ext = fileName.split('.').pop() || '';
+
+        // Ensure folder chain exists in the DOM
+        let container = treeEl;
+        let prefix = '';
+        for (let i = 0; i < parts.length - 1; i++) {
+            prefix += parts[i] + '/';
+            let existing = treeEl.querySelector(`.tree-folder[data-prefix="${CSS.escape(prefix)}"]`);
+            if (!existing) {
+                existing = document.createElement('div');
+                existing.className = 'tree-folder open';
+                existing.dataset.prefix = prefix;
+                existing.innerHTML = `
+                    <div class="tree-folder-header">
+                        <i data-lucide="chevron-right" class="tree-folder-chevron" style="width:14px;height:14px;"></i>
+                        <i data-lucide="folder" style="width:14px;height:14px;color:#f59e0b;flex-shrink:0;"></i>
+                        <span style="flex:1;">${escapeHtml(parts[i])}</span>
+                    </div>
+                    <div class="tree-folder-children" style="margin-left:12px;display:block;border-left:1px solid #1e293b;"></div>`;
+                existing.querySelector('.tree-folder-header').addEventListener('click', () => existing.classList.toggle('open'));
+                container.appendChild(existing);
+                if (window.lucide) lucide.createIcons();
+            }
+            container = existing.querySelector('.tree-folder-children');
+        }
+
+        // Create the file row
+        const fileDiv = document.createElement('div');
+        fileDiv.className = 'tree-file fade-in' + (isPending ? ' gen-pending' : '');
+        fileDiv.dataset.path = filePath;
+        const iconHtml = fileIconSvg(ext);
+        fileDiv.innerHTML = `
+            ${iconHtml}
+            <span class="tree-file-name">${escapeHtml(fileName)}</span>
+            ${isPending ? '<span class="gen-dot"></span>' : `<span class="tree-file-size">${formatSize(0)}</span>`}`;
+
+        if (!isPending) {
+            // Clickable immediately
+            fileDiv.addEventListener('click', () => selectFile(filePath, fileDiv));
+        }
+        container.appendChild(fileDiv);
+        if (window.lucide) lucide.createIcons();
+
+        // Auto-display the latest file in the viewer
+        if (!isPending && !activeFilePath) {
+            selectFile(filePath, fileDiv);
+        }
+    }
+
+    function closeLiveMode() {
+        if (_liveEventSource) {
+            _liveEventSource.close();
+            _liveEventSource = null;
+        }
+        // Hide progress bar
+        const barWrap = document.getElementById('live-progress-bar-wrap');
+        if (barWrap) barWrap.style.display = 'none';
+    }
 
     // ── Load build metadata ──────────────────────────────────────────────────
     async function loadBuildMeta() {
@@ -1127,5 +1653,414 @@
     // expose for inline handlers
     window.selectFile = selectFile;
 })();
+</script>
+
+<!-- ══════════════════════════════════════════════════════════════
+     Visual Edit Mode
+═══════════════════════════════════════════════════════════════ -->
+<script>
+(function () {
+    'use strict';
+
+    // ── State ──────────────────────────────────────────────────────────────────
+    let veActive = false;
+    let pendingEdits = [];           // { selector, elementIndex, styles, text }
+    let veCurrentTarget = null;      // { iframeEl, elementIndex, selector, origStyles, origText }
+
+    // ── Script injected into the iframe when VE mode activates ────────────────
+    const VE_IFRAME_SCRIPT = `
+(function() {
+    if (window.__ignaraVeInstalled) return;
+    window.__ignaraVeInstalled = true;
+
+    var hovered = null;
+    var selected = null;
+
+    function getSelector(el) {
+        if (!el || el === document.body) return 'body';
+        var tag = el.tagName.toLowerCase();
+        var idx = Array.from(el.parentElement ? el.parentElement.children : []).indexOf(el);
+        return getSelector(el.parentElement) + ' > ' + tag + ':nth-child(' + (idx + 1) + ')';
+    }
+
+    function getElementIndex(el) {
+        var all = document.querySelectorAll(el.tagName);
+        return Array.from(all).indexOf(el);
+    }
+
+    function hexColor(rgb) {
+        if (!rgb || rgb === 'rgba(0, 0, 0, 0)' || rgb === 'transparent') return '#000000';
+        var m = rgb.match(/rgba?\\((\\d+),\\s*(\\d+),\\s*(\\d+)/);
+        if (!m) return '#000000';
+        return '#' + [m[1],m[2],m[3]].map(function(x) {
+            return ('0' + parseInt(x).toString(16)).slice(-2);
+        }).join('');
+    }
+
+    document.addEventListener('mouseover', function(e) {
+        if (!window.__ignaraVeActive) return;
+        if (hovered && hovered !== selected) hovered.style.outline = hovered.__origOutline || '';
+        hovered = e.target;
+        if (hovered && hovered !== document.body && hovered !== document.documentElement) {
+            hovered.__origOutline = hovered.__origOutline !== undefined ? hovered.__origOutline : hovered.style.outline;
+            if (hovered !== selected) hovered.style.outline = '2px solid rgba(99,179,237,0.6)';
+        }
+    }, true);
+
+    document.addEventListener('mouseout', function(e) {
+        if (!window.__ignaraVeActive) return;
+        if (hovered && hovered !== selected) {
+            hovered.style.outline = hovered.__origOutline || '';
+            hovered = null;
+        }
+    }, true);
+
+    document.addEventListener('click', function(e) {
+        if (!window.__ignaraVeActive) return;
+        e.preventDefault();
+        e.stopPropagation();
+
+        // Deselect previous
+        if (selected) {
+            selected.style.outline = selected.__origOutline || '';
+        }
+        selected = e.target;
+        if (!selected || selected === document.body || selected === document.documentElement) return;
+
+        selected.__origOutline = selected.style.outline || '';
+        selected.style.outline = '2px solid #63b3ed';
+
+        var cs = window.getComputedStyle(selected);
+        var payload = {
+            type: 'ignara-ve-select',
+            tag: selected.tagName.toLowerCase(),
+            elementIndex: getElementIndex(selected),
+            selector: getSelector(selected),
+            text: selected.childNodes.length === 1 && selected.childNodes[0].nodeType === 3
+                  ? selected.textContent : '',
+            styles: {
+                color: hexColor(cs.color),
+                backgroundColor: hexColor(cs.backgroundColor),
+                fontSize: parseFloat(cs.fontSize) || 16,
+                padding: parseFloat(cs.padding) || 0,
+                margin: parseFloat(cs.margin) || 0,
+                borderRadius: parseFloat(cs.borderRadius) || 0
+            },
+            rect: selected.getBoundingClientRect()
+        };
+        window.parent.postMessage(payload, '*');
+    }, true);
+
+    // Listen for live-preview style patches from parent
+    window.addEventListener('message', function(e) {
+        if (!e.data || e.data.type !== 'ignara-ve-patch') return;
+        var patch = e.data;
+        // Find element by selector or tag+index
+        var el = null;
+        try { el = document.querySelector(patch.selector); } catch(err) {}
+        if (!el) {
+            var all = document.querySelectorAll(patch.tag);
+            el = all[patch.elementIndex] || null;
+        }
+        if (!el) return;
+        if (patch.styles.color)           el.style.color = patch.styles.color;
+        if (patch.styles.backgroundColor) el.style.backgroundColor = patch.styles.backgroundColor;
+        if (patch.styles.fontSize)        el.style.fontSize = patch.styles.fontSize + 'px';
+        if (patch.styles.padding !== undefined) el.style.padding = patch.styles.padding + 'px';
+        if (patch.styles.margin !== undefined)  el.style.margin  = patch.styles.margin  + 'px';
+        if (patch.styles.borderRadius !== undefined) el.style.borderRadius = patch.styles.borderRadius + 'px';
+        if (patch.text !== undefined && patch.text !== null) el.textContent = patch.text;
+    });
+}());
+`;
+
+    // ── Toggle Visual Edit ─────────────────────────────────────────────────────
+    window.toggleVisualEdit = function () {
+        const previewPanel  = document.getElementById('panel-preview');
+        const btnVe         = document.getElementById('btn-visual-edit');
+        const toolbar       = document.getElementById('ve-toolbar');
+        const iframeEl      = document.getElementById('preview-iframe');
+
+        veActive = !veActive;
+        btnVe.classList.toggle('ve-active', veActive);
+
+        if (veActive) {
+            // Switch to preview tab if not already there
+            if (typeof window.switchTab === 'function') window.switchTab('preview');
+
+            // Show toolbar (remove 'hidden' class)
+            toolbar.classList.remove('hidden');
+            toolbar.style.display = 'flex';
+
+            if (iframeEl && iframeEl.style.display !== 'none') {
+                injectVeIntoIframe(iframeEl);
+            } else {
+                showToast('Switch to an HTML file preview to use Visual Edit.', 'error');
+            }
+
+            if (window.lucide) lucide.createIcons();
+        } else {
+            toolbar.classList.add('hidden');
+            toolbar.style.display = 'none';
+            deactivateVeInIframe(iframeEl);
+            veClosePanel();
+        }
+    };
+
+    function injectVeIntoIframe(iframe) {
+        try {
+            const doc = iframe.contentDocument || iframe.contentWindow.document;
+            if (!doc) return;
+
+            // Inject script if not already present
+            if (!doc.querySelector('#__ignara_ve_script')) {
+                const s = doc.createElement('script');
+                s.id = '__ignara_ve_script';
+                s.textContent = VE_IFRAME_SCRIPT;
+                (doc.head || doc.body).appendChild(s);
+            }
+            // Activate hover/click listeners
+            if (iframe.contentWindow) {
+                iframe.contentWindow.__ignaraVeActive = true;
+            }
+        } catch (e) {
+            // Cross-origin iframe — can't inject directly
+            // The iframe uses blob URLs or srcdoc so this should succeed
+        }
+    }
+
+    function deactivateVeInIframe(iframe) {
+        try {
+            if (iframe && iframe.contentWindow) {
+                iframe.contentWindow.__ignaraVeActive = false;
+            }
+        } catch (e) { /* ignore */ }
+    }
+
+    // Re-inject whenever a new HTML file loads into the iframe
+    document.addEventListener('DOMContentLoaded', () => {
+        const iframeEl = document.getElementById('preview-iframe');
+        if (iframeEl) {
+            iframeEl.addEventListener('load', () => {
+                if (veActive) injectVeIntoIframe(iframeEl);
+            });
+        }
+    });
+
+    // ── Listen for postMessage from iframe ────────────────────────────────────
+    window.addEventListener('message', function (e) {
+        if (!e.data || e.data.type !== 'ignara-ve-select') return;
+        const data = e.data;
+        veCurrentTarget = {
+            tag:           data.tag,
+            elementIndex:  data.elementIndex,
+            selector:      data.selector,
+            origText:      data.text,
+            origStyles:    Object.assign({}, data.styles),
+            rect:          data.rect,
+        };
+        openEditPanel(data, e.source);
+    });
+
+    // ── Edit Panel ────────────────────────────────────────────────────────────
+    function openEditPanel(data) {
+        const panel = document.getElementById('ve-edit-panel');
+        document.getElementById('ve-tag-badge').textContent = '<' + data.tag + '>';
+
+        // Populate fields with current values
+        document.getElementById('ve-input-text').value      = data.text || '';
+        document.getElementById('ve-input-fontsize').value  = data.styles.fontSize   || '';
+        document.getElementById('ve-input-radius').value    = data.styles.borderRadius || '';
+        document.getElementById('ve-input-padding').value   = data.styles.padding      || '';
+        document.getElementById('ve-input-margin').value    = data.styles.margin       || '';
+        document.getElementById('ve-input-color').value     = data.styles.color         || '#000000';
+        document.getElementById('ve-input-bg').value        = data.styles.backgroundColor || '#ffffff';
+
+        // Position panel near iframe click — try to use the element's rect
+        const iframeEl = document.getElementById('preview-iframe');
+        const iframeRect = iframeEl ? iframeEl.getBoundingClientRect() : { left: 0, top: 0, width: 600 };
+
+        let left = iframeRect.left + (data.rect ? data.rect.right : 0) + 12;
+        let top  = iframeRect.top  + (data.rect ? data.rect.top   : 80);
+
+        // Clamp so it doesn't go off-screen
+        const pw = 288;
+        if (left + pw > window.innerWidth - 10) left = window.innerWidth - pw - 12;
+        if (left < 8) left = 8;
+        if (top < 60) top = 60;
+        if (top + 420 > window.innerHeight) top = window.innerHeight - 430;
+
+        panel.style.left    = left + 'px';
+        panel.style.top     = top  + 'px';
+        panel.style.display = 'block';
+    }
+
+    window.veClosePanel = function () {
+        document.getElementById('ve-edit-panel').style.display = 'none';
+        veCurrentTarget = null;
+    };
+
+    // Live-preview: send patch to iframe as user types
+    window.veLivePreview = function () {
+        if (!veCurrentTarget) return;
+        const iframeEl = document.getElementById('preview-iframe');
+        if (!iframeEl || !iframeEl.contentWindow) return;
+
+        iframeEl.contentWindow.postMessage({
+            type:         'ignara-ve-patch',
+            selector:      veCurrentTarget.selector,
+            tag:           veCurrentTarget.tag,
+            elementIndex:  veCurrentTarget.elementIndex,
+            styles: {
+                color:           document.getElementById('ve-input-color').value,
+                backgroundColor: document.getElementById('ve-input-bg').value,
+                fontSize:        Number(document.getElementById('ve-input-fontsize').value) || null,
+                padding:         document.getElementById('ve-input-padding').value !== '' ? Number(document.getElementById('ve-input-padding').value) : undefined,
+                margin:          document.getElementById('ve-input-margin').value  !== '' ? Number(document.getElementById('ve-input-margin').value)  : undefined,
+                borderRadius:    document.getElementById('ve-input-radius').value  !== '' ? Number(document.getElementById('ve-input-radius').value)  : undefined,
+            },
+            text: document.getElementById('ve-input-text').value || null,
+        }, '*');
+    };
+
+    // ── Apply a single element edit to pendingEdits ───────────────────────────
+    window.veApplyEdit = function () {
+        if (!veCurrentTarget) return;
+
+        const edit = {
+            selector:     veCurrentTarget.selector,
+            tag:          veCurrentTarget.tag,
+            elementIndex: veCurrentTarget.elementIndex,
+            text:         document.getElementById('ve-input-text').value,
+            styles: {
+                color:           document.getElementById('ve-input-color').value,
+                backgroundColor: document.getElementById('ve-input-bg').value,
+                fontSize:        Number(document.getElementById('ve-input-fontsize').value) || undefined,
+                padding:         document.getElementById('ve-input-padding').value !== '' ? Number(document.getElementById('ve-input-padding').value) : undefined,
+                margin:          document.getElementById('ve-input-margin').value  !== '' ? Number(document.getElementById('ve-input-margin').value)  : undefined,
+                borderRadius:    document.getElementById('ve-input-radius').value  !== '' ? Number(document.getElementById('ve-input-radius').value)  : undefined,
+            }
+        };
+
+        // Remove any previous edit targeting the same selector
+        pendingEdits = pendingEdits.filter(e => e.selector !== edit.selector);
+        pendingEdits.push(edit);
+
+        updateEditCount();
+        veClosePanel();
+        showToast(`Edit saved (${pendingEdits.length} pending)`, 'success');
+    };
+
+    // ── Undo last edit ────────────────────────────────────────────────────────
+    window.veUndo = function () {
+        if (!pendingEdits.length) {
+            showToast('No edits to undo.', 'error');
+            return;
+        }
+        const removed = pendingEdits.pop();
+        updateEditCount();
+
+        // Restore original styles in the iframe
+        const iframeEl = document.getElementById('preview-iframe');
+        if (iframeEl && iframeEl.contentWindow) {
+            iframeEl.contentWindow.postMessage({
+                type:         'ignara-ve-patch',
+                selector:      removed.selector,
+                tag:           removed.tag,
+                elementIndex:  removed.elementIndex,
+                styles:        veCurrentTarget ? veCurrentTarget.origStyles : {},
+                text:          veCurrentTarget ? veCurrentTarget.origText   : null,
+            }, '*');
+        }
+        showToast('Edit undone.', 'success');
+    };
+
+    function updateEditCount() {
+        const countEl = document.getElementById('ve-edit-count');
+        if (pendingEdits.length > 0) {
+            countEl.textContent = pendingEdits.length + (pendingEdits.length === 1 ? ' edit' : ' edits');
+            countEl.style.display = 'inline';
+        } else {
+            countEl.style.display = 'none';
+        }
+    }
+
+    // ── Apply Changes (send to backend) ──────────────────────────────────────
+    window.veApplyChanges = async function () {
+        if (!pendingEdits.length) {
+            showToast('No edits to apply.', 'error');
+            return;
+        }
+
+        const filePath = typeof activeFilePath !== 'undefined' ? activeFilePath : '';
+        const buildId  = typeof BUILD_ID !== 'undefined' ? BUILD_ID : '';
+
+        // Build a CSS patch from the edits
+        const cssPatch = pendingEdits.map(edit => {
+            const rules = [];
+            if (edit.styles.color)           rules.push(`color: ${edit.styles.color}`);
+            if (edit.styles.backgroundColor) rules.push(`background-color: ${edit.styles.backgroundColor}`);
+            if (edit.styles.fontSize)        rules.push(`font-size: ${edit.styles.fontSize}px`);
+            if (edit.styles.padding !== undefined) rules.push(`padding: ${edit.styles.padding}px`);
+            if (edit.styles.margin  !== undefined) rules.push(`margin: ${edit.styles.margin}px`);
+            if (edit.styles.borderRadius !== undefined) rules.push(`border-radius: ${edit.styles.borderRadius}px`);
+            if (!rules.length) return '';
+            return `${edit.selector} { ${rules.join('; ')}; }`;
+        }).filter(Boolean).join('\n');
+
+        const applyBtn = document.getElementById('ve-apply-btn');
+        applyBtn.disabled = true;
+        applyBtn.textContent = 'Applying…';
+
+        try {
+            const res = await fetch(`/api/build/${buildId}/visual-edit`, {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    edits:     pendingEdits,
+                    file_path: filePath,
+                    css_patch: cssPatch,
+                }),
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                showToast(`Applied ${data.edits_count} visual edit${data.edits_count !== 1 ? 's' : ''}.`, 'success');
+                pendingEdits = [];
+                updateEditCount();
+            } else {
+                showToast(data.detail || 'Failed to apply edits.', 'error');
+            }
+        } catch (err) {
+            showToast('Network error: ' + String(err), 'error');
+        } finally {
+            applyBtn.disabled = false;
+            applyBtn.innerHTML = '<i data-lucide="check-circle" style="width:11px;height:11px;"></i> Apply Changes';
+            if (window.lucide) lucide.createIcons();
+        }
+    };
+
+    // ── Re-inject on iframe load (called from updatePreview) ─────────────────
+    // Hook into the existing updatePreview by observing the iframe src changes
+    const _origIframeObserver = new MutationObserver(() => {
+        if (!veActive) return;
+        const iframeEl = document.getElementById('preview-iframe');
+        if (iframeEl) injectVeIntoIframe(iframeEl);
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const iframeEl = document.getElementById('preview-iframe');
+        if (iframeEl) {
+            iframeEl.addEventListener('load', () => {
+                if (veActive) {
+                    // Small delay to let the iframe content settle
+                    setTimeout(() => injectVeIntoIframe(iframeEl), 100);
+                }
+            });
+        }
+        if (window.lucide) lucide.createIcons();
+    });
+
+}());
 </script>
 {% endblock %}

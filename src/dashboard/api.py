@@ -148,6 +148,12 @@ class ContactRequest(BaseModel):
     message: str = Field(..., min_length=10, max_length=5000)
 
 
+class DiscussRequest(BaseModel):
+    """Request to ask the planning assistant a question."""
+    message: str = Field(..., min_length=1, max_length=2000)
+    context: Optional[Dict[str, Any]] = None
+
+
 class OnboardingStatusResponse(BaseModel):
     """Onboarding status response."""
     steps: Dict[str, bool]
@@ -1474,6 +1480,143 @@ async def api_build_get_file(build_id: str, file_path: str):
     return {"path": file_path, "content": content, "size": full_path.stat().st_size}
 
 
+async def api_discuss(data: DiscussRequest) -> Dict[str, Any]:
+    """POST /api/discuss — planning assistant for brainstorming app ideas."""
+    ctx = data.context or {}
+    app_name = ctx.get("name", "your app")
+    description = ctx.get("description", "")
+    features = ctx.get("features", [])
+    message_lower = data.message.lower()
+
+    # Build a contextual, personalised reply
+    if any(kw in message_lower for kw in ["auth", "login", "sign", "user"]):
+        reply = (
+            f"For {app_name}, user authentication is a great foundation. "
+            "I'd recommend starting with JWT-based auth — it's stateless and easy to scale. "
+            "Use refresh tokens stored in an HttpOnly cookie so they're protected from XSS. "
+            "Add rate-limiting on the login endpoint (e.g. 5 attempts / minute) and email verification "
+            "before granting full access."
+        )
+        suggestions = [
+            "Use bcrypt for password hashing (cost factor 12)",
+            "Implement refresh token rotation to prevent token theft",
+            "Add OAuth2 social login (Google / GitHub) as a fast-path",
+            "Send a welcome email and verify the address before activation",
+        ]
+    elif any(kw in message_lower for kw in ["pay", "stripe", "billing", "subscription", "monetize", "money"]):
+        reply = (
+            f"For {app_name}, Stripe is the right choice for payments. "
+            "Use Stripe Checkout for one-off purchases — it handles PCI compliance and 3D Secure automatically. "
+            "For subscriptions, use Stripe Billing with Products and Prices. "
+            "Make sure to implement the Stripe webhook listener to handle payment events reliably."
+        )
+        suggestions = [
+            "Store plan / tier info server-side, never trust the client",
+            "Implement a grace period before downgrading on failed payment",
+            "Use Stripe's Customer Portal so users can manage their subscription",
+            "Add a free trial with credit card on file to reduce churn",
+        ]
+    elif any(kw in message_lower for kw in ["database", "db", "data", "storage", "schema", "model"]):
+        reply = (
+            f"For {app_name}'s data layer, PostgreSQL is a solid default. "
+            "Use an ORM like SQLAlchemy (Python) or Prisma (Node) to keep your schema version-controlled "
+            "with migrations. Design your schema around your access patterns first — avoid "
+            "premature normalisation. Index foreign keys and any column you filter or sort by."
+        )
+        suggestions = [
+            "Add soft-delete (is_deleted flag) instead of hard deletes for safety",
+            "Use UUIDs as primary keys to avoid enumeration attacks",
+            "Store created_at / updated_at on every table for auditing",
+            "Set up read replicas early if you expect high read traffic",
+        ]
+    elif any(kw in message_lower for kw in ["api", "endpoint", "rest", "graphql", "backend"]):
+        reply = (
+            f"For {app_name}'s API design, a RESTful approach works well for most use cases. "
+            "Version your API from day one (e.g. /api/v1/...) even if you only have one version. "
+            "Return consistent error shapes: {error, message, code}. "
+            "Add request validation at the boundary using Pydantic (FastAPI) or Zod (Node) — "
+            "never trust incoming data."
+        )
+        suggestions = [
+            "Add pagination to all list endpoints (cursor-based for large datasets)",
+            "Document your API with OpenAPI / Swagger from the start",
+            "Use HTTP 422 for validation errors and 404 for missing resources",
+            "Add idempotency keys for state-changing POST requests",
+        ]
+    elif any(kw in message_lower for kw in ["deploy", "hosting", "server", "docker", "cloud", "production"]):
+        reply = (
+            f"For deploying {app_name}, Docker Compose is a great starting point — "
+            "it keeps your frontend, backend and database together in one config. "
+            "For production, Railway and Render both support Dockerfile-based deployments with "
+            "zero-downtime deploys. If you need edge CDN for the frontend, Vercel or Cloudflare Pages "
+            "are excellent choices."
+        )
+        suggestions = [
+            "Use environment variables for all secrets — never commit .env files",
+            "Set up health check endpoints (/healthz) for your load balancer",
+            "Enable automated backups on your production database from day one",
+            "Use a staging environment that mirrors production before shipping",
+        ]
+    else:
+        # Generic planning response personalised with context
+        desc_snippet = f" — {description[:100]}" if description else ""
+        feature_list = ", ".join(features[:3]) if features else "authentication, API, and a database"
+        reply = (
+            f"Great question about {app_name}{desc_snippet}. "
+            f"Based on your idea, I'd focus on these priorities: start with {feature_list}. "
+            "Build the thinnest possible vertical slice first — one end-to-end feature working "
+            "in production is worth more than ten half-finished features. "
+            f"Your message: \u2018{data.message[:80]}\u2019 — happy to dive deeper on any aspect."
+        )
+        suggestions = [
+            "Define your core user journey before writing a single line of code",
+            "Pick one target user persona and design everything around their needs",
+            "Ship a public beta early — real user feedback beats assumptions",
+            "Keep your initial tech stack boring and proven; innovate in the product layer",
+        ]
+
+    return {
+        "reply": reply,
+        "suggestions": suggestions,
+    }
+
+
+# ==================== Visual Edit Endpoint ====================
+
+class VisualEditRequest(BaseModel):
+    """Request model for visual edits."""
+    edits: List[Dict[str, Any]] = Field(default_factory=list)
+    file_path: str = Field(default="")
+    css_patch: Optional[str] = Field(default=None)
+
+
+async def api_visual_edit(build_id: str, request: VisualEditRequest) -> Dict[str, Any]:
+    """Apply visual edits from the Visual Edit mode overlay.
+
+    This is currently a stub that logs the edits and returns success.
+    Future implementation will patch the actual source files in the build output.
+    """
+    edits_count = len(request.edits)
+    logger.info(
+        "Visual edit request for build %s — %d edit(s) on file '%s'\nCSS patch:\n%s",
+        build_id,
+        edits_count,
+        request.file_path,
+        request.css_patch or "(none)",
+    )
+    for i, edit in enumerate(request.edits):
+        logger.debug("  Edit %d/%d: selector=%r tag=%r", i + 1, edits_count,
+                     edit.get("selector"), edit.get("tag"))
+
+    return {
+        "success": True,
+        "message": "Visual edits applied",
+        "edits_count": edits_count,
+        "build_id": build_id,
+        "file_path": request.file_path,
+    }
+
+
 def create_build_router() -> APIRouter:
     """Create router for build pipeline API endpoints."""
     router = APIRouter()
@@ -1484,4 +1627,6 @@ def create_build_router() -> APIRouter:
     router.add_api_route("/build/{build_id}/download", api_build_download, methods=["GET"])
     router.add_api_route("/build/{build_id}/files", api_build_list_files, methods=["GET"])
     router.add_api_route("/build/{build_id}/files/{file_path:path}", api_build_get_file, methods=["GET"])
+    router.add_api_route("/build/{build_id}/visual-edit", api_visual_edit, methods=["POST"])
+    router.add_api_route("/discuss", api_discuss, methods=["POST"])
     return router

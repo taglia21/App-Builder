@@ -971,32 +971,150 @@ def _build_main_app_prompt(ctx: _GenerationContext) -> str:
             '''Return service liveness status.'''
             return {{"status": "ok", "version": settings.VERSION}}
 
+        === MIDDLEWARE STACK — implement ALL of the following ===
+        Add these middleware classes/functions ABOVE app.include_router():
+
+        1. REQUEST ID MIDDLEWARE — adds X-Request-ID header to every response:
+           import uuid
+           from starlette.middleware.base import BaseHTTPMiddleware
+           from starlette.requests import Request as StarletteRequest
+
+           class RequestIDMiddleware(BaseHTTPMiddleware):
+               async def dispatch(self, request: StarletteRequest, call_next):
+                   request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+                   response = await call_next(request)
+                   response.headers["X-Request-ID"] = request_id
+                   return response
+
+        2. REQUEST TIMING MIDDLEWARE — adds X-Response-Time header in milliseconds:
+           import time
+           class RequestTimingMiddleware(BaseHTTPMiddleware):
+               async def dispatch(self, request: StarletteRequest, call_next):
+                   start = time.perf_counter()
+                   response = await call_next(request)
+                   duration_ms = round((time.perf_counter() - start) * 1000, 2)
+                   response.headers["X-Response-Time"] = f"{{duration_ms}}ms"
+                   return response
+
+        3. STRUCTURED LOGGING MIDDLEWARE — logs method, path, status, duration:
+           class StructuredLoggingMiddleware(BaseHTTPMiddleware):
+               async def dispatch(self, request: StarletteRequest, call_next):
+                   start = time.perf_counter()
+                   response = await call_next(request)
+                   duration_ms = round((time.perf_counter() - start) * 1000, 2)
+                   logger.info(
+                       "{{method}} {{path}} {{status}} {{duration_ms}}ms",
+                       extra={{
+                           "method": request.method,
+                           "path": request.url.path,
+                           "status": response.status_code,
+                           "duration_ms": duration_ms,
+                           "request_id": response.headers.get("X-Request-ID", "-"),
+                       }},
+                   )
+                   return response
+
+        4. RATE LIMITING — use slowapi for rate limiting on sensitive endpoints:
+           from slowapi import Limiter, _rate_limit_exceeded_handler
+           from slowapi.util import get_remote_address
+           from slowapi.errors import RateLimitExceeded
+
+           limiter = Limiter(key_func=get_remote_address, default_limits=["200/minute"])
+           app.state.limiter = limiter
+           app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+        5. GLOBAL EXCEPTION HANDLER — returns structured JSON errors:
+           from fastapi import Request
+           from fastapi.responses import JSONResponse
+
+           @app.exception_handler(Exception)
+           async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+               logger.error("Unhandled exception: %s", exc, exc_info=True)
+               return JSONResponse(
+                   status_code=500,
+                   content={{
+                       "error": "internal_server_error",
+                       "message": "An unexpected error occurred.",
+                       "request_id": request.headers.get("X-Request-ID", "-"),
+                   }},
+               )
+
+        Register middleware in this order (last registered = outermost wrapper):
+           app.add_middleware(RequestIDMiddleware)
+           app.add_middleware(RequestTimingMiddleware)
+           app.add_middleware(StructuredLoggingMiddleware)
+           app.add_middleware(GZipMiddleware, minimum_size=1000)
+           app.add_middleware(CORSMiddleware, ...)
+
+        === HEALTH CHECK ENDPOINTS — include both in main.py (NOT a separate router) ===
+        import time as _time
+        _start_time = _time.monotonic()
+
+        @app.get("/health", tags=["Health"], summary="Liveness probe")
+        async def health_check() -> dict:
+            '''Return service liveness — always fast, no DB check.'''
+            uptime_seconds = round(_time.monotonic() - _start_time, 1)
+            return {{
+                "status": "ok",
+                "version": settings.VERSION,
+                "uptime": uptime_seconds,
+            }}
+
+        @app.get("/health/ready", tags=["Health"], summary="Readiness probe — checks DB")
+        async def health_ready(db: AsyncSession = Depends(get_db)) -> dict:
+            '''Return readiness — verifies the database connection is alive.'''
+            try:
+                await db.execute(text("SELECT 1"))
+                db_status = "connected"
+            except Exception:
+                db_status = "unreachable"
+            return {{
+                "status": "ok" if db_status == "connected" else "degraded",
+                "version": settings.VERSION,
+                "database": db_status,
+            }}
+
+        Required imports for health/ready:
+            from sqlalchemy.ext.asyncio import AsyncSession
+            from sqlalchemy import text
+            from fastapi import Depends
+            from app.db.session import get_db
+
         === ANTI-PATTERNS — never do any of these ===
         1. Do NOT use deprecated @app.on_event("startup") — use the lifespan context manager.
         2. Do NOT hard-code CORS origins, secret keys, or database URLs — read from settings.
         3. Do NOT import settings values at module level before the settings object is created.
         4. Do NOT add business logic or route handlers to main.py — use the api_router.
         5. Do NOT configure logging after the app is created — configure it at module load.
+        6. Do NOT register RequestTimingMiddleware before RequestIDMiddleware (ID must be set first).
+        7. Do NOT omit the global exception handler — every unhandled error must return JSON.
 
         === CROSS-FILE CONSISTENCY ===
         - Import api_router from: `from app.api import api_router`
         - Import settings from: `from app.core.config import settings`
         - Import engine for disposal from: `from app.db.session import engine`
+        - Import get_db from: `from app.db.session import get_db`
         - The API prefix must match settings.API_V1_STR (= "/api/v1").
+        - The limiter object must be attached to app.state before any route uses @limiter.limit.
 
         === CODE QUALITY REQUIREMENTS ===
         - Use lifespan context manager (asynccontextmanager) instead of deprecated event decorators.
         - Log startup/shutdown with the app name and version.
-        - The health endpoint must include the application version in its response.
+        - Capture _start_time = time.monotonic() at module level for accurate uptime reporting.
+        - The /health endpoint MUST NOT hit the database (liveness, not readiness).
+        - The /health/ready endpoint MUST execute `SELECT 1` and return "database": "connected" or "unreachable".
         - Set openapi_url to use the API_V1_STR prefix so docs appear at /api/v1/docs.
         - All settings values must be read from the `settings` singleton.
 
         === REQUIREMENTS ===
         - File: backend/app/main.py
         - FastAPI app with title, version, description, and lifespan handler.
-        - CORSMiddleware from settings.ALLOWED_ORIGINS, GZipMiddleware.
+        - CORSMiddleware from settings.ALLOWED_ORIGINS, GZipMiddleware, all custom middleware.
+        - slowapi Limiter attached to app.state with 200/minute default.
+        - Global exception handler returning structured JSON.
         - Include api_router with prefix=settings.API_V1_STR.
-        - GET /health endpoint returning status and version.
+        - GET /health — liveness (no DB), returns status/version/uptime.
+        - GET /health/ready — readiness (hits DB), returns status/version/database.
         - Structured logging configured at module level.
         - Output ONLY the Python source — no markdown, no explanation.
     """).strip()
@@ -1628,23 +1746,43 @@ def _build_requirements_prompt(ctx: _GenerationContext) -> str:
         pytest-asyncio>=0.23.0
         aiosqlite>=0.20.0
 
+        === ADDITIONAL REQUIRED PACKAGES — always include these ===
+        # Rate limiting
+        slowapi>=0.1.9          # slowapi: rate limiting for FastAPI via decorators
+
+        # Structured logging
+        structlog>=24.1.0       # structlog: structured, context-rich logging
+
+        # Demo data / seeding
+        faker>=24.0.0           # Faker: realistic test/seed data generation
+
+        # Async HTTP client
+        httpx>=0.27.0           # httpx: async HTTP client (also used in tests)
+
+        These MUST appear in the output grouped under their respective section comments.
+        Use inline version comments (# package: short description) to explain less-known packages.
+
         === ANTI-PATTERNS — never do any of these ===
         1. Do NOT pin to exact versions (==) — use minimum versions (>=) for flexibility.
         2. Do NOT include packages that are not actually used by the application.
         3. Do NOT duplicate packages — each package must appear exactly once.
         4. Do NOT mix comments and package names on the same line.
         5. Do NOT forget email-validator when the app handles email fields.
+        6. Do NOT omit slowapi, structlog, faker, or httpx — they are always required.
 
         === CODE QUALITY REQUIREMENTS ===
         - Group packages with section comments (# Web framework, # Database, etc.).
         - Keep packages in alphabetical order within each group.
+        - Add a short inline comment after each non-obvious package explaining its role.
         - Include aiosqlite for the test suite (in-memory SQLite testing).
         - Add email-validator>=2.1.0 since EmailStr is used in schemas.
         - Use >=X.Y.0 style minimum version pins.
+        - Include a # --- version pinned --- comment header at the top of the file.
 
         === REQUIREMENTS ===
         - File: backend/requirements.txt
-        - Include all core deps above plus integration deps: {extra or '(none)'}
+        - Include all core deps above plus: slowapi, structlog, faker, httpx.
+        - Also include integration deps: {extra or '(none)'}
         - Grouped by category with comments.
         - Output ONLY the requirements.txt content — no markdown, no explanation.
     """).strip()
@@ -2873,6 +3011,1592 @@ def _build_tsconfig_prompt(ctx: _GenerationContext) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Vue.js prompt builders
+# ---------------------------------------------------------------------------
+
+
+def _build_vue_app_prompt(ctx: _GenerationContext) -> str:
+    spec = ctx.spec
+    nav_items = "\n".join(
+        f"  - {{{{ label: '{p.title}', to: '{p.route}' }}}}" for p in spec.pages
+    )
+    return textwrap.dedent(f"""
+        Generate the root App.vue component for a Vue 3 + TypeScript + Tailwind CSS frontend.
+
+        === SYSTEM SPEC ===
+        {_spec_summary(spec, ctx=ctx)}
+
+        === NAV ITEMS ===
+        {nav_items}
+
+        === ALREADY GENERATED INTERFACES ===
+        {_interfaces_summary(ctx, relevant_to='frontend/src/App.vue')}
+
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        <script setup lang="ts">
+        import {{ ref, computed }} from 'vue';
+        import {{ useRouter, useRoute }} from 'vue-router';
+        import {{ useAuthStore }} from '@/stores/auth';
+        import RouterView from 'vue-router';
+
+        const router = useRouter();
+        const route = useRoute();
+        const authStore = useAuthStore();
+        const sidebarOpen = ref(false);
+
+        const navLinks = [
+          {{ label: 'Dashboard', to: '/dashboard' }},
+        ];
+
+        const isAuthenticated = computed(() => authStore.isAuthenticated);
+
+        async function logout() {{
+          await authStore.logout();
+          router.push('/login');
+        }}
+        </script>
+
+        <template>
+          <div class="min-h-screen bg-gray-50">
+            <!-- Unauthenticated layout: router-view handles login/register pages -->
+            <template v-if="!isAuthenticated">
+              <RouterView />
+            </template>
+
+            <!-- Authenticated dashboard layout -->
+            <template v-else>
+              <div class="flex h-screen overflow-hidden">
+                <!-- Sidebar -->
+                <aside
+                  :class="['fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-200 md:relative md:translate-x-0',
+                    sidebarOpen ? 'translate-x-0' : '-translate-x-full']"
+                  aria-label="Main navigation"
+                >
+                  <div class="flex h-16 items-center border-b px-4">
+                    <span class="text-lg font-semibold">{spec.app_name}</span>
+                  </div>
+                  <nav class="mt-4 space-y-1 px-2" aria-label="Sidebar">
+                    <RouterLink
+                      v-for="link in navLinks"
+                      :key="link.to"
+                      :to="link.to"
+                      :aria-current="route.path === link.to ? 'page' : undefined"
+                      class="flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors"
+                      active-class="bg-blue-50 text-blue-700"
+                      inactive-class="text-gray-700 hover:bg-gray-100"
+                    >
+                      {{{{ link.label }}}}
+                    </RouterLink>
+                  </nav>
+                </aside>
+
+                <!-- Main content -->
+                <div class="flex flex-1 flex-col overflow-hidden">
+                  <header class="flex h-16 items-center justify-between border-b bg-white px-4 md:px-6">
+                    <button
+                      @click="sidebarOpen = !sidebarOpen"
+                      class="md:hidden"
+                      aria-label="Toggle navigation"
+                    >
+                      &#9776;
+                    </button>
+                    <span class="ml-auto text-sm text-gray-600">{{{{ authStore.user?.email }}}}</span>
+                    <button
+                      @click="logout"
+                      class="ml-4 text-sm text-red-600 hover:underline"
+                      aria-label="Sign out"
+                    >
+                      Sign out
+                    </button>
+                  </header>
+                  <main class="flex-1 overflow-y-auto p-4 md:p-6" id="main-content">
+                    <RouterView />
+                  </main>
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT use Vue Options API — always use <script setup lang="ts"> (Composition API).
+        2. Do NOT import RouterView or RouterLink manually — they are globally registered by vue-router.
+        3. Do NOT use window.location for navigation — always use the Vue Router composable.
+        4. Do NOT check auth with synchronous localStorage reads in setup() — use the Pinia auth store.
+        5. Do NOT hard-code nav links — generate them from the spec's page list.
+
+        === ACCESSIBILITY REQUIREMENTS ===
+        - Sidebar <aside> must have aria-label="Main navigation".
+        - Active RouterLink must have :aria-current="page".
+        - Mobile toggle button must have aria-label="Toggle navigation".
+        - Main <main> must have id="main-content" for skip-link targets.
+
+        === REQUIREMENTS ===
+        - File: frontend/src/App.vue
+        - Vue 3 Composition API (<script setup lang="ts">).
+        - Conditional layout: unauthenticated shows plain RouterView, authenticated shows sidebar + header.
+        - Nav links for all pages in the spec.
+        - Logout via authStore.logout() then router.push('/login').
+        - Tailwind CSS for all styling.
+        - Output ONLY the .vue SFC source — no markdown, no explanation.
+    """).strip()
+
+
+def _build_vue_router_prompt(ctx: _GenerationContext) -> str:
+    spec = ctx.spec
+    routes = "\n".join(
+        f"  - {{{{ path: '{p.route}', component: '{p.title.replace(' ', '')}Page', meta: {{{{ requiresAuth: True }} }}}}}}" for p in spec.pages
+    )
+    entity_names = [e.name for e in spec.entities]
+    return textwrap.dedent(f"""
+        Generate the Vue Router configuration for a Vue 3 + TypeScript frontend.
+
+        === SYSTEM SPEC ===
+        {_spec_summary(spec, ctx=ctx)}
+
+        === PAGES AND ROUTES ===
+        {routes}
+
+        === ENTITIES ===
+        {', '.join(entity_names)}
+
+        === ALREADY GENERATED INTERFACES ===
+        {_interfaces_summary(ctx, relevant_to='frontend/src/router/index.ts')}
+
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        import {{ createRouter, createWebHistory, type RouteRecordRaw }} from 'vue-router';
+        import {{ useAuthStore }} from '@/stores/auth';
+
+        const routes: RouteRecordRaw[] = [
+          {{
+            path: '/login',
+            name: 'Login',
+            component: () => import('@/views/LoginView.vue'),
+            meta: {{ requiresAuth: false }},
+          }},
+          {{
+            path: '/register',
+            name: 'Register',
+            component: () => import('@/views/RegisterView.vue'),
+            meta: {{ requiresAuth: false }},
+          }},
+          {{
+            path: '/dashboard',
+            name: 'Dashboard',
+            component: () => import('@/views/DashboardView.vue'),
+            meta: {{ requiresAuth: true }},
+          }},
+          // Entity-specific routes (list and detail)
+          {{
+            path: '/posts',
+            name: 'PostList',
+            component: () => import('@/views/PostListView.vue'),
+            meta: {{ requiresAuth: true }},
+          }},
+          {{
+            path: '/posts/:id',
+            name: 'PostDetail',
+            component: () => import('@/views/PostDetailView.vue'),
+            meta: {{ requiresAuth: true }},
+          }},
+          // Catch-all redirect
+          {{ path: '/:pathMatch(.*)*', redirect: '/dashboard' }},
+        ];
+
+        const router = createRouter({{
+          history: createWebHistory(import.meta.env.BASE_URL),
+          routes,
+          scrollBehavior(_to, _from, savedPosition) {{
+            return savedPosition ?? {{ top: 0 }};
+          }},
+        }});
+
+        // Navigation guard: redirect to /login if route requires auth and user is not authenticated
+        router.beforeEach(async (to) => {{
+          const authStore = useAuthStore();
+          if (to.meta.requiresAuth && !authStore.isAuthenticated) {{
+            return {{ name: 'Login', query: {{ redirect: to.fullPath }} }};
+          }}
+          return true;
+        }});
+
+        export default router;
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT use Vue 2 style router (VueRouter.default) — use createRouter from vue-router 4.
+        2. Do NOT use synchronous component imports — use dynamic imports () => import(...) for code splitting.
+        3. Do NOT access Pinia stores before app.use(pinia) is called — only access in guards (afterEach/beforeEach).
+        4. Do NOT hard-code auth logic in individual views — use route meta + navigation guard.
+        5. Do NOT omit the catch-all redirect to /dashboard.
+
+        === REQUIREMENTS ===
+        - File: frontend/src/router/index.ts
+        - Vue Router 4 with createRouter + createWebHistory.
+        - All pages in spec plus /login, /register, and entity list/detail routes.
+        - Navigation guard using Pinia auth store for requiresAuth meta.
+        - Dynamic imports for all page components (code splitting).
+        - scrollBehavior restoring position on back navigation.
+        - Output ONLY the TypeScript source — no markdown, no explanation.
+    """).strip()
+
+
+def _build_vue_store_prompt(entity: "EntitySpec", ctx: _GenerationContext) -> str:
+    spec = ctx.spec
+    return textwrap.dedent(f"""
+        Generate a Pinia store for managing {entity.name} state in a Vue 3 + TypeScript frontend.
+
+        === SYSTEM SPEC ===
+        {_spec_summary(spec, ctx=ctx)}
+
+        === ENTITY DETAIL ===
+        {_entity_detail(entity)}
+
+        === ALREADY GENERATED INTERFACES ===
+        {_interfaces_summary(ctx, relevant_to=f'frontend/src/stores/{entity.name.lower()}.ts')}
+
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        import {{ defineStore }} from 'pinia';
+        import {{ ref, computed }} from 'vue';
+        import {{ postApi }} from '@/lib/api';
+        import type {{ Post, PostCreate, PostUpdate }} from '@/types';
+
+        export const usePostStore = defineStore('post', () => {{
+          // ---- State ----
+          const posts = ref<Post[]>([]);
+          const currentPost = ref<Post | null>(null);
+          const loading = ref(false);
+          const error = ref<string | null>(null);
+          const total = ref(0);
+          const page = ref(1);
+          const pageSize = ref(20);
+
+          // ---- Getters ----
+          const isEmpty = computed(() => posts.value.length === 0);
+          const totalPages = computed(() => Math.ceil(total.value / pageSize.value));
+
+          // ---- Actions ----
+          async function fetchAll(params?: {{ page?: number; pageSize?: number }}) {{
+            loading.value = true;
+            error.value = null;
+            try {{
+              const res = await postApi.list(params);
+              posts.value = res.items;
+              total.value = res.total;
+            }} catch (e: unknown) {{
+              error.value = e instanceof Error ? e.message : 'Failed to load posts';
+            }} finally {{
+              loading.value = false;
+            }}
+          }}
+
+          async function fetchOne(id: string) {{
+            loading.value = true;
+            error.value = null;
+            try {{
+              currentPost.value = await postApi.get(id);
+            }} catch (e: unknown) {{
+              error.value = e instanceof Error ? e.message : 'Failed to load post';
+            }} finally {{
+              loading.value = false;
+            }}
+          }}
+
+          async function create(data: PostCreate): Promise<Post> {{
+            loading.value = true;
+            error.value = null;
+            try {{
+              const post = await postApi.create(data);
+              posts.value.unshift(post);
+              total.value += 1;
+              return post;
+            }} catch (e: unknown) {{
+              error.value = e instanceof Error ? e.message : 'Failed to create post';
+              throw e;
+            }} finally {{
+              loading.value = false;
+            }}
+          }}
+
+          async function update(id: string, data: PostUpdate): Promise<Post> {{
+            loading.value = true;
+            error.value = null;
+            try {{
+              const updated = await postApi.update(id, data);
+              const idx = posts.value.findIndex(p => p.id === id);
+              if (idx !== -1) posts.value[idx] = updated;
+              if (currentPost.value?.id === id) currentPost.value = updated;
+              return updated;
+            }} catch (e: unknown) {{
+              error.value = e instanceof Error ? e.message : 'Failed to update post';
+              throw e;
+            }} finally {{
+              loading.value = false;
+            }}
+          }}
+
+          async function remove(id: string): Promise<void> {{
+            loading.value = true;
+            error.value = null;
+            try {{
+              await postApi.delete(id);
+              posts.value = posts.value.filter(p => p.id !== id);
+              total.value -= 1;
+              if (currentPost.value?.id === id) currentPost.value = null;
+            }} catch (e: unknown) {{
+              error.value = e instanceof Error ? e.message : 'Failed to delete post';
+              throw e;
+            }} finally {{
+              loading.value = false;
+            }}
+          }}
+
+          function clearError() {{
+            error.value = null;
+          }}
+
+          return {{
+            posts, currentPost, loading, error, total, page, pageSize,
+            isEmpty, totalPages,
+            fetchAll, fetchOne, create, update, remove, clearError,
+          }};
+        }});
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT use Options Store syntax (defineStore with object) — use the Setup Store (function) syntax.
+        2. Do NOT mutate state outside actions — all mutations must be inside the store.
+        3. Do NOT swallow errors silently — set error.value AND re-throw for caller handling in create/update/delete.
+        4. Do NOT forget to set loading = false in a finally block — loading must always be reset.
+        5. Do NOT use $patch for complex updates — prefer direct assignment in setup store actions.
+
+        === CODE QUALITY REQUIREMENTS ===
+        - Use Setup Store (function syntax): defineStore(id, () => {{ ... }}).
+        - Separate state (ref), getters (computed), and actions (async functions).
+        - Every action must have try/catch/finally with loading and error handling.
+        - Expose all state, getters, and actions in the return statement.
+        - Store ID must be the entity name in lowercase ('{entity.name.lower()}').
+        - Import types from '@/types', API client from '@/lib/api'.
+
+        === REQUIREMENTS ===
+        - File: frontend/src/stores/{entity.name.lower()}.ts
+        - Pinia Setup Store for entity: {entity.name}.
+        - State: items list, current item, loading, error, pagination (total/page/pageSize).
+        - Getters: isEmpty, totalPages.
+        - Actions: fetchAll, fetchOne, create, update, remove, clearError.
+        - Full TypeScript typing, no implicit any.
+        - Output ONLY the TypeScript source — no markdown, no explanation.
+    """).strip()
+
+
+def _build_vue_page_prompt(page: "PageSpec", ctx: _GenerationContext, theme: str) -> str:
+    spec = ctx.spec
+    safe_name = page.title.replace(' ', '') + 'View'
+    related_entities = "\n".join(
+        _entity_detail(e)
+        for e in spec.entities
+        if e.name.lower() in [r.lower() for r in getattr(page, 'related_entities', [])]
+    ) or '(none)'
+    return textwrap.dedent(f"""
+        Generate a Vue 3 page component for the "{page.title}" page.
+
+        === SYSTEM SPEC ===
+        {_spec_summary(spec, ctx=ctx)}
+
+        === PAGE SPEC ===
+        Title: {page.title}
+        Route: {page.route}
+        Description: {getattr(page, 'description', 'N/A')}
+        Layout: {getattr(page, 'layout', 'dashboard')}
+
+        === THEME ===
+        {theme}
+
+        === RELATED ENTITIES ===
+        {related_entities}
+
+        === ALREADY GENERATED INTERFACES ===
+        {_interfaces_summary(ctx, relevant_to=f'frontend/src/views/{safe_name}.vue')}
+
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        <script setup lang="ts">
+        import {{ ref, onMounted }} from 'vue';
+        import {{ usePostStore }} from '@/stores/post';
+        import {{ PostTable, PostForm }} from '@/components/Post';
+        import type {{ Post }} from '@/types';
+
+        const postStore = usePostStore();
+        const showForm = ref(false);
+        const editingPost = ref<Post | null>(null);
+
+        onMounted(() => {{
+          postStore.fetchAll();
+        }});
+
+        function handleEdit(post: Post) {{
+          editingPost.value = post;
+          showForm.value = true;
+        }}
+
+        function handleClose() {{
+          editingPost.value = null;
+          showForm.value = false;
+        }}
+
+        async function handleDelete(id: string) {{
+          await postStore.remove(id);
+        }}
+        </script>
+
+        <template>
+          <div class="space-y-6">
+            <div class="flex items-center justify-between">
+              <h1 class="text-2xl font-bold text-gray-900">Posts</h1>
+              <button
+                @click="showForm = true; editingPost = null"
+                class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                New Post
+              </button>
+            </div>
+
+            <!-- Error state -->
+            <div v-if="postStore.error" class="rounded-md bg-red-50 p-4 text-sm text-red-700" role="alert">
+              {{{{ postStore.error }}}}
+            </div>
+
+            <!-- Loading state -->
+            <div v-if="postStore.loading" class="flex justify-center py-12">
+              <div class="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" aria-label="Loading" />
+            </div>
+
+            <!-- Data table -->
+            <PostTable
+              v-else
+              :posts="postStore.posts"
+              @edit="handleEdit"
+              @delete="handleDelete"
+            />
+
+            <!-- Create / Edit form modal -->
+            <PostForm
+              v-if="showForm"
+              :post="editingPost"
+              @close="handleClose"
+              @saved="postStore.fetchAll(); handleClose()"
+            />
+          </div>
+        </template>
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT use Vue Options API — always use <script setup lang="ts">.
+        2. Do NOT call API directly from page components — always use the Pinia store action.
+        3. Do NOT render the data table without a v-if loading/error guard.
+        4. Do NOT use window.confirm() for delete confirmation — use a modal component.
+        5. Do NOT omit @saved emit handling — refresh the list after a successful form save.
+
+        === ACCESSIBILITY REQUIREMENTS ===
+        - Page <h1> must use the page title.
+        - Error messages must appear in a div with role="alert".
+        - Loading spinner must have aria-label="Loading".
+        - Action buttons must have descriptive labels.
+
+        === REQUIREMENTS ===
+        - File: frontend/src/views/{safe_name}.vue
+        - Vue 3 <script setup lang="ts">.
+        - Use Pinia store(s) for all data fetching and mutations.
+        - Loading + error + empty states.
+        - CRUD flow: list table, create/edit form modal, delete with confirmation.
+        - Apply {theme} theme with Tailwind CSS.
+        - Output ONLY the .vue SFC source — no markdown, no explanation.
+    """).strip()
+
+
+def _build_vue_entity_components_prompt(
+    entity: "EntitySpec",
+    ctx: _GenerationContext,
+    theme: str,
+) -> str:
+    spec = ctx.spec
+    plural = entity.plural.lower() if hasattr(entity, 'plural') else entity.name.lower() + 's'
+    return textwrap.dedent(f"""
+        Generate Vue 3 components for managing the {entity.name} entity.
+        Produce THREE components in a single file using named exports:
+        - {entity.name}Table: displays a paginated list with edit/delete actions
+        - {entity.name}Form: create or update form with validation
+        - {entity.name}Card: compact summary card for dashboard use
+
+        Each component is its own SFC block but exported from this index file via named re-exports.
+        Use separate <script setup>, <template>, <style> per component.
+
+        === SYSTEM SPEC ===
+        {_spec_summary(spec, ctx=ctx)}
+
+        === ENTITY DETAIL ===
+        {_entity_detail(entity)}
+
+        === ALREADY GENERATED INTERFACES ===
+        {_interfaces_summary(ctx, relevant_to=f'frontend/src/components/{entity.name}/index.ts')}
+
+        === GOLDEN EXAMPLE — {entity.name}Table.vue ===
+        <script setup lang="ts">
+        import {{ defineProps, defineEmits }} from 'vue';
+        import type {{ {entity.name} }} from '@/types';
+
+        const props = defineProps<{{
+          {entity.name.lower()}s: {entity.name}[];
+          loading?: boolean;
+        }}>(); // no default since items come from store
+
+        const emit = defineEmits<{{
+          edit: [{entity.name.lower()}: {entity.name}];
+          delete: [id: string];
+        }}>();
+        </script>
+
+        <template>
+          <div class="overflow-x-auto">
+            <div v-if="loading" class="flex justify-center py-8">
+              <div class="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" aria-label="Loading" />
+            </div>
+            <table v-else class="min-w-full divide-y divide-gray-200 text-sm">
+              <thead class="bg-gray-50">
+                <tr>
+                  <!-- headers for each field -->
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100 bg-white">
+                <tr v-for="item in {entity.name.lower()}s" :key="item.id">
+                  <!-- cells for each field -->
+                  <td class="whitespace-nowrap px-4 py-3 text-right">
+                    <button @click="emit('edit', item)" :aria-label="`Edit ${{item.id}}`" class="text-blue-600 hover:underline mr-2">Edit</button>
+                    <button @click="emit('delete', item.id)" :aria-label="`Delete ${{item.id}}`" class="text-red-600 hover:underline">Delete</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
+
+        === GOLDEN EXAMPLE — {entity.name}Form.vue ===
+        <script setup lang="ts">
+        import {{ ref, watch }} from 'vue';
+        import {{ useForm }} from 'vee-validate';
+        import * as yup from 'yup';
+        import {{ use{entity.name}Store }} from '@/stores/{entity.name.lower()}';
+        import type {{ {entity.name}, {entity.name}Create }} from '@/types';
+
+        const props = defineProps<{{
+          {entity.name.lower()}?: {entity.name} | null;
+        }}>();
+        const emit = defineEmits<{{
+          close: [];
+          saved: [{entity.name.lower()}: {entity.name}];
+        }}>();
+
+        const store = use{entity.name}Store();
+        const isEdit = computed(() => !!props.{entity.name.lower()});
+
+        const schema = yup.object({{
+          // field validations derived from entity spec
+        }});
+
+        const {{ handleSubmit, defineField, errors, isSubmitting }} = useForm({{
+          validationSchema: schema,
+          initialValues: props.{entity.name.lower()} ?? {{}},
+        }});
+
+        const onSubmit = handleSubmit(async (values) => {{
+          if (isEdit.value) {{
+            const updated = await store.update(props.{entity.name.lower()}!.id, values);
+            emit('saved', updated);
+          }} else {{
+            const created = await store.create(values as {entity.name}Create);
+            emit('saved', created);
+          }}
+        }});
+        </script>
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT use Vue Options API — always use <script setup lang="ts">.
+        2. Do NOT use v-model with plain <input> without a label — always pair inputs with <label>.
+        3. Do NOT call the API directly from components — always go through the Pinia store.
+        4. Do NOT mutate props — use local refs for form state.
+        5. Do NOT forget defineEmits — every component that communicates upward must declare its emits.
+
+        === ACCESSIBILITY REQUIREMENTS ===
+        - Table action buttons must have :aria-label with the item identifier.
+        - Form inputs must have associated <label for="..."> elements.
+        - Error messages from vee-validate must be shown adjacent to their field.
+        - Loading spinner must have aria-label="Loading".
+
+        === RESPONSIVE DESIGN ===
+        - Table: overflow-x-auto wrapper for horizontal scroll on mobile.
+        - Form: single column on mobile, two-column grid on md+.
+        - Card: concise, shows 2–3 key fields only.
+
+        === CODE QUALITY REQUIREMENTS ===
+        - Use vee-validate + yup for form validation (matches backend Pydantic constraints).
+        - All props and emits must be fully typed with TypeScript generics.
+        - Watch props.{entity.name.lower()} in the form to reset when switching between create/edit.
+        - Export components individually so pages can import just what they need.
+
+        === REQUIREMENTS ===
+        - Files:
+            frontend/src/components/{entity.name}/{entity.name}Table.vue
+            frontend/src/components/{entity.name}/{entity.name}Form.vue
+            frontend/src/components/{entity.name}/{entity.name}Card.vue
+        - Generate ALL THREE as separate SFC files.
+        - Use <script setup lang="ts">, defineProps, defineEmits with full TypeScript types.
+        - vee-validate + yup for form validation matching backend schema constraints.
+        - Apply {theme} theme with Tailwind CSS.
+        - Output ONLY the .vue SFC source for all three files concatenated with
+          a comment separator: // === FILE: path/to/Component.vue ===
+        - Output ONLY the .vue SFC source — no markdown, no explanation.
+    """).strip()
+
+
+# ---------------------------------------------------------------------------
+# Svelte / SvelteKit prompt builders
+# ---------------------------------------------------------------------------
+
+
+def _build_svelte_layout_prompt(ctx: _GenerationContext, theme: str) -> str:
+    spec = ctx.spec
+    nav_items = "\n".join(f"  - {{{{ label: '{p.title}', href: '{p.route}' }}}}" for p in spec.pages)
+    return textwrap.dedent(f"""
+        Generate the SvelteKit root layout component (+layout.svelte).
+
+        === SYSTEM SPEC ===
+        {_spec_summary(spec, ctx=ctx)}
+
+        === NAV ITEMS ===
+        {nav_items}
+
+        === ALREADY GENERATED INTERFACES ===
+        {_interfaces_summary(ctx, relevant_to='frontend/src/routes/+layout.svelte')}
+
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        <script lang="ts">
+          import {{ onMount }} from 'svelte';
+          import {{ goto }} from '$app/navigation';
+          import {{ page }} from '$app/stores';
+          import {{ authStore }} from '$lib/stores/auth';
+
+          const navLinks = [
+            {{ label: 'Dashboard', href: '/dashboard' }},
+          ];
+
+          let sidebarOpen = false;
+
+          onMount(async () => {{
+            if (!$authStore.token) {{
+              goto('/login');
+              return;
+            }}
+            await authStore.loadUser();
+          }});
+
+          async function logout() {{
+            authStore.clear();
+            goto('/login');
+          }}
+        </script>
+
+        {{#if $authStore.isAuthenticated}}
+          <div class="flex h-screen overflow-hidden">
+            <!-- Sidebar -->
+            <aside
+              class="{{sidebarOpen ? 'translate-x-0' : '-translate-x-full'}} fixed inset-y-0 left-0 z-50 w-64 transform bg-white shadow-lg transition-transform duration-200 md:relative md:translate-x-0"
+              aria-label="Main navigation"
+            >
+              <div class="flex h-16 items-center border-b px-4">
+                <span class="text-lg font-semibold">{spec.app_name}</span>
+              </div>
+              <nav class="mt-4 space-y-1 px-2" aria-label="Sidebar">
+                {{#each navLinks as link}}
+                  <a
+                    href={{link.href}}
+                    aria-current={{$page.url.pathname === link.href ? 'page' : undefined}}
+                    class="flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors
+                      {{$page.url.pathname === link.href ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-100'}}"
+                  >
+                    {{link.label}}
+                  </a>
+                {{/each}}
+              </nav>
+            </aside>
+
+            <!-- Main content -->
+            <div class="flex flex-1 flex-col overflow-hidden">
+              <header class="flex h-16 items-center justify-between border-b bg-white px-4 md:px-6">
+                <button on:click={{() => (sidebarOpen = !sidebarOpen)}} class="md:hidden" aria-label="Toggle navigation">
+                  &#9776;
+                </button>
+                <span class="ml-auto text-sm text-gray-600">{{$authStore.user?.email}}</span>
+                <button on:click={{logout}} class="ml-4 text-sm text-red-600 hover:underline" aria-label="Sign out">
+                  Sign out
+                </button>
+              </header>
+              <main class="flex-1 overflow-y-auto p-4 md:p-6" id="main-content">
+                <slot />
+              </main>
+            </div>
+          </div>
+        {{:else}}
+          <slot />
+        {{/if}}
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT use SvelteKit load functions in layout for auth — use the authStore in onMount.
+        2. Do NOT use window.location.href for navigation — use goto() from $app/navigation.
+        3. Do NOT use <slot> outside the conditional blocks — render layout only when authenticated.
+        4. Do NOT hard-code nav links — build them from the spec pages.
+        5. Do NOT omit aria-label on the sidebar, toggle, and logout button.
+
+        === REQUIREMENTS ===
+        - File: frontend/src/routes/+layout.svelte
+        - Svelte 5 / SvelteKit with <script lang="ts">.
+        - Conditional layout: authenticated shows sidebar + header + <slot />, unauthenticated shows <slot /> only.
+        - Nav links for all pages in the spec.
+        - Auth check in onMount using authStore.
+        - Apply {theme} theme with Tailwind CSS.
+        - Output ONLY the .svelte SFC source — no markdown, no explanation.
+    """).strip()
+
+
+def _build_svelte_page_prompt(page: "PageSpec", ctx: _GenerationContext, theme: str) -> str:
+    spec = ctx.spec
+    safe_route = page.route.strip('/') or 'home'
+    related_entities = "\n".join(
+        _entity_detail(e)
+        for e in spec.entities
+        if e.name.lower() in [r.lower() for r in getattr(page, 'related_entities', [])]
+    ) or '(none)'
+    return textwrap.dedent(f"""
+        Generate a SvelteKit page component (+page.svelte) for the "{page.title}" page.
+
+        === SYSTEM SPEC ===
+        {_spec_summary(spec, ctx=ctx)}
+
+        === PAGE SPEC ===
+        Title: {page.title}
+        Route: {page.route}
+        Description: {getattr(page, 'description', 'N/A')}
+
+        === THEME ===
+        {theme}
+
+        === RELATED ENTITIES ===
+        {related_entities}
+
+        === ALREADY GENERATED INTERFACES ===
+        {_interfaces_summary(ctx, relevant_to=f'frontend/src/routes/{safe_route}/+page.svelte')}
+
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        <script lang="ts">
+          import {{ onMount }} from 'svelte';
+          import {{ postStore }} from '$lib/stores/post';
+          import PostTable from '$lib/components/Post/PostTable.svelte';
+          import PostForm from '$lib/components/Post/PostForm.svelte';
+          import type {{ Post }} from '$lib/types';
+
+          let showForm = false;
+          let editingPost: Post | null = null;
+
+          onMount(() => {{
+            postStore.fetchAll();
+          }});
+
+          function handleEdit(event: CustomEvent<Post>) {{
+            editingPost = event.detail;
+            showForm = true;
+          }}
+
+          function handleClose() {{
+            editingPost = null;
+            showForm = false;
+          }}
+
+          async function handleDelete(event: CustomEvent<string>) {{
+            await postStore.remove(event.detail);
+          }}
+        </script>
+
+        <svelte:head><title>{page.title} | {spec.app_name}</title></svelte:head>
+
+        <div class="space-y-6">
+          <div class="flex items-center justify-between">
+            <h1 class="text-2xl font-bold text-gray-900">{page.title}</h1>
+            <button
+              on:click={{() => {{ showForm = true; editingPost = null; }}}}
+              class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              New Item
+            </button>
+          </div>
+
+          {{#if $postStore.error}}
+            <div class="rounded-md bg-red-50 p-4 text-sm text-red-700" role="alert">
+              {{$postStore.error}}
+            </div>
+          {{/if}}
+
+          {{#if $postStore.loading}}
+            <div class="flex justify-center py-12">
+              <div class="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" aria-label="Loading" />
+            </div>
+          {{:else}}
+            <PostTable
+              items={{$postStore.posts}}
+              on:edit={{handleEdit}}
+              on:delete={{handleDelete}}
+            />
+          {{/if}}
+
+          {{#if showForm}}
+            <PostForm
+              item={{editingPost}}
+              on:close={{handleClose}}
+              on:saved={{() => {{ postStore.fetchAll(); handleClose(); }}}}
+            />
+          {{/if}}
+        </div>
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT use a +page.server.ts load for client-side-only auth — use onMount with stores.
+        2. Do NOT use writable stores directly in the template without the $ prefix — always use $storeName.
+        3. Do NOT call API functions directly in +page.svelte — delegate to the store.
+        4. Do NOT omit <svelte:head> with the page title.
+        5. Do NOT use synchronous API calls — always async/await within onMount or event handlers.
+
+        === ACCESSIBILITY REQUIREMENTS ===
+        - Page heading must be <h1> with the page title.
+        - Error block must have role="alert".
+        - Loading spinner must have aria-label="Loading".
+        - Form modal must trap focus (use a Svelte modal with inert attribute on background).
+
+        === REQUIREMENTS ===
+        - File: frontend/src/routes/{safe_route}/+page.svelte
+        - Svelte / SvelteKit with <script lang="ts">.
+        - Use Svelte stores for all data + mutations.
+        - Loading, error, and empty states.
+        - CRUD flow: list, create/edit form, delete.
+        - Apply {theme} theme with Tailwind CSS.
+        - Output ONLY the .svelte SFC source — no markdown, no explanation.
+    """).strip()
+
+
+def _build_svelte_entity_components_prompt(
+    entity: "EntitySpec",
+    ctx: _GenerationContext,
+    theme: str,
+) -> str:
+    spec = ctx.spec
+    return textwrap.dedent(f"""
+        Generate Svelte components for managing the {entity.name} entity.
+        Produce THREE components:
+        - {entity.name}Table.svelte: paginated list with edit/delete actions
+        - {entity.name}Form.svelte: create/update form with superforms validation
+        - {entity.name}Card.svelte: compact summary card for dashboard widgets
+
+        === SYSTEM SPEC ===
+        {_spec_summary(spec, ctx=ctx)}
+
+        === ENTITY DETAIL ===
+        {_entity_detail(entity)}
+
+        === ALREADY GENERATED INTERFACES ===
+        {_interfaces_summary(ctx, relevant_to=f'frontend/src/lib/components/{entity.name}/{entity.name}Table.svelte')}
+
+        === GOLDEN EXAMPLE — {entity.name}Table.svelte ===
+        <script lang="ts">
+          import {{ createEventDispatcher }} from 'svelte';
+          import type {{ {entity.name} }} from '$lib/types';
+
+          export let items: {entity.name}[] = [];
+          export let loading = false;
+
+          const dispatch = createEventDispatcher<{{
+            edit: {entity.name};
+            delete: string;
+          }}>();
+        </script>
+
+        {{#if loading}}
+          <div class="flex justify-center py-8">
+            <div class="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" aria-label="Loading" />
+          </div>
+        {{:else if items.length === 0}}
+          <p class="py-8 text-center text-gray-500">No {entity.name.lower()}s yet.</p>
+        {{:else}}
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 text-sm">
+              <thead class="bg-gray-50">
+                <tr>
+                  <!-- column headers for each field -->
+                  <th class="px-4 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100 bg-white">
+                {{#each items as item (item.id)}}
+                  <tr>
+                    <!-- cells for each field -->
+                    <td class="whitespace-nowrap px-4 py-3 text-right">
+                      <button
+                        on:click={{() => dispatch('edit', item)}}
+                        aria-label={{`Edit ${{item.id}}`}}
+                        class="mr-2 text-blue-600 hover:underline"
+                      >Edit</button>
+                      <button
+                        on:click={{() => dispatch('delete', item.id)}}
+                        aria-label={{`Delete ${{item.id}}`}}
+                        class="text-red-600 hover:underline"
+                      >Delete</button>
+                    </td>
+                  </tr>
+                {{/each}}
+              </tbody>
+            </table>
+          </div>
+        {{/if}}
+
+        === GOLDEN EXAMPLE — {entity.name}Form.svelte ===
+        <script lang="ts">
+          import {{ createEventDispatcher }} from 'svelte';
+          import {{ use{entity.name}Store }} from '$lib/stores/{entity.name.lower()}';
+          import type {{ {entity.name} }} from '$lib/types';
+
+          export let item: {entity.name} | null = null;
+
+          const dispatch = createEventDispatcher<{{
+            close: void;
+            saved: {entity.name};
+          }}>();
+          const store = use{entity.name}Store();
+
+          let formData = item ? {{ ...item }} : {{}};
+          let submitting = false;
+          let formError: string | null = null;
+
+          async function submit() {{
+            submitting = true;
+            formError = null;
+            try {{
+              const result = item
+                ? await store.update(item.id, formData)
+                : await store.create(formData);
+              dispatch('saved', result);
+            }} catch (e: unknown) {{
+              formError = e instanceof Error ? e.message : 'An error occurred';
+            }} finally {{
+              submitting = false;
+            }}
+          }}
+        </script>
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT use Svelte reactive statements ($:) for async data — use onMount or explicit event handlers.
+        2. Do NOT mutate exported props directly — copy to local state in the form.
+        3. Do NOT use on:click without dispatching a typed event in table row actions.
+        4. Do NOT forget the loading/empty state in the table.
+        5. Do NOT omit aria-label on row action buttons.
+
+        === ACCESSIBILITY REQUIREMENTS ===
+        - Table action buttons must have aria-label with item identifier.
+        - Form inputs must have <label> elements associated via for/id.
+        - Error messages must appear adjacent to their input.
+        - Form submit error must appear in a role="alert" container.
+
+        === RESPONSIVE DESIGN ===
+        - Table: overflow-x-auto for mobile horizontal scroll.
+        - Form: single column on mobile, two-column grid on md+.
+        - Card: show only 2–3 key fields, badge for status.
+
+        === CODE QUALITY REQUIREMENTS ===
+        - Use createEventDispatcher with typed generics for all component events.
+        - All exported props must have TypeScript types.
+        - Form copy props to local state (not mutate the prop directly).
+        - Use $lib/ path alias (not relative imports) for all internal imports.
+
+        === REQUIREMENTS ===
+        - Files:
+            frontend/src/lib/components/{entity.name}/{entity.name}Table.svelte
+            frontend/src/lib/components/{entity.name}/{entity.name}Form.svelte
+            frontend/src/lib/components/{entity.name}/{entity.name}Card.svelte
+        - Generate ALL THREE as separate .svelte files.
+        - Output them concatenated with a comment separator: // === FILE: path/to/Component.svelte ===
+        - Apply {theme} theme with Tailwind CSS.
+        - Output ONLY the .svelte SFC source — no markdown, no explanation.
+    """).strip()
+
+
+def _build_svelte_store_prompt(entity: "EntitySpec", ctx: _GenerationContext) -> str:
+    spec = ctx.spec
+    return textwrap.dedent(f"""
+        Generate a Svelte writable store for managing {entity.name} state in a SvelteKit frontend.
+
+        === SYSTEM SPEC ===
+        {_spec_summary(spec, ctx=ctx)}
+
+        === ENTITY DETAIL ===
+        {_entity_detail(entity)}
+
+        === ALREADY GENERATED INTERFACES ===
+        {_interfaces_summary(ctx, relevant_to=f'frontend/src/lib/stores/{entity.name.lower()}.ts')}
+
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        import {{ writable, derived, get }} from 'svelte/store';
+        import {{ {entity.name.lower()}Api }} from '$lib/api';
+        import type {{ {entity.name}, {entity.name}Create, {entity.name}Update }} from '$lib/types';
+
+        interface {entity.name}State {{
+          items: {entity.name}[];
+          current: {entity.name} | null;
+          loading: boolean;
+          error: string | null;
+          total: number;
+          page: number;
+          pageSize: number;
+        }}
+
+        function create{entity.name}Store() {{
+          const initial: {entity.name}State = {{
+            items: [],
+            current: null,
+            loading: false,
+            error: null,
+            total: 0,
+            page: 1,
+            pageSize: 20,
+          }};
+
+          const {{ subscribe, set, update }} = writable<{entity.name}State>(initial);
+
+          return {{
+            subscribe,
+
+            async fetchAll(params?: {{ page?: number; pageSize?: number }}) {{
+              update(s => ({{ ...s, loading: true, error: null }}));
+              try {{
+                const res = await {entity.name.lower()}Api.list(params);
+                update(s => ({{ ...s, items: res.items, total: res.total, loading: false }}));
+              }} catch (e: unknown) {{
+                const error = e instanceof Error ? e.message : 'Failed to load';
+                update(s => ({{ ...s, error, loading: false }}));
+              }}
+            }},
+
+            async fetchOne(id: string) {{
+              update(s => ({{ ...s, loading: true, error: null }}));
+              try {{
+                const item = await {entity.name.lower()}Api.get(id);
+                update(s => ({{ ...s, current: item, loading: false }}));
+              }} catch (e: unknown) {{
+                const error = e instanceof Error ? e.message : 'Failed to load';
+                update(s => ({{ ...s, error, loading: false }}));
+              }}
+            }},
+
+            async create(data: {entity.name}Create): Promise<{entity.name}> {{
+              update(s => ({{ ...s, loading: true, error: null }}));
+              try {{
+                const item = await {entity.name.lower()}Api.create(data);
+                update(s => ({{ ...s, items: [item, ...s.items], total: s.total + 1, loading: false }}));
+                return item;
+              }} catch (e: unknown) {{
+                const error = e instanceof Error ? e.message : 'Failed to create';
+                update(s => ({{ ...s, error, loading: false }}));
+                throw e;
+              }}
+            }},
+
+            async update(id: string, data: {entity.name}Update): Promise<{entity.name}> {{
+              update(s => ({{ ...s, loading: true, error: null }}));
+              try {{
+                const updated = await {entity.name.lower()}Api.update(id, data);
+                update(s => ({{
+                  ...s,
+                  items: s.items.map(i => i.id === id ? updated : i),
+                  current: s.current?.id === id ? updated : s.current,
+                  loading: false,
+                }}));
+                return updated;
+              }} catch (e: unknown) {{
+                const error = e instanceof Error ? e.message : 'Failed to update';
+                update(s => ({{ ...s, error, loading: false }}));
+                throw e;
+              }}
+            }},
+
+            async remove(id: string): Promise<void> {{
+              update(s => ({{ ...s, loading: true, error: null }}));
+              try {{
+                await {entity.name.lower()}Api.delete(id);
+                update(s => ({{
+                  ...s,
+                  items: s.items.filter(i => i.id !== id),
+                  total: s.total - 1,
+                  current: s.current?.id === id ? null : s.current,
+                  loading: false,
+                }}));
+              }} catch (e: unknown) {{
+                const error = e instanceof Error ? e.message : 'Failed to delete';
+                update(s => ({{ ...s, error, loading: false }}));
+                throw e;
+              }}
+            }},
+
+            clearError() {{
+              update(s => ({{ ...s, error: null }}));
+            }},
+
+            reset() {{
+              set(initial);
+            }},
+          }};
+        }}
+
+        export const {entity.name.lower()}Store = create{entity.name}Store();
+
+        // Derived stores for convenience
+        export const {entity.name.lower()}s = derived(
+          {entity.name.lower()}Store,
+          $s => $s.items,
+        );
+        export const {entity.name.lower()}Loading = derived(
+          {entity.name.lower()}Store,
+          $s => $s.loading,
+        );
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT use Svelte 5 runes ($state, $derived) — use writable/derived for SvelteKit compatibility.
+        2. Do NOT mutate the store state directly — always use update() or set().
+        3. Do NOT swallow errors silently — set error state AND re-throw in create/update/remove.
+        4. Do NOT forget to reset loading to false in the catch block.
+        5. Do NOT access get(store) inside subscribe callbacks — use the snapshot parameter.
+
+        === CODE QUALITY REQUIREMENTS ===
+        - Factory function pattern: create{entity.name}Store() returns the store object.
+        - Export a singleton: export const {entity.name.lower()}Store = create{entity.name}Store().
+        - Export derived stores for the items list and loading state for convenience.
+        - Full TypeScript interface for the store state.
+        - Every action is async with try/catch/finally pattern.
+        - Store ID exported as `{entity.name.lower()}Store`.
+
+        === REQUIREMENTS ===
+        - File: frontend/src/lib/stores/{entity.name.lower()}.ts
+        - Svelte writable store for {entity.name} entity.
+        - State: items, current, loading, error, total, page, pageSize.
+        - Actions: fetchAll, fetchOne, create, update, remove, clearError, reset.
+        - Derived exports: {entity.name.lower()}s, {entity.name.lower()}Loading.
+        - Full TypeScript typing, no implicit any.
+        - Output ONLY the TypeScript source — no markdown, no explanation.
+    """).strip()
+
+
+def _build_svelte_config_prompt(ctx: _GenerationContext) -> str:
+    spec = ctx.spec
+    return textwrap.dedent(f"""
+        Generate a svelte.config.js for a SvelteKit + TypeScript + Tailwind CSS project.
+
+        === SYSTEM SPEC ===
+        {_spec_summary(spec, ctx=ctx)}
+
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        import adapter from '@sveltejs/adapter-node';
+        import {{ vitePreprocess }} from '@sveltejs/vite-plugin-svelte';
+
+        /** @type {{import('@sveltejs/kit').Config}} */
+        const config = {{
+          preprocess: vitePreprocess(),
+          kit: {{
+            adapter: adapter({{ out: 'build' }}),
+            alias: {{
+              $lib: './src/lib',
+              $components: './src/lib/components',
+              $stores: './src/lib/stores',
+            }},
+          }},
+        }};
+
+        export default config;
+
+        === REQUIREMENTS ===
+        - File: frontend/svelte.config.js
+        - Use @sveltejs/adapter-node for server-side rendering (not static adapter).
+        - Configure $lib and $components path aliases.
+        - vitePreprocess() for TypeScript and PostCSS/Tailwind support.
+        - Output ONLY the JavaScript source — no markdown, no explanation.
+    """).strip()
+
+
+def _build_vue_package_json_prompt(ctx: _GenerationContext) -> str:
+    spec = ctx.spec
+    return textwrap.dedent(f"""
+        Generate a package.json for a Vue 3 + TypeScript + Vite + Tailwind CSS frontend project.
+
+        === SYSTEM SPEC ===
+        {_spec_summary(spec, ctx=ctx)}
+
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        {{
+          "name": "{spec.app_name.lower().replace(' ', '-')}-frontend",
+          "version": "0.1.0",
+          "private": true,
+          "type": "module",
+          "scripts": {{
+            "dev": "vite",
+            "build": "vue-tsc && vite build",
+            "preview": "vite preview",
+            "type-check": "vue-tsc --noEmit",
+            "lint": "eslint . --ext .vue,.ts,.tsx"
+          }},
+          "dependencies": {{
+            "vue": "^3.4.0",
+            "vue-router": "^4.3.0",
+            "pinia": "^2.1.7",
+            "vee-validate": "^4.12.0",
+            "yup": "^1.4.0",
+            "clsx": "^2.1.1",
+            "lucide-vue-next": "^0.379.0"
+          }},
+          "devDependencies": {{
+            "@types/node": "^20.14.0",
+            "@vitejs/plugin-vue": "^5.0.4",
+            "autoprefixer": "^10.4.19",
+            "eslint": "^8.57.0",
+            "eslint-plugin-vue": "^9.26.0",
+            "postcss": "^8.4.38",
+            "tailwindcss": "^3.4.4",
+            "typescript": "^5.4.5",
+            "vite": "^5.2.0",
+            "vue-tsc": "^2.0.14"
+          }}
+        }}
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT use "latest" — pin to specific semver ranges.
+        2. Do NOT include react or next.js packages in a Vue project.
+        3. Do NOT put tailwindcss in dependencies — it belongs in devDependencies.
+        4. Do NOT omit pinia (state management) or vue-router.
+        5. Do NOT omit the "type-check" script.
+
+        === REQUIREMENTS ===
+        - File: frontend/package.json
+        - Vue 3, Vite 5, TypeScript, Tailwind CSS, Pinia, Vue Router, vee-validate, yup.
+        - Scripts: dev, build, preview, type-check, lint.
+        - Output ONLY the package.json content — no markdown, no explanation.
+    """).strip()
+
+
+def _build_svelte_package_json_prompt(ctx: _GenerationContext) -> str:
+    spec = ctx.spec
+    return textwrap.dedent(f"""
+        Generate a package.json for a SvelteKit + TypeScript + Tailwind CSS frontend project.
+
+        === SYSTEM SPEC ===
+        {_spec_summary(spec, ctx=ctx)}
+
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        {{
+          "name": "{spec.app_name.lower().replace(' ', '-')}-frontend",
+          "version": "0.1.0",
+          "private": true,
+          "scripts": {{
+            "dev": "vite dev",
+            "build": "vite build",
+            "preview": "vite preview",
+            "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+            "lint": "eslint . --ext .ts,.svelte"
+          }},
+          "dependencies": {{
+            "@sveltejs/kit": "^2.5.0",
+            "svelte": "^4.2.15"
+          }},
+          "devDependencies": {{
+            "@sveltejs/adapter-node": "^5.0.1",
+            "@sveltejs/vite-plugin-svelte": "^3.1.0",
+            "@types/node": "^20.14.0",
+            "autoprefixer": "^10.4.19",
+            "eslint": "^8.57.0",
+            "eslint-plugin-svelte": "^2.39.0",
+            "postcss": "^8.4.38",
+            "svelte-check": "^3.7.1",
+            "tailwindcss": "^3.4.4",
+            "tslib": "^2.6.3",
+            "typescript": "^5.4.5",
+            "vite": "^5.2.0"
+          }}
+        }}
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT use "latest" — pin to specific semver ranges.
+        2. Do NOT include react or vue packages in a Svelte project.
+        3. Do NOT put tailwindcss in dependencies — it belongs in devDependencies.
+        4. Do NOT omit @sveltejs/adapter-node or the check script.
+
+        === REQUIREMENTS ===
+        - File: frontend/package.json
+        - SvelteKit 2, Svelte 4, Vite 5, TypeScript, Tailwind CSS.
+        - Scripts: dev, build, preview, check, lint.
+        - Output ONLY the package.json content — no markdown, no explanation.
+    """).strip()
+
+
+def _build_vue_vite_config_prompt(ctx: _GenerationContext) -> str:
+    spec = ctx.spec
+    return textwrap.dedent(f"""
+        Generate a vite.config.ts for a Vue 3 + TypeScript + Tailwind CSS Vite project.
+
+        === SYSTEM SPEC ===
+        {_spec_summary(spec, ctx=ctx)}
+
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        import {{ defineConfig }} from 'vite';
+        import vue from '@vitejs/plugin-vue';
+        import {{ fileURLToPath, URL }} from 'node:url';
+
+        export default defineConfig({{
+          plugins: [vue()],
+          resolve: {{
+            alias: {{
+              '@': fileURLToPath(new URL('./src', import.meta.url)),
+            }},
+          }},
+          server: {{
+            port: 3000,
+            proxy: {{
+              '/api': {{
+                target: 'http://localhost:8000',
+                changeOrigin: true,
+              }},
+            }},
+          }},
+          build: {{
+            target: 'esnext',
+            sourcemap: true,
+          }},
+        }});
+
+        === REQUIREMENTS ===
+        - File: frontend/vite.config.ts
+        - @vitejs/plugin-vue, @ path alias pointing to src/, dev server on port 3000.
+        - Proxy /api to http://localhost:8000 for local development.
+        - Output ONLY the TypeScript source — no markdown, no explanation.
+    """).strip()
+
+
+# ---------------------------------------------------------------------------
+# Supabase prompt builders
+# ---------------------------------------------------------------------------
+
+
+def _build_supabase_schema_prompt(ctx: _GenerationContext) -> str:
+    """Generate Supabase SQL migration with RLS policies for all entities."""
+    spec = ctx.spec
+    entity_list = "\n".join(f"  - {e.name}: {', '.join(f.name for f in e.fields[:6])}" for e in spec.entities)
+    relationship_list = "\n".join(
+        f"  - {r.from_entity} {r.relationship_type} {r.to_entity}"
+        for r in spec.relationships
+    ) if spec.relationships else "  (none)"
+
+    return textwrap.dedent(f"""
+        Generate a complete Supabase SQL migration file.
+
+        Application: {spec.app_name}
+        Description: {spec.description}
+
+        Entities:
+{entity_list}
+
+        Relationships:
+{relationship_list}
+
+        === REQUIREMENTS ===
+        1. CREATE TABLE statements for every entity listed above.
+           - Every table must have: id UUID DEFAULT uuid_generate_v4() PRIMARY KEY
+           - Every table must have: created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+           - Every table must have: updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+           - Map entity fields to appropriate PostgreSQL column types.
+           - Add REFERENCES constraints for all foreign key relationships.
+           - Add appropriate NOT NULL constraints and DEFAULT values.
+           - Add CHECK constraints where field names imply validation (e.g. email format, positive numbers).
+        2. Enable Row Level Security on every table:
+           ALTER TABLE <table> ENABLE ROW LEVEL SECURITY;
+        3. RLS policies for each table (use Supabase auth.uid() pattern):
+           - SELECT policy: authenticated users can read their own rows
+           - INSERT policy: authenticated users can insert rows with their user_id
+           - UPDATE policy: users can update their own rows
+           - DELETE policy: users can delete their own rows
+           For public/shared data tables (no user_id column), allow all authenticated users to SELECT.
+        4. Create a trigger to auto-update updated_at on every table:
+           CREATE OR REPLACE FUNCTION update_updated_at_column()
+           RETURNS TRIGGER AS $$ BEGIN NEW.updated_at = NOW(); RETURN NEW; END; $$ LANGUAGE plpgsql;
+           Then apply the trigger to every table.
+        5. Add CREATE INDEX statements for foreign key columns and any field named *_id, email, or status.
+        6. Include: CREATE EXTENSION IF NOT EXISTS "uuid-ossp"; at the top.
+        7. Use a transaction: BEGIN; ... COMMIT;
+
+        === ANTI-PATTERNS — never do any of these ===
+        - Do NOT use SERIAL or INTEGER for primary keys — use UUID.
+        - Do NOT omit RLS policies — every table must have them.
+        - Do NOT use NOW() as a default for updated_at without the trigger.
+        - Do NOT emit markdown fences or explanation — raw SQL only.
+
+        File: supabase/migrations/001_initial.sql
+        Output ONLY the SQL — no markdown, no comments beyond inline SQL comments.
+    """).strip()
+
+
+def _build_supabase_client_prompt(ctx: _GenerationContext) -> str:
+    """Generate the Supabase Python client module for the backend."""
+    spec = ctx.spec
+    entity_list = "\n".join(
+        f"  - {e.name} (table: {e.name.lower()}s)"
+        for e in spec.entities
+    )
+
+    return textwrap.dedent(f"""
+        Generate a production-ready Supabase Python client module.
+
+        Application: {spec.app_name}
+        Entities / tables:
+{entity_list}
+
+        === REQUIREMENTS ===
+        1. Import and initialise the Supabase client using supabase-py:
+           from supabase import create_client, Client
+           from app.core.config import settings
+
+           def get_supabase() -> Client:
+               return create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
+
+        2. Provide typed helper functions for CRUD operations on each entity:
+           - list_<entity>s(filters: dict | None = None) -> list[dict]
+           - get_<entity>(id: str) -> dict | None
+           - create_<entity>(data: dict) -> dict
+           - update_<entity>(id: str, data: dict) -> dict
+           - delete_<entity>(id: str) -> None
+           Each function must handle supabase-py exceptions and re-raise as HTTPException.
+
+        3. Auth helpers using Supabase Auth:
+           - sign_up(email: str, password: str) -> dict  (returns user + session)
+           - sign_in(email: str, password: str) -> dict
+           - sign_out(access_token: str) -> None
+           - get_user(access_token: str) -> dict | None
+           - verify_token(access_token: str) -> dict  (raises HTTPException 401 if invalid)
+
+        4. Real-time subscription helper (async):
+           async def subscribe_to_table(table: str, callback) -> None
+           Uses supabase-py's realtime channel subscription.
+
+        5. All functions must have:
+           - Full type hints
+           - Docstrings explaining purpose and return shape
+           - Proper error handling (catch APIError from supabase-py, map to HTTPException)
+           - Logging via module-level logger
+
+        === ANTI-PATTERNS ===
+        - Do NOT hard-code SUPABASE_URL or keys — read from settings.
+        - Do NOT use the anon key for server-side operations — use service_role key.
+        - Do NOT use raw SQL — use supabase-py table builder.
+        - Do NOT omit error handling.
+
+        File: backend/app/supabase_client.py
+        Output ONLY the Python source — no markdown, no explanation.
+    """).strip()
+
+
+def _build_supabase_types_prompt(ctx: _GenerationContext) -> str:
+    """Generate TypeScript database types for Supabase schema."""
+    spec = ctx.spec
+    entity_detail = []
+    for e in spec.entities:
+        fields_str = ", ".join(
+            f"{f.name}: {_ts_type_for_field(f)}"
+            for f in e.fields
+        )
+        entity_detail.append(f"  {e.name}: {{ {fields_str}, created_at: string, updated_at: string }}")
+    entities_block = "\n".join(entity_detail)
+
+    return textwrap.dedent(f"""
+        Generate TypeScript database types for a Supabase project.
+
+        Application: {spec.app_name}
+        Entities and their field signatures:
+{entities_block}
+
+        === REQUIREMENTS ===
+        1. Export a `Database` interface matching the Supabase generated types format:
+           export interface Database {{
+             public: {{
+               Tables: {{
+                 <table_name>: {{
+                   Row: {{ <all columns with correct TS types> }}
+                   Insert: {{ <same as Row but all fields optional except id> }}
+                   Update: {{ <same as Insert> }}
+                 }}
+               }}
+             }}
+           }}
+
+        2. Export individual row types as type aliases:
+           export type <Entity>Row = Database['public']['Tables']['<table>']['Row'];
+           export type <Entity>Insert = Database['public']['Tables']['<table>']['Insert'];
+           export type <Entity>Update = Database['public']['Tables']['<table>']['Update'];
+
+        3. Export a typed Supabase client helper:
+           import {{ createClient, SupabaseClient }} from '@supabase/supabase-js';
+           export type TypedSupabaseClient = SupabaseClient<Database>;
+           export function createTypedClient(url: string, key: string): TypedSupabaseClient
+
+        4. Export enum types for any field named "status", "role", or "type" — derive
+           sensible values from the field description or entity context.
+
+        5. Include a RealtimePayload generic helper type:
+           export type RealtimePayload<T> = {{
+             eventType: 'INSERT' | 'UPDATE' | 'DELETE';
+             new: T;
+             old: Partial<T>;
+           }}
+
+        === TYPE MAPPING RULES ===
+        - UUIDs / id fields → string
+        - Text / varchar → string
+        - Integer / numeric → number
+        - Boolean → boolean
+        - Timestamps / dates → string (ISO 8601)
+        - JSON / jsonb → Record<string, unknown>
+        - Arrays → unknown[]
+        - Nullable columns → type | null
+
+        === ANTI-PATTERNS ===
+        - Do NOT use `any` — use `unknown` for untyped JSON.
+        - Do NOT omit the Database interface — it is required for client type safety.
+        - Do NOT emit markdown fences or explanation — raw TypeScript only.
+
+        File: frontend/src/types/database.ts
+        Output ONLY the TypeScript source — no markdown, no explanation.
+    """).strip()
+
+
+def _ts_type_for_field(field) -> str:
+    """Map an EntityField to a TypeScript type string (best-effort heuristic)."""
+    name_lower = field.name.lower()
+    ftype = (field.field_type or "").lower()
+    if ftype in ("int", "integer", "float", "decimal", "number"):
+        return "number"
+    if ftype in ("bool", "boolean"):
+        return "boolean"
+    if "json" in ftype:
+        return "Record<string, unknown>"
+    if name_lower.endswith("_at") or "date" in name_lower or "time" in name_lower:
+        return "string"  # ISO timestamp
+    if name_lower.endswith("_id") or name_lower == "id":
+        return "string"  # UUID
+    return "string"
+
+
+# ---------------------------------------------------------------------------
 # Infrastructure prompt builders
 # ---------------------------------------------------------------------------
 
@@ -3049,6 +4773,144 @@ def _build_env_example_prompt(ctx: _GenerationContext) -> str:
     """).strip()
 
 
+def _build_seed_data_prompt(ctx: _GenerationContext) -> str:
+    spec = ctx.spec
+    entities_list = ', '.join(e.name for e in spec.entities)
+    entity_details = '\n\n'.join(_entity_detail(e) for e in spec.entities)
+    return textwrap.dedent(f"""
+        Generate a database seed script for the FastAPI backend.
+
+        === SYSTEM SPEC ===
+        {_spec_summary(spec, ctx=ctx)}
+
+        === ENTITIES TO SEED ===
+        {entity_details}
+
+        === ALREADY GENERATED INTERFACES ===
+        {_interfaces_summary(ctx, relevant_to='backend/app/db/seed.py')}
+
+        === GOLDEN EXAMPLE (match this quality and style exactly) ===
+        '''Seed script - populates the database with realistic demo data.
+
+        Run with: python -m app.db.seed
+
+        This script is IDEMPOTENT: running it multiple times will not create
+        duplicate records.  Each entity uses a stable external identifier
+        (e.g., email or slug) to check for existence before inserting.
+        '''
+        import asyncio
+        import logging
+        from faker import Faker
+        from sqlalchemy import select
+        from sqlalchemy.ext.asyncio import AsyncSession
+        from app.db.session import AsyncSessionLocal
+        from app.core.security import get_password_hash
+        from app.models.user import User
+        from app.models.post import Post
+
+        logger = logging.getLogger(__name__)
+        fake = Faker()
+        Faker.seed(42)  # deterministic output
+
+        async def seed_users(db: AsyncSession) -> list[User]:
+            # Create admin + 10 regular users if they don't exist.
+            users = []
+            # Admin user (stable, idempotent)
+            result = await db.execute(select(User).where(User.email == "admin@example.com"))
+            admin = result.scalar_one_or_none()
+            if not admin:
+                admin = User(
+                    email="admin@example.com",
+                    hashed_password=get_password_hash("AdminPass123!"),
+                    full_name="Admin User",
+                    is_active=True,
+                    is_superuser=True,
+                )
+                db.add(admin)
+                logger.info("Created admin user: admin@example.com")
+            users.append(admin)
+
+            # 10 regular users (idempotent by email)
+            for i in range(10):
+                email = f"user{{i+1:02d}}@example.com"
+                result = await db.execute(select(User).where(User.email == email))
+                if not result.scalar_one_or_none():
+                    user = User(
+                        email=email,
+                        hashed_password=get_password_hash("UserPass123!"),
+                        full_name=fake.name(),
+                        is_active=True,
+                        is_superuser=False,
+                    )
+                    db.add(user)
+                    users.append(user)
+
+            await db.flush()  # assign IDs before relationships
+            return users
+
+        async def seed_posts(db: AsyncSession, users: list[User]) -> None:
+            # Create 25 posts spread across users.
+            for i in range(25):
+                title = fake.sentence(nb_words=6).rstrip(".")
+                result = await db.execute(select(Post).where(Post.title == title))
+                if not result.scalar_one_or_none():
+                    post = Post(
+                        title=title,
+                        content=fake.paragraphs(nb=3, ext_word_list=None),
+                        published=fake.boolean(chance_of_getting_true=70),
+                        author_id=users[i % len(users)].id,
+                        created_at=fake.date_time_between(start_date="-1y", end_date="now"),
+                    )
+                    db.add(post)
+
+        async def main() -> None:  # noqa: D401 - imperative mood ok here
+            logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+            async with AsyncSessionLocal() as db:
+                async with db.begin():
+                    users = await seed_users(db)
+                    await seed_posts(db, users)
+            logger.info("Seeding complete.")
+
+        if __name__ == "__main__":
+            asyncio.run(main())
+
+        === ANTI-PATTERNS — never do any of these ===
+        1. Do NOT hard-code real email addresses or passwords that look like real credentials.
+        2. Do NOT use synchronous DB calls — always use async/await with AsyncSession.
+        3. Do NOT insert without an idempotency check — the script must be safe to run multiple times.
+        4. Do NOT generate random data without seeding Faker (use Faker.seed(42)) for reproducibility.
+        5. Do NOT import from modules that don't exist in the project — use the actual model paths.
+        6. Do NOT forget to call await db.flush() before creating records with foreign-key references.
+
+        === CODE QUALITY REQUIREMENTS ===
+        - Module-level docstring explaining how to run the seed script.
+        - Use Faker for ALL generated content: names, emails, text, dates, booleans.
+        - Faker.seed(42) at module level for deterministic, reproducible output.
+        - Each seeder function is separate and named seed_{{entity_plural}}.
+        - idempotency check: query for a stable natural key (email, slug, name) before inserting.
+        - Use async with db.begin() to wrap all inserts in a single transaction.
+        - Log each major seeding step (logger.info) so progress is visible in CI.
+        - All models imported with their correct paths from app.models.
+        - Passwords hashed via get_password_hash from app.core.security.
+        - Script executable via: python -m app.db.seed (if __name__ == "__main__" block).
+
+        === REALISTIC DATA REQUIREMENTS ===
+        - Admin user: email="admin@example.com", password="AdminPass123!", is_superuser=True.
+        - Regular users: email pattern "user01@example.com" through "user10@example.com".
+        - Create AT LEAST 15–25 records per main entity using faker data.
+        - Spread foreign-key relationships across users (use index modulo).
+        - Use fake.date_time_between() for created_at / updated_at fields.
+        - Use fake.boolean(chance_of_getting_true=70) for boolean status fields.
+
+        === REQUIREMENTS ===
+        - File: backend/app/db/seed.py
+        - Entities: {entities_list}
+        - Seed admin user + 10 regular users + 15-25 records per entity.
+        - Fully idempotent, async, uses Faker with seed 42.
+        - Output ONLY the Python source — no markdown, no explanation.
+    """).strip()
+
+
 def _build_gitignore_prompt(ctx: _GenerationContext) -> str:
     return textwrap.dedent(f"""
         Generate a comprehensive .gitignore file for a Python/FastAPI + Next.js monorepo.
@@ -3139,25 +5001,98 @@ def _build_readme_prompt(ctx: _GenerationContext) -> str:
         cd backend && pytest --cov=app tests/
         ```
 
+        === REQUIRED ENHANCEMENTS — include ALL of these ===
+
+        1. ASCII ART LOGO — place at the very top before any badges:
+           Generate a simple ASCII art block for "{spec.app_name}" (e.g., using block letters or
+           a stylised banner). Keep it under 6 lines tall and within 60 characters wide.
+           Wrap it in a ```text code block.
+
+        2. ARCHITECTURE DIAGRAM — include as a text/ASCII diagram in a "## Architecture" section:
+           ```
+           Browser  ─►  Next.js (port 3000)
+                              │
+                              ▼  HTTP / JSON
+                        FastAPI (port 8000)
+                              │
+                              ▼
+                        PostgreSQL (port 5432)
+           ```
+           Adapt the ports and labels to match this project's stack.
+
+        3. QUICK START TABLE — two-column table: Docker Compose path vs Manual path:
+           | Method | Commands |
+           |---|---|
+           | Docker Compose | `cp .env.example .env && docker compose up --build -d` |
+           | Manual | `cd backend && pip install -r requirements.txt && uvicorn ...` |
+
+        4. API ENDPOINT DOCUMENTATION TABLE — in "## API Reference" section:
+           | Method | Path | Auth | Description |
+           |---|---|---|---|
+           | POST | /api/v1/auth/login | No | Obtain JWT access token |
+           | GET | /api/v1/{{entity}} | Yes | List all {{entity}} records |
+           | POST | /api/v1/{{entity}} | Yes | Create a new {{entity}} |
+           | GET | /api/v1/{{entity}}/{{id}} | Yes | Get {{entity}} by ID |
+           | PUT | /api/v1/{{entity}}/{{id}} | Yes | Update {{entity}} by ID |
+           | DELETE | /api/v1/{{entity}}/{{id}} | Yes | Delete {{entity}} by ID |
+           | GET | /health | No | Liveness probe |
+           | GET | /health/ready | No | Readiness probe (DB check) |
+           Generate rows for EACH entity in the spec.
+
+        5. ENVIRONMENT VARIABLES TABLE — in "## Environment Variables" section:
+           | Variable | Required | Default | Description |
+           |---|---|---|---|
+           | DATABASE_URL | Yes | — | PostgreSQL connection string |
+           | SECRET_KEY | Yes | — | JWT signing secret (min 32 chars) |
+           | ALLOWED_ORIGINS | No | http://localhost:3000 | Comma-separated CORS origins |
+           | DEBUG | No | false | Enable debug mode |
+           List ALL env vars from the project with accurate descriptions.
+
+        6. DEPLOYMENT GUIDE SECTION — "## Deployment" with subsections:
+           ### Fly.io
+           ```bash
+           fly launch --name {spec.app_name.lower().replace(' ', '-')}
+           fly secrets set SECRET_KEY=$(openssl rand -hex 32)
+           fly secrets set DATABASE_URL=...
+           fly deploy
+           ```
+           ### Railway
+           Steps for one-click Railway deploy with environment variable config.
+           ### Self-Hosted (Docker)
+           Steps for docker compose up on a VPS with Caddy reverse proxy.
+
+        7. SEED DATA SECTION — "## Seed Data" section:
+           ```bash
+           # Populate the database with realistic demo data
+           cd backend
+           python -m app.db.seed
+           ```
+           Explain what entities are seeded and approximate counts.
+
         === ANTI-PATTERNS — never do any of these ===
         1. Do NOT write vague descriptions like "it does things" — be specific about what the app does.
         2. Do NOT omit code blocks for commands — every shell command must be in a ```bash block.
-        3. Do NOT include the entire API schema — link to /docs instead.
+        3. Do NOT include the entire API schema — use the endpoint table above + link to /docs.
         4. Do NOT use placeholder text like [INSERT YOUR VALUE HERE].
-        5. Do NOT forget the Environment Variables section — developers always need this.
+        5. Do NOT forget the Environment Variables table — developers always need this.
+        6. Do NOT omit the ASCII art logo or architecture diagram.
+        7. Do NOT generate a deployment section with only one platform — include at least two.
 
         === CODE QUALITY REQUIREMENTS ===
         - Use proper GitHub-flavored Markdown.
         - All code examples must be in fenced code blocks with language tags.
-        - Include a table of contents if the README exceeds 6 sections.
+        - Include a table of contents since the README has 8+ sections.
         - Use real version numbers from requirements.txt, not placeholders.
         - Badge URLs must use shields.io format.
+        - Section order: ASCII logo, badges, description, TOC, Features, Tech Stack,
+          Architecture, Quick Start, Local Dev, Seed Data, Env Vars, API Reference,
+          Migrations, Testing, Deployment.
 
         === REQUIREMENTS ===
         - File: README.md
         - App: {spec.app_name}, Entities: {entities_list}
-        - Sections: Overview, Features, Tech Stack, Quick Start, Local Dev, Env Vars, API Docs, Migrations, Testing.
-        - Real bash commands, shields.io badges, table for tech stack.
+        - ALL required enhancements above must be present.
+        - Real bash commands, shields.io badges, tables for tech stack, API endpoints, env vars.
         - Output ONLY the Markdown content — no outer fences, no explanation.
     """).strip()
 
@@ -3626,6 +5561,15 @@ class CodeGeneratorV2:
             depends_on=model_paths + ["backend/alembic/env.py"],
         ))
 
+        # ========== Seed data script (depends on models + session) ==========
+        plan.append(_FileSpec(
+            relative_path="backend/app/db/seed.py",
+            category=FileCategory.BACKEND_DB,
+            prompt_builder=lambda c: _build_seed_data_prompt(c),
+            description="Database seed script (Faker, idempotent)",
+            depends_on=model_paths + ["backend/app/db/session.py", "backend/app/core/security.py"],
+        ))
+
         # ========== TIER 5: Backend tests (depend on routes + CRUD) ==========
         for entity in spec.entities:
             ent = entity
@@ -3640,105 +5584,340 @@ class CodeGeneratorV2:
                 ],
             ))
 
-        # ========== Frontend: Foundation (Tier 0 for types, depends on types for API) ==========
-        plan.append(_FileSpec(
-            relative_path="frontend/src/types/index.ts",
-            category=FileCategory.FRONTEND_TYPE,
-            prompt_builder=lambda c: _build_frontend_types_prompt(c),
-            description="TypeScript type definitions",
-            depends_on=[],  # Tier 0 for frontend
-        ))
-        plan.append(_FileSpec(
-            relative_path="frontend/src/lib/api.ts",
-            category=FileCategory.FRONTEND_API,
-            prompt_builder=lambda c: _build_api_client_prompt(c),
-            description="Typed API client",
-            depends_on=["frontend/src/types/index.ts"],
-        ))
-        plan.append(_FileSpec(
-            relative_path="frontend/src/components/ui/index.tsx",
-            category=FileCategory.FRONTEND_COMPONENT,
-            prompt_builder=lambda c: _build_ui_components_prompt(c, c.theme),
-            description="Shared UI component library",
-            depends_on=[],  # Tier 0 for frontend
-        ))
+        # ========== Frontend: framework selection ==========
+        frontend_framework = ctx.customization.get('frontend_framework', 'nextjs')
 
-        # ========== Frontend: Entity components (depend on types + UI + API) ==========
-        for entity in spec.entities:
-            ent = entity
+        if frontend_framework == 'vue':
+            # ---- Vue.js / Vite frontend ----
+
+            # Tier 0: types + API client (shared regardless of framework)
             plan.append(_FileSpec(
-                relative_path=f"frontend/src/components/{ent.name.lower()}/{ent.name}Components.tsx",
+                relative_path="frontend/src/types/index.ts",
+                category=FileCategory.FRONTEND_TYPE,
+                prompt_builder=lambda c: _build_frontend_types_prompt(c),
+                description="TypeScript type definitions",
+                depends_on=[],
+            ))
+            plan.append(_FileSpec(
+                relative_path="frontend/src/lib/api.ts",
+                category=FileCategory.FRONTEND_API,
+                prompt_builder=lambda c: _build_api_client_prompt(c),
+                description="Typed API client",
+                depends_on=["frontend/src/types/index.ts"],
+            ))
+
+            # Tier 1: App.vue + Router (depend on types)
+            plan.append(_FileSpec(
+                relative_path="frontend/src/App.vue",
                 category=FileCategory.FRONTEND_COMPONENT,
-                prompt_builder=lambda c, e=ent: _build_entity_component_prompt(e, c, c.theme),
-                description=f"Components: {ent.name}",
-                depends_on=[
-                    "frontend/src/types/index.ts",
-                    "frontend/src/lib/api.ts",
-                    "frontend/src/components/ui/index.tsx",
-                ],
+                prompt_builder=lambda c: _build_vue_app_prompt(c),
+                description="Root App.vue component",
+                depends_on=["frontend/src/types/index.ts"],
             ))
-
-        # ========== Frontend: Pages (depend on entity components) ==========
-        entity_component_paths = [
-            f"frontend/src/components/{e.name.lower()}/{e.name}Components.tsx"
-            for e in spec.entities
-        ]
-        plan.append(_FileSpec(
-            relative_path="frontend/src/app/(auth)/login_register_pages.tsx",
-            category=FileCategory.FRONTEND_PAGE,
-            prompt_builder=lambda c: _build_auth_pages_prompt(c, c.theme),
-            description="Login + register pages",
-            depends_on=["frontend/src/components/ui/index.tsx", "frontend/src/lib/api.ts"],
-        ))
-        plan.append(_FileSpec(
-            relative_path="frontend/src/app/(dashboard)/layout.tsx",
-            category=FileCategory.FRONTEND_PAGE,
-            prompt_builder=lambda c: _build_dashboard_layout_prompt(c, c.theme),
-            description="Dashboard layout",
-            depends_on=["frontend/src/components/ui/index.tsx"],
-        ))
-        for page in spec.pages:
-            pg = page
-            safe = pg.route.strip("/").replace("/", "_") or "home"
             plan.append(_FileSpec(
-                relative_path=f"frontend/src/app/{safe}/page.tsx",
-                category=FileCategory.FRONTEND_PAGE,
-                prompt_builder=lambda c, p=pg: _build_page_prompt(p, c, c.theme),
-                description=f"Page: {pg.title}",
-                depends_on=entity_component_paths + [
-                    "frontend/src/app/(dashboard)/layout.tsx",
-                ],
+                relative_path="frontend/src/router/index.ts",
+                category=FileCategory.FRONTEND_CONFIG,
+                prompt_builder=lambda c: _build_vue_router_prompt(c),
+                description="Vue Router configuration",
+                depends_on=["frontend/src/types/index.ts"],
             ))
 
-        # ========== Frontend: Config (Tier 0 — no code deps) ==========
-        plan.append(_FileSpec(
-            relative_path="frontend/package.json",
-            category=FileCategory.FRONTEND_CONFIG,
-            prompt_builder=lambda c: _build_frontend_package_json_prompt(c),
-            description="Frontend package.json",
-            depends_on=[],
-        ))
-        plan.append(_FileSpec(
-            relative_path="frontend/tailwind.config.ts",
-            category=FileCategory.FRONTEND_CONFIG,
-            prompt_builder=lambda c: _build_tailwind_config_prompt(c, c.theme),
-            description="Tailwind CSS config",
-            depends_on=[],
-        ))
-        plan.append(_FileSpec(
-            relative_path="frontend/tsconfig.json",
-            category=FileCategory.FRONTEND_CONFIG,
-            prompt_builder=lambda c: _build_tsconfig_prompt(c),
-            description="TypeScript config",
-            depends_on=[],
-        ))
-        plan.append(_FileSpec(
-            relative_path="frontend/Dockerfile",
-            category=FileCategory.FRONTEND_CONFIG,
-            prompt_builder=lambda c: _build_frontend_dockerfile_prompt(c),
-            description="Frontend Dockerfile",
-            depends_on=[],
-        ))
+            # Tier 2: Pinia stores per entity
+            vue_store_paths: List[str] = []
+            for entity in spec.entities:
+                ent = entity
+                store_path = f"frontend/src/stores/{ent.name.lower()}.ts"
+                vue_store_paths.append(store_path)
+                plan.append(_FileSpec(
+                    relative_path=store_path,
+                    category=FileCategory.FRONTEND_COMPONENT,
+                    prompt_builder=lambda c, e=ent: _build_vue_store_prompt(e, c),
+                    description=f"Pinia store: {ent.name}",
+                    depends_on=["frontend/src/lib/api.ts", "frontend/src/types/index.ts"],
+                ))
+
+            # Tier 3: Entity components (List, Form, Card per entity)
+            vue_component_paths: List[str] = []
+            for entity in spec.entities:
+                ent = entity
+                # We generate all three components into one file then split;
+                # use the Table as the representative path for dependencies
+                comp_path = f"frontend/src/components/{ent.name}/{ent.name}Table.vue"
+                vue_component_paths.append(comp_path)
+                plan.append(_FileSpec(
+                    relative_path=comp_path,
+                    category=FileCategory.FRONTEND_COMPONENT,
+                    prompt_builder=lambda c, e=ent: _build_vue_entity_components_prompt(e, c, c.theme),
+                    description=f"Vue components: {ent.name}",
+                    depends_on=[
+                        "frontend/src/types/index.ts",
+                        "frontend/src/lib/api.ts",
+                        f"frontend/src/stores/{ent.name.lower()}.ts",
+                    ],
+                ))
+
+            # Tier 4: Page views
+            for page in spec.pages:
+                pg = page
+                safe_view = pg.title.replace(' ', '') + 'View'
+                plan.append(_FileSpec(
+                    relative_path=f"frontend/src/views/{safe_view}.vue",
+                    category=FileCategory.FRONTEND_PAGE,
+                    prompt_builder=lambda c, p=pg: _build_vue_page_prompt(p, c, c.theme),
+                    description=f"Vue page: {pg.title}",
+                    depends_on=vue_component_paths + vue_store_paths,
+                ))
+
+            # Config files
+            plan.append(_FileSpec(
+                relative_path="frontend/package.json",
+                category=FileCategory.FRONTEND_CONFIG,
+                prompt_builder=lambda c: _build_vue_package_json_prompt(c),
+                description="Frontend package.json (Vue/Vite)",
+                depends_on=[],
+            ))
+            plan.append(_FileSpec(
+                relative_path="frontend/vite.config.ts",
+                category=FileCategory.FRONTEND_CONFIG,
+                prompt_builder=lambda c: _build_vue_vite_config_prompt(c),
+                description="Vite config (Vue)",
+                depends_on=[],
+            ))
+            plan.append(_FileSpec(
+                relative_path="frontend/tailwind.config.ts",
+                category=FileCategory.FRONTEND_CONFIG,
+                prompt_builder=lambda c: _build_tailwind_config_prompt(c, c.theme),
+                description="Tailwind CSS config",
+                depends_on=[],
+            ))
+            plan.append(_FileSpec(
+                relative_path="frontend/tsconfig.json",
+                category=FileCategory.FRONTEND_CONFIG,
+                prompt_builder=lambda c: _build_tsconfig_prompt(c),
+                description="TypeScript config",
+                depends_on=[],
+            ))
+            plan.append(_FileSpec(
+                relative_path="frontend/Dockerfile",
+                category=FileCategory.FRONTEND_CONFIG,
+                prompt_builder=lambda c: _build_frontend_dockerfile_prompt(c),
+                description="Frontend Dockerfile",
+                depends_on=[],
+            ))
+
+        elif frontend_framework == 'svelte':
+            # ---- SvelteKit frontend ----
+
+            # Tier 0: types + API client
+            plan.append(_FileSpec(
+                relative_path="frontend/src/lib/types/index.ts",
+                category=FileCategory.FRONTEND_TYPE,
+                prompt_builder=lambda c: _build_frontend_types_prompt(c),
+                description="TypeScript type definitions",
+                depends_on=[],
+            ))
+            plan.append(_FileSpec(
+                relative_path="frontend/src/lib/api.ts",
+                category=FileCategory.FRONTEND_API,
+                prompt_builder=lambda c: _build_api_client_prompt(c),
+                description="Typed API client",
+                depends_on=["frontend/src/lib/types/index.ts"],
+            ))
+
+            # Tier 1: Root layout
+            plan.append(_FileSpec(
+                relative_path="frontend/src/routes/+layout.svelte",
+                category=FileCategory.FRONTEND_PAGE,
+                prompt_builder=lambda c: _build_svelte_layout_prompt(c, c.theme),
+                description="SvelteKit root layout",
+                depends_on=["frontend/src/lib/types/index.ts"],
+            ))
+
+            # Tier 2: Svelte stores per entity
+            svelte_store_paths: List[str] = []
+            for entity in spec.entities:
+                ent = entity
+                store_path = f"frontend/src/lib/stores/{ent.name.lower()}.ts"
+                svelte_store_paths.append(store_path)
+                plan.append(_FileSpec(
+                    relative_path=store_path,
+                    category=FileCategory.FRONTEND_COMPONENT,
+                    prompt_builder=lambda c, e=ent: _build_svelte_store_prompt(e, c),
+                    description=f"Svelte store: {ent.name}",
+                    depends_on=["frontend/src/lib/api.ts", "frontend/src/lib/types/index.ts"],
+                ))
+
+            # Tier 3: Entity components
+            svelte_component_paths: List[str] = []
+            for entity in spec.entities:
+                ent = entity
+                comp_path = f"frontend/src/lib/components/{ent.name}/{ent.name}Table.svelte"
+                svelte_component_paths.append(comp_path)
+                plan.append(_FileSpec(
+                    relative_path=comp_path,
+                    category=FileCategory.FRONTEND_COMPONENT,
+                    prompt_builder=lambda c, e=ent: _build_svelte_entity_components_prompt(e, c, c.theme),
+                    description=f"Svelte components: {ent.name}",
+                    depends_on=[
+                        "frontend/src/lib/types/index.ts",
+                        "frontend/src/lib/api.ts",
+                        f"frontend/src/lib/stores/{ent.name.lower()}.ts",
+                    ],
+                ))
+
+            # Tier 4: Page routes
+            for page in spec.pages:
+                pg = page
+                safe_route = pg.route.strip('/') or 'home'
+                plan.append(_FileSpec(
+                    relative_path=f"frontend/src/routes/{safe_route}/+page.svelte",
+                    category=FileCategory.FRONTEND_PAGE,
+                    prompt_builder=lambda c, p=pg: _build_svelte_page_prompt(p, c, c.theme),
+                    description=f"Svelte page: {pg.title}",
+                    depends_on=svelte_component_paths + svelte_store_paths + [
+                        "frontend/src/routes/+layout.svelte",
+                    ],
+                ))
+
+            # Config files
+            plan.append(_FileSpec(
+                relative_path="frontend/package.json",
+                category=FileCategory.FRONTEND_CONFIG,
+                prompt_builder=lambda c: _build_svelte_package_json_prompt(c),
+                description="Frontend package.json (SvelteKit)",
+                depends_on=[],
+            ))
+            plan.append(_FileSpec(
+                relative_path="frontend/svelte.config.js",
+                category=FileCategory.FRONTEND_CONFIG,
+                prompt_builder=lambda c: _build_svelte_config_prompt(c),
+                description="SvelteKit config",
+                depends_on=[],
+            ))
+            plan.append(_FileSpec(
+                relative_path="frontend/tailwind.config.ts",
+                category=FileCategory.FRONTEND_CONFIG,
+                prompt_builder=lambda c: _build_tailwind_config_prompt(c, c.theme),
+                description="Tailwind CSS config",
+                depends_on=[],
+            ))
+            plan.append(_FileSpec(
+                relative_path="frontend/tsconfig.json",
+                category=FileCategory.FRONTEND_CONFIG,
+                prompt_builder=lambda c: _build_tsconfig_prompt(c),
+                description="TypeScript config",
+                depends_on=[],
+            ))
+            plan.append(_FileSpec(
+                relative_path="frontend/Dockerfile",
+                category=FileCategory.FRONTEND_CONFIG,
+                prompt_builder=lambda c: _build_frontend_dockerfile_prompt(c),
+                description="Frontend Dockerfile",
+                depends_on=[],
+            ))
+
+        else:
+            # ---- Default: Next.js / React frontend ----
+
+            # ========== Frontend: Foundation (Tier 0 for types, depends on types for API) ==========
+            plan.append(_FileSpec(
+                relative_path="frontend/src/types/index.ts",
+                category=FileCategory.FRONTEND_TYPE,
+                prompt_builder=lambda c: _build_frontend_types_prompt(c),
+                description="TypeScript type definitions",
+                depends_on=[],  # Tier 0 for frontend
+            ))
+            plan.append(_FileSpec(
+                relative_path="frontend/src/lib/api.ts",
+                category=FileCategory.FRONTEND_API,
+                prompt_builder=lambda c: _build_api_client_prompt(c),
+                description="Typed API client",
+                depends_on=["frontend/src/types/index.ts"],
+            ))
+            plan.append(_FileSpec(
+                relative_path="frontend/src/components/ui/index.tsx",
+                category=FileCategory.FRONTEND_COMPONENT,
+                prompt_builder=lambda c: _build_ui_components_prompt(c, c.theme),
+                description="Shared UI component library",
+                depends_on=[],  # Tier 0 for frontend
+            ))
+
+            # ========== Frontend: Entity components (depend on types + UI + API) ==========
+            for entity in spec.entities:
+                ent = entity
+                plan.append(_FileSpec(
+                    relative_path=f"frontend/src/components/{ent.name.lower()}/{ent.name}Components.tsx",
+                    category=FileCategory.FRONTEND_COMPONENT,
+                    prompt_builder=lambda c, e=ent: _build_entity_component_prompt(e, c, c.theme),
+                    description=f"Components: {ent.name}",
+                    depends_on=[
+                        "frontend/src/types/index.ts",
+                        "frontend/src/lib/api.ts",
+                        "frontend/src/components/ui/index.tsx",
+                    ],
+                ))
+
+            # ========== Frontend: Pages (depend on entity components) ==========
+            entity_component_paths = [
+                f"frontend/src/components/{e.name.lower()}/{e.name}Components.tsx"
+                for e in spec.entities
+            ]
+            plan.append(_FileSpec(
+                relative_path="frontend/src/app/(auth)/login_register_pages.tsx",
+                category=FileCategory.FRONTEND_PAGE,
+                prompt_builder=lambda c: _build_auth_pages_prompt(c, c.theme),
+                description="Login + register pages",
+                depends_on=["frontend/src/components/ui/index.tsx", "frontend/src/lib/api.ts"],
+            ))
+            plan.append(_FileSpec(
+                relative_path="frontend/src/app/(dashboard)/layout.tsx",
+                category=FileCategory.FRONTEND_PAGE,
+                prompt_builder=lambda c: _build_dashboard_layout_prompt(c, c.theme),
+                description="Dashboard layout",
+                depends_on=["frontend/src/components/ui/index.tsx"],
+            ))
+            for page in spec.pages:
+                pg = page
+                safe = pg.route.strip("/").replace("/", "_") or "home"
+                plan.append(_FileSpec(
+                    relative_path=f"frontend/src/app/{safe}/page.tsx",
+                    category=FileCategory.FRONTEND_PAGE,
+                    prompt_builder=lambda c, p=pg: _build_page_prompt(p, c, c.theme),
+                    description=f"Page: {pg.title}",
+                    depends_on=entity_component_paths + [
+                        "frontend/src/app/(dashboard)/layout.tsx",
+                    ],
+                ))
+
+            # ========== Frontend: Config (Tier 0 — no code deps) ==========
+            plan.append(_FileSpec(
+                relative_path="frontend/package.json",
+                category=FileCategory.FRONTEND_CONFIG,
+                prompt_builder=lambda c: _build_frontend_package_json_prompt(c),
+                description="Frontend package.json",
+                depends_on=[],
+            ))
+            plan.append(_FileSpec(
+                relative_path="frontend/tailwind.config.ts",
+                category=FileCategory.FRONTEND_CONFIG,
+                prompt_builder=lambda c: _build_tailwind_config_prompt(c, c.theme),
+                description="Tailwind CSS config",
+                depends_on=[],
+            ))
+            plan.append(_FileSpec(
+                relative_path="frontend/tsconfig.json",
+                category=FileCategory.FRONTEND_CONFIG,
+                prompt_builder=lambda c: _build_tsconfig_prompt(c),
+                description="TypeScript config",
+                depends_on=[],
+            ))
+            plan.append(_FileSpec(
+                relative_path="frontend/Dockerfile",
+                category=FileCategory.FRONTEND_CONFIG,
+                prompt_builder=lambda c: _build_frontend_dockerfile_prompt(c),
+                description="Frontend Dockerfile",
+                depends_on=[],
+            ))
 
         # ========== Infrastructure (Tier 0 — no code deps) ==========
         plan.append(_FileSpec(
@@ -3776,6 +5955,59 @@ class CodeGeneratorV2:
             description="GitHub Actions CI/CD",
             depends_on=[],
         ))
+
+        # ========== Supabase integration (conditional on database == 'supabase') ==========
+        if ctx.customization.get('database', 'postgresql') == 'supabase':
+            # 1. SQL migration with RLS policies for all entities
+            plan.append(_FileSpec(
+                relative_path="supabase/migrations/001_initial.sql",
+                category=FileCategory.BACKEND_DB,
+                prompt_builder=lambda c: _build_supabase_schema_prompt(c),
+                description="Supabase SQL migration (CREATE TABLE + RLS + triggers)",
+                depends_on=[],  # Pure SQL, no Python deps
+            ))
+
+            # 2. Python Supabase client (replaces / supplements SQLAlchemy CRUD)
+            plan.append(_FileSpec(
+                relative_path="backend/app/supabase_client.py",
+                category=FileCategory.BACKEND_CORE,
+                prompt_builder=lambda c: _build_supabase_client_prompt(c),
+                description="Supabase Python client + auth helpers",
+                depends_on=["backend/app/core/config.py"],
+            ))
+
+            # 3. TypeScript database types (replaces generic types/index.ts)
+            plan.append(_FileSpec(
+                relative_path="frontend/src/types/database.ts",
+                category=FileCategory.FRONTEND_TYPE,
+                prompt_builder=lambda c: _build_supabase_types_prompt(c),
+                description="Supabase TypeScript database types",
+                depends_on=[],
+            ))
+
+            # 4. Supabase config file for local development
+            plan.append(_FileSpec(
+                relative_path="supabase/config.toml",
+                category=FileCategory.INFRASTRUCTURE,
+                prompt_builder=lambda c: textwrap.dedent(f"""
+                    Generate a supabase/config.toml for local Supabase development.
+
+                    Application: {c.spec.app_name}
+
+                    Requirements:
+                    - project_id = a lowercase slug derived from the app name
+                    - [api] port = 54321
+                    - [db] port = 54322
+                    - [studio] port = 54323
+                    - [inbucket] port = 54324 (email testing)
+                    - [storage] enabled = true
+                    - [auth] enabled = true, site_url = http://localhost:3000
+                    - [auth.email] enable_signup = true, confirm_email = false (dev convenience)
+                    - Output ONLY the TOML content.
+                """).strip(),
+                description="Supabase local dev config",
+                depends_on=[],
+            ))
 
         return plan
 
