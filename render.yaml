@@ -15,6 +15,8 @@ services:
           property: connectionString
       - key: SECRET_KEY
         generateValue: true
+      - key: COOKIE_SECRET
+        generateValue: true
       - key: ENVIRONMENT
         value: production
       - key: STRIPE_SECRET_KEY
