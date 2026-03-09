@@ -31,17 +31,26 @@ services:
         sync: false
       - key: STRIPE_PRICE_ENTERPRISE
         sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GOOGLE_API_KEY
+        sync: false
       - key: RESEND_API_KEY
         sync: false
       - key: RESEND_FROM_EMAIL
         sync: false
+    domains:
+      - ignara.pro
+      - www.ignara.pro
+  - type: redis
+    name: ignara-redis
+    ipAllowList: []
+    plan: starter
+    maxmemoryPolicy: allkeys-lru
 
 databases:
   - name: ignara-db
-    plan: starter
     databaseName: ignara
     user: ignara
-
-  - name: ignara-redis
-    type: redis
-    plan: starter
