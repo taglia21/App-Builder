@@ -93,16 +93,48 @@ def create_billing_router(templates):
             if not price_id:
                 raise HTTPException(status_code=400, detail="Invalid plan. Available: starter, pro, enterprise")
 
+            # Get authenticated user for Stripe metadata
+            from src.dashboard.routes import get_current_user
+            user = get_current_user(request)
+            user_id = str(user.id) if user else None
+            user_email = getattr(user, "email", None) if user else None
+
+            if not user_id:
+                raise HTTPException(status_code=401, detail="Login required to subscribe.")
+
             base_url = str(request.base_url).rstrip("/")
 
-            checkout_session = stripe.checkout.Session.create(
+            # Build checkout session with user metadata for webhook provisioning
+            checkout_params = dict(
                 payment_method_types=["card"],
                 line_items=[{"price": price_id, "quantity": 1}],
                 mode="subscription",
                 success_url=f"{base_url}/billing/success?session_id={{CHECKOUT_SESSION_ID}}",
                 cancel_url=f"{base_url}/billing/plans",
                 allow_promotion_codes=True,
+                metadata={"user_id": user_id, "plan": plan},
+                client_reference_id=user_id,
             )
+            # Pre-fill email if available
+            if user_email:
+                checkout_params["customer_email"] = user_email
+
+            # Reuse existing Stripe customer if user already has one
+            try:
+                from src.database.db import get_db
+                from src.database.models import Subscription
+                db = get_db()
+                with db.session() as sess:
+                    sub = sess.query(Subscription).filter(
+                        Subscription.user_id == user_id
+                    ).first()
+                    if sub and sub.stripe_customer_id:
+                        checkout_params["customer"] = sub.stripe_customer_id
+                        checkout_params.pop("customer_email", None)  # Can't use both
+            except Exception as e:
+                logger.debug("Customer lookup for checkout skipped: %s", e)
+
+            checkout_session = stripe.checkout.Session.create(**checkout_params)
             return JSONResponse({"url": checkout_session.url})
         except stripe.error.StripeError as e:
             logger.error(f"Stripe checkout error: {e}")
@@ -125,8 +157,26 @@ def create_billing_router(templates):
                 status_code=503,
             )
 
-        # In production, get customer_id from logged-in user
-        customer_id = request.query_params.get("customer_id")
+        # Resolve customer_id from the authenticated user
+        from src.dashboard.routes import get_current_user
+        user = get_current_user(request)
+        if not user:
+            return RedirectResponse("/auth/login?next=/billing/portal")
+
+        customer_id = None
+        try:
+            from src.database.db import get_db
+            from src.database.models import Subscription
+            db = get_db()
+            with db.session() as sess:
+                sub = sess.query(Subscription).filter(
+                    Subscription.user_id == str(user.id)
+                ).first()
+                if sub:
+                    customer_id = sub.stripe_customer_id
+        except Exception as e:
+            logger.warning("Failed to look up Stripe customer for portal: %s", e)
+
         if not customer_id:
             return RedirectResponse("/billing/plans")
 
@@ -137,7 +187,8 @@ def create_billing_router(templates):
                 return_url=f"{base_url}/dashboard",
             )
             return RedirectResponse(session.url)
-        except stripe.error.StripeError:
+        except stripe.error.StripeError as e:
+            logger.error("Stripe portal error: %s", e)
             return RedirectResponse("/billing/plans")
 
     @router.post("/webhook")

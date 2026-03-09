@@ -1583,6 +1583,14 @@ async def analyze_idea_api(request: Request) -> JSONResponse:
 
         if not idea:
             return JSONResponse({'error': 'Please provide your business idea'}, status_code=400)
+        if len(idea) < 5:
+            return JSONResponse({'error': 'Idea must be at least 5 characters'}, status_code=400)
+        if len(idea) > 5000:
+            return JSONResponse({'error': 'Idea must be under 5000 characters'}, status_code=400)
+
+        # Sanitize input: strip control characters
+        import re as _re
+        idea = _re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', idea)
 
         project_id = str(uuid.uuid4())[:8]
 

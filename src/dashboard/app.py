@@ -101,10 +101,53 @@ except Exception as _sentry_err:
 logger = get_logger(__name__)
 
 
+def _validate_environment() -> None:
+    """Log warnings for missing configuration. Fail-fast in production for secrets."""
+    env = os.getenv("ENVIRONMENT", os.getenv("APP_ENV", "development")).lower()
+    is_prod = env in ("production", "prod")
+
+    # Critical secrets that MUST exist in production
+    critical_vars = [
+        ("COOKIE_SECRET", "Session cookies will use an insecure default"),
+        ("DATABASE_URL", "Database will fall back to SQLite"),
+    ]
+    # Important but non-fatal
+    important_vars = [
+        ("STRIPE_SECRET_KEY", "Stripe payments will be disabled"),
+        ("STRIPE_WEBHOOK_SECRET", "Stripe webhooks will be rejected"),
+        ("STRIPE_PRICE_STARTER", "Starter plan checkout will fail"),
+        ("STRIPE_PRICE_PRO", "Pro plan checkout will fail"),
+        ("STRIPE_PRICE_ENTERPRISE", "Enterprise plan checkout will fail"),
+    ]
+
+    missing_critical = []
+    for var, msg in critical_vars:
+        val = os.getenv(var, "")
+        if not val or len(val) < 8:
+            if is_prod:
+                missing_critical.append(var)
+            else:
+                logger.warning("ENV: %s not set — %s", var, msg)
+
+    if missing_critical:
+        raise RuntimeError(
+            f"Missing critical environment variables for production: {', '.join(missing_critical)}. "
+            f"Set these before starting the app in production mode."
+        )
+
+    for var, msg in important_vars:
+        if not os.getenv(var):
+            logger.info("ENV: %s not set — %s", var, msg)
+
+    logger.info("Environment validated (mode=%s)", env)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan events — startup and shutdown."""
     # --- Startup ---
+    _validate_environment()
+
     from src.database.db import init_db
     init_db(create_tables=True)
     logger.info("Database tables initialized at startup")
